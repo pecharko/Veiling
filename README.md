@@ -1,2 +1,1 @@
-# Veiling
-De 41 veiling website
+# Veilingcatalogus 41 Lokeren
