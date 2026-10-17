@@ -1,0 +1,48 @@
+# Mac / editors
+.DS_Store
+._*
+.idea/
+.vscode/
+*.swp
+*~
+
+# Geheime configuratie (templates zonder secrets mogen wel in Git)
+.env
+.env.*
+!.env.example
+private/config.php
+private/config.local.php
+private/.env
+**/.htpasswd
+**/id_rsa
+**/id_ed25519
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Productie-uploadbestanden, snapshots, tijdelijke en logbestanden
+catalogus-public/uploads/
+uploads/
+private/backups/
+**/backups/
+**/snapshots/
+**/tmp/
+**/cache/
+*.log
+error_log
+
+# Databaseback-ups en exporten (niet documentatieschema's)
+*.sql.gz
+*.dump
+*.bak
+*.backup
+*backup*.sql
+*.zip
+*.tar
+*.tar.gz
+
+# OS-/FTP-specifieke bestanden met mogelijk gevoelige verbindingen
+.netrc
+.ftpconfig
+.ftppass
