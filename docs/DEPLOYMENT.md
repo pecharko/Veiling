@@ -2,17 +2,17 @@
 
 **Uitrolmodel:** voorlopig handmatige bestandenoverdracht naar OVHcloud via RemoteDrive. **Geen automatische deployment vanuit GitHub.**
 
-## 1. Veilige eerste import (nog uit te voeren)
+## 1. Eerste import (17 oktober 2026 uitgevoerd, controles deels open)
 
-1. Download **de actuele productiebroncode** van `catalogus-public/` en `private/` naar een afzonderlijke, veilige map op je Mac.
-2. Neem óók een beveiligde back-up van de huidige database en kavelfoto's, maar bewaar deze **buiten de Git-repository**.
-3. Clone de private GitHub-repository in GitHub Desktop.
-4. Inventariseer alle broncodebestanden en vergelijk ze met de bekende functionaliteit. Een oude ZIP uit de chat is **niet** automatisch dezelfde versie als productie.
-5. Verwijder of vervang productiegeheimen door een onschadelijk voorbeeldbestand (bv. `private/config.example.php`, zonder echte waarden).
-6. Controleer `git status` en de GitHub Desktop Changes-lijst **bestand voor bestand**. Let op credentials in PHP, .htaccess, logs, JSON, foto's, SQL-dumps en commentaar.
-7. Commit pas daarna de geschoonde broncode, bijvoorbeeld `chore: import verified OVHcloud production baseline`.
-8. Push naar GitHub en controleer via de webinterface dat geen geheimen of gegevensbestanden zichtbaar zijn.
-9. Actualiseer `docs/ARCHITECTURE.md`, `docs/REQUIREMENTS.md` en `docs/TESTPLAN.md` aan de hand van de echte code.
+1. **Uitgevoerd volgens gebruiker:** actuele productiebroncode van `catalogus-public/` en `private/` gekopieerd naar `/Users/chrisdemol/Code/41Lokeren-Productie`.
+2. **Nog afzonderlijk te verifiëren:** beveiligde back-up van database, foto's en productieconfiguratie blijft buiten Git; GitHub vervangt die niet.
+3. **Uitgevoerd volgens gebruiker:** repository gekloond onder `/Users/chrisdemol/Code/GitHub/Veiling`.
+4. **Statisch beoordeeld:** belangrijke geïmporteerde PHP-/JS-bestanden in GitHub; zie `docs/CODE_AUDIT_2026-10-17.md`. Compleetheid vergeleken met OVHcloud moet nog worden geverifieerd.
+5. **Gecontroleerd voor de voorbeeldconfiguratie:** `private/config.example.php` bevat placeholders. Verdere scanning en hercontrole bij elke commit blijft nodig.
+6. **Uitgevoerd volgens gebruiker:** staginglijst met 28 bestanden bekeken. Geheimencontrole blijft nodig voor nieuwe bestanden.
+7. **Uitgevoerd volgens gebruiker:** eerste broncode-commit en push.
+8. **Door GitHub-verificatie bevestigd:** centrale codebestanden zijn bereikbaar in de private repository. Volledige secret-audit en ontbrekende assets blijven open.
+9. **Uitgevoerd:** architectuur, requirements en testplan bijgewerkt vanuit statische code-inspectie. Testuitvoering is nog open.
 
 **Privacy:** een private repository is niet hetzelfde als een kluis voor productiegeheimen. Indien ooit een secret werd gecommit, moet die credential worden vervangen en de blootstelling worden onderzocht; alleen het bestand verwijderen is niet genoeg.
 
