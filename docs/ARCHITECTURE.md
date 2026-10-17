@@ -1,13 +1,13 @@
 # Technische architectuur — 41 Lokeren
 
-**Status 17 oktober 2026:** gebaseerd op eerder gedeelde delen van PHP-broncode en screenshots, **niet** op een volledige actuele productie-export. Controleer alle paden bij de import.
+**Status 17 oktober 2026:** gebaseerd op de op GitHub geïmporteerde applicatiebroncode. Statische code-inspectie is uitgevoerd; dit is **geen runtimecontrole** van OVHcloud, database of configuratie. Zie [code-audit](CODE_AUDIT_2026-10-17.md).
 
 ## Hosting en runtime
 
 - Hosting: OVHcloud webhosting met domein <https://41lokeren.be>.
 - Server-side: PHP; data: MySQL.
 - Deploy: momenteel handmatig via RemoteDrive/FTP-achtige bestandskoppeling.
-- Geen aanwijzing voor buildpipeline, Composer, GitHub Actions of automatische deployments; pas aannemen na broncode-inspectie.
+- In de geïmporteerde repository zijn geen Composer/buildpipeline-bestanden of automatische deploymentworkflows aangetroffen.
 - MySQL-back-up en webbestanden/foto's moeten apart worden veiliggesteld. Hostingopslag en databasequota kunnen verschillend gemeten worden.
 
 ## Bekende projectindeling
@@ -34,13 +34,13 @@ private/
   backups/              # Snapshotarchief: NIET committen
 ```
 
-**Opmerking:** de actuele website kan aanvullende bestanden of andere paden bevatten; deze opsomming is geen gegarandeerd volledige directorylisting.
+**Opmerking:** de GitHub-baseline is geïmporteerd vanuit een lokale OVHcloud-kopie; eventuele door `.gitignore` uitgesloten productie-/uploadbestanden en later op de server gewijzigde bestanden ontbreken.
 
 ## Bekende databasetabellen
 
 `admins`, `login_attempts`, `lots`, `lot_images`, `settings`.
 
-Verifieer de volledige schema's, indexen (met name de unieke lotnummerconstraint), foreign keys en kolomtypen op basis van een **geschoonde** schema-export. Publiceer geen productiegegevens of inlog-/passwordhashwaarden.
+Er staat geen geversioneerd schema in de repository. Verifieer volledige schema's, indexen (**UNIQUE op `lots.lot_number`**), foreign keys en kolomtypen met een **geschoonde** schema-export of metadataquery. Publiceer geen productiegegevens of inlog-/passwordhashwaarden.
 
 ## Beveiligingsgrenzen
 
@@ -50,7 +50,7 @@ Verifieer de volledige schema's, indexen (met name de unieke lotnummerconstraint
 4. Snapshotarchief en logs bevatten mogelijk gevoelige informatie en blijven buiten GitHub en buiten de publieke site.
 5. Bij publicatie worden alleen toegestane kavels getoond, afhankelijk van status per kavel en algemene zichtbaarheid.
 
-## Ontbrekende verificatie
+## Actueel bekende ontbrekende bestanden en verificatie
 
 - Exacte PHP- en MySQL-versies en benodigde PHP-extensies, waaronder `ZipArchive`.
 - Actuele `private/bootstrap.php` en wijzigingen aan admin-menu na hotfix v1.5.1.
@@ -60,3 +60,19 @@ Verifieer de volledige schema's, indexen (met name de unieke lotnummerconstraint
 - Match tussen bestanden op OVHcloud en toekomstige GitHub-baseline.
 
 Werk dit document bij zodra de echte productiebroncode is veilig ingelezen.
+
+## Publieke functionaliteit in code
+
+- `catalogus-public/index.php`: zoeken, categorie-/prijsfilter, sorteren, pagineren, globale publicatievlag, kavelstatus.
+- `catalogus-public/kavel.php`: detail, galerij en vorig/volgend kavel.
+- `catalogus-public/assets/catalogus.js`: favorieten via browser-`localStorage` en delen van kavel.
+- `catalogus-public/admin/import.php`: CSV-upsert op lotnummer, voorwaardelijk publiceren.
+- `private/snapshots.php`: ZIP-back-ups, hashes en restore; **consistentie bij gelijktijdige schrijfacties is nog niet bewezen**.
+
+## Bestanden die in GitHub ontbreken
+
+- `catalogus-public/assets/placeholder.svg` en `catalogus-public/assets/voorbeeld-kavels.csv` (wel door PHP gebruikt).
+- `sql/install.sql` en `catalogus-public/admin/setup.php` (wel vanuit systeemcheck/login genoemd; setup kan bewust na installatie verwijderd zijn).
+- `catalogus-public/uploads/.htaccess` en gebruikersfoto's (uitgesloten van Git; uploads-beveiliging op productie apart controleren).
+
+Zie het [auditrapport](CODE_AUDIT_2026-10-17.md) voor impact en opvolging.
