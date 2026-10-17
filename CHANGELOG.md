@@ -10,8 +10,12 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - Functionele requirementsbaseline in `docs/REQUIREMENTS.md`.
 - Documentatie voor architectuur, lokale kopie, deploy- en herstelproces, en testplan.
 
+- Productiebroncode (PHP, CSS, JS en statische ontwerpassets) door de gebruiker vanuit OVHcloud naar `main` gepusht; belangrijke bestanden via GitHub gecontroleerd.
+- Eerste statische broncode-audit: `docs/CODE_AUDIT_2026-10-17.md`, inclusief traceerbaarheid en risico's.
+- Requirementsregister bijgewerkt naar **28 functionele requirements**, met nieuwe beschrijvingen voor favorieten, filters, galerie, adminoverzicht en systeemcheck; implementatiestatus onderscheiden van echte tests.
+
 ### Nog te doen
-- Actuele OVHcloud-productiecode veilig importeren, zonder credentials, database-inhoud, uploads of snapshots.
+- Controleren of de geïmporteerde GitHub-code nog exact overeenkomt met alle bestanden op OVHcloud (uitgesloten uploads/configuratie buiten Git blijven).
 - Vereisten en releasehistoriek toetsen aan de daadwerkelijke code.
 - Back-up-/herstelmodule in een testomgeving valideren.
 
