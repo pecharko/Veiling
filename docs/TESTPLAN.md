@@ -1,6 +1,6 @@
 # Testplan — veilingcatalogus 41 Lokeren
 
-**Status:** testcases voorbereid op basis van eerdere projectbeschrijving; **nog geen uitvoering of succes claimen**. Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
+**Status 17 oktober 2026:** testcases bij de GitHub-broncode gecontroleerd en uitgebreid; **geen tests uitgevoerd of geslaagd verklaard**. Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
 
 | Test-ID | Requirement | Testscenario | Verwacht resultaat | Uitvoering |
 |---|---|---|---|---|
@@ -25,6 +25,15 @@
 | T-019 | FR-022 | Beheer-POST zonder geldig CSRF-token | Actie geweigerd, geen datamutatie | Niet uitgevoerd |
 | T-020 | NFR-003 | Mobiel scherm en toetsenbordbediening | Velden en acties bruikbaar, geen overlap | Niet uitgevoerd |
 | T-021 | NFR-001 | Geplande commit op secrets/gegevens scannen | Geen credentials, SQL-dumps, foto's of snapshots | Niet uitgevoerd |
+
+| T-022 | FR-024 | Publiek zoeken/filteren/sorteren/pagineren | Alleen gepubliceerde kavels; correcte resultaten en navigatie | Niet uitgevoerd |
+| T-023 | FR-025 | Favoriet toevoegen/verwijderen, pagina herladen | Favorieten blijven lokaal per browser behouden; geen serveraccount nodig | Niet uitgevoerd |
+| T-024 | FR-026 | Galerie en delen/kopiëren kavel-link | Goede foto en bruikbare deelbare URL | Niet uitgevoerd |
+| T-025 | FR-027/028 | Adminoverzicht en systeemcontrole | Correcte tellingen, filters, controles en foutmeldingen | Niet uitgevoerd |
+| T-026 | FR-003 | Metadataquery voor `lots.lot_number` | Unieke DB-index bestaat op lotnummer | Niet uitgevoerd |
+| T-027 | FR-015/017 | Gelijktijdige kavelwijziging tijdens snapshot/restore in testomgeving | Back-up en herstelde data zijn onderling consistent; geen verlies | Niet uitgevoerd |
+| T-028 | FR-013 | Kavel zonder foto en voorbeeld-CSV downloaden | Placeholder en CSV-download werken zonder 404 | Niet uitgevoerd |
+| T-029 | NFR-001 | GitHub-baseline scannen op hardcoded secrets, persoonsgegevens, snapshots | Geen gevoelige gegevens in getrackte bestanden | Niet uitgevoerd |
 
 ## Registratie bij uitvoering
 
