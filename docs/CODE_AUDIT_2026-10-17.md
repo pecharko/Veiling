@@ -64,7 +64,7 @@ Deze bestanden kunnen wel nog op OVHcloud staan; **dat is niet gecontroleerd**. 
 
 ### P2 — Databaseconstraint op unieke lotnummers (UPDATE 18-10-2026: bevestigd)
 
-**Update 18 oktober 2026:** via aangeleverde phpMyAdmin-uitvoer van `SHOW INDEX FROM lots;` is bevestigd dat `lot_number` een afzonderlijke unieke BTREE-index heeft (`Key_name=lot_number`, `Column_name=lot_number`, `Seq_in_index=1`, `Non_unique=0`). MySQL verhindert daardoor dubbele lotnummers. Een schemawijziging is niet nodig. De repository heeft nog geen geversioneerd databaseschema en functionele tests voor de PHP-foutmelding, CSV-upsert en gelijktijdige bewerkingen staan open. Deze bevinding actualiseert de eerdere risico-inschatting van 17 oktober.
+**Update 18 oktober 2026:** via aangeleverde phpMyAdmin-uitvoer van `SHOW INDEX FROM lots;` is bevestigd dat `lot_number` een afzonderlijke unieke BTREE-index heeft (`Key_name=lot_number`, `Column_name=lot_number`, `Seq_in_index=1`, `Non_unique=0`). MySQL verhindert daardoor dubbele lotnummers. Een schemawijziging is niet nodig. De volledige `lots`-DDL is op 18 oktober 2026 in [`docs/DATABASE.md`](DATABASE.md) opgenomen op basis van een phpMyAdmin-screenshot; de overige vier tabelschema's en functionele tests voor de PHP-foutmelding, CSV-upsert en gelijktijdige bewerkingen staan open. Deze bevinding actualiseert de eerdere risico-inschatting van 17 oktober.
 
 ### P3 — Validatie details en overige regressiepunten
 
