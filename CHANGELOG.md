@@ -15,7 +15,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - Afzonderlijk synchronisatieprobleem Mac: GitHub weigert accountwachtwoorden voor Git over HTTPS. Gebruik GitHub Desktop-browseraanmelding, Git Credential Manager of GitHub CLI; geen productiecode gewijzigd.
 
 ### Uitlogcontrole — 2026-10-18
-- T-041 gedeeltelijk geslaagd: na gevraagde logout toont de screenshot `/admin/login.php`. Heropenen van de afgeschermde `/admin/index.php` zonder opnieuw aanmelden is nog niet gecontroleerd. Documentatie bijgewerkt, geen productiecode gewijzigd.
+- T-041 geslaagd (visuele functionele test): na logout toont Chrome `/admin/login.php`; na opnieuw openen van de beveiligde `/admin/index.php` in hetzelfde gewone browservenster zonder aanmelding verschijnt opnieuw het loginformulier. Technische cookie-/sessiestorevalidatie nog niet uitgevoerd. Geen productiecode gewijzigd.
 
 ### Browsertest — 2026-10-18
 - T-001 (FR-001): drie incognitocontroles voor kaveloverzicht (`/admin/index.php`), CSV-import (`/admin/import.php`) en kaveleditor (`/admin/kavel.php`) tonen loginformulier zonder afgeschermde inhoud. Op derde screenshot is de uiteindelijke URL `/admin/login.php` zichtbaar. Geldige login/logout en andere beveiligde routes blijven te testen. Geen gegevens gewijzigd.
