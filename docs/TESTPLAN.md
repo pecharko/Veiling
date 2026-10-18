@@ -1,6 +1,6 @@
 # Testplan — veilingcatalogus 41 Lokeren
 
-**Status 17 oktober 2026:** testcases bij de GitHub-broncode gecontroleerd en uitgebreid; **geen tests uitgevoerd of geslaagd verklaard**. Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
+**Status 18 oktober 2026:** de schema-inspecties T-026, T-030 t/m T-032 en T-034 t/m T-036 zijn met phpMyAdmin-screenshots bevestigd. De nieuwe fase-1-code-inspectie is gedocumenteerd in [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md). **Functionele live tests zijn nog niet uitgevoerd of geslaagd verklaard.** Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
 
 | Test-ID | Requirement | Testscenario | Verwacht resultaat | Uitvoering |
 |---|---|---|---|---|
@@ -25,7 +25,6 @@
 | T-019 | FR-022 | Beheer-POST zonder geldig CSRF-token | Actie geweigerd, geen datamutatie | Niet uitgevoerd |
 | T-020 | NFR-003 | Mobiel scherm en toetsenbordbediening | Velden en acties bruikbaar, geen overlap | Niet uitgevoerd |
 | T-021 | NFR-001 | Geplande commit op secrets/gegevens scannen | Geen credentials, SQL-dumps, foto's of snapshots | Niet uitgevoerd |
-
 | T-022 | FR-024 | Publiek zoeken/filteren/sorteren/pagineren | Alleen gepubliceerde kavels; correcte resultaten en navigatie | Niet uitgevoerd |
 | T-023 | FR-025 | Favoriet toevoegen/verwijderen, pagina herladen | Favorieten blijven lokaal per browser behouden; geen serveraccount nodig | Niet uitgevoerd |
 | T-024 | FR-026 | Galerie en delen/kopiëren kavel-link | Goede foto en bruikbare deelbare URL | Niet uitgevoerd |
@@ -42,6 +41,8 @@
 | T-035 | FR-001 | `SHOW CREATE TABLE admins;` via phpMyAdmin | Primaire sleutel, unieke e-mailindex, verplichte `password_hash` en aanmaakdatum aanwezig | **Geslaagd 18-10-2026** — DDL bevestigd en opgenomen in `docs/DATABASE.md`. Login-/rollenwerking niet getest |
 | T-036 | FR-001 | `SHOW CREATE TABLE login_attempts;` in phpMyAdmin | Primaire sleutel, `ip_hash CHAR(64)` (ASCII), timestamp en samengestelde index op IP-hash/tijdstip aanwezig | **Geslaagd 18-10-2026** — geverifieerd via aangeleverde screenshot; DDL in `docs/DATABASE.md` |
 | T-037 | FR-001 | Test inloglimiet met gecontroleerde testaccount/IP en herstel na tijdvenster, inclusief opschoning oude pogingen | Na 8 mislukte pogingen binnen 15 minuten wordt de volgende poging tijdelijk geblokkeerd; records ouder dan 24 uur worden bij login-POST opgeschoond, succesvolle login wist IP-pogingen | Niet uitgevoerd — **uitsluitend testomgeving**, geen productieblokkering veroorzaken |
+| T-038 | FR-002/004 | Invalide kavelinvoer veroorzaakt fout; ingevoerde gegevens blijven zichtbaar in het formulier | POST-gegevens blijven behouden zonder onverwachte aanmaak/wijziging | **Code-inspectie: afwijking gevonden 18-10-2026** — invoervelden worden na een fout uit DB/defaults opgebouwd; niet interactief getest, zie issue #5 |
+| T-039 | FR-002/006 | Fotoupload mislukt bij het opslaan van een nieuw kavel | Eenduidig resultaat: geen onbedoelde gedeeltelijke save of onjuiste melding, geen verweesde foto's | **Code-inspectie: risico gevonden 18-10-2026** — lot-insert gebeurt vóór uploadvalidatie; niet getest, zie issue #5 |
 
 ## Registratie bij uitvoering
 
@@ -57,4 +58,4 @@ Bewijs / notities:
 Actiehouder en eventuele follow-up:
 ```
 
-**Let op:** voer T-012 t/m T-017 alleen uit met geschikte testdata of in een geïsoleerde testomgeving. Test geen risicovolle herstelactie rechtstreeks op productie.
+**Let op:** voer T-012 t/m T-017, T-037 t/m T-039 en destructieve CSV-/CRUD-tests alleen uit met geschikte testdata of in een geïsoleerde testomgeving. Test geen risicovolle herstelactie rechtstreeks op productie.
