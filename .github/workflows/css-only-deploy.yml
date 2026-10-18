@@ -1,0 +1,133 @@
+
+name: Deploy admin CSS only (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Choose plan first; deploy requires approval"
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      release_sha:
+        description: "Approved full main commit SHA (required for deploy)"
+        required: false
+        type: string
+        default: ""
+      confirmation:
+        description: "For deploy only: type DEPLOY CSS"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  css-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+
+    steps:
+      - name: Checkout approved main
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate CSS-only release offline
+        run: |
+          python -m py_compile scripts/deploy_admin_css_only.py
+          python scripts/deploy_admin_css_only.py plan
+
+      - name: Authorize production change
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+
+          if [ "$CONFIRMATION" != "DEPLOY CSS" ]; then
+            echo "Production deployment not authorized"
+            exit 1
+          fi
+
+          if [ -z "$RELEASE_SHA" ] || [ "$RELEASE_SHA" != "$GITHUB_SHA" ]; then
+            echo "Approved release SHA does not match checked-out commit"
+            exit 1
+          fi
+
+          for name in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required SFTP setting: $name"
+              exit 1
+            fi
+          done
+
+      - name: Install SFTP client
+        if: inputs.mode == 'deploy'
+        run: python -m pip install 'paramiko==3.5.1'
+
+      - name: Back up current production CSS
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_admin_css_only.py backup
+
+      - name: Save private rollback artifact
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovh-css-before-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload CSS and verify SHA-256
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_admin_css_only.py upload
+
+      - name: Read-only production smoke tests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          check() {
+            actual=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' "$1")
+            if [ "$actual" != "$2" ]; then
+              echo "Unexpected HTTP $actual for $1"
+              exit 1
+            fi
+          }
+
+          check https://41lokeren.be/ 200
+          check https://41lokeren.be/admin/index.php 303
+          check https://41lokeren.be/admin/import.php 404
+
+          post_code=$(curl -sS --max-time 20 -X POST --data '' \
+            -o /dev/null -w '%{http_code}' \
+            https://41lokeren.be/admin/import.php)
+
+          test "$post_code" = "404"
+          echo "Production smoke tests passed"
