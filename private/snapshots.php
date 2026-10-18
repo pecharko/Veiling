@@ -42,7 +42,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
   $assets=snap_assets(); $bytes=0;foreach($assets as $path)$bytes+=(int)filesize($path);
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
-  $free=@disk_free_space(snap_dir());if(is_numeric($free)&&$free>=0&&$free<$bytes+20*1024*1024)throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
+  $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
   $data=json_encode(['format'=>'41lokeren-v1','created_at'=>gmdate('c'),'tables'=>$rows],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
   $space=snap_storage_stats($quotaBytes);
   if($space['warnings'])throw new RuntimeException('Opslaggebruik kan niet volledig worden bepaald; snapshot uit voorzorg geweigerd.');
@@ -148,6 +148,12 @@ function snap_storage_stats(int $quotaBytes=1073741824): array {
  $percent=$quotaBytes>0?($total/$quotaBytes*100):0;
  return ['quota'=>$quotaBytes,'total'=>$total,'free'=>max(0,$quotaBytes-$total),'percent'=>$percent,
   'parts'=>$parts,'snapshots'=>$backupBytes,'uploads'=>$uploadsBytes,'warnings'=>$warnings,'files'=>$count];
+}
+/** Shared disk-space guard: false means unknown and the estimated quota still applies. */
+function snap_has_physical_capacity(int|float|false $diskFree,int $photoBytes): bool {
+ if($photoBytes<0)return false;
+ if($diskFree===false)return true;
+ return $diskFree >= $photoBytes+20*1024*1024;
 }
 /** Consistent UI warning classification; no disk writes. */
 function snap_storage_level(float $percent): string {
