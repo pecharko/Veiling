@@ -61,7 +61,7 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 
 De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validatie) en **FR-009** (CSV-import) is gericht nagekeken. De PHP-implementatie is aanwezig, maar de geauthenticeerde en muterende testscenario's zijn **niet uitgevoerd**; zie [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md).
 
-**Bevinding bij FR-002/004/006:** bij een fout in `admin/kavel.php` worden eerder ingevoerde formulierwaarden niet opnieuw uit de POST getoond. Daarnaast gebeurt de lot-INSERT/UPDATE vóór de uploadvalidatie, wat een misleidende foutmelding over al opgeslagen gegevens kan veroorzaken. Dit is als codebevinding vastgelegd in [issue #5](https://github.com/pecharko/Veiling/issues/5) met de nog openstaande scenario's **T-038/T-039**. Geen gebruikersdata aangepast of live foutscenario gereproduceerd.
+**Voorgestelde verbetering FR-002/004/006 (branch `fix/kavel-editor-validation-recovery`):** na een fout in `admin/kavel.php` vult `lot_form_values()` de invoer opnieuw vanuit de ingestuurde formulierwaarden, met serverzijde HTML-escaping bij weergave. `photo_files()` controleert uploadstatus en tijdelijke uploadbestanden nu **vóór** de SQL INSERT/UPDATE. Bij zulke uploadfouten vermeldt de foutmelding dat het kavel niet is opgeslagen. Latere problemen met inhoud/conversie van afzonderlijke foto's geven na de SQL-save nog steeds expliciet een **gedeeltelijk succes** als waarschuwing. Automatische formuliertests zijn toegevoegd; **T-038/T-039 blijven open tot PR-CI en geïsoleerde integratietests**. Zie [issue #5](https://github.com/pecharko/Veiling/issues/5). De productiecode is niet aangepast.
 
 ## Uitgewerkte acceptatiecriteria voor risicovolle functies
 
