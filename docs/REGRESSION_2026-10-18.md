@@ -3,7 +3,7 @@
 **Project:** 41 Lokeren online veilingcatalogus  
 **Referenties:** `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md`, `docs/DATABASE.md`.  
 **Scope:** aanmelding/autorisatie, kavelbeheer en CSV-import.  
-**Status:** statische broncode-review uitgevoerd; **geen geauthenticeerde of muterende integratietests uitgevoerd**.
+**Status:** statische broncode-review uitgevoerd; **T-001 (basiscontrole zonder login) is via gebruikersscreenshot op 18-10-2026 geslaagd**. Geen geauthenticeerde of muterende integratietests uitgevoerd.
 
 ## Wat is daadwerkelijk gecontroleerd?
 
@@ -18,6 +18,12 @@
 | Publicatiestatus bij CSV | `catalogus-public/admin/import.php` | Zonder `publiceren`-kolom blijft de bestaande status behouden; nieuwe lots worden draft. Alleen statisch geverifieerd. |
 
 **De live website kon niet betrouwbaar worden opgehaald via externe GET-controle; daaruit volgt geen bewijs voor werking of uitval.** De browser-/adminchecks vragen een gebruiker met een geldige sessie. Er zijn geen bestaande kavels aangepast of uploads/imports uitgevoerd.
+
+## Resultaat eerste handmatige browsertest (18 oktober 2026)
+
+- **T-001 — Geslaagd voor de basiscontrole:** de gebruiker opende naar aanleiding van de instructies `https://41lokeren.be/admin/index.php` in een incognitovenster en stuurde een screenshot van het scherm **Beheerderstoegang / Welkom terug** met e-mailadres- en wachtwoordvelden. Afgeschermde kavelgegevens waren niet zichtbaar.
+- **Beperking bewijs:** de browseradresbalk is niet op de screenshot te zien. Daardoor is de exacte eind-URL `/admin/login.php` niet afzonderlijk uit het screenshot vast te stellen. Anonieme toegang tot `/admin/import.php` en `/admin/kavel.php`, inloggen met correcte credentials en uitloggen zijn nog niet daadwerkelijk gecontroleerd.
+- **Datamutaties:** geen. Geen wachtwoorden of sessiegegevens verzameld.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
