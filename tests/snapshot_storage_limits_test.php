@@ -65,6 +65,15 @@ capacity_check(!snap_has_estimated_capacity(['free'=>null,'warnings'=>[]],$photo
 capacity_check(!snap_has_estimated_capacity(['free'=>$required,'warnings'=>[]],-1,$dbsize),
     'T-017 invalid negative upload size fails closed');
 
+capacity_check(!snap_has_physical_capacity(0,$photos),
+    'T-017 zero actual free disk bytes blocks snapshot even if quota estimate is healthy');
+capacity_check(!snap_has_physical_capacity($margin+$photos-1,$photos),
+    'T-017 physical disk one byte below margin blocks snapshot');
+capacity_check(snap_has_physical_capacity($margin+$photos,$photos),
+    'T-017 physical disk exactly at required margin allows snapshot');
+capacity_check(snap_has_physical_capacity(false,$photos),
+    'T-017 unavailable disk_free_space leaves quota preflight responsible');
+
 // Real snap_create with simulated quota. No large files / production storage.
 $storage=snap_storage_stats();
 $assets=snap_assets();
