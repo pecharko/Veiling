@@ -40,7 +40,7 @@ private/
 
 `admins`, `login_attempts`, `lots`, `lot_images`, `settings`.
 
-**Het geverifieerde schema van `lots` staat in [DATABASE.md](DATABASE.md)** (bron: phpMyAdmin `SHOW CREATE TABLE lots;`, 18 oktober 2026). De tabel bevat onder meer de afzonderlijke `UNIQUE KEY lot_number (lot_number)`, de indexen `idx_public (status, lot_number)` en `idx_category (status, category)`, en gebruikt InnoDB. Voor `settings`, `admins`, `lot_images` en `login_attempts` ontbreken nog geverifieerde DDL's/foreign keys; publiceer geen productiegegevens, inlog- of passwordhashwaarden.
+**De geverifieerde schema's van `lots` en `lot_images` staan in [DATABASE.md](DATABASE.md)** (bron: phpMyAdmin `SHOW CREATE TABLE`, 18 oktober 2026). `lots.lot_number` heeft een unieke index; `lot_images.lot_id` verwijst met `fk_lot_image` naar `lots.id` en gebruikt `ON DELETE CASCADE`. De samengestelde `uq_source(lot_id,source_name)` geldt voor niet-NULL bronbestandsnamen; foto-volgorde via `idx_img(lot_id,sort_order,id)`. Let op: databasecascade verwijdert geen fysieke fotobestanden; de PHP-opruimlogica vereist een regressietest. Voor `settings`, `admins` en `login_attempts` ontbreken nog geverifieerde DDL's/foreign keys; publiceer geen productiegegevens, inlog- of passwordhashwaarden.
 
 ## Beveiligingsgrenzen
 
