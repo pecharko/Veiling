@@ -66,6 +66,8 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 **Extra controlebewijs 18-10-2026:** `SELECT lot_number, COUNT(*) AS aantal FROM lots GROUP BY lot_number HAVING COUNT(*) > 1 ORDER BY lot_number;` leverde volgens het aangeleverde phpMyAdmin-screenshot **nul rijen** op: er zijn geen bestaande dubbele lotnummers (T-030 geslaagd). De interactieve functionele testen blijven open.
 
 **Schema vastgelegd 18-10-2026:** de volledige DDL van `lots` uit `SHOW CREATE TABLE lots;` is gedocumenteerd in [DATABASE.md](DATABASE.md). T-031 is geslaagd. De databaselaag van FR-003 is bevestigd, maar de requirement blijft **Te verifiëren** voor kaveleditor-/CSV- en gelijktijdige bewerkingstests.
+
+**Fotorelatie bevestigd 18-10-2026 (FR-007/FR-008/FR-010):** `SHOW CREATE TABLE lot_images;` toont foreign key `fk_lot_image (lot_id) REFERENCES lots(id) ON DELETE CASCADE`, fotovolgorde-index `idx_img (lot_id,sort_order,id)` en een unieke index `uq_source (lot_id,source_name)` voor niet-NULL bronbestandsnamen. DDL is opgenomen in [DATABASE.md](DATABASE.md); T-032 (schemacontrole) geslaagd. De praktijk van cascadeverwijdering en fysieke bestandsopruiming blijft te testen (T-033).
 1. Een lotnummer is uniek op databaseniveau, niet alleen via een UI-controle.
 2. Bewerken van een bestaande kavel met hetzelfde eigen lotnummer blijft mogelijk.
 3. Een poging om een bestaand nummer te gebruiken geeft een begrijpelijke melding.
