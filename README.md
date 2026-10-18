@@ -11,6 +11,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 - [Databaseschema](docs/DATABASE.md) — **alle vijf tabellen geverifieerd**: `lots`, `lot_images`, `settings`, `admins` en `login_attempts`.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
+- [Regressiecontrole fase 1](docs/REGRESSION_2026-10-18.md) — veilige volgorde voor aanmelden, kavelbeheer en CSV-import; broncodebevindingen.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
 - [Code-audit 17/10/2026](docs/CODE_AUDIT_2026-10-17.md) — statisch vastgestelde functionaliteit, risico's en opvolging.
 
@@ -53,3 +54,8 @@ De Git-repository is geen vervanging voor back-ups van database, uploads, produc
 - [GitHub-issue #2](https://github.com/pecharko/Veiling/issues/2) — consistent en veilig snapshot-/herstelproces.
 - [GitHub-issue #3](https://github.com/pecharko/Veiling/issues/3) — unieke lotnummers bevestigd; functionele tests en resterende databaseschema's opvolgen.
 - [GitHub-issue #4](https://github.com/pecharko/Veiling/issues/4) — ontbrekende assets en installatieverwijzingen controleren.
+- [GitHub-issue #5](https://github.com/pecharko/Veiling/issues/5) — kavelvelden verdwijnen na fout; mogelijk partiële opslag bij mislukte fotoupload.
+
+## Automatische kwaliteitscontrole
+
+Het bestand `.github/workflows/php-lint.yml` voert bij een GitHub-push of pull request een **PHP 8.2-syntaxcontrole** uit op de versiebeheerde PHP-code. Volg de uitvoering onder [Actions](https://github.com/pecharko/Veiling/actions). Deze codecontrole vervangt geen functionele tests of een deployment op OVHcloud.
