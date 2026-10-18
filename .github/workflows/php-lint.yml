@@ -37,4 +37,11 @@ jobs:
           done
 
       - name: Detect whitespace errors
-        run: git diff --check HEAD^ HEAD || git diff --check
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git rev-parse --verify HEAD^ >/dev/null 2>&1; then
+            git diff --check HEAD^ HEAD
+          else
+            git diff --check
+          fi
