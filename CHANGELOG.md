@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Gerichte SFTP-deployment van opslagcorrecties T-016/T-017 (voorbereid, niet live)
+- Dedicated handmatige GitHub Actions-release voor twee PHP-bestanden, in veilige volgorde `private/snapshots.php` daarna `catalogus-public/admin/backup.php`.
+- Vooraf controle van projectroot, codeback-up van beide bestanden als zeven dagen privé artifact, serverdrift-controle en SHA-256-verificatie; bij uploadfout best-effort code-rollback.
+- Na handmatig goedgekeurde upload alleen read-only HTTP-controles (homepage, login, back-up achter login, CSV nog steeds 404). **Geen automatische productie-uitrol, geen MySQL-/datasnapshot-wijzigingen.**
+
 ### Opslagwaarschuwingen en snapshot-capaciteit — T-016/T-017
 - **T-016/T-017: 29/29 controles geslaagd** in geïsoleerde CI ([run 39126901647](https://github.com/pecharko/Veiling/actions/runs/39126901647)), met gesimuleerde opslaglimieten: niveaus rond 80% (waarschuwing) en 90% (kritiek), schijf- en quota-preflight inclusief 20 MiB veiligheidsmarge, echte snapshotcreatie met te lage/volledige testquota.
 - Onvolledige bestandsmeting mag de capaciteitspreflight niet langer onbedoeld overslaan: een nieuw snapshot wordt dan uit voorzorg geweigerd.

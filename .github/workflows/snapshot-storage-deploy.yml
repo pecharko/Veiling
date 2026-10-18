@@ -1,0 +1,126 @@
+name: Deploy T-016 T-017 opslagveiligheid (handmatig)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = alleen controle; deploy = exact twee PHP-bestanden overzetten'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      confirmation:
+        description: 'Voor echte upload exact DEPLOY SNAPSHOTS typen'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  snapshot-storage:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout approved main
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Inspect exact release list and Python syntax
+        run: |
+          python3 -m py_compile scripts/deploy_snapshot_storage.py
+          python3 scripts/deploy_snapshot_storage.py plan
+
+      - name: Set up PHP for syntax checks
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+
+      - name: Verify both source files compile
+        run: |
+          php -l private/snapshots.php
+          php -l catalogus-public/admin/backup.php
+
+      - name: Require explicit approval for production
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != 'DEPLOY SNAPSHOTS' ]; then
+            echo 'Not authorized: enter DEPLOY SNAPSHOTS to upload.'
+            exit 1
+          fi
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!key:-}" ]; then
+              echo "SFTP configuration missing: $key"
+              exit 1
+            fi
+          done
+
+      - name: Install pinned SFTP client
+        if: inputs.mode == 'deploy'
+        run: python3 -m pip install 'paramiko==3.5.1'
+
+      - name: Verify remote tree and back up both previous PHP files
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_snapshot_storage.py backup
+
+      - name: Store private recovery artifact BEFORE uploading
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovh-snapshot-storage-before-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload snapshot helper first, then admin, and read back SHA256
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_snapshot_storage.py upload
+
+      - name: Check public site, admin authentication and disabled CSV route
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            local description="$1" expected="$2" url="$3" method="${4:-GET}"
+            local actual
+            actual=$(curl --silent --show-error --max-time 20 \
+              -o /dev/null -w '%{http_code}' -X "$method" "$url")
+            if [ "$actual" != "$expected" ]; then
+              echo "$description FAILED: HTTP $actual, expected $expected"
+              exit 1
+            fi
+            echo "$description OK: HTTP $actual"
+          }
+          check 'Homepage' 200 'https://41lokeren.be/'
+          check 'Login page' 200 'https://41lokeren.be/admin/login.php'
+          check 'Protected backup page' 303 'https://41lokeren.be/admin/backup.php'
+          check 'CSV disabled GET' 404 'https://41lokeren.be/admin/import.php'
+          check 'CSV disabled empty POST' 404 'https://41lokeren.be/admin/import.php' POST

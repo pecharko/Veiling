@@ -52,6 +52,11 @@ jobs:
           python3 -m py_compile scripts/deploy_kavel_editor.py
           python3 scripts/deploy_kavel_editor.py plan
 
+      - name: Verify T-016/T-017 deployment manifest offline
+        run: |
+          python3 -m py_compile scripts/deploy_snapshot_storage.py
+          python3 scripts/deploy_snapshot_storage.py plan
+
       - name: Detect whitespace errors
         shell: bash
         run: |
