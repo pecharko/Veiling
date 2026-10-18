@@ -56,6 +56,7 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-027 | Kaveloverzicht in admin | Overzicht toont aantallen, statussen, foto's, zoeken/filteren en pagineren voor de beheerder. | Statisch bevestigd |
 | FR-028 | Systeemcontrole | Admin ziet controles van PHP, MySQL, configuratie, HTTPS en schrijfrechten, met duidelijke resultaten. | Statisch bevestigd |
 | FR-029 | Downloadbaar CSV-voorbeeld | Niet zichtbaar of downloadbaar vanuit de admin zolang FR-009 is uitgeschakeld; voorbeeld-CSV uit actieve Git-tree verwijderd. | Tijdelijk uitgeschakeld |
+| FR-030 | Veilige, handmatig gestarte OVH-deployment | Beheerder kan vanuit GitHub op `main` eerst een releaseplan inzien en daarna vijf vooraf goedgekeurde PHP-bestanden via SFTP deployen; met hostkeycontrole, SFTP-secrets, vóór-uploadback-up, hashverificatie en niet-destructieve HTTP-smoketests. Geen automatische deploy na commit en geen secrets in Git. | Gepland / geïmplementeerd in PR, echte verbinding nog te testen |
 
 **CSV-voorbeeld 18-10-2026 (FR-029):** Chrome toont bij de downloadpoging `voorbeeld-kavels.html` en `File wasn't available on site`; het in `admin/import.php` genoemde bestand ontbrak in de GitHub-repository. `catalogus-public/assets/voorbeeld-kavels.csv` is nu toegevoegd en gecontroleerd op de negen importkolommen, puntkommascheiding en UTF-8-BOM. **Nog vereist:** upload naar OVHcloud en geslaagde browserdownload bevestigen (T-028). De twee fictieve records zijn expliciet als voorbeelden gemarkeerd en staan op `publiceren=nee`.
 

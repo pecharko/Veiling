@@ -2,6 +2,44 @@
 
 **Uitrolmodel:** voorlopig handmatige bestandenoverdracht naar OVHcloud via RemoteDrive. **Geen automatische deployment vanuit GitHub.**
 
+## Geautomatiseerde, gecontroleerde SFTP-upload (nieuwe mogelijkheid)
+
+Workflow: [GitHub Actions — Deploy naar OVHcloud (handmatig)](../.github/workflows/ovhcloud-deploy.yml). Uploadscript: [`scripts/deploy_ovh_sftp.py`](../scripts/deploy_ovh_sftp.py).
+
+**Doel:** minder handwerk via RemoteDrive. De eerste release uploadt bewust **alleen de vijf hieronder genoemde PHP-bestanden voor het uitschakelen van CSV-import**. De workflow draait **niet automatisch bij commits**; een beheerder start ze expliciet, vanaf de `main`-branch. De standaardkeuze `plan` toont enkel de bestanden en wijzigt niets. De optie `deploy` vereist het exacte bevestigingswoord **`DEPLOY`**.
+
+### Eenmalig in te stellen in OVHcloud
+
+1. Open **OVHcloud Manager → Web Cloud → Hosting → FTP - SSH**. Verifieer de SFTP-servernaam en de FTP-gebruiker. Activeer **SFTP** voor deze gebruiker indien nodig; OVH Starter ondersteunt dit.
+2. Controleer in je SFTP-client wat de login-basismap is. Zoek vanuit die map de twee **naast elkaar liggende mappen** `catalogus-public/` en `private/`. De repository gebruikt die structuur. Een SFTP-pad `.` kan correct zijn wanneer je bij aanmelden meteen in `/home/kobejoe` terechtkomt; gebruik anders het daadwerkelijk bevestigde pad. **Niet gokken.**
+3. Controleer de SSH-hostsleutelvingerafdruk van de server via een reeds vertrouwde SFTP-verbinding of OVHcloud. Gebruik die verificatie om de uitvoer van `ssh-keyscan -p 22 <SFTP-host>` te valideren; `ssh-keyscan` alleen geeft **geen** identiteitgarantie.
+
+### Eenmalig in GitHub instellen
+
+In [GitHub-repository-instellingen](https://github.com/pecharko/Veiling/settings/secrets/actions) → **Settings → Secrets and variables → Actions**:
+
+| Type | Naam | Waarde |
+|---|---|---|
+| Secret | `OVH_SFTP_HOST` | Gecontroleerde SFTP-hostnaam uit OVHcloud |
+| Secret | `OVH_SFTP_USER` | Gebruikersnaam van FTP/SFTP |
+| Secret | `OVH_SFTP_PASSWORD` | SFTP-wachtwoord, alleen in GitHub Secrets invoeren |
+| Secret | `OVH_SFTP_KNOWN_HOSTS` | Hele geverifieerde SSH-`known_hosts`-regel voor host: `hostnaam ssh-ed25519 AAAA...` (kan ook ander SSH-sleuteltype zijn) |
+| Variable | `OVH_SFTP_BASE` | SFTP-basismap die `catalogus-public/` en `private/` bevat, bijvoorbeeld `.` indien bevestigd |
+
+Gebruik voor dit doel bij voorkeur een afzonderlijke SFTP-gebruiker met alleen noodzakelijke maptoegang. Deel **geen** wachtwoord of host-key secrets in ChatGPT, issues of commits. Maak desgewenst een GitHub **Environment `production`** met expliciete reviewergoedkeuring voordat de job de secrets kan gebruiken (waar dit in je plan mogelijk is). De workflow gebruikt uitsluitend een geverifieerde SSH-hostsleutel en weigert onbekende hosts; er is geen fallback naar gewone FTP.
+
+### Uitvoeren
+
+1. Open [GitHub → Actions](https://github.com/pecharko/Veiling/actions) → **Deploy naar OVHcloud (handmatig)** → **Run workflow**, branch **main**.
+2. Kies eerst **`plan`**, laat `confirmation` leeg en start. Controleer de afgedrukte lijst van precies vijf PHP-bestanden. Dit vereist nog geen SFTP-credentials.
+3. Kies daarna **`deploy`**, typ **`DEPLOY`**, en start.
+4. De workflow controleert de verbinding en de bestaande serverbestanden, **downloadt eerst de vijf oude productieversies**, bewaart die als **privé GitHub Actions-artifact voor 7 dagen**, en uploadt vervolgens de nieuwe bestanden. Na elke upload wordt de SHA-256 inhoud gecontroleerd. Bij een fout probeert het script wijzigingen terug te draaien. Dit is een **best-effort rollback**, geen volwaardige database-/serverback-up.
+5. Na upload test de job uitsluitend `GET` en een **lege POST** naar `https://41lokeren.be/admin/import.php`: beide moeten **404** teruggeven. De database blijft onaangeraakt. Controleer daarna in Chrome dat CSV-import uit de admin is verdwenen en Foto-import en Back-up & herstel nog werken.
+
+**Veiligheidsbeperkingen:** deze eerste workflow deployt niet automatisch andere toekomstige codewijzigingen. Voordat we de workflow uitbreiden, moet de vrijgavelijst en smoke-test per release gecontroleerd worden. De private `config.php`, snapshots, uploads, databasebestanden en `.htaccess` worden niet aangeraakt. **GitHub-commit ≠ live OVH-uitrol.**
+
+**Fallback:** als SFTP niet beschikbaar is of de workflow faalt, gebruik de handmatige RemoteDrive-stappen hieronder; controleer een eventueel foutgerelateerd back-upartifact vóór opnieuw uploaden.
+
 ## Uitrol: CSV-import tijdelijk verwijderen (18 oktober 2026)
 
 **Pas na merge naar `main`**, synchroniseer GitHub Desktop met de repository. Maak vóór upload een lokale kopie van de huidige bestanden in de OVHcloud-productieomgeving.
