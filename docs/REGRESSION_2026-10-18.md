@@ -3,7 +3,7 @@
 **Project:** 41 Lokeren online veilingcatalogus  
 **Referenties:** `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md`, `docs/DATABASE.md`.  
 **Scope:** aanmelding/autorisatie, kavelbeheer en CSV-import.  
-**Status:** statische broncode-review uitgevoerd; **T-001 (basiscontrole zonder login) is via gebruikersscreenshot op 18-10-2026 geslaagd**. Geen geauthenticeerde of muterende integratietests uitgevoerd.
+**Status 18 oktober 2026:** statische broncode-review uitgevoerd, drie anonieme adminroutes visueel afgeschermd (T-001). De gebruiker meldde zich met eigen account aan en toont het adminoverzicht (T-001B), **maar de browser toont 'Not Secure' (T-040, issue #6).** Geen muterende integratietests uitgevoerd; vervolgtests van adminacties opgeschort tot TLS is beoordeeld.
 
 ## Wat is daadwerkelijk gecontroleerd?
 
@@ -26,6 +26,14 @@
 - **Derde toegangscontrole:** na het openen van `/admin/kavel.php` in hetzelfde incognitovenster toonde de gebruiker opnieuw het loginformulier, nu met de adresbalk `41lokeren.be/admin/login.php` zichtbaar. Het afgeschermde kaveleditorformulier was niet zichtbaar. De drie gevraagde routes hebben hiermee een geslaagde visuele basiscontrole; de exacte redirect is nu voor de derde controle in beeld.
 - **Beperking bewijs:** het screenshot toont de eind-URL van de derde controle, niet gelijktijdig de vooraf gevraagde kaveleditor-URL. De navigatie is beoordeeld binnen de gevolgde testinstructie. Inloggen met correcte credentials, uitloggen en andere adminroutes zijn nog niet functioneel getest.
 - **Datamutaties:** geen. Geen wachtwoorden of sessiegegevens verzameld.
+
+## Aanmelding met geldig account en mogelijke HTTPS-fout (18 oktober 2026)
+
+De gebruiker deelde na de instructie om met een bestaand beheerdersaccount in te loggen een screenshot van `41lokeren.be/admin/index.php` met een ingelogde beheerinterface. Zichtbaar zijn een kaveloverzicht, 10 kavels, alle 10 gepubliceerd, 10 kavels met een foto, een ingeschakelde publieke catalogus en het menu-item Back-up & herstel. **T-001B: toegang na aanmelding bevestigd.**
+
+**Beveiligingswaarschuwing T-040:** Chrome toont op dezelfde screenshot links van het adres `Not Secure` (rood). Daardoor is **niet aangetoond dat de inlogverbinding versleuteld en correct gevalideerd is**. De precieze oorzaak van de melding en het daadwerkelijke protocol zijn niet af te leiden uit het screenshot alleen. Rechtstreekse externe TLS-/HTTP-controle vanuit de assistentomgeving is niet betrouwbaar gelukt. De mogelijke HTTPS-/certificaatfout is als **P0 GitHub [issue #6](https://github.com/pecharko/Veiling/issues/6)** vastgelegd.
+
+**Volgorde:** vóór andere adminacties eerst het browserbeveiligingspaneel controleren en indien nodig de OVHcloud SSL-domeinkoppeling/certificaatconfiguratie repareren. Geen wachtwoorden, cookies of persoonsgegevens delen; geen certificaatwaarschuwingen omzeilen. Tests van kavelbewerking, CSV-import, fotoupload en logout blijven voorlopig open.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
