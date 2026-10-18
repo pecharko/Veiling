@@ -62,6 +62,8 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 ### FR-003 — Unieke lotnummers
 
 **Controlebewijs 18-10-2026:** aangeleverde phpMyAdmin-uitvoer van `SHOW INDEX FROM lots;` toont index `lot_number`, `Column_name=lot_number`, `Seq_in_index=1`, `Non_unique=0`. Daarmee is databank-uniciteit bevestigd. FR-003 blijft **Te verifiëren** tot de functionele tests voor duplicaatmeldingen, import en gelijktijdige bewerkingen zijn uitgevoerd. Geen schemawijziging nodig.
+
+**Extra controlebewijs 18-10-2026:** `SELECT lot_number, COUNT(*) AS aantal FROM lots GROUP BY lot_number HAVING COUNT(*) > 1 ORDER BY lot_number;` leverde volgens het aangeleverde phpMyAdmin-screenshot **nul rijen** op: er zijn geen bestaande dubbele lotnummers (T-030 geslaagd). De interactieve functionele testen blijven open.
 1. Een lotnummer is uniek op databaseniveau, niet alleen via een UI-controle.
 2. Bewerken van een bestaande kavel met hetzelfde eigen lotnummer blijft mogelijk.
 3. Een poging om een bestaand nummer te gebruiken geeft een begrijpelijke melding.
