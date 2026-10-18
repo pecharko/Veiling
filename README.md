@@ -2,7 +2,7 @@
 
 Deze repository bevat de **broncode en documentatie** van de online veilingcatalogus van 41 Lokeren: <https://41lokeren.be>.
 
-**Actuele productbeslissing (18 oktober 2026):** de CSV-import van kavels is op verzoek tijdelijk verwijderd uit het beheer. De directe importroute is in de repository geblokkeerd; **foto-import blijft beschikbaar**. De wijziging wordt pas actief op 41lokeren.be nadat de aangepaste bestanden op OVHcloud zijn geplaatst. Zie [uitrolinstructies](docs/DEPLOYMENT.md).
+**Actuele productstatus (18 oktober 2026):** de CSV-import van kavels is op verzoek tijdelijk verwijderd en op **41lokeren.be actief uitgeschakeld** (GET/POST 404, menu en dashboard gecontroleerd); foto-import blijft beschikbaar. De kaveleditorcorrectie van [PR #7](https://github.com/pecharko/Veiling/pull/7) is in `main` gemerged en heeft 20 geïsoleerde HTTP/MySQL-integratiechecks doorstaan, maar **is nog niet op OVHcloud gepubliceerd**. Zie [uitrolinstructies](docs/DEPLOYMENT.md).
 
 **Status (17 oktober 2026):** de actuele applicatiebroncode is door de gebruiker vanaf een OVHcloud-kopie naar deze repository gepusht en belangrijke PHP-bestanden zijn statisch geïnspecteerd. **Nog geen geteste/volledige herstelbaseline:** database, kavelfoto's, configuratiegeheimen en sommige ontbrekende assets zijn niet in Git opgeslagen. Zie [eerste code-audit](docs/CODE_AUDIT_2026-10-17.md).
 
@@ -13,6 +13,8 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 - [Databaseschema](docs/DATABASE.md) — **alle vijf tabellen geverifieerd**: `lots`, `lot_images`, `settings`, `admins` en `login_attempts`.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
 - [Handmatige GitHub Actions-deploy](.github/workflows/ovhcloud-deploy.yml) — veilige SFTP-upload met één klik na eenmalige configuratie; start standaard als niet-destructief plan, geen automatische uitrol bij commits.
+- [Afzonderlijke kaveleditor-deploy](.github/workflows/kavel-deploy.yml) — alleen `private/lot_form.php` en `catalogus-public/admin/kavel.php`, na expliciete bevestiging; eerst een offline plan.
+- [Geïsoleerde kaveleditortests](.github/workflows/kavel-integration.yml) — HTTP/PHP/MySQL-test van invoerbehoud en foto's, zonder productiegegevens.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
 - [Regressiecontrole fase 1](docs/REGRESSION_2026-10-18.md) — veilige volgorde voor aanmelden, kavelbeheer en CSV-import; broncodebevindingen.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
@@ -48,7 +50,7 @@ Iedere wijziging aan de applicatie koppelen we aan een requirement-ID en werken 
 3. `CHANGELOG.md`;
 4. testresultaten en zo nodig `docs/DEPLOYMENT.md`.
 
-Wijzigingen op GitHub komen **niet automatisch** op OVHcloud terecht: uitrol gebeurt voorlopig gecontroleerd via RemoteDrive. De geïmporteerde code is **statisch** beoordeeld; pas na uitvoering van het testplan mag een release als geteste baseline worden gemarkeerd.
+Wijzigingen op GitHub komen **niet automatisch** op OVHcloud terecht: goedgekeurde releases worden gecontroleerd via **handmatig gestarte GitHub Actions/SFTP-workflows** uitgerold; RemoteDrive blijft als fallback beschikbaar. De geïmporteerde code is **statisch** beoordeeld; pas na uitvoering van het testplan mag een release als geteste baseline worden gemarkeerd.
 
 ## Back-ups
 
