@@ -3,7 +3,7 @@
 **Project:** 41 Lokeren online veilingcatalogus  
 **Referenties:** `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md`, `docs/DATABASE.md`.  
 **Scope:** aanmelding/autorisatie, kavelbeheer en CSV-import.  
-**Status 18 oktober 2026:** statische broncode-review uitgevoerd, drie anonieme adminroutes visueel afgeschermd (T-001). De gebruiker meldde zich met eigen account aan en toont het adminoverzicht (T-001B), **maar de browser toont 'Not Secure' (T-040, issue #6).** Geen muterende integratietests uitgevoerd; vervolgtests van adminacties opgeschort tot TLS is beoordeeld.
+**Status 18 oktober 2026:** drie anonieme adminroutes visueel afgeschermd (T-001); adminoverzicht na aanmelden bereikbaar (T-001B). Een later Chrome-beveiligingspaneel bevestigt **'Connection is secure' en 'Certificate is valid' voor 41lokeren.be**. T-040 is daarmee **gedeeltelijk geslaagd**; HTTP→HTTPS-doorverwijzing en verdere sessie-/logouttests zijn nog open. Geen muterende datatests uitgevoerd.
 
 ## Wat is daadwerkelijk gecontroleerd?
 
@@ -34,6 +34,10 @@ De gebruiker deelde na de instructie om met een bestaand beheerdersaccount in te
 **Beveiligingswaarschuwing T-040:** Chrome toont op dezelfde screenshot links van het adres `Not Secure` (rood). Daardoor is **niet aangetoond dat de inlogverbinding versleuteld en correct gevalideerd is**. De precieze oorzaak van de melding en het daadwerkelijke protocol zijn niet af te leiden uit het screenshot alleen. Rechtstreekse externe TLS-/HTTP-controle vanuit de assistentomgeving is niet betrouwbaar gelukt. De mogelijke HTTPS-/certificaatfout is als **P0 GitHub [issue #6](https://github.com/pecharko/Veiling/issues/6)** vastgelegd.
 
 **Volgorde:** vóór andere adminacties eerst het browserbeveiligingspaneel controleren en indien nodig de OVHcloud SSL-domeinkoppeling/certificaatconfiguratie repareren. Geen wachtwoorden, cookies of persoonsgegevens delen; geen certificaatwaarschuwingen omzeilen. Tests van kavelbewerking, CSV-import, fotoupload en logout blijven voorlopig open.
+
+### Aanvullend bewijs HTTPS (18 oktober 2026)
+
+Een derde browserscreenshot toont het Chrome-sitebeveiligingspaneel van **41lokeren.be** met de letterlijke meldingen **`Connection is secure`** en **`Certificate is valid`**. Daarmee is voor de op dat moment geopende beheerderspagina een veilige, door Chrome gevalideerde verbinding aangetoond. De oorspronkelijke rode waarschuwing is op recentere screenshots verdwenen. Dit bewijst **niet** dat een onversleuteld `http://`-verzoek automatisch serverzijdig naar `https://` wordt omgeleid of dat iedere route dezelfde beveiliging afdwingt. [Issue #6](https://github.com/pecharko/Veiling/issues/6) blijft daarom open voor de resterende HTTPS-hardeningcontrole. De administratie kan verder worden getest via uitdrukkelijke HTTPS-URL's, zonder destructieve acties.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
