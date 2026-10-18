@@ -36,11 +36,11 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-012 | Zichtbaarheid volledige catalogus | Beheerder kan de publieke catalogus aan/uitzetten, onafhankelijk van status per kavel. | Statisch bevestigd |
 | FR-013 | Publieke catalogus en kavelpagina | Bezoeker kan zichtbare kavels en hun informatie/foto's bekijken zonder beheerrechten. | Statisch bevestigd |
 | FR-014 | Offline biedproces | Publieke informatie vermeldt dat bieden uitsluitend tijdens de fysieke veiling gebeurt; geen online biedinterface. | Statisch bevestigd |
-| FR-015 | Handmatige snapshot maken | Beheerder kan op verzoek een consistente back-up van relevante MySQL-gegevens en kavelfoto's maken. | Te verifiëren |
-| FR-016 | Snapshot downloaden en verwijderen | Back-up is downloadbaar; verwijderen vereist passende bevestiging en autorisatie. | Statisch bevestigd |
-| FR-017 | Snapshot herstellen | Beheerder kan een geldige snapshot kiezen; expliciete bevestiging, voorafgaande veiligheidskopie en foutafhandeling beschermen bestaande data. | Te verifiëren |
-| FR-018 | Snapshotgroottes tonen | Per snapshot en totaal is de bestandsomvang leesbaar. | Statisch bevestigd |
-| FR-019 | Opslaggebruik tonen en waarschuwen | Geschat hostinggebruik, snapshotruimte en fotogebruik worden getoond; vanaf 80% waarschuwing, vanaf 90% kritiek. | Te verifiëren |
+| FR-015 | Handmatige snapshot maken | Beheerder kan op verzoek een consistente back-up van relevante MySQL-gegevens en kavelfoto's maken. | Basiswerking in CI geslaagd (T-011/T-045, 18-10-2026); consistentie bij gelijktijdige writes nog te bewijzen |
+| FR-016 | Snapshot downloaden en verwijderen | Back-up is downloadbaar; verwijderen vereist passende bevestiging en autorisatie. | Geïsoleerde HTTP-tests geslaagd (T-045): geauthenticeerd downloaden, foute bevestiging weigeren, gekozen ZIP verwijderen |
+| FR-017 | Snapshot herstellen | Beheerder kan een geldige snapshot kiezen; expliciete bevestiging, voorafgaande veiligheidskopie en foutafhandeling beschermen bestaande data. | Basisherstel en veiligheidskopie getest in geïsoleerd CI (T-012/T-014/T-045); concurrency/crash/rollbackfouten nog open |
+| FR-018 | Snapshotgroottes tonen | Per snapshot en totaal is de bestandsomvang leesbaar. | Backendformat/lijst/totalen en UI-rendering in CI bevestigd (T-011/T-045); fysieke hosting nog niet vergeleken |
+| FR-019 | Opslaggebruik tonen en waarschuwen | Geschat hostinggebruik, snapshotruimte en fotogebruik worden getoond; vanaf 80% waarschuwing, vanaf 90% kritiek. | Bestandsoptelling en adminweergave in CI bevestigd; 80/90%-drempels en werkelijke OVH-quotavergelijking nog niet getest |
 | FR-020 | Capaciteitscontrole voor snapshot | Nieuwe snapshot wordt niet gestart wanneer de vooraf geschatte benodigde ruimte inclusief veiligheidsmarge ontoereikend is. | Te verifiëren |
 | FR-021 | Administratiemenu inclusief back-upfunctie | Back-up & herstel is bereikbaar vanuit alle beheerpagina's. | Statisch bevestigd |
 | FR-022 | CSRF-beveiliging voor schrijfacties | Iedere admin-POST die gegevens wijzigt valideert een CSRF-token. | Statisch bevestigd |
@@ -97,6 +97,8 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 **Beheerdersschema bevestigd 18-10-2026 (FR-001):** `SHOW CREATE TABLE admins;` bevestigt `id` als primaire sleutel, een unieke index op `email` en een verplichte `password_hash`-kolom. DDL staat in [DATABASE.md](DATABASE.md); T-035 is geslaagd. Er zijn geen rol-/permissiekolommen; rechtenbeheer en functionele login-/wachtwoordtests blijven open. De kolomnaam wijst op opslag van hashes, maar de DDL alleen bewijst geen correct hashbeleid.
 
 **Loginpogingen-schema bevestigd 18-10-2026 (FR-001):** `SHOW CREATE TABLE login_attempts;` bevestigt `id` als primaire sleutel, `ip_hash CHAR(64) ASCII`, een timestamp en index `idx_attempts(ip_hash,attempted_at)`. De code in `admin/login.php` registreert mislukte pogingen, gebruikt maximaal 8 pogingen binnen 15 minuten en schoont oude records op bij een login-POST. T-036 (schema) is geslaagd; T-037 (werkend blokkeren, vrijgeven en opschonen) staat open. Deterministische IP-hashes moeten als mogelijk persoonsgegeven worden behandeld. Zie [DATABASE.md](DATABASE.md).
+
+**Functionele snapshotproeven 18-10-2026:** twee geïsoleerde GitHub Actions-suites tegen MySQL 8.4 + PHP 8.2 (40/40 geslaagd, [run 39112431040](https://github.com/pecharko/Veiling/actions/runs/39112431040)). Getest: ZIP met uitsluitend databank-JSON, checksummanifest en kavelfoto's (géén PHP/CSS/JS-sourcecode); terugzetten van vijf tabellen/foto's, checksumweigering, snapshot-lock, opslagoptelling, geauthenticeerde download, CSRF, correcte bevestigingen, verwijderen, veiligheidssnapshot en sessie-invalidering. **Beperking:** geen productierestore; consistente snapshot bij gelijktijdige bewerkingen, crashrecoverability en werkelijke OVHcloud-quota blijven open onder [issue #2](https://github.com/pecharko/Veiling/issues/2).
 
 ### FR-015 t/m FR-017 — Snapshot en herstel
 1. De snapshot omvat alle tabellen en kavelfoto's die nodig zijn om de catalogus volledig te herstellen; exact bereik wordt gecontroleerd.
