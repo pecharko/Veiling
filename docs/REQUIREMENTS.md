@@ -103,7 +103,7 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 4. De getoonde limiet is instelbaar of gedocumenteerd; de OVHcloud Manager is leidend bij afwijkingen.
 5. Controle van ruimte vóór snapshot voorkomt voorzienbare opslagoverschrijding; afwijkend OVH-quota wordt veilig behandeld.
 
-**Beveiligingscontrole 18-10-2026 (FR-001 / NFR-007):** na een geldige aanmelding werd `/admin/index.php` zichtbaar (T-001B). Een eerder screenshot toonde rood **'Not Secure'**, maar een later Chrome-beveiligingspaneel voor **41lokeren.be** vermeldt expliciet **'Connection is secure'** en **'Certificate is valid'**. De TLS-/certificaatcontrole is voor deze verbinding bevestigd, maar `curl -I http://41lokeren.be/admin/login.php` gaf **HTTP 200 zonder HTTPS-redirect**. NFR-007 is hiermee **niet voldaan**; T-040 mislukt voor HTTP-afdwinging. Zie [issue #6](https://github.com/pecharko/Veiling/issues/6) en [herstelplan](HTTPS_REMEDIATION.md).
+**Beveiligingscontrole 18-10-2026 (FR-001 / NFR-007):** na een geldige aanmelding werd `/admin/index.php` zichtbaar (T-001B). Een eerder screenshot toonde rood **'Not Secure'**, maar een later Chrome-beveiligingspaneel voor **41lokeren.be** vermeldt expliciet **'Connection is secure'** en **'Certificate is valid'**. De TLS-/certificaatcontrole is bevestigd. Aanvankelijk gaf `curl -I http://41lokeren.be/admin/login.php` **HTTP 200 zonder redirect**, maar na de tijdelijke Apache-wijziging toont de herhaalde test **`302 Found` met een correcte `Location: https://41lokeren.be/admin/login.php`**. De redirect werkt voor deze route. **NFR-007 nog deels open:** HTTPS-eindrespons, overige routes, permanente 301 en sessiecookiegedrag hertesten. Zie [issue #6](https://github.com/pecharko/Veiling/issues/6) en [herstelplan](HTTPS_REMEDIATION.md).
 
 ## Niet-functionele afspraken
 
@@ -115,7 +115,7 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 | NFR-004 | Database en foto-back-ups worden onafhankelijk van Git getest en extern bewaard. | Gedocumenteerde restoretest |
 | NFR-005 | Een release kan worden teruggedraaid met code-back-up en passend dataplan. | Deployment-checklist |
 | NFR-006 | Vereiste functionaliteit en tests worden in dezelfde codewijziging bijgewerkt. | Pull-request-checklist |
-| NFR-007 | Beheeromgeving uitsluitend via correct HTTPS bereikbaar, met valide certificaat en veilige cookies; HTTP wordt naar HTTPS omgeleid. | **Niet voldaan 18-10-2026:** geldig HTTPS-certificaat bevestigd, maar HTTP-login retourneert `200 OK` zonder redirect (T-040). Herstel en hertest vereist; zie `docs/HTTPS_REMEDIATION.md`. |
+| NFR-007 | Beheeromgeving uitsluitend via correct HTTPS bereikbaar, met valide certificaat en veilige cookies; HTTP wordt naar HTTPS omgeleid. | **Gedeeltelijk aangetoond 18-10-2026:** Chrome valideert HTTPS-certificaat en HTTP-login geeft na aanpassing tijdelijke `302` naar HTTPS. HTTPS-eindpunt, volledige route-dekking, permanente 301 en sessiecookiegedrag nog open (T-040). |
 
 ## Traceerbaarheid en onderhoud
 
