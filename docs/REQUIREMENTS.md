@@ -76,6 +76,8 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 
 **Veilinginstellingen bevestigd 18-10-2026 (FR-011/FR-012):** `SHOW CREATE TABLE settings;` toont alle benodigde veilingvelden, een optionele datum en `is_published tinyint(1) NOT NULL DEFAULT 0`. De applicatie gebruikt `settings.id=1`; de primaire sleutel maakt die ID uniek, maar de database dwingt geen singleton af. De schema-inspectie T-034 is geslaagd; functionele formuliertest T-010 en publicatiecontrole T-006 zijn nog niet uitgevoerd. Zie [DATABASE.md](DATABASE.md).
 
+**Beheerdersschema bevestigd 18-10-2026 (FR-001):** `SHOW CREATE TABLE admins;` bevestigt `id` als primaire sleutel, een unieke index op `email` en een verplichte `password_hash`-kolom. DDL staat in [DATABASE.md](DATABASE.md); T-035 is geslaagd. Er zijn geen rol-/permissiekolommen; rechtenbeheer en functionele login-/wachtwoordtests blijven open. De kolomnaam wijst op opslag van hashes, maar de DDL alleen bewijst geen correct hashbeleid.
+
 ### FR-015 t/m FR-017 — Snapshot en herstel
 1. De snapshot omvat alle tabellen en kavelfoto's die nodig zijn om de catalogus volledig te herstellen; exact bereik wordt gecontroleerd.
 2. Snapshotbestanden bevinden zich buiten de publiek toegankelijke webroot.
