@@ -4,8 +4,13 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Testvoorbereiding — 2026-10-18
+- Fase-1-regressiecontrole van aanmelden, kavelbeheer en CSV-import op basis van huidige GitHub-PHP-broncode vastgelegd in `docs/REGRESSION_2026-10-18.md`. Geen geauthenticeerde of muterende productietests uitgevoerd.
+- Niet-destructieve GitHub Actions-workflow toegevoegd voor PHP 8.2-syntaxcontrole bij push/pull request (`.github/workflows/php-lint.yml`); workflowresultaat nog niet als geslaagd bevestigd.
+- [Issue #5](https://github.com/pecharko/Veiling/issues/5) geopend voor verlies van kavelinvoer na fout en risico op gedeeltelijk opslaan bij foutieve fotoupload; T-038/T-039 opgenomen. Geen productiecode gewijzigd.
+
 ### Gecontroleerd — 2026-10-18
-- FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests en geschoond schema in GitHub blijven open.
+- FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests blijven open. De DDL van alle vijf tabellen is inmiddels gedocumenteerd.
 - FR-003: phpMyAdmin-duplicatenquery met `GROUP BY lot_number HAVING COUNT(*) > 1` gaf nul rijen terug. T-030 geslaagd; geen bestaande duplicaten.
 - FR-003: volledige `SHOW CREATE TABLE lots;`-uitvoer bevestigd en (zonder huidige `AUTO_INCREMENT`-tellerstand) gedocumenteerd in `docs/DATABASE.md`. T-031 geslaagd. Geen wijziging aan productiedatabase.
 - FR-007/008/010: `SHOW CREATE TABLE lot_images;` bevestigd: foreign key `fk_lot_image` met `ON DELETE CASCADE`, index voor fotovolgorde en unieke niet-NULL bronnaam per kavel. DDL toegevoegd aan `docs/DATABASE.md`, T-032 geslaagd. Fysieke fotobestanden worden niet door MySQL verwijderd; T-033 staat open.
