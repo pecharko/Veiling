@@ -40,6 +40,22 @@ Gebruik voor dit doel bij voorkeur een afzonderlijke SFTP-gebruiker met alleen n
 
 **Fallback:** als SFTP niet beschikbaar is of de workflow faalt, gebruik de handmatige RemoteDrive-stappen hieronder; controleer een eventueel foutgerelateerd back-upartifact vóór opnieuw uploaden.
 
+## Kaveleditor release — PR #7 (NIET live, afzonderlijke toestemming)
+
+De code in PR #7 verbetert de kaveleditor: behoud formulierwaarden na opslaanfouten en controleer uploadstatus vóór DB-save. Een MySQL 8.4/PHP localhost-integratietest is geslaagd; de productieomgeving is hierdoor **niet** gewijzigd.
+
+**Pas nadat PR #7 expliciet is goedgekeurd en gemerged** staat de workflow [Deploy kaveleditor naar OVHcloud](../.github/workflows/kavel-deploy.yml) op `main` beschikbaar. Start eerst `plan`: toont precies de twee geplande bestanden zonder netwerkverkeer. `deploy` vereist het bevestigingswoord `DEPLOY KAVEL`. Gebruik het bestaande GitHub `production` environment en dezelfde eerder ingeregelde SFTP-Secrets.
+
+De workflow:
+
+1. Controleert de bestaande editor en het systeem op de SFTP-doelmap.
+2. Haalt een **pre-uploadback-up** op van `catalogus-public/admin/kavel.php`; neemt `private/lot_form.php` ook op wanneer die al bestaat. Als de helper nog ontbreekt, noteert de manifest expliciet dat het een nieuw bestand is.
+3. Bewaart een rollback-artifact voor zeven dagen, en uploadt daarna **eerst** `private/lot_form.php`, **daarna** `catalogus-public/admin/kavel.php`.
+4. Verifieert van beide bestanden de checksums. Bij een fout probeert het script de vorige versies te herstellen, en verwijdert het eventueel zojuist aangemaakte helperbestand.
+5. Controleert anoniem `/admin/kavel.php` (verwacht login-redirect `303`) en de uitgeschakelde CSV-route `/admin/import.php` (verwacht `404`).
+
+**Beperkingen:** automatische smoke-tests vervangen geen handmatige controle van een geldige kavelbewaring in de productie-UI. Gebruik geen bestaande veilingkavels voor destructieve testen; een testkavel alleen met expliciete toestemming en opruimplan. Bij onverwacht resultaat geen tweede deploy starten maar bekijk de herstelkopie. De bestaande CSV-deploymentworkflow blijft afzonderlijk en is niet uitgebreid met editorbestanden.
+
 ## Uitrol: CSV-import tijdelijk verwijderen (18 oktober 2026)
 
 **Pas na merge naar `main`**, synchroniseer GitHub Desktop met de repository. Maak vóór upload een lokale kopie van de huidige bestanden in de OVHcloud-productieomgeving.
