@@ -8,6 +8,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 
 - [Functionele requirements](docs/REQUIREMENTS.md) — levend register met acceptatiecriteria en verificatiestatus.
 - [Technische architectuur](docs/ARCHITECTURE.md) — huidige opzet en openstaande verificatiepunten.
+- [Databaseschema](docs/DATABASE.md) — geverifieerde `lots`-DDL, unieke lotnummers en nog openstaande tabellen.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
@@ -50,5 +51,5 @@ De Git-repository is geen vervanging voor back-ups van database, uploads, produc
 ## Op te volgen verbeterpunten
 
 - [GitHub-issue #2](https://github.com/pecharko/Veiling/issues/2) — consistent en veilig snapshot-/herstelproces.
-- [GitHub-issue #3](https://github.com/pecharko/Veiling/issues/3) — unieke database-index voor lotnummers controleren.
+- [GitHub-issue #3](https://github.com/pecharko/Veiling/issues/3) — unieke lotnummers bevestigd; functionele tests en resterende databaseschema's opvolgen.
 - [GitHub-issue #4](https://github.com/pecharko/Veiling/issues/4) — ontbrekende assets en installatieverwijzingen controleren.
