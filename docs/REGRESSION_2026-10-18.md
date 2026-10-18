@@ -3,7 +3,7 @@
 **Project:** 41 Lokeren online veilingcatalogus  
 **Referenties:** `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md`, `docs/DATABASE.md`.  
 **Scope:** aanmelding/autorisatie, kavelbeheer en CSV-import.  
-**Status 18 oktober 2026:** drie anonieme adminroutes visueel afgeschermd (T-001); adminoverzicht na aanmelden bereikbaar (T-001B). Een later Chrome-beveiligingspaneel bevestigt **'Connection is secure' en 'Certificate is valid' voor 41lokeren.be**. T-040 is daarmee **gedeeltelijk geslaagd**; HTTP→HTTPS-doorverwijzing en verdere sessie-/logouttests zijn nog open. Geen muterende datatests uitgevoerd.
+**Status 18 oktober 2026:** drie anonieme adminroutes visueel afgeschermd (T-001); adminoverzicht na aanmelden bereikbaar (T-001B). Een later Chrome-beveiligingspaneel bevestigt **'Connection is secure' en 'Certificate is valid' voor 41lokeren.be**. Vervolgens bewees de gebruiker met `curl -I http://41lokeren.be/admin/login.php` dat HTTP **`200 OK`** zonder redirect retourneert. **T-040 is voor HTTP-afdwinging mislukt**, ondanks geldig HTTPS-certificaat. Zie [HTTPS_REMEDIATION.md](HTTPS_REMEDIATION.md). Sessie-/logouttests blijven open. Geen muterende datatests uitgevoerd.
 
 ## Wat is daadwerkelijk gecontroleerd?
 
@@ -37,7 +37,7 @@ De gebruiker deelde na de instructie om met een bestaand beheerdersaccount in te
 
 ### Aanvullend bewijs HTTPS (18 oktober 2026)
 
-Een derde browserscreenshot toont het Chrome-sitebeveiligingspaneel van **41lokeren.be** met de letterlijke meldingen **`Connection is secure`** en **`Certificate is valid`**. Daarmee is voor de op dat moment geopende beheerderspagina een veilige, door Chrome gevalideerde verbinding aangetoond. De oorspronkelijke rode waarschuwing is op recentere screenshots verdwenen. Dit bewijst **niet** dat een onversleuteld `http://`-verzoek automatisch serverzijdig naar `https://` wordt omgeleid of dat iedere route dezelfde beveiliging afdwingt. [Issue #6](https://github.com/pecharko/Veiling/issues/6) blijft daarom open voor de resterende HTTPS-hardeningcontrole. De administratie kan verder worden getest via uitdrukkelijke HTTPS-URL's, zonder destructieve acties.
+Een derde browserscreenshot toont het Chrome-sitebeveiligingspaneel van **41lokeren.be** met de letterlijke meldingen **`Connection is secure`** en **`Certificate is valid`**. Daarmee is voor de op dat moment geopende beheerderspagina een veilige, door Chrome gevalideerde verbinding aangetoond. De oorspronkelijke rode waarschuwing is op recentere screenshots verdwenen. Deze browserbevestiging bewijst geen HTTP-redirect. **Aanvullend bewijs op 18-10-2026:** `curl -I http://41lokeren.be/admin/login.php` antwoordt met `HTTP/1.1 200 OK`, dus een automatische HTTP→HTTPS-redirect **ontbreekt aantoonbaar** voor die route. [Issue #6](https://github.com/pecharko/Veiling/issues/6) blijft daarom open voor de resterende HTTPS-hardeningcontrole. De administratie kan verder worden getest via uitdrukkelijke HTTPS-URL's, zonder destructieve acties.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
