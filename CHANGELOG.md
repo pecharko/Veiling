@@ -5,7 +5,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 ## [Unreleased]
 
 ### Opslagwaarschuwingen en snapshot-capaciteit — T-016/T-017
-- CI-regressietest met gesimuleerde opslaglimieten: niveaus rond 80% (waarschuwing) en 90% (kritiek), schijf- en quota-preflight inclusief 20 MiB veiligheidsmarge, echte snapshotcreatie met te lage/volledige testquota.
+- **T-016/T-017: 29/29 controles geslaagd** in geïsoleerde CI ([run 39126901647](https://github.com/pecharko/Veiling/actions/runs/39126901647)), met gesimuleerde opslaglimieten: niveaus rond 80% (waarschuwing) en 90% (kritiek), schijf- en quota-preflight inclusief 20 MiB veiligheidsmarge, echte snapshotcreatie met te lage/volledige testquota.
 - Onvolledige bestandsmeting mag de capaciteitspreflight niet langer onbedoeld overslaan: een nieuw snapshot wordt dan uit voorzorg geweigerd.
 - Adminpagina gebruikt dezelfde opslagniveau-classificatie als de CI-test. Geen wachtwoorden of productiegegevens in de tests; alleen disposable MySQL/PHP. **Uitrol op OVHcloud niet uitgevoerd.**
 
