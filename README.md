@@ -12,6 +12,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 - [Technische architectuur](docs/ARCHITECTURE.md) — huidige opzet en openstaande verificatiepunten.
 - [Databaseschema](docs/DATABASE.md) — **alle vijf tabellen geverifieerd**: `lots`, `lot_images`, `settings`, `admins` en `login_attempts`.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
+- [Handmatige GitHub Actions-deploy](.github/workflows/ovhcloud-deploy.yml) — veilige SFTP-upload met één klik na eenmalige configuratie; start standaard als niet-destructief plan, geen automatische uitrol bij commits.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
 - [Regressiecontrole fase 1](docs/REGRESSION_2026-10-18.md) — veilige volgorde voor aanmelden, kavelbeheer en CSV-import; broncodebevindingen.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
