@@ -1,6 +1,6 @@
 # Testplan — veilingcatalogus 41 Lokeren
 
-**Status 18 oktober 2026:** de schema-inspecties T-026, T-030 t/m T-032 en T-034 t/m T-036 zijn met phpMyAdmin-screenshots bevestigd. De nieuwe fase-1-code-inspectie is gedocumenteerd in [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md). **De basiscontrole T-001 is op 18-10-2026 voor drie anonieme adminroutes geslaagd op basis van gebruikersscreenshots; bij de derde controle is ook de login-URL zichtbaar. Overige functionele live tests zijn nog niet uitgevoerd of geslaagd verklaard.** Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
+**Status 18 oktober 2026:** de schema-inspecties T-026, T-030 t/m T-032 en T-034 t/m T-036 zijn met phpMyAdmin-screenshots bevestigd. De nieuwe fase-1-code-inspectie is gedocumenteerd in [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md). **De basiscontrole T-001 is op 18-10-2026 voor drie anonieme adminroutes geslaagd; daarnaast is de admin na volgens gebruiker geldige aanmelding toegankelijk (T-001B). BELANGRIJK: Chrome toont op die screenshot 'Not Secure': HTTPS/TLS-controle T-040 is daarom GEBLOKKEERD / VERDACHT totdat de verbinding veilig is bevestigd. Overige functionele live tests zijn nog niet uitgevoerd.** Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
 
 | Test-ID | Requirement | Testscenario | Verwacht resultaat | Uitvoering |
 |---|---|---|---|---|
@@ -43,6 +43,8 @@
 | T-037 | FR-001 | Test inloglimiet met gecontroleerde testaccount/IP en herstel na tijdvenster, inclusief opschoning oude pogingen | Na 8 mislukte pogingen binnen 15 minuten wordt de volgende poging tijdelijk geblokkeerd; records ouder dan 24 uur worden bij login-POST opgeschoond, succesvolle login wist IP-pogingen | Niet uitgevoerd — **uitsluitend testomgeving**, geen productieblokkering veroorzaken |
 | T-038 | FR-002/004 | Invalide kavelinvoer veroorzaakt fout; ingevoerde gegevens blijven zichtbaar in het formulier | POST-gegevens blijven behouden zonder onverwachte aanmaak/wijziging | **Code-inspectie: afwijking gevonden 18-10-2026** — invoervelden worden na een fout uit DB/defaults opgebouwd; niet interactief getest, zie issue #5 |
 | T-039 | FR-002/006 | Fotoupload mislukt bij het opslaan van een nieuw kavel | Eenduidig resultaat: geen onbedoelde gedeeltelijke save of onjuiste melding, geen verweesde foto's | **Code-inspectie: risico gevonden 18-10-2026** — lot-insert gebeurt vóór uploadvalidatie; niet getest, zie issue #5 |
+| T-001B | FR-001 | Aanmelden met geldig beheerdersaccount geeft toegang tot kaveloverzicht | Adminoverzicht toegankelijk na geldige aanmelding; sessie blijft beperkt tot beveiligd HTTPS | **Functionele toegang geslaagd 18-10-2026**, gebruikersscreenshot op `/admin/index.php` toont ingelogde admin, 10 kavels en navigatie. **HTTPS-waarschuwing open (T-040), veilige sessie nog niet bevestigd.** |
+| T-040 | NFR-007 / FR-001 | Controleer dat admin login en alle adminroutes uitsluitend via correct HTTPS bereikbaar zijn en HTTP doorverwijst | Chrome toont veilige HTTPS-verbinding met geldig certificaat voor `41lokeren.be`; geen onversleutelde login of sessie | **Beveiligingswaarschuwing gesignaleerd 18-10-2026** — op screenshot `/admin/index.php` toont Chrome rood `Not Secure`. Oorzaak niet vastgesteld; verdere admin-interactie uitstellen, zie issue #6. |
 
 ## Registratie bij uitvoering
 
