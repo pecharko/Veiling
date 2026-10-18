@@ -1,0 +1,66 @@
+name: Kaveleditor integratietests (geisoleerd)
+
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/admin/kavel.php'
+      - 'private/lot_form.php'
+      - 'private/images.php'
+      - 'tests/kavel*'
+      - '.github/workflows/kavel-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kavel-mysql-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-password-only
+          MYSQL_DATABASE: auction_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-password-only"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - name: Checkout PR code
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2 with isolated test dependencies
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, curl, gd, fileinfo
+          tools: none
+          coverage: none
+
+      - name: Create disposable schema and test administrator
+        env:
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+          CI_DB_USER: root
+          CI_DB_PASSWORD: ci-password-only
+        run: php tests/kavel_integration_setup.php
+
+      - name: Test real HTTP login, editor errors and photo uploads
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -d upload_max_filesize=1K -d post_max_size=10M -S localhost:8090 -t catalogus-public > /tmp/kavel-test-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..25}; do
+            if curl -fsS -o /dev/null http://localhost:8090/admin/login.php; then
+              break
+            fi
+            sleep 1
+          done
+          php tests/kavel_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
