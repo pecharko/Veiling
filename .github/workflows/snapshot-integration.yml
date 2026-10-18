@@ -55,3 +55,22 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/snapshot_integration.php
+
+      - name: Exercise authenticated backup UI and HTTP snapshot flows
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S localhost:8090 -t catalogus-public > /tmp/snapshot-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..25}; do
+            if curl -fsS -o /dev/null http://localhost:8090/admin/login.php; then
+              break
+            fi
+            sleep 1
+          done
+          php tests/snapshot_http_integration.php || { tail -n 90 /tmp/snapshot-http.log; exit 1; }
