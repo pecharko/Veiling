@@ -10,7 +10,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - [Issue #5](https://github.com/pecharko/Veiling/issues/5) geopend voor verlies van kavelinvoer na fout en risico op gedeeltelijk opslaan bij foutieve fotoupload; T-038/T-039 opgenomen. Geen productiecode gewijzigd.
 
 ### Browsertest — 2026-10-18
-- T-001 (FR-001): incognitocontrole toont loginformulier voor zowel kaveloverzicht (`/admin/index.php`) als CSV-import (`/admin/import.php`). Twee gebruikersscreenshots, visuele basiscontroles geslaagd; uiteindelijke redirect-URL is niet zichtbaar en andere beveiligde routes/geldige login staan nog open. Geen gegevens gewijzigd.
+- T-001 (FR-001): drie incognitocontroles voor kaveloverzicht (`/admin/index.php`), CSV-import (`/admin/import.php`) en kaveleditor (`/admin/kavel.php`) tonen loginformulier zonder afgeschermde inhoud. Op derde screenshot is de uiteindelijke URL `/admin/login.php` zichtbaar. Geldige login/logout en andere beveiligde routes blijven te testen. Geen gegevens gewijzigd.
 
 ### Gecontroleerd — 2026-10-18
 - FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests blijven open. De DDL van alle vijf tabellen is inmiddels gedocumenteerd.
