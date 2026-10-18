@@ -34,16 +34,19 @@ function snap_assets(): array {
  ksort($result);return $result;
 }
 function snap_lock(){ $fp=fopen(snap_dir().'/.operation.lock','c'); if(!$fp||!flock($fp,LOCK_EX|LOCK_NB))throw new RuntimeException('Er loopt al een backup- of herstelbewerking.');return $fp; }
-function snap_create(PDO $pdo): string {
+/** Allow a simulated quota only through explicit internal calls (e.g. isolated CI tests). */
+function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
+ if($quotaBytes<=0)throw new InvalidArgumentException('Ongeldige hostinglimiet.');
  snap_init();$lock=snap_lock();$tmp=null;
  try{
   $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
   $assets=snap_assets(); $bytes=0;foreach($assets as $path)$bytes+=(int)filesize($path);
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
-  $free=@disk_free_space(snap_dir());if(is_numeric($free)&&$free>0&&$free<$bytes+20*1024*1024)throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
+  $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
   $data=json_encode(['format'=>'41lokeren-v1','created_at'=>gmdate('c'),'tables'=>$rows],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
-  $space=snap_storage_stats();
-  if(!$space['warnings'] && $space['free'] < $bytes + strlen($data) + 20*1024*1024)
+  $space=snap_storage_stats($quotaBytes);
+  if($space['warnings'])throw new RuntimeException('Opslaggebruik kan niet volledig worden bepaald; snapshot uit voorzorg geweigerd.');
+  if(!snap_has_estimated_capacity($space,$bytes,strlen($data)))
    throw new RuntimeException('Onvoldoende geschatte hostingruimte voor deze snapshot (inclusief veiligheidsmarge). Download en verwijder eerst oude snapshots.');
   $name='snapshot-'.date('Ymd-His').'-'.bin2hex(random_bytes(6)).'.zip';$tmp=snap_dir().'/.building-'.bin2hex(random_bytes(8)).'.zip';
   $zip=new ZipArchive();if($zip->open($tmp,ZipArchive::CREATE|ZipArchive::EXCL)!==true)throw new RuntimeException('Kon ZIP niet aanmaken.');
@@ -146,6 +149,27 @@ function snap_storage_stats(int $quotaBytes=1073741824): array {
  return ['quota'=>$quotaBytes,'total'=>$total,'free'=>max(0,$quotaBytes-$total),'percent'=>$percent,
   'parts'=>$parts,'snapshots'=>$backupBytes,'uploads'=>$uploadsBytes,'warnings'=>$warnings,'files'=>$count];
 }
+/** Shared disk-space guard: false means unknown and the estimated quota still applies. */
+function snap_has_physical_capacity(int|float|false $diskFree,int $photoBytes): bool {
+ if($photoBytes<0)return false;
+ if($diskFree===false)return true;
+ return $diskFree >= $photoBytes+20*1024*1024;
+}
+/** Consistent UI warning classification; no disk writes. */
+function snap_storage_level(float $percent): string {
+ if($percent>=90.0)return 'critical';
+ if($percent>=80.0)return 'warning';
+ return 'ok';
+}
+/** Estimated capacity preflight; fail closed when the file scan is incomplete. */
+function snap_has_estimated_capacity(array $storage,int $photoBytes,int $databaseBytes): bool {
+ if($photoBytes<0||$databaseBytes<0)return false;
+ if(!empty($storage['warnings']))return false;
+ $free=$storage['free']??null;
+ if(!is_int($free)||$free<0)return false;
+ return $free >= $photoBytes+$databaseBytes+20*1024*1024;
+}
+
 function snap_human_size(int|float $bytes): string {
  if($bytes>=1073741824)return number_format($bytes/1073741824,2,',','.').' GB';
  if($bytes>=1048576)return number_format($bytes/1048576,1,',','.').' MB';

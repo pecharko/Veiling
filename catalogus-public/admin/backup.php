@@ -37,7 +37,7 @@ if(is_post()){
 $available=snap_listing();$total=array_sum(array_column($available,'size'));
 $quota=1073741824; // OVHcloud Starter: 1 GiB nominale webopslag; pas aan als abonnement wijzigt.
 $storage=snap_storage_stats($quota);
-$level=$storage['percent']>=90?'critical':($storage['percent']>=80?'warning':'ok');
+$level=snap_storage_level((float)$storage['percent']);
 admin_top('Back-up & herstel');
 ?>
 <style>
