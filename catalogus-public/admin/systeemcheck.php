@@ -36,7 +36,7 @@ report_item($rows, 'HTTPS', $https, 'Open de beheeromgeving uitsluitend op een a
 $upload = upload_limit_bytes((string)ini_get('upload_max_filesize'));
 $post = upload_limit_bytes((string)ini_get('post_max_size'));
 report_item($rows, 'PHP-uploadlimiet (foto’s)', $upload >= 8*1048576 && $post >= 9*1048576,
-  'upload_max_filesize=' . ini_get('upload_max_filesize') . ', post_max_size=' . ini_get('post_max_size') . '. Foto's voeg je afzonderlijk toe bij het aanmaken of bewerken van een kavel.', true);
+  'upload_max_filesize=' . ini_get('upload_max_filesize') . ', post_max_size=' . ini_get('post_max_size') . '. Foto’s voeg je afzonderlijk toe bij het aanmaken of bewerken van een kavel.', true);
 $dbOkay = false;
 $dbMessage = 'Nog niet gecontroleerd.';
 try {
