@@ -2,13 +2,6 @@ name: Snapshot en herstel — geisoleerde tests
 
 on:
   pull_request:
-    paths:
-      - 'private/snapshots.php'
-      - 'catalogus-public/admin/backup.php'
-      - 'tests/snapshot*'
-      - '.github/workflows/snapshot-integration.yml'
-      - '.github/workflows/snapshot-storage-deploy.yml'
-      - 'scripts/deploy_snapshot_storage.py'
   workflow_dispatch:
 
 permissions:
