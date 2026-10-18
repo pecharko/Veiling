@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### CSV-voorbeeldbestand hersteld — 2026-10-18
+- In de productie-admin mislukt de knop `Download voorbeeld-CSV`: Chrome probeert `voorbeeld-kavels.html` op te slaan en meldt dat het bestand niet beschikbaar is. De link in `admin/import.php` wees naar een statisch CSV-bestand dat niet in Git stond.
+- `catalogus-public/assets/voorbeeld-kavels.csv` toegevoegd met exact de negen importkolommen, UTF-8-BOM en twee duidelijk fictieve, **niet-gepubliceerde** voorbeeldkavels. CSV-parser van `admin/import.php` gecontroleerd op kolomnamen en puntkommascheiding. Geen wijzigingen aan de PHP-importfunctie.
+- **Uitrol nog nodig:** bestand uploaden naar `/catalogus-public/assets/` op OVHcloud. Productiedownload en import zijn nog **niet** opnieuw getest. T-028 nog open; issue #4 gedeeltelijk opgevolgd.
+
 ### Testvoorbereiding — 2026-10-18
 - Fase-1-regressiecontrole van aanmelden, kavelbeheer en CSV-import op basis van huidige GitHub-PHP-broncode vastgelegd in `docs/REGRESSION_2026-10-18.md`. Geen geauthenticeerde of muterende productietests uitgevoerd.
 - Niet-destructieve GitHub Actions-workflow toegevoegd voor PHP 8.2-syntaxcontrole bij push/pull request (`.github/workflows/php-lint.yml`); workflowresultaat nog niet als geslaagd bevestigd.
