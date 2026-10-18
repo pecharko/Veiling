@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require dirname(__DIR__, 2) . '/private/images.php';
+require dirname(__DIR__, 2) . '/private/lot_form.php';
 require_auth();
 $pdo=db();
 $id=max(0,(int)($_GET['id']??$_POST['id']??0));
@@ -43,31 +44,39 @@ if(is_post()){
     elseif($max!=='' && (!is_numeric($max)|| (float)$max<0))$error='Ongeldige maximumschatting.';
     elseif($min!==''&&$max!==''&&(float)$max<(float)$min)$error='Maximumschatting mag niet lager zijn dan minimumschatting.';
     else{
+      // Valideer alle uploadstatussen voordat er een kavel wordt aangemaakt of gewijzigd.
       try{
-        $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status];
-        if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=? WHERE id=?');}
-        else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status) VALUES (?,?,?,?,?,?,?,?,?)');}
-        $st->execute($values);
-        if(!$id)$id=(int)$pdo->lastInsertId();
         $photos=photo_files($_FILES['photos']??[]);
-        $failed=[];
-        foreach($photos as $i=>$photo){
-          try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
-          catch(Throwable $ex){$failed[]=$photo['name'].': '.$ex->getMessage();}
-        }
-        flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
-        redirect('admin/kavel.php',['id'=>$id]);
-      }catch(PDOException $ex){
-        if($ex->getCode()==='23000')$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
-        else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
-      }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
+      }catch(RuntimeException $ex){
+        $error='Foto-upload mislukt; het kavel is niet opgeslagen: '.$ex->getMessage();
+      }
+      if(!$error){
+        try{
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=? WHERE id=?');}
+          else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status) VALUES (?,?,?,?,?,?,?,?,?)');}
+          $st->execute($values);
+          if(!$id)$id=(int)$pdo->lastInsertId();
+          $failed=[];
+          foreach($photos as $i=>$photo){
+            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
+            catch(Throwable $ex){$failed[]=$photo['name'].': '.$ex->getMessage();}
+          }
+          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
+          redirect('admin/kavel.php',['id'=>$id]);
+        }catch(PDOException $ex){
+          if($ex->getCode()==='23000')$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+          else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
+        }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
+      }
     }
   }
 }
 if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$lot=$st->fetch();}
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
 $defaults=['lot_number'=>'','title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
-$d=array_merge($defaults,$lot?:[]);
+$submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
+$d=lot_form_values($defaults,$lot?:null,$submitted);
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
 ?>
