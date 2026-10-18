@@ -4,7 +4,7 @@
 
 | Test-ID | Requirement | Testscenario | Verwacht resultaat | Uitvoering |
 |---|---|---|---|---|
-| T-001 | FR-001 | Adminpagina openen zonder login | Login vereist, geen afgeschermde informatie zichtbaar | **Geslaagd (basiscontrole), 18-10-2026** — gebruiker stuurde na openen in incognitovenster screenshot van loginformulier, zonder kaveloverzicht. Adresbalk/uiteindelijke redirect-URL ontbreken op screenshot; aanvullende anonieme adminroutes en daadwerkelijke login nog niet gecontroleerd. |
+| T-001 | FR-001 | Adminpagina's openen zonder login (`/admin/index.php` en `/admin/import.php`) | Login vereist, geen afgeschermde kavel- of importinformatie zichtbaar | **Geslaagd (twee visuele basiscontroles), 18-10-2026** — gebruiker stuurde in de gevraagde incognitotest na beide openingsacties een loginformulier, zonder kaveloverzicht of CSV-importscherm. Adresbalk en exacte eind-URL zijn op screenshots niet zichtbaar; overige routes en geldig aanmelden nog niet getest. |
 | T-002 | FR-002/004 | Nieuwe kavel maken, geldige titel en schatting | Kavel wordt bewaard en heropenbaar | Niet uitgevoerd |
 | T-003 | FR-003 | Tweede kavel met bestaand lotnummer bewaren | Duidelijke fout; geen tweede identiek lotnummer | Niet uitgevoerd |
 | T-004 | FR-003 | Bestaande kavel bewerken zonder lotnummer te wijzigen | Bewerking slaagt | Niet uitgevoerd |
