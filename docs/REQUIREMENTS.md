@@ -78,6 +78,8 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 
 **Beheerdersschema bevestigd 18-10-2026 (FR-001):** `SHOW CREATE TABLE admins;` bevestigt `id` als primaire sleutel, een unieke index op `email` en een verplichte `password_hash`-kolom. DDL staat in [DATABASE.md](DATABASE.md); T-035 is geslaagd. Er zijn geen rol-/permissiekolommen; rechtenbeheer en functionele login-/wachtwoordtests blijven open. De kolomnaam wijst op opslag van hashes, maar de DDL alleen bewijst geen correct hashbeleid.
 
+**Loginpogingen-schema bevestigd 18-10-2026 (FR-001):** `SHOW CREATE TABLE login_attempts;` bevestigt `id` als primaire sleutel, `ip_hash CHAR(64) ASCII`, een timestamp en index `idx_attempts(ip_hash,attempted_at)`. De code in `admin/login.php` registreert mislukte pogingen, gebruikt maximaal 8 pogingen binnen 15 minuten en schoont oude records op bij een login-POST. T-036 (schema) is geslaagd; T-037 (werkend blokkeren, vrijgeven en opschonen) staat open. Deterministische IP-hashes moeten als mogelijk persoonsgegeven worden behandeld. Zie [DATABASE.md](DATABASE.md).
+
 ### FR-015 t/m FR-017 — Snapshot en herstel
 1. De snapshot omvat alle tabellen en kavelfoto's die nodig zijn om de catalogus volledig te herstellen; exact bereik wordt gecontroleerd.
 2. Snapshotbestanden bevinden zich buiten de publiek toegankelijke webroot.
