@@ -63,4 +63,4 @@ $badStatus = lot_form_values($defaults, null, ['status' => 'unknown', 'title' =>
 check_value('draft', $badStatus['status'], 'Onbekende status nooit selecteren');
 check_value('', $badStatus['title'], 'Array als formulierveld niet accepteren');
 
-echo "lot_form_values: 11 controles geslaagd\n";
+echo "lot_form_values: alle 13 controles geslaagd\n";
