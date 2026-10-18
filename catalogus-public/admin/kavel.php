@@ -53,21 +53,21 @@ if(is_post()){
       if(!$error){
         try{
           $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status];
-        if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=? WHERE id=?');}
-        else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status) VALUES (?,?,?,?,?,?,?,?,?)');}
-        $st->execute($values);
-        if(!$id)$id=(int)$pdo->lastInsertId();
-        $failed=[];
-        foreach($photos as $i=>$photo){
-          try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
-          catch(Throwable $ex){$failed[]=$photo['name'].': '.$ex->getMessage();}
-        }
-        flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
-        redirect('admin/kavel.php',['id'=>$id]);
-      }catch(PDOException $ex){
-        if($ex->getCode()==='23000')$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
-        else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
-      }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=? WHERE id=?');}
+          else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status) VALUES (?,?,?,?,?,?,?,?,?)');}
+          $st->execute($values);
+          if(!$id)$id=(int)$pdo->lastInsertId();
+          $failed=[];
+          foreach($photos as $i=>$photo){
+            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
+            catch(Throwable $ex){$failed[]=$photo['name'].': '.$ex->getMessage();}
+          }
+          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
+          redirect('admin/kavel.php',['id'=>$id]);
+        }catch(PDOException $ex){
+          if($ex->getCode()==='23000')$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+          else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
+        }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
       }
     }
   }
