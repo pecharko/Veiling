@@ -40,6 +40,8 @@
 | T-033 | FR-007/017 | Testkavel met foto's verwijderen, inclusief databasecascade en bestandsopruiming | Geen gekoppelde fotoregistraties en geen achterblijvende fysieke foto's; herstelmechanisme blijft consistent | Niet uitgevoerd — **uitsluitend geïsoleerde testomgeving**, niet op productie |
 | T-034 | FR-011/012 | `SHOW CREATE TABLE settings;` via phpMyAdmin | Veilingvelden, optionele datum, publicatievlag standaard 0, primaire sleutel en wijzigingstijdstip aanwezig | **Geslaagd 18-10-2026** — screenshot toont volledig schema; opgenomen in `docs/DATABASE.md`. Geen interactieve formulier- of publicatietest |
 | T-035 | FR-001 | `SHOW CREATE TABLE admins;` via phpMyAdmin | Primaire sleutel, unieke e-mailindex, verplichte `password_hash` en aanmaakdatum aanwezig | **Geslaagd 18-10-2026** — DDL bevestigd en opgenomen in `docs/DATABASE.md`. Login-/rollenwerking niet getest |
+| T-036 | FR-001 | `SHOW CREATE TABLE login_attempts;` in phpMyAdmin | Primaire sleutel, `ip_hash CHAR(64)` (ASCII), timestamp en samengestelde index op IP-hash/tijdstip aanwezig | **Geslaagd 18-10-2026** — geverifieerd via aangeleverde screenshot; DDL in `docs/DATABASE.md` |
+| T-037 | FR-001 | Test inloglimiet met gecontroleerde testaccount/IP en herstel na tijdvenster, inclusief opschoning oude pogingen | Na 8 mislukte pogingen binnen 15 minuten wordt de volgende poging tijdelijk geblokkeerd; records ouder dan 24 uur worden bij login-POST opgeschoond, succesvolle login wist IP-pogingen | Niet uitgevoerd — **uitsluitend testomgeving**, geen productieblokkering veroorzaken |
 
 ## Registratie bij uitvoering
 
