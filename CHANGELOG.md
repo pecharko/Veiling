@@ -11,6 +11,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - FR-007/008/010: `SHOW CREATE TABLE lot_images;` bevestigd: foreign key `fk_lot_image` met `ON DELETE CASCADE`, index voor fotovolgorde en unieke niet-NULL bronnaam per kavel. DDL toegevoegd aan `docs/DATABASE.md`, T-032 geslaagd. Fysieke fotobestanden worden niet door MySQL verwijderd; T-033 staat open.
 - FR-011/012: `SHOW CREATE TABLE settings;` bevestigd, inclusief optionele veilingdatum en verborgen standaardpublicatiestatus (`is_published=0`). De singletonconventie `id=1` is een applicatieafspraak, geen databaseconstraint. Schema vastgelegd in `docs/DATABASE.md`; T-034 geslaagd, T-006/T-010 nog open. Geen wijzigingen aan productie.
 - FR-001: `SHOW CREATE TABLE admins;` bevestigd met unieke e-mailindex en verplichte `password_hash`. Schema vastgelegd in `docs/DATABASE.md`; T-035 geslaagd. Geen rol-/permissievelden aangetroffen; login-/autorisatietests blijven open. Productiedatabase ongewijzigd.
+- FR-001: `SHOW CREATE TABLE login_attempts;` bevestigd: ASCII IP-hash van 64 tekens, timestamp en `idx_attempts(ip_hash,attempted_at)`. DDL van alle vijf tabellen nu in `docs/DATABASE.md`; T-036 geslaagd. Inloglimiet/opschoning (T-037) nog niet functioneel getest; geen productiecode of MySQL gewijzigd.
 
 ### Toegevoegd — 2026-10-17
 - Private GitHub-repository ingericht als toekomstige broncode- en documentatiebasis.
