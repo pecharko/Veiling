@@ -54,6 +54,9 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-026 | Fotogalerij en delen van kavel | Thumbnails wisselen de hoofdfoto; kavel-link delen/kopiëren werkt met browserfallback. | Statisch bevestigd |
 | FR-027 | Kaveloverzicht in admin | Overzicht toont aantallen, statussen, foto's, zoeken/filteren en pagineren voor de beheerder. | Statisch bevestigd |
 | FR-028 | Systeemcontrole | Admin ziet controles van PHP, MySQL, configuratie, HTTPS en schrijfrechten, met duidelijke resultaten. | Statisch bevestigd |
+| FR-029 | Downloadbaar CSV-voorbeeld | De link `Download voorbeeld-CSV` levert een bestaand UTF-8-CSV-bestand met dezelfde kolommen als de importfunctie; fictieve voorbeeldrijen mogen niet onbedoeld gepubliceerd worden. | Te verifiëren |
+
+**CSV-voorbeeld 18-10-2026 (FR-029):** Chrome toont bij de downloadpoging `voorbeeld-kavels.html` en `File wasn't available on site`; het in `admin/import.php` genoemde bestand ontbrak in de GitHub-repository. `catalogus-public/assets/voorbeeld-kavels.csv` is nu toegevoegd en gecontroleerd op de negen importkolommen, puntkommascheiding en UTF-8-BOM. **Nog vereist:** upload naar OVHcloud en geslaagde browserdownload bevestigen (T-028). De twee fictieve records zijn expliciet als voorbeelden gemarkeerd en staan op `publiceren=nee`.
 
 **Bekende verificatiegaten:** bij FR-003 is de UNIQUE-index op `lots.lot_number` op 18 oktober 2026 via phpMyAdmin-metadata bevestigd; interactietests van de kaveleditor, CSV-upsert en gelijktijdige invoer blijven open. Bij FR-015 t/m FR-020 zijn consistentie, hersteltest en serverquota nog niet aangetoond. Zie het [code-auditrapport](CODE_AUDIT_2026-10-17.md). Een status **Statisch bevestigd** is geen geslaagde acceptatietest.
 
