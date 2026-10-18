@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Voorgestelde kaveleditor-correctie — featurebranch (nog niet uitgerold)
+- FR-002/004: na een mislukte kavelbewaring blijven de ingestuurde invoervelden zichtbaar; helper `private/lot_form.php` met 13 assertions in `tests/lot_form_test.php`.
+- FR-006: uploadstatussen worden gecontroleerd vóór de kavel-INSERT/UPDATE. Vroegtijdige uploadfouten veroorzaken geen SQL-mutatie; problemen tijdens latere fotobewerking houden een expliciete waarschuwing over gedeeltelijk succes.
+- GitHub Actions voert de PHP-regressietest uit bij pull requests. De uitvoering en een end-to-endtest in een geïsoleerde omgeving zijn nog te bevestigen. Geen wijzigingen aan de live OVHcloud-site.
+
 ### Testvoorbereiding — 2026-10-18
 - Fase-1-regressiecontrole van aanmelden, kavelbeheer en CSV-import op basis van huidige GitHub-PHP-broncode vastgelegd in `docs/REGRESSION_2026-10-18.md`. Geen geauthenticeerde of muterende productietests uitgevoerd.
 - Niet-destructieve GitHub Actions-workflow toegevoegd voor PHP 8.2-syntaxcontrole bij push/pull request (`.github/workflows/php-lint.yml`); workflowresultaat nog niet als geslaagd bevestigd.
