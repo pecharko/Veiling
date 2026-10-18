@@ -4,11 +4,16 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Opslagwaarschuwingen en snapshot-capaciteit — T-016/T-017
+- CI-regressietest met gesimuleerde opslaglimieten: niveaus rond 80% (waarschuwing) en 90% (kritiek), schijf- en quota-preflight inclusief 20 MiB veiligheidsmarge, echte snapshotcreatie met te lage/volledige testquota.
+- Onvolledige bestandsmeting mag de capaciteitspreflight niet langer onbedoeld overslaan: een nieuw snapshot wordt dan uit voorzorg geweigerd.
+- Adminpagina gebruikt dezelfde opslagniveau-classificatie als de CI-test. Geen wachtwoorden of productiegegevens in de tests; alleen disposable MySQL/PHP. **Uitrol op OVHcloud niet uitgevoerd.**
+
 ### Back-up & herstel — 40 geïsoleerde functionele controles geslaagd (18-10-2026)
 - Nieuwe GitHub Actions-suites met fictieve kavels/foto's op tijdelijke MySQL 8.4 en PHP 8.2, **zonder productiegegevens** en zonder gewijzigde applicatiecode. Snapshot-ZIP's bevatten databasegegevens, manifest en kavelfoto's, **geen sourcecode**.
 - Snapshotcreatie, volledige herstelcyclus, SHA-256-integriteit, ZIP-grootte en opslagoptelling, lock en padcontrole getest (20 checks).
 - Daarnaast de echte geauthenticeerde beheerpagina getest: toegang, download, create, delete, restore, veiligheidskopie, CSRF en sessie-invalidering (20 checks). [CI-run 39112431040](https://github.com/pecharko/Veiling/actions/runs/39112431040).
-- **Openstaande risico's (issue #2):** niet gegarandeerd consistente snapshot bij concurrente kavel- en fotowijzigingen; crash tussen foto- en databasetransacties; werkelijke OVHcloud-opslagquota en 80/90%-waarschuwingen nog niet geverifieerd. **Geen herstelactie op productie uitgevoerd.**
+- **Openstaande risico's (issue #2):** niet gegarandeerd consistente snapshot bij concurrente kavel- en fotowijzigingen; crash tussen foto- en databasetransacties; werkelijke OVHcloud-opslagquota nog niet geverifieerd; de 80/90%-drempels zijn in de nieuwe PR #11 uitsluitend gesimuleerd. **Geen herstelactie op productie uitgevoerd.**
 
 - **Kaveleditor PR #7:** werkelijke formulier- en fotouploadflows gevalideerd tegen geïsoleerde MySQL 8.4 en localhost PHP, GitHub Actions-run 39109809899 geslaagd. De afzonderlijke handmatige SFTP-workflow heeft beide editorbestanden naar OVHcloud uitgerold. GitHub Actions-job `ovh-kavel` is geslaagd, inclusief back-upartifact en rooktest voor loginbeveiliging en uitgeschakelde CSV-import (screenshot 18-10-2026). De beheerder heeft na de visuele nieuw-kavelcontrole op 18-10-2026 gemeld dat alles goed lijkt te werken; gebruikersacceptatie vastgelegd, zonder destructieve productietests.
 
