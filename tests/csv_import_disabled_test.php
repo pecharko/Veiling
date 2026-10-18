@@ -21,4 +21,4 @@ $assert(!preg_match('/\\b(?:INSERT|UPDATE|DELETE)\\s+(?:INTO|FROM|lots)\\b/i', $
 $assert(!str_contains($nav, "admin/import.php"), 'CSV-menu-entry is nog zichtbaar.');
 $assert(!str_contains($dashboard, "admin/import.php"), 'CSV-dashboardactie is nog zichtbaar.');
 
-echo "CSV-import geblokkeerd in broncode: 6 controles geslaagd\\n";
+echo "CSV-import geblokkeerd in broncode: 6 controles geslaagd\n";
