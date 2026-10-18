@@ -4,8 +4,13 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Bulkfoto-import definitief uitgeschakeld (19-10-2026; nog niet uitgerold)
+- Op verzoek is de niet te ondersteunen bulkfoto-import via SFTP uit de adminnavigatie verwijderd. De oude route `admin/fotos-bulk.php` geeft voor GET en POST uitsluitend HTTP 404, zonder databaseverbinding, fotoverwerking of verwijdering van bestanden.
+- Verouderde systeemcontrole op `private/photo-inbox/` en de SFTP-bulkimporttip verwijderd. Reeds aanwezige bestanden in de inbox blijven onaangeroerd.
+- Upload en beheer van foto's binnen afzonderlijke kavels blijft beschikbaar. Geïsoleerde HTTP-regressietests uitgebreid; T-047 toegevoegd. **Productie is nog niet gewijzigd; gerichte deployment vereist aparte toestemming.**
+
 ### Modern kaveloverzicht (PR in voorbereiding, niet live)
-- Dubbele actieknoppen onder de statistieken verwijderd; hoofdnavigatie blijft de enige ingang voor nieuw kavel, foto-import en veilinginformatie.
+- Dubbele actieknoppen onder de statistieken verwijderd; hoofdnavigatie bleef destijds de ingang voor nieuw kavel, foto-import en veilinginformatie (foto-import later uitgefaseerd).
 - Vier moderne statistiekkaarten, responsieve tabel, statusbadges, duidelijkere bewerkactie en gecombineerde zoek-/categorie-/statusfilters.
 - Alleen admin-dashboard PHP en scoped CSS gewijzigd; geen database- of fotoaanpassingen. Productie-uitrol vereist aparte gecontroleerde SFTP-release.
 

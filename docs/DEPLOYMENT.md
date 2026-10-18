@@ -2,6 +2,11 @@
 
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
 
+## Uitfaseren bulkfoto-import — voorbereiding, nog niet live (19-10-2026)
+
+De ontwikkelwijziging raakt uitsluitend `private/bootstrap.php` (menulink), `catalogus-public/admin/fotos-bulk.php` (HTTP 404 voor alle methodes) en `catalogus-public/admin/systeemcheck.php` (verwijderde controle en tekst). Andere PHP-/data-/fotobestanden hoeven niet te worden geüpload. **Gebruik geen bestaande dashboard-, CSS-, kavel- of snapshotworkflow:** die hebben een andere, vaste allowlist. Bereid eerst een aparte gerichte handmatige deployment met offline `plan`, SHA-256, geverifieerde SFTP-root, een kort bewaard privé-back-upartifact, driftcontrole, best-effort rollback en read-only GET + lege POST naar `admin/fotos-bulk.php` (beide 404) voor. Controleer ook de bestaande CSV-404 en anonieme admin-auth, vervolgens aangemeld de afwezige menulink en foto-upload bij een kavel. Verander **geen** database, `private/photo-inbox/`, `uploads/`, bestaande foto's, snapshots of configuratie. Vraag apart expliciete toestemming voor productie na groene CI en een geslaagd plan.
+
+
 ## Gerichte code-release T-016/T-017 — opslagwaarschuwingen en snapshot-preflight (NOG NIET LIVE)
 
 GitHub PR #11, gemerged in code-commit `d98dbc8fb90e4019649eefc41c86998cdcbcbaeb`. **69 geïsoleerde GitHub Actions-tests geslaagd**: [69 tests](https://github.com/pecharko/Veiling/actions/runs/39127059404), [PHP-lint](https://github.com/pecharko/Veiling/actions/runs/39127059332). Code in GitHub is niet gelijk aan de live server.
