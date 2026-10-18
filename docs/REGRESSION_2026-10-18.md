@@ -23,7 +23,8 @@
 
 - **T-001 — Geslaagd voor de basiscontrole:** de gebruiker opende naar aanleiding van de instructies `https://41lokeren.be/admin/index.php` in een incognitovenster en stuurde een screenshot van het scherm **Beheerderstoegang / Welkom terug** met e-mailadres- en wachtwoordvelden. Afgeschermde kavelgegevens waren niet zichtbaar.
 - **Tweede toegangscontrole:** de gebruiker opende vervolgens volgens de instructie `/admin/import.php` in hetzelfde incognitovenster en deelde opnieuw een screenshot van het loginformulier in plaats van het CSV-importscherm. Daarmee is de visuele toegangsafscherming voor zowel `/admin/index.php` als `/admin/import.php` bevestigd.
-- **Beperking bewijs:** op beide screenshots ontbreekt de browseradresbalk, zodat de precieze eind-URL `/admin/login.php` niet afzonderlijk zichtbaar is. Anonieme toegang tot `/admin/kavel.php`, inloggen met correcte credentials en uitloggen zijn nog niet daadwerkelijk gecontroleerd.
+- **Derde toegangscontrole:** na het openen van `/admin/kavel.php` in hetzelfde incognitovenster toonde de gebruiker opnieuw het loginformulier, nu met de adresbalk `41lokeren.be/admin/login.php` zichtbaar. Het afgeschermde kaveleditorformulier was niet zichtbaar. De drie gevraagde routes hebben hiermee een geslaagde visuele basiscontrole; de exacte redirect is nu voor de derde controle in beeld.
+- **Beperking bewijs:** het screenshot toont de eind-URL van de derde controle, niet gelijktijdig de vooraf gevraagde kaveleditor-URL. De navigatie is beoordeeld binnen de gevolgde testinstructie. Inloggen met correcte credentials, uitloggen en andere adminroutes zijn nog niet functioneel getest.
 - **Datamutaties:** geen. Geen wachtwoorden of sessiegegevens verzameld.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
