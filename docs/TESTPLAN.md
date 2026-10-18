@@ -38,6 +38,7 @@
 | T-031 | FR-003 | `SHOW CREATE TABLE lots;` in phpMyAdmin | DDL bevat `UNIQUE KEY lot_number (lot_number)`, verwachte kolommen, defaults en indexen | **Geslaagd 18-10-2026** — volledige DDL getoond, opgenomen in `docs/DATABASE.md` (zonder omgevingsgebonden auto-incrementteller) |
 | T-032 | FR-007/008/010 | `SHOW CREATE TABLE lot_images;` in phpMyAdmin | FK naar `lots.id` met `ON DELETE CASCADE`, unieke bronnaam per kavel en sorteerindex aanwezig | **Geslaagd 18-10-2026** — schema/constraints gezien op screenshot; vastgelegd in `docs/DATABASE.md` |
 | T-033 | FR-007/017 | Testkavel met foto's verwijderen, inclusief databasecascade en bestandsopruiming | Geen gekoppelde fotoregistraties en geen achterblijvende fysieke foto's; herstelmechanisme blijft consistent | Niet uitgevoerd — **uitsluitend geïsoleerde testomgeving**, niet op productie |
+| T-034 | FR-011/012 | `SHOW CREATE TABLE settings;` via phpMyAdmin | Veilingvelden, optionele datum, publicatievlag standaard 0, primaire sleutel en wijzigingstijdstip aanwezig | **Geslaagd 18-10-2026** — screenshot toont volledig schema; opgenomen in `docs/DATABASE.md`. Geen interactieve formulier- of publicatietest |
 
 ## Registratie bij uitvoering
 
