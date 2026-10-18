@@ -67,7 +67,7 @@ admin_top('Systeemcontrole OVHcloud');
     <tr><td><strong><?= e($row['title']) ?></strong></td><td><span class="status <?= $row['state'] === 'OK' ? 'live' : 'draft' ?>"><?= e($row['state']) ?></span></td><td><?= e($row['detail']) ?></td></tr>
   <?php endforeach; ?>
   </tbody></table>
-  <p class="hint">Belangrijk: een geslaagde systeemcheck is geen volledige beveiligingsaudit. Test ook de publieke catalogus, uploads, login, CSV-import en back-ups voordat je bezoekers uitnodigt.</p>
+  <p class="hint">Belangrijk: een geslaagde systeemcheck is geen volledige beveiligingsaudit. Test ook de publieke catalogus, uploads, login en back-ups voordat je bezoekers uitnodigt.</p>
   <div class="form-actions"><a class="secondary" href="<?= e(url('admin/index.php')) ?>">Terug naar beheer</a><a class="primary" href="<?= e(url('admin/systeemcheck.php')) ?>">Controle vernieuwen ↻</a></div>
 </div>
 <?php admin_bottom(); ?>
