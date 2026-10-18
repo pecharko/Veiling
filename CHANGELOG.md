@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### CSV-import tijdelijk verwijderd uit admin (nog niet uitgerold)
+- FR-009 en FR-029 op verzoek tijdelijk uitgeschakeld. Menulink en dashboardknop verdwijnen, oude route `catalogus-public/admin/import.php` is vervangen door een minimale handler die altijd HTTP 404 retourneert, ook voor POST (zonder databaseverbinding of schrijfopdracht).
+- Actief CSV-voorbeeldbestand verwijderd; oorspronkelijke parser en voorbeeld blijven in de Git-geschiedenis herstelbaar. Foto-import blijft behouden; tekst op systeemcheck en backup aangepast.
+- Regressiecontrole T-042 toegevoegd: ontbrekende links, 404 bij GET en POST, foto-import nog aanwezig. **Uitrol naar OVHcloud vereist**; louter GitHub aanpassen wijzigt productie niet.
+
 ### CSV-voorbeeldbestand hersteld — 2026-10-18
 - In de productie-admin mislukt de knop `Download voorbeeld-CSV`: Chrome probeert `voorbeeld-kavels.html` op te slaan en meldt dat het bestand niet beschikbaar is. De link in `admin/import.php` wees naar een statisch CSV-bestand dat niet in Git stond.
 - `catalogus-public/assets/voorbeeld-kavels.csv` toegevoegd met exact de negen importkolommen, UTF-8-BOM en twee duidelijk fictieve, **niet-gepubliceerde** voorbeeldkavels. CSV-parser van `admin/import.php` gecontroleerd op kolomnamen en puntkommascheiding. Geen wijzigingen aan de PHP-importfunctie.
