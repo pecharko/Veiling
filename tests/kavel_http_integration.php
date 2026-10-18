@@ -54,6 +54,11 @@ function by_number(int $nr): array|false {
 }
 
 try {
+  [$status] = request_page('/admin/fotos-bulk.php');
+  claim($status === 404, 'Unauthenticated bulk import GET returns 404');
+  [$status] = request_page('/admin/fotos-bulk.php', ['action' => 'process']);
+  claim($status === 404, 'Unauthenticated bulk import POST returns 404');
+
   [$status, $html] = request_page('/admin/login.php');
   claim($status === 200, 'Login form loads');
   $csrf = token($html);
@@ -67,6 +72,8 @@ try {
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
+  [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
+  claim($status === 200 && !str_contains($systemcheck, 'Afgeschermde fotobulkmap') && !str_contains($systemcheck, 'bulk via SFTP'), 'System check no longer requires bulk photo import');
   [$status] = request_page('/admin/fotos-bulk.php');
   claim($status === 404, 'Old bulk photo import GET returns 404');
   $lotsBeforeBulk = lot_count();
