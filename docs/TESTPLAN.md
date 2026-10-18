@@ -39,6 +39,7 @@
 | T-032 | FR-007/008/010 | `SHOW CREATE TABLE lot_images;` in phpMyAdmin | FK naar `lots.id` met `ON DELETE CASCADE`, unieke bronnaam per kavel en sorteerindex aanwezig | **Geslaagd 18-10-2026** — schema/constraints gezien op screenshot; vastgelegd in `docs/DATABASE.md` |
 | T-033 | FR-007/017 | Testkavel met foto's verwijderen, inclusief databasecascade en bestandsopruiming | Geen gekoppelde fotoregistraties en geen achterblijvende fysieke foto's; herstelmechanisme blijft consistent | Niet uitgevoerd — **uitsluitend geïsoleerde testomgeving**, niet op productie |
 | T-034 | FR-011/012 | `SHOW CREATE TABLE settings;` via phpMyAdmin | Veilingvelden, optionele datum, publicatievlag standaard 0, primaire sleutel en wijzigingstijdstip aanwezig | **Geslaagd 18-10-2026** — screenshot toont volledig schema; opgenomen in `docs/DATABASE.md`. Geen interactieve formulier- of publicatietest |
+| T-035 | FR-001 | `SHOW CREATE TABLE admins;` via phpMyAdmin | Primaire sleutel, unieke e-mailindex, verplichte `password_hash` en aanmaakdatum aanwezig | **Geslaagd 18-10-2026** — DDL bevestigd en opgenomen in `docs/DATABASE.md`. Login-/rollenwerking niet getest |
 
 ## Registratie bij uitvoering
 
