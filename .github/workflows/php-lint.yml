@@ -1,0 +1,40 @@
+name: PHP syntax and repository checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+
+      - name: Lint all versioned PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -d '' files < <(find catalogus-public private -type f -name '*.php' -print0)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No PHP files found"
+            exit 1
+          fi
+          for file in "${files[@]}"; do
+            php -l "$file"
+          done
+
+      - name: Detect whitespace errors
+        run: git diff --check HEAD^ HEAD || git diff --check
