@@ -4,6 +4,12 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Modern kaveloverzicht (PR in voorbereiding, niet live)
+- Dubbele actieknoppen onder de statistieken verwijderd; hoofdnavigatie blijft de enige ingang voor nieuw kavel, foto-import en veilinginformatie.
+- Vier moderne statistiekkaarten, responsieve tabel, statusbadges, duidelijkere bewerkactie en gecombineerde zoek-/categorie-/statusfilters.
+- Alleen admin-dashboard PHP en scoped CSS gewijzigd; geen database- of fotoaanpassingen. Productie-uitrol vereist aparte gecontroleerde SFTP-release.
+
+
 ### Gerichte SFTP-deployment van opslagcorrecties T-016/T-017 (voorbereid, niet live)
 - Dedicated handmatige GitHub Actions-release voor twee PHP-bestanden, in veilige volgorde `private/snapshots.php` daarna `catalogus-public/admin/backup.php`.
 - Vooraf controle van projectroot, codeback-up van beide bestanden als zeven dagen privé artifact, serverdrift-controle en SHA-256-verificatie; bij uploadfout best-effort code-rollback.
