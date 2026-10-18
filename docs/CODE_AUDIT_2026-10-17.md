@@ -62,9 +62,9 @@ In de **repository** ontbreken:
 
 Deze bestanden kunnen wel nog op OVHcloud staan; **dat is niet gecontroleerd**. Voeg noodzakelijke niet-gevoelige assets/schema-documentatie toe of pas de verwijzingen aan. Laat `setup.php` niet zomaar publiek actief staan.
 
-### P2 — Databaseconstraint op unieke lotnummers niet aantoonbaar
+### P2 — Databaseconstraint op unieke lotnummers (UPDATE 18-10-2026: bevestigd)
 
-De upsert in `admin/import.php` veronderstelt een UNIQUE- of PRIMARY KEY-conflict voor lotnummers. De repository bevat geen geversioneerd databaseschema. Controleer veilig met `SHOW INDEX FROM lots;` of met een geschoonde schema-export dat `lots.lot_number` een unieke index heeft; geen productiegegevens exporteren naar GitHub.
+**Update 18 oktober 2026:** via aangeleverde phpMyAdmin-uitvoer van `SHOW INDEX FROM lots;` is bevestigd dat `lot_number` een afzonderlijke unieke BTREE-index heeft (`Key_name=lot_number`, `Column_name=lot_number`, `Seq_in_index=1`, `Non_unique=0`). MySQL verhindert daardoor dubbele lotnummers. Een schemawijziging is niet nodig. De repository heeft nog geen geversioneerd databaseschema en functionele tests voor de PHP-foutmelding, CSV-upsert en gelijktijdige bewerkingen staan open. Deze bevinding actualiseert de eerdere risico-inschatting van 17 oktober.
 
 ### P3 — Validatie details en overige regressiepunten
 
