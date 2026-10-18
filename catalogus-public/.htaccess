@@ -1,0 +1,4 @@
+# Forceer HTTPS - permanente redirect
+RewriteEngine On
+RewriteCond %{SERVER_PORT} ^80$
+RewriteRule ^(.*)$ https://41lokeren.be/$1 [R=301,L]
