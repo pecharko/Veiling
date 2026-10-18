@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### GitHub Actions → OVHcloud SFTP-deploy (nog niet op productie uitgevoerd)
+- FR-030/T-043: handmatig startbare GitHub Actions-workflow toegevoegd met een offline `plan`-modus, aparte bevestigde `deploy`-modus, SFTP met vooraf geverifieerde SSH-hostsleutel en repositorysecrets.
+- De workflow is beperkt tot de vijf PHP-bestanden van de CSV-disable-release. Ze haalt de huidige versies van OVHcloud eerst op in een kort bewaard privé-back-upartifact, verifieert hashes en probeert bij uploadfouten de vorige bestanden te herstellen.
+- HTTP-smoketests eisen 404 voor GET en lege POST op `admin/import.php` na de upload. Geen automatische uitrol bij push; er zijn nog geen SFTP-credentials ingesteld of remote acties uitgevoerd.
+
 ### CSV-import tijdelijk verwijderd uit admin (nog niet uitgerold)
 - FR-009 en FR-029 op verzoek tijdelijk uitgeschakeld. Menulink en dashboardknop verdwijnen, oude route `catalogus-public/admin/import.php` is vervangen door een minimale handler die altijd HTTP 404 retourneert, ook voor POST (zonder databaseverbinding of schrijfopdracht).
 - Actief CSV-voorbeeldbestand verwijderd; oorspronkelijke parser en voorbeeld blijven in de Git-geschiedenis herstelbaar. Foto-import blijft behouden; tekst op systeemcheck en backup aangepast.
