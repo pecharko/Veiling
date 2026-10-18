@@ -4,6 +4,12 @@
 
 ## Uitfaseren bulkfoto-import — voorbereiding, nog niet live (19-10-2026)
 
+**Afzonderlijke voorgestelde workflow:** `.github/workflows/photo-import-retirement-deploy.yml` met `scripts/deploy_photo_import_retirement.py` (PR voor handmatige review). De workflow is alleen handmatig startbaar op `main` en controleert het door de beheerder ingegeven exacte `release_sha` plus bevestiging `DEPLOY PHOTO RETIRE` vóór elke SFTP-verbinding. Test eerst `mode=plan` met lege bevestiging en controleer de drie SHA-256-hashes; dit doet geen netwerkverbinding. Een geslaagd plan geeft geen toestemming voor upload.
+
+**Strikte bestandsvolgorde:** eerst `catalogus-public/admin/fotos-bulk.php` (404 voor GET/POST), dan `catalogus-public/admin/systeemcheck.php` (verouderde bulk-mapcontrole verwijderd), tot slot `private/bootstrap.php` (Foto-import-link weg). Tijdens `deploy` worden de drie bestaande productieversies vóór enige wijziging geback-upt in een privé GitHub Actions-artifact (7 dagen); alle externe bestanden en de toepassingmap worden geverifieerd met lstat om symlinks te weigeren. Bij drift of ongeldige serverroot: stoppen. Bij uploadfout: best-effort rollback met SHA-256-verificatie. De HTTP-smoketests controleren homepage/login/afgeschermde admin en beide oude import-URL's (GET + lege POST). Test daarna aangemeld of de menulink ontbreekt en de kaveleditor nog foto's accepteert, zonder een destructieve productietest uit te voeren.
+
+
+
 De ontwikkelwijziging raakt uitsluitend `private/bootstrap.php` (menulink), `catalogus-public/admin/fotos-bulk.php` (HTTP 404 voor alle methodes) en `catalogus-public/admin/systeemcheck.php` (verwijderde controle en tekst). Andere PHP-/data-/fotobestanden hoeven niet te worden geüpload. **Gebruik geen bestaande dashboard-, CSS-, kavel- of snapshotworkflow:** die hebben een andere, vaste allowlist. Bereid eerst een aparte gerichte handmatige deployment met offline `plan`, SHA-256, geverifieerde SFTP-root, een kort bewaard privé-back-upartifact, driftcontrole, best-effort rollback en read-only GET + lege POST naar `admin/fotos-bulk.php` (beide 404) voor. Controleer ook de bestaande CSV-404 en anonieme admin-auth, vervolgens aangemeld de afwezige menulink en foto-upload bij een kavel. Verander **geen** database, `private/photo-inbox/`, `uploads/`, bestaande foto's, snapshots of configuratie. Vraag apart expliciete toestemming voor productie na groene CI en een geslaagd plan.
 
 
