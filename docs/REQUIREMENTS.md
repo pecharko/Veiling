@@ -146,3 +146,6 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 ## Eerste verificatieronde
 
 Nu de actuele OVHcloud-broncode naar GitHub is geïmporteerd en statisch beoordeeld, controleren we vervolgens op de server en in een testomgeving achtereenvolgens: databaseconstraints, alle importpaden, foto-opslag, login/CSRF, back-up/restore, de menukoppeling, opslagmeter en de zichtbaarheid van de publieke catalogus. Noteer bevindingen in `docs/TESTPLAN.md` en dit register.
+
+## FR-031 — Modern kaveloverzicht (gepland voor productie)
+Het beheer toont vier statistiekkaarten, een responsieve kaveltabel met statusbadges en een bewerkactie. De dubbele actiebalk verdwijnt omdat de hoofdnavigatie deze acties al aanbiedt. Zoekterm, categorie en publicatiestatus kunnen gecombineerd worden; paginering bewaart de filters. De backend blijft read-only op het overzicht en gebruikt gebonden SQL-parameters.
