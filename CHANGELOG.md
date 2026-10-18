@@ -4,10 +4,24 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### Voorgestelde kaveleditor-correctie — featurebranch (nog niet uitgerold)
-- FR-002/004: na een mislukte kavelbewaring blijven de ingestuurde invoervelden zichtbaar; helper `private/lot_form.php` met 13 assertions in `tests/lot_form_test.php`.
-- FR-006: uploadstatussen worden gecontroleerd vóór de kavel-INSERT/UPDATE. Vroegtijdige uploadfouten veroorzaken geen SQL-mutatie; problemen tijdens latere fotobewerking houden een expliciete waarschuwing over gedeeltelijk succes.
-- GitHub Actions voert de PHP-regressietest uit bij pull requests. De uitvoering en een end-to-endtest in een geïsoleerde omgeving zijn nog te bevestigen. Geen wijzigingen aan de live OVHcloud-site.
+### PR #7 opnieuw geïntegreerd met actuele main (nog niet live)
+- Formulierwaarden blijven staan bij validatie- of databankfout via `lot_form_values()`; uploadstatus wordt vóór INSERT/UPDATE gecontroleerd. Alleen deze kaveleditorcorrectie en tests zijn overgenomen, zonder de bestaande CSV-uitschakeling of SFTP-deployment terug te draaien.
+- PHP-unitchecks toegevoegd aan de bestaande GitHub Actions-controle. Echte integratietests op een geïsoleerde MySQL-database en een afzonderlijk goedgekeurde editor-deployment moeten nog volgen.
+
+### Eerste automatische OVHcloud SFTP-deploy geslaagd — 2026-10-18
+- FR-030/T-043: handmatig startbare GitHub Actions-workflow toegevoegd met een offline `plan`-modus, aparte bevestigde `deploy`-modus, SFTP met vooraf geverifieerde SSH-hostsleutel en repositorysecrets.
+- De workflow is beperkt tot de vijf PHP-bestanden van de CSV-disable-release. Ze haalt de huidige versies van OVHcloud eerst op in een kort bewaard privé-back-upartifact, verifieert hashes en probeert bij uploadfouten de vorige bestanden te herstellen.
+- HTTP-smoketests eisen 404 voor GET en lege POST op `admin/import.php` na de upload. Geen automatische uitrol bij push. Op 18-10-2026 heeft de gebruiker een expliciete `deploy` gestart; SFTP-hostsleutel, back-upartifact, uploads, checksums en GET-/POST-404-smoketests slaagden ([run 39109055677](https://github.com/pecharko/Veiling/actions/runs/39109055677)).
+
+### CSV-import tijdelijk verwijderd uit admin (productie uitgerold)
+- FR-009 en FR-029 op verzoek tijdelijk uitgeschakeld. Menulink en dashboardknop verdwijnen, oude route `catalogus-public/admin/import.php` is vervangen door een minimale handler die altijd HTTP 404 retourneert, ook voor POST (zonder databaseverbinding of schrijfopdracht).
+- Actief CSV-voorbeeldbestand verwijderd; oorspronkelijke parser en voorbeeld blijven in de Git-geschiedenis herstelbaar. Foto-import blijft behouden; tekst op systeemcheck en backup aangepast.
+- Regressiecontrole T-042 toegevoegd: ontbrekende links, 404 bij GET en POST, foto-import nog aanwezig. **Uitrol via GitHub Actions-run 39109055677 geslaagd** op 18-10-2026: vijf PHP-bestanden via SFTP geplaatst, oude versies in herstelartifact bewaard, GET en lege POST naar import.php geven HTTP 404. Ook visueel bevestigd via productie-adminscreenshot: CSV-import ontbreekt in hoofdmenu en dashboard, links naar Foto-import, kavelbeheer en Back-up & herstel zijn aanwezig en 10 kavels staan nog in het overzicht. **T-042 geslaagd**; werking van de andere functies wordt afzonderlijk getest.
+
+### CSV-voorbeeldbestand hersteld — 2026-10-18
+- In de productie-admin mislukt de knop `Download voorbeeld-CSV`: Chrome probeert `voorbeeld-kavels.html` op te slaan en meldt dat het bestand niet beschikbaar is. De link in `admin/import.php` wees naar een statisch CSV-bestand dat niet in Git stond.
+- `catalogus-public/assets/voorbeeld-kavels.csv` toegevoegd met exact de negen importkolommen, UTF-8-BOM en twee duidelijk fictieve, **niet-gepubliceerde** voorbeeldkavels. CSV-parser van `admin/import.php` gecontroleerd op kolomnamen en puntkommascheiding. Geen wijzigingen aan de PHP-importfunctie.
+- **Uitrol nog nodig:** bestand uploaden naar `/catalogus-public/assets/` op OVHcloud. Productiedownload en import zijn nog **niet** opnieuw getest. T-028 nog open; issue #4 gedeeltelijk opgevolgd.
 
 ### Testvoorbereiding — 2026-10-18
 - Fase-1-regressiecontrole van aanmelden, kavelbeheer en CSV-import op basis van huidige GitHub-PHP-broncode vastgelegd in `docs/REGRESSION_2026-10-18.md`. Geen geauthenticeerde of muterende productietests uitgevoerd.

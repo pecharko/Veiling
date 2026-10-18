@@ -16,6 +16,7 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 - **Gepland** — goedgekeurde requirement, nog niet ontwikkeld.
 - **Geverifieerd** — code én acceptatietest gecontroleerd; datum/testbewijs registreren.
 - **Vervallen** — bewust verwijderd, met reden en wijzigingsdatum.
+- **Tijdelijk uitgeschakeld** — op verzoek niet toegankelijk; herstelbare implementatie blijft in de Git-geschiedenis.
 
 ## Register functionele requirements
 
@@ -29,7 +30,7 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-006 | Foto's uploaden bij kavels | JPEG/PNG/WebP-upload werkt met servervalidatie en limieten; fouten worden gemeld zonder onnodig gegevensverlies. | Statisch bevestigd |
 | FR-007 | Foto's tonen en verwijderen | Kavelfoto's verschijnen in admin en op publieke pagina's; verwijderactie is beschermd en doelgericht. | Statisch bevestigd |
 | FR-008 | Hoofdfoto bepalen | De foto met de laagste sorteerwaarde wordt als hoofdfoto gebruikt. | Statisch bevestigd |
-| FR-009 | CSV-import van kavels | Beheerder kan kavels importeren; invoerfouten en duplicaten worden beheerst afgehandeld. | Statisch bevestigd |
+| FR-009 | CSV-import van kavels | **Voorlopig niet beschikbaar:** geen menu/dashboardlink, rechtstreekse GET/POST naar `/admin/import.php` stopt met HTTP 404 zonder datamutatie; oude implementatie later herstelbaar via Git. | Tijdelijk uitgeschakeld — geverifieerd op OVHcloud 18-10-2026 (T-042): GET/lege POST beide HTTP 404 in run 39109055677; gebruikersscreenshot bevestigt afwezigheid in menu én dashboard, links Foto-import en Back-up & herstel aanwezig |
 | FR-010 | Bulkimport van kavelfoto's | Meerdere foto's kunnen via de foto-import aan juiste kavels worden gekoppeld. | Statisch bevestigd |
 | FR-011 | Veilinginformatie beheren | Naam, ondertitel, inleiding, datum, tijd, locatie, adres, e-mail en praktische informatie kunnen worden opgeslagen. | Statisch bevestigd |
 | FR-012 | Zichtbaarheid volledige catalogus | Beheerder kan de publieke catalogus aan/uitzetten, onafhankelijk van status per kavel. | Statisch bevestigd |
@@ -54,6 +55,12 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-026 | Fotogalerij en delen van kavel | Thumbnails wisselen de hoofdfoto; kavel-link delen/kopiëren werkt met browserfallback. | Statisch bevestigd |
 | FR-027 | Kaveloverzicht in admin | Overzicht toont aantallen, statussen, foto's, zoeken/filteren en pagineren voor de beheerder. | Statisch bevestigd |
 | FR-028 | Systeemcontrole | Admin ziet controles van PHP, MySQL, configuratie, HTTPS en schrijfrechten, met duidelijke resultaten. | Statisch bevestigd |
+| FR-029 | Downloadbaar CSV-voorbeeld | Niet zichtbaar of downloadbaar vanuit de admin zolang FR-009 is uitgeschakeld; voorbeeld-CSV uit actieve Git-tree verwijderd. | Tijdelijk uitgeschakeld |
+| FR-030 | Veilige, handmatig gestarte OVH-deployment | Beheerder kan vanuit GitHub op `main` eerst een releaseplan inzien en daarna vijf vooraf goedgekeurde PHP-bestanden via SFTP deployen; met hostkeycontrole, SFTP-secrets, vóór-uploadback-up, hashverificatie en niet-destructieve HTTP-smoketests. Geen automatische deploy na commit en geen secrets in Git. | Geverifieerd voor eerste gerichte release — SFTP-upload, back-upartifact, SHA256-controle en GET/POST 404 geslaagd in run 39109055677 op 18-10-2026; toekomstige releases alleen na aangepaste allowlist/review |
+
+**CSV-voorbeeld 18-10-2026 (FR-029):** Chrome toont bij de downloadpoging `voorbeeld-kavels.html` en `File wasn't available on site`; het in `admin/import.php` genoemde bestand ontbrak in de GitHub-repository. `catalogus-public/assets/voorbeeld-kavels.csv` is nu toegevoegd en gecontroleerd op de negen importkolommen, puntkommascheiding en UTF-8-BOM. **Nog vereist:** upload naar OVHcloud en geslaagde browserdownload bevestigen (T-028). De twee fictieve records zijn expliciet als voorbeelden gemarkeerd en staan op `publiceren=nee`.
+
+**Nieuwe beslissing 18-10-2026:** op expliciet verzoek is **de volledige kavel-CSV-import tijdelijk buiten gebruik** gezet, inclusief de oude directe import-URL en het voorbeeldbestand. Foto-import blijft beschikbaar. De eerdere CSV-downloadbevinding hierboven is historisch; downloadherstel is geen openstaand werk zolang de functie uitgeschakeld blijft. Zie [uitrolinstructies](DEPLOYMENT.md) en test T-042.
 
 **Bekende verificatiegaten:** bij FR-003 is de UNIQUE-index op `lots.lot_number` op 18 oktober 2026 via phpMyAdmin-metadata bevestigd; interactietests van de kaveleditor, CSV-upsert en gelijktijdige invoer blijven open. Bij FR-015 t/m FR-020 zijn consistentie, hersteltest en serverquota nog niet aangetoond. Zie het [code-auditrapport](CODE_AUDIT_2026-10-17.md). Een status **Statisch bevestigd** is geen geslaagde acceptatietest.
 
@@ -61,7 +68,9 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 
 De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validatie) en **FR-009** (CSV-import) is gericht nagekeken. De PHP-implementatie is aanwezig, maar de geauthenticeerde en muterende testscenario's zijn **niet uitgevoerd**; zie [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md).
 
-**Voorgestelde verbetering FR-002/004/006 (branch `fix/kavel-editor-validation-recovery`):** na een fout in `admin/kavel.php` vult `lot_form_values()` de invoer opnieuw vanuit de ingestuurde formulierwaarden, met serverzijde HTML-escaping bij weergave. `photo_files()` controleert uploadstatus en tijdelijke uploadbestanden nu **vóór** de SQL INSERT/UPDATE. Bij zulke uploadfouten vermeldt de foutmelding dat het kavel niet is opgeslagen. Latere problemen met inhoud/conversie van afzonderlijke foto's geven na de SQL-save nog steeds expliciet een **gedeeltelijk succes** als waarschuwing. Automatische formuliertests zijn toegevoegd; **T-038/T-039 blijven open tot PR-CI en geïsoleerde integratietests**. Zie [issue #5](https://github.com/pecharko/Veiling/issues/5). De productiecode is niet aangepast.
+**Bevinding bij FR-002/004/006:** bij een fout in `admin/kavel.php` worden eerder ingevoerde formulierwaarden niet opnieuw uit de POST getoond. Daarnaast gebeurt de lot-INSERT/UPDATE vóór de uploadvalidatie, wat een misleidende foutmelding over al opgeslagen gegevens kan veroorzaken. Dit is als codebevinding vastgelegd in [issue #5](https://github.com/pecharko/Veiling/issues/5) met de nog openstaande scenario's **T-038/T-039**. Geen gebruikersdata aangepast of live foutscenario gereproduceerd.
+
+**Kaveleditorcorrectie (PR #7, nog niet uitgerold):** FR-002/004 behoudt ingestuurde formulierwaarden wanneer de server opslaan weigert; FR-006 valideert de PHP-uploadstatus vóór de lot INSERT/UPDATE. Bij latere foutieve afbeeldingsinhoud blijft de bestaande melding over gedeeltelijk succes behouden. Testen T-038 en T-039 moeten op een geïsoleerde database worden bevestigd; de 13 unit-assertions van `lot_form_values()` zijn eerder geslaagd.
 
 ## Uitgewerkte acceptatiecriteria voor risicovolle functies
 

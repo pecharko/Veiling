@@ -2,6 +2,8 @@
 
 Deze repository bevat de **broncode en documentatie** van de online veilingcatalogus van 41 Lokeren: <https://41lokeren.be>.
 
+**Actuele productbeslissing (18 oktober 2026):** de CSV-import van kavels is op verzoek tijdelijk verwijderd uit het beheer. De directe importroute is in de repository geblokkeerd; **foto-import blijft beschikbaar**. De wijziging wordt pas actief op 41lokeren.be nadat de aangepaste bestanden op OVHcloud zijn geplaatst. Zie [uitrolinstructies](docs/DEPLOYMENT.md).
+
 **Status (17 oktober 2026):** de actuele applicatiebroncode is door de gebruiker vanaf een OVHcloud-kopie naar deze repository gepusht en belangrijke PHP-bestanden zijn statisch geïnspecteerd. **Nog geen geteste/volledige herstelbaseline:** database, kavelfoto's, configuratiegeheimen en sommige ontbrekende assets zijn niet in Git opgeslagen. Zie [eerste code-audit](docs/CODE_AUDIT_2026-10-17.md).
 
 ## Belangrijkste documenten
@@ -10,6 +12,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 - [Technische architectuur](docs/ARCHITECTURE.md) — huidige opzet en openstaande verificatiepunten.
 - [Databaseschema](docs/DATABASE.md) — **alle vijf tabellen geverifieerd**: `lots`, `lot_images`, `settings`, `admins` en `login_attempts`.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
+- [Handmatige GitHub Actions-deploy](.github/workflows/ovhcloud-deploy.yml) — veilige SFTP-upload met één klik na eenmalige configuratie; start standaard als niet-destructief plan, geen automatische uitrol bij commits.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
 - [Regressiecontrole fase 1](docs/REGRESSION_2026-10-18.md) — veilige volgorde voor aanmelden, kavelbeheer en CSV-import; broncodebevindingen.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.

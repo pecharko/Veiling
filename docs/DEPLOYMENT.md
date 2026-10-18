@@ -2,6 +2,68 @@
 
 **Uitrolmodel:** voorlopig handmatige bestandenoverdracht naar OVHcloud via RemoteDrive. **Geen automatische deployment vanuit GitHub.**
 
+## Geautomatiseerde, gecontroleerde SFTP-upload (nieuwe mogelijkheid)
+
+Workflow: [GitHub Actions — Deploy naar OVHcloud (handmatig)](../.github/workflows/ovhcloud-deploy.yml). Uploadscript: [`scripts/deploy_ovh_sftp.py`](../scripts/deploy_ovh_sftp.py).
+
+**Doel:** minder handwerk via RemoteDrive. De eerste release uploadt bewust **alleen de vijf hieronder genoemde PHP-bestanden voor het uitschakelen van CSV-import**. De workflow draait **niet automatisch bij commits**; een beheerder start ze expliciet, vanaf de `main`-branch. De standaardkeuze `plan` toont enkel de bestanden en wijzigt niets. De optie `deploy` vereist het exacte bevestigingswoord **`DEPLOY`**.
+
+### Eenmalig in te stellen in OVHcloud
+
+1. Open **OVHcloud Manager → Web Cloud → Hosting → FTP - SSH**. Verifieer de SFTP-servernaam en de FTP-gebruiker. Activeer **SFTP** voor deze gebruiker indien nodig; OVH Starter ondersteunt dit.
+2. Controleer in je SFTP-client wat de login-basismap is. Zoek vanuit die map de twee **naast elkaar liggende mappen** `catalogus-public/` en `private/`. De repository gebruikt die structuur. Een SFTP-pad `.` kan correct zijn wanneer je bij aanmelden meteen in `/home/kobejoe` terechtkomt; gebruik anders het daadwerkelijk bevestigde pad. **Niet gokken.**
+3. Controleer de SSH-hostsleutelvingerafdruk van de server via een reeds vertrouwde SFTP-verbinding of OVHcloud. Gebruik die verificatie om de uitvoer van `ssh-keyscan -p 22 <SFTP-host>` te valideren; `ssh-keyscan` alleen geeft **geen** identiteitgarantie.
+
+### Eenmalig in GitHub instellen
+
+In [GitHub-repository-instellingen](https://github.com/pecharko/Veiling/settings/secrets/actions) → **Settings → Secrets and variables → Actions**:
+
+| Type | Naam | Waarde |
+|---|---|---|
+| Secret | `OVH_SFTP_HOST` | Gecontroleerde SFTP-hostnaam uit OVHcloud |
+| Secret | `OVH_SFTP_USER` | Gebruikersnaam van FTP/SFTP |
+| Secret | `OVH_SFTP_PASSWORD` | SFTP-wachtwoord, alleen in GitHub Secrets invoeren |
+| Secret | `OVH_SFTP_KNOWN_HOSTS` | Hele geverifieerde SSH-`known_hosts`-regel voor host: `hostnaam ssh-ed25519 AAAA...` (kan ook ander SSH-sleuteltype zijn) |
+| Variable | `OVH_SFTP_BASE` | SFTP-basismap die `catalogus-public/` en `private/` bevat, bijvoorbeeld `.` indien bevestigd |
+
+Gebruik voor dit doel bij voorkeur een afzonderlijke SFTP-gebruiker met alleen noodzakelijke maptoegang. Deel **geen** wachtwoord of host-key secrets in ChatGPT, issues of commits. Maak desgewenst een GitHub **Environment `production`** met expliciete reviewergoedkeuring voordat de job de secrets kan gebruiken (waar dit in je plan mogelijk is). De workflow gebruikt uitsluitend een geverifieerde SSH-hostsleutel en weigert onbekende hosts; er is geen fallback naar gewone FTP.
+
+### Uitvoeren
+
+1. Open [GitHub → Actions](https://github.com/pecharko/Veiling/actions) → **Deploy naar OVHcloud (handmatig)** → **Run workflow**, branch **main**.
+2. Kies eerst **`plan`**, laat `confirmation` leeg en start. Controleer de afgedrukte lijst van precies vijf PHP-bestanden. Dit vereist nog geen SFTP-credentials.
+3. Kies daarna **`deploy`**, typ **`DEPLOY`**, en start.
+4. De workflow controleert de verbinding en de bestaande serverbestanden, **downloadt eerst de vijf oude productieversies**, bewaart die als **privé GitHub Actions-artifact voor 7 dagen**, en uploadt vervolgens de nieuwe bestanden. Na elke upload wordt de SHA-256 inhoud gecontroleerd. Bij een fout probeert het script wijzigingen terug te draaien. Dit is een **best-effort rollback**, geen volwaardige database-/serverback-up.
+5. Na upload test de job uitsluitend `GET` en een **lege POST** naar `https://41lokeren.be/admin/import.php`: beide moeten **404** teruggeven. De database blijft onaangeraakt. Controleer daarna in Chrome dat CSV-import uit de admin is verdwenen en Foto-import en Back-up & herstel nog werken.
+
+**Veiligheidsbeperkingen:** deze eerste workflow deployt niet automatisch andere toekomstige codewijzigingen. Voordat we de workflow uitbreiden, moet de vrijgavelijst en smoke-test per release gecontroleerd worden. De private `config.php`, snapshots, uploads, databasebestanden en `.htaccess` worden niet aangeraakt. **GitHub-commit ≠ live OVH-uitrol.**
+
+**Fallback:** als SFTP niet beschikbaar is of de workflow faalt, gebruik de handmatige RemoteDrive-stappen hieronder; controleer een eventueel foutgerelateerd back-upartifact vóór opnieuw uploaden.
+
+## Uitrol: CSV-import tijdelijk verwijderen (18 oktober 2026)
+
+**Pas na merge naar `main`**, synchroniseer GitHub Desktop met de repository. Maak vóór upload een lokale kopie van de huidige bestanden in de OVHcloud-productieomgeving.
+
+Upload **alle vijf** volgende bestanden vanaf de geactualiseerde repository met RemoteDrive, op exact dezelfde relatieve paden:
+
+1. `private/bootstrap.php` — verwijdert CSV-link uit het adminmenu;
+2. `catalogus-public/admin/index.php` — verwijdert knop 'Kavels importeren';
+3. `catalogus-public/admin/import.php` — vervangt de importfunctie door een HTTP-404-afhandeling die ook POST blokkeert;
+4. `catalogus-public/admin/systeemcheck.php` — verwijdert CSV-import als actieve systeemcheck;
+5. `catalogus-public/admin/backup.php` — verwijdert CSV-verwijzing uit de back-upaanbeveling.
+
+**Let op:** `admin/import.php` moet juist worden **overschreven**, niet alleen uit het menu worden verborgen. Verwijder het bestand **niet** uitsluitend uit Git of via de FTP-client, want de overblijvende serverversie kan dan nog imports uitvoeren. Als `catalogus-public/assets/voorbeeld-kavels.csv` intussen op OVHcloud was geplaatst, mag je **alleen dat niet meer gebruikte voorbeeldbestand** verwijderen (niet de volledige assets-map). Wijzig de database, bestaande kavels, snapshots, fotobestanden, `private/config.php` en `.htaccess` niet.
+
+**Na upload, uitsluitend veilig testen:**
+
+```bash
+curl -sSI https://41lokeren.be/admin/import.php | grep -iE '^(HTTP/|location:)'
+```
+
+Verwacht: `HTTP/2 404` (of HTTP/1.1 404, afhankelijk van protocol). Open daarnaast admin/index.php en controleer dat CSV-import uit menu en acties verdwenen is maar Foto-import en Back-up & herstel intact blijven. **POST-test alleen uitvoeren met een leeg verzoek (zonder CSV-bestand, zonder authenticatiegegevens):** `curl -sS -o /dev/null -w '%{http_code}\n' -X POST https://41lokeren.be/admin/import.php`. Verwacht `404`. De test zonder data kan geen kavels toevoegen. Leg het resultaat vast als T-042.
+
+Rollback: herstel de vijf originele PHP-bestanden vanuit de vooraf gemaakte veilige kopie. Hiermee kan CSV-import weer actief worden; pas doen na expliciete beslissing. De oude importimplementatie blijft ook in de Git-geschiedenis beschikbaar.
+
 ## 1. Eerste import (17 oktober 2026 uitgevoerd, controles deels open)
 
 1. **Uitgevoerd volgens gebruiker:** actuele productiebroncode van `catalogus-public/` en `private/` gekopieerd naar `/Users/chrisdemol/Code/41Lokeren-Productie`.

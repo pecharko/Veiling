@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -d '' files < <(find catalogus-public private -type f -name '*.php' -print0)
+          mapfile -d '' files < <(find catalogus-public private tests -type f -name '*.php' -print0)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No PHP files found"
             exit 1
@@ -36,7 +36,15 @@ jobs:
             php -l "$file"
           done
 
-      - name: Run lot form regression tests
+      - name: Verify CSV import is disabled in source
+        run: php tests/csv_import_disabled_test.php
+
+      - name: Check OVH release manifest (offline, no credentials)
+        run: |
+          python3 -m py_compile scripts/deploy_ovh_sftp.py
+          python3 scripts/deploy_ovh_sftp.py plan
+
+      - name: Test lot editor form persistence
         run: php tests/lot_form_test.php
 
       - name: Detect whitespace errors
