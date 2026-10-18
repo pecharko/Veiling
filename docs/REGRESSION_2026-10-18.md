@@ -22,7 +22,8 @@
 ## Resultaat eerste handmatige browsertest (18 oktober 2026)
 
 - **T-001 — Geslaagd voor de basiscontrole:** de gebruiker opende naar aanleiding van de instructies `https://41lokeren.be/admin/index.php` in een incognitovenster en stuurde een screenshot van het scherm **Beheerderstoegang / Welkom terug** met e-mailadres- en wachtwoordvelden. Afgeschermde kavelgegevens waren niet zichtbaar.
-- **Beperking bewijs:** de browseradresbalk is niet op de screenshot te zien. Daardoor is de exacte eind-URL `/admin/login.php` niet afzonderlijk uit het screenshot vast te stellen. Anonieme toegang tot `/admin/import.php` en `/admin/kavel.php`, inloggen met correcte credentials en uitloggen zijn nog niet daadwerkelijk gecontroleerd.
+- **Tweede toegangscontrole:** de gebruiker opende vervolgens volgens de instructie `/admin/import.php` in hetzelfde incognitovenster en deelde opnieuw een screenshot van het loginformulier in plaats van het CSV-importscherm. Daarmee is de visuele toegangsafscherming voor zowel `/admin/index.php` als `/admin/import.php` bevestigd.
+- **Beperking bewijs:** op beide screenshots ontbreekt de browseradresbalk, zodat de precieze eind-URL `/admin/login.php` niet afzonderlijk zichtbaar is. Anonieme toegang tot `/admin/kavel.php`, inloggen met correcte credentials en uitloggen zijn nog niet daadwerkelijk gecontroleerd.
 - **Datamutaties:** geen. Geen wachtwoorden of sessiegegevens verzameld.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
