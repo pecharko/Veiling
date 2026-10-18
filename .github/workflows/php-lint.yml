@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -d '' files < <(find catalogus-public private -type f -name '*.php' -print0)
+          mapfile -d '' files < <(find catalogus-public private tests -type f -name '*.php' -print0)
           if [ "${#files[@]}" -eq 0 ]; then
             echo "No PHP files found"
             exit 1
@@ -35,6 +35,9 @@ jobs:
           for file in "${files[@]}"; do
             php -l "$file"
           done
+
+      - name: Verify CSV import is disabled in source
+        run: php tests/csv_import_disabled_test.php
 
       - name: Detect whitespace errors
         shell: bash
