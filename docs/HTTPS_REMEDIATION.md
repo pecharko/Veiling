@@ -13,7 +13,7 @@
 - `catalogus-public/admin/login.php` gebruikt `<form method="post">` zonder absolute HTTPS-action. Een in HTTP geopende pagina kan dus een inlog-POST via HTTP doen.
 - `private/bootstrap.php` stelt de admincookie in met `secure=true`. Dit is nuttige verdediging, **geen HTTPS-afdwinging**.
 
-**Beveiligingsstatus:** T-040 als geheel **mislukt** op HTTP→HTTPS-redirect; TLS-deel van de test **geslaagd**. Voer geen nieuwe adminlogins uit via `http://`.
+**Update 18 oktober 2026 — tijdelijke 302 geplaatst:** de gebruiker deelde een nieuwe `curl -I http://41lokeren.be/admin/login.php`-uitvoer met **`HTTP/1.1 302 Found`** en **`Location: https://41lokeren.be/admin/login.php`**. De tijdelijke HTTP→HTTPS-redirect is voor de loginroute **bevestigd als werkend**. De regels staan nu kennelijk op OVHcloud, maar het exacte actieve `.htaccess`-pad en de volledige inhoud zijn niet onafhankelijk geverifieerd. **Nog niet definitief:** afzonderlijke HTTPS-eindrespons, redirectketen/publieke routes en omschakeling naar 301. Voer logins uitsluitend via HTTPS uit.
 
 ## Herstelvoorstel voor OVHcloud
 
@@ -53,6 +53,8 @@ curl -IL --max-redirs 3 http://41lokeren.be/admin/login.php
 Wanneer dit gevalideerd is, verander `R=302` naar `R=301` en hertest. Controleer pas later, indien zinvol, of HSTS veilig kan worden ingeschakeld.
 
 **Let op:** noch GitHub noch deze documentatie wijzigen de live OVHcloud-instellingen automatisch. De Apache-configuratie moet nog uitdrukkelijk en gecontroleerd worden geïnstalleerd.
+
+**Resultaat eerste proef:** één `curl -I`-screenshot bevestigt 302 en correcte HTTPS-Location voor `/admin/login.php`. De overige tests uit dit hoofdstuk moeten nog worden uitgevoerd voordat `R=302` naar `R=301` gaat.
 
 ## Na herstel
 
