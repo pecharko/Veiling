@@ -57,6 +57,12 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 
 **Bekende verificatiegaten:** bij FR-003 is de UNIQUE-index op `lots.lot_number` op 18 oktober 2026 via phpMyAdmin-metadata bevestigd; interactietests van de kaveleditor, CSV-upsert en gelijktijdige invoer blijven open. Bij FR-015 t/m FR-020 zijn consistentie, hersteltest en serverquota nog niet aangetoond. Zie het [code-auditrapport](CODE_AUDIT_2026-10-17.md). Een status **Statisch bevestigd** is geen geslaagde acceptatietest.
 
+## Regressiecontrole fase 1 — 18 oktober 2026
+
+De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validatie) en **FR-009** (CSV-import) is gericht nagekeken. De PHP-implementatie is aanwezig, maar de geauthenticeerde en muterende testscenario's zijn **niet uitgevoerd**; zie [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md).
+
+**Bevinding bij FR-002/004/006:** bij een fout in `admin/kavel.php` worden eerder ingevoerde formulierwaarden niet opnieuw uit de POST getoond. Daarnaast gebeurt de lot-INSERT/UPDATE vóór de uploadvalidatie, wat een misleidende foutmelding over al opgeslagen gegevens kan veroorzaken. Dit is als codebevinding vastgelegd in [issue #5](https://github.com/pecharko/Veiling/issues/5) met de nog openstaande scenario's **T-038/T-039**. Geen gebruikersdata aangepast of live foutscenario gereproduceerd.
+
 ## Uitgewerkte acceptatiecriteria voor risicovolle functies
 
 ### FR-003 — Unieke lotnummers
