@@ -36,6 +36,9 @@ jobs:
             php -l "$file"
           done
 
+      - name: Run lot form regression tests
+        run: php tests/lot_form_test.php
+
       - name: Detect whitespace errors
         shell: bash
         run: |
