@@ -1,10 +1,10 @@
 # Testplan — veilingcatalogus 41 Lokeren
 
-**Status 18 oktober 2026:** de schema-inspecties T-026, T-030 t/m T-032 en T-034 t/m T-036 zijn met phpMyAdmin-screenshots bevestigd. De nieuwe fase-1-code-inspectie is gedocumenteerd in [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md). **Functionele live tests zijn nog niet uitgevoerd of geslaagd verklaard.** Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
+**Status 18 oktober 2026:** de schema-inspecties T-026, T-030 t/m T-032 en T-034 t/m T-036 zijn met phpMyAdmin-screenshots bevestigd. De nieuwe fase-1-code-inspectie is gedocumenteerd in [REGRESSION_2026-10-18.md](REGRESSION_2026-10-18.md). **De basiscontrole T-001 is op 18-10-2026 op basis van een gebruikersscreenshot geslaagd (beperkt bewijs); overige functionele live tests zijn nog niet uitgevoerd of geslaagd verklaard.** Vul bij uitvoering datum, omgeving, commit, resultaat en opmerkingen in.
 
 | Test-ID | Requirement | Testscenario | Verwacht resultaat | Uitvoering |
 |---|---|---|---|---|
-| T-001 | FR-001 | Adminpagina openen zonder login | Login vereist, geen afgeschermde informatie zichtbaar | Niet uitgevoerd |
+| T-001 | FR-001 | Adminpagina openen zonder login | Login vereist, geen afgeschermde informatie zichtbaar | **Geslaagd (basiscontrole), 18-10-2026** — gebruiker stuurde na openen in incognitovenster screenshot van loginformulier, zonder kaveloverzicht. Adresbalk/uiteindelijke redirect-URL ontbreken op screenshot; aanvullende anonieme adminroutes en daadwerkelijke login nog niet gecontroleerd. |
 | T-002 | FR-002/004 | Nieuwe kavel maken, geldige titel en schatting | Kavel wordt bewaard en heropenbaar | Niet uitgevoerd |
 | T-003 | FR-003 | Tweede kavel met bestaand lotnummer bewaren | Duidelijke fout; geen tweede identiek lotnummer | Niet uitgevoerd |
 | T-004 | FR-003 | Bestaande kavel bewerken zonder lotnummer te wijzigen | Bewerking slaagt | Niet uitgevoerd |
