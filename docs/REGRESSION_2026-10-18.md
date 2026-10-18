@@ -1,0 +1,59 @@
+# Regressiecontrole — fase 1 (18 oktober 2026)
+
+**Project:** 41 Lokeren online veilingcatalogus  
+**Referenties:** `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md`, `docs/DATABASE.md`.  
+**Scope:** aanmelding/autorisatie, kavelbeheer en CSV-import.  
+**Status:** statische broncode-review uitgevoerd; **geen geauthenticeerde of muterende integratietests uitgevoerd**.
+
+## Wat is daadwerkelijk gecontroleerd?
+
+| Onderdeel | Broncodebewijs | Bevinding |
+|---|---|---|
+| Toegang admin | `private/bootstrap.php`: `require_auth()` | Admin-GET's vragen ingelogde sessie. Alleen statisch geverifieerd. |
+| Formulierbeveiliging | `private/bootstrap.php`: `csrf_field()`, `check_csrf()` | Tokens worden gegenereerd en op POST gecontroleerd. Alleen statisch geverifieerd. |
+| Login | `catalogus-public/admin/login.php` | `password_verify()`, sessie-ID-regeneratie bij succes, IP-hash-gebaseerde mislukte-pogingentelling en tijdelijke blokkering zijn in de code aanwezig. Alleen statisch geverifieerd. |
+| Kavelnummer | `catalogus-public/admin/kavel.php` plus geverifieerde MySQL-DDL | Lotnummer 1..999999; foutmelding bij SQLSTATE 23000; UNIQUE-index op `lots.lot_number` bewezen via phpMyAdmin. |
+| Kavelvelden | `catalogus-public/admin/kavel.php` | Titel verplicht; negatieve schattingen en omgekeerd bereik worden tegengehouden. Alleen statisch geverifieerd. |
+| CSV-import | `catalogus-public/admin/import.php` | CSV max. 3 MiB en max. 2.000 regels; dubbels binnen één CSV worden geweigerd; `ON DUPLICATE KEY UPDATE` voor bestaande lotnummers; transactionele uitvoering van SQL-rijen. Alleen statisch geverifieerd. |
+| Publicatiestatus bij CSV | `catalogus-public/admin/import.php` | Zonder `publiceren`-kolom blijft de bestaande status behouden; nieuwe lots worden draft. Alleen statisch geverifieerd. |
+
+**De live website kon niet betrouwbaar worden opgehaald via externe GET-controle; daaruit volgt geen bewijs voor werking of uitval.** De browser-/adminchecks vragen een gebruiker met een geldige sessie. Er zijn geen bestaande kavels aangepast of uploads/imports uitgevoerd.
+
+## Vastgesteld probleem in code (nog geen interactief testresultaat)
+
+**Issue [#5](https://github.com/pecharko/Veiling/issues/5) — P2: verlies van formulierinvoer na bewaarfout.**
+
+In `admin/kavel.php` worden na een POST-fout de formulierwaarden opgebouwd uit `$lot` (bestaande DB-rij) of defaults, **niet uit de ingestuurde POST-velden**. Bij een mislukte aanmaakpoging verschijnt daarom een leeg/default formulier; bij een mislukte bewerking de vorige opgeslagen waarden. Dat vergroot de kans op gegevensverlies voor de beheerder (T-038: statisch afwijking, runtime nog te reproduceren).
+
+**Partiële opslag bij ongeldige fotoupload:** de SQL-insert/update gebeurt voordat `photo_files()` eventuele uploadfouten kan signaleren. Daardoor kan de kavel zijn bewaard terwijl de browser een fout toont. T-039 is op basis van code-inspectie een risico, maar nog niet via testdata gevalideerd. Test niet rechtstreeks op productie.
+
+## Praktijktests in veilige volgorde
+
+### A. Alleen-lezen op productie (uit te voeren door bevoegde gebruiker)
+
+1. **T-001 — Toegang zonder login:** open een volledig nieuw **privé-/incognitovenster**, zonder bestaande beheerderscookies. Open `https://41lokeren.be/admin/index.php`. **Verwacht:** doorsturen naar `/admin/login.php` en geen kaveloverzicht tonen. Controleer ook `/admin/import.php` en `/admin/kavel.php` in datzelfde anonieme venster.
+2. **T-001 vervolg — Geldige login:** open je normale browser, log met je eigen beheerdersaccount in op `/admin/login.php` (deel geen wachtwoord of sessiecookie). **Verwacht:** toegang tot kaveloverzicht. Een gewone succesvolle login is geen test van de blokkering na 8 fouten.
+3. **Read-only UI-check:** open `/admin/index.php` en `/admin/kavel.php` en `/admin/import.php` via het menu. Controleer dat alle velden en functies zichtbaar zijn, maar **klik niet op opslaan/importeren/verwijderen**.
+4. **CSV-downloadlink:** klik desgewenst alleen op `Download voorbeeld-CSV`, en controleer of een geldig CSV-bestand wordt gedownload. Dit verandert de database niet. De broncode verwijst naar `assets/voorbeeld-kavels.csv`, dat niet in de GitHub-baseline is aangetroffen; zie issue #4. Dit bewijst niet of het bestand op OVHcloud ontbreekt.
+5. **Systeemcheck:** open `/admin/systeemcheck.php`. Noteer uitsluitend de statussen OK/AANDACHT/FOUT, **geen databaseconfiguratie, accountgegevens of wachtwoorden delen**.
+
+Noteer per test datum, gebruikte browser en resultaat **geslaagd / mislukt / geblokkeerd**, met eventueel screenshot waarop geen persoonsgegevens of sessiegegevens staan.
+
+### B. Alleen in een geïsoleerde testomgeving met testdatabase en testuploads
+
+1. **T-002/T-004:** maak een testkavel, heropen en bewerk het; controleer correct opslaan.
+2. **T-003:** probeer een bestaand lotnummer te gebruiken; verwacht duidelijke fout, geen tweede identiek lot, en behoud van ingevoerde waarden (T-038).
+3. **T-005:** importeer CSV met dubbele nummers **binnen CSV**; verwacht weigering zonder gedeeltelijke imports. Test daarnaast CSV-upsert van al bestaand nummer en statusbehoud zonder statuskolom.
+4. **T-039:** simuleer een uploadfout; controleer of de kavel al dan niet is bewaard, of de foutmelding dat correct beschrijft en of er geen verweesde foto's ontstaan.
+5. **T-037:** test 8 mislukte logins, blokkering en vrijgave uitsluitend met een **testaccount** op een geïsoleerde testserver. Geen productie-IP blokkeren.
+6. **T-019:** controleer ongeldige CSRF-POST's alleen in de testomgeving.
+
+**Vooraf:** aparte schema-/datakopie zonder echte accounts/geheimen, afgeschermde test-URL of lokale testserver, nooit een restore naar productie. Fotobestanden/backup-testdata horen buiten Git te blijven.
+
+## Vastleggen van resultaten
+
+Werk `docs/TESTPLAN.md` bij met de echte resultaten. Markeer een testcase pas als **Geslaagd** nadat die effectief is uitgevoerd, niet op basis van alleen de aanwezigheid van PHP-code. Werk `docs/REQUIREMENTS.md` en `CHANGELOG.md` gelijktijdig bij bij iedere functionele wijziging.
+
+## Automatische codecontrole
+
+`.github/workflows/php-lint.yml` controleert bij push en pull request de **PHP 8.2-syntax** van versioneerde PHP-bestanden. Controleer onder de GitHub-tab **Actions** of deze workflow voor `main` werd gestart en geslaagd is. Een geslaagde syntaxcontrole is **geen** functionele regressietest of OVHcloud-compatibiliteitsbewijs.
