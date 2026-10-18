@@ -55,11 +55,13 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-027 | Kaveloverzicht in admin | Overzicht toont aantallen, statussen, foto's, zoeken/filteren en pagineren voor de beheerder. | Statisch bevestigd |
 | FR-028 | Systeemcontrole | Admin ziet controles van PHP, MySQL, configuratie, HTTPS en schrijfrechten, met duidelijke resultaten. | Statisch bevestigd |
 
-**Bekende verificatiegaten:** bij FR-003 ontbreekt schema-/UNIQUE-indexbewijs; bij FR-015 t/m FR-020 zijn consistentie, hersteltest en serverquota nog niet aangetoond. Zie het [code-auditrapport](CODE_AUDIT_2026-10-17.md). Een status **Statisch bevestigd** is geen geslaagde acceptatietest.
+**Bekende verificatiegaten:** bij FR-003 is de UNIQUE-index op `lots.lot_number` op 18 oktober 2026 via phpMyAdmin-metadata bevestigd; interactietests van de kaveleditor, CSV-upsert en gelijktijdige invoer blijven open. Bij FR-015 t/m FR-020 zijn consistentie, hersteltest en serverquota nog niet aangetoond. Zie het [code-auditrapport](CODE_AUDIT_2026-10-17.md). Een status **Statisch bevestigd** is geen geslaagde acceptatietest.
 
 ## Uitgewerkte acceptatiecriteria voor risicovolle functies
 
 ### FR-003 — Unieke lotnummers
+
+**Controlebewijs 18-10-2026:** aangeleverde phpMyAdmin-uitvoer van `SHOW INDEX FROM lots;` toont index `lot_number`, `Column_name=lot_number`, `Seq_in_index=1`, `Non_unique=0`. Daarmee is databank-uniciteit bevestigd. FR-003 blijft **Te verifiëren** tot de functionele tests voor duplicaatmeldingen, import en gelijktijdige bewerkingen zijn uitgevoerd. Geen schemawijziging nodig.
 1. Een lotnummer is uniek op databaseniveau, niet alleen via een UI-controle.
 2. Bewerken van een bestaande kavel met hetzelfde eigen lotnummer blijft mogelijk.
 3. Een poging om een bestaand nummer te gebruiken geeft een begrijpelijke melding.
