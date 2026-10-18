@@ -40,8 +40,8 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-016 | Snapshot downloaden en verwijderen | Back-up is downloadbaar; verwijderen vereist passende bevestiging en autorisatie. | Geïsoleerde HTTP-tests geslaagd (T-045): geauthenticeerd downloaden, foute bevestiging weigeren, gekozen ZIP verwijderen |
 | FR-017 | Snapshot herstellen | Beheerder kan een geldige snapshot kiezen; expliciete bevestiging, voorafgaande veiligheidskopie en foutafhandeling beschermen bestaande data. | Basisherstel en veiligheidskopie getest in geïsoleerd CI (T-012/T-014/T-045); concurrency/crash/rollbackfouten nog open |
 | FR-018 | Snapshotgroottes tonen | Per snapshot en totaal is de bestandsomvang leesbaar. | Backendformat/lijst/totalen en UI-rendering in CI bevestigd (T-011/T-045); fysieke hosting nog niet vergeleken |
-| FR-019 | Opslaggebruik tonen en waarschuwen | Geschat hostinggebruik, snapshotruimte en fotogebruik worden getoond; vanaf 80% waarschuwing, vanaf 90% kritiek. | Bestandsoptelling en adminweergave in CI bevestigd; 80/90%-drempels en werkelijke OVH-quotavergelijking nog niet getest |
-| FR-020 | Capaciteitscontrole voor snapshot | Nieuwe snapshot wordt niet gestart wanneer de vooraf geschatte benodigde ruimte inclusief veiligheidsmarge ontoereikend is. | Te verifiëren |
+| FR-019 | Opslaggebruik tonen en waarschuwen | Geschat hostinggebruik, snapshotruimte en fotogebruik worden getoond; vanaf 80% waarschuwing, vanaf 90% kritiek. | Grenswaarden 79/80/89/90% met CI-simulatie toegevoegd (T-016, PR #11); echte OVHcloud-quota blijven indicatief, scherm is geen officiële teller |
+| FR-020 | Capaciteitscontrole voor snapshot | Nieuwe snapshot wordt niet gestart wanneer de vooraf geschatte benodigde ruimte inclusief veiligheidsmarge ontoereikend is. | CI-integratietest met gesimuleerde quota vóór `snap_create()` toegevoegd (T-017, PR #11). Minder dan 20 MiB marge wordt geweigerd; onvolledige opslagscan faalt veilig. Nog niet op productie gedeployed of met echte hostinglimiet geverifieerd. |
 | FR-021 | Administratiemenu inclusief back-upfunctie | Back-up & herstel is bereikbaar vanuit alle beheerpagina's. | Statisch bevestigd |
 | FR-022 | CSRF-beveiliging voor schrijfacties | Iedere admin-POST die gegevens wijzigt valideert een CSRF-token. | Statisch bevestigd |
 | FR-023 | Status- en foutmeldingen | Bij bewaren, import, verwijderen en herstel geeft de UI duidelijke feedback zonder gevoelige foutdetails te lekken. | Statisch bevestigd |
@@ -109,6 +109,8 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 6. De beheerder moet een ingrijpend herstel expliciet bevestigen.
 7. Bij mislukking worden half herstelde gegevens of verweesde foto's zoveel mogelijk voorkomen; herstelstrategie moet aantoonbaar getest zijn.
 8. Het herstelproces krijgt een test met een tijdelijke/testomgeving **vóór** gebruik op productie.
+
+**Aanpassing in PR #11 (18-10-2026):** de opslagniveau-classificatie is nu een gedeelde functie voor UI en tests (80%=waarschuwing, 90%=kritiek). De opslagpreflight controleert ook bij waarschuwingen of de actuele schatting betrouwbaar genoeg is; een onvolledige bestandsmeting verhindert nu uit voorzorg een nieuwe snapshot. Een expliciete interne quota-parameter maakt de capaciteitstest in een disposable CI-database mogelijk zonder de OVHcloud-hosting werkelijk te vullen. **GitHub-code is niet automatisch de gedeployde productiecode.**
 
 ### FR-019 en FR-020 — Hostingopslag
 1. Dashboard maakt het onderscheid tussen geschatte websitebestanden, snapshots, foto's en eventuele afzonderlijk toegewezen databasequota.
