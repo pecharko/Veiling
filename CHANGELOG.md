@@ -14,6 +14,9 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - **P1 issue #6 (tijdelijke redirect actief):** aanvankelijk antwoordde HTTP-login met `200 OK` zonder redirect. De gebruiker testte na OVHcloud-aanpassing opnieuw: `302 Found` en `Location: https://41lokeren.be/admin/login.php`. Vervolgcontrole geslaagd: directe HTTPS-login `HTTP/2 200`, loginredirectketen `302`→`200` zonder lus en homepage `302` naar HTTPS. Permanente 301 voor HTTP-login en homepage vervolgens via `curl -sSI` bevestigd (`301 Moved Permanently` met HTTPS-Location). Sessie-/logoutcontrole en aanvullende adminroutes blijven open; live `.htaccess` moet nog gecontroleerd in Git worden opgenomen. Zie `docs/HTTPS_REMEDIATION.md`. Productieconfiguratie door gebruiker aangepast; geen PHP- of databasewijzigingen door de assistent.
 - Afzonderlijk synchronisatieprobleem Mac: GitHub weigert accountwachtwoorden voor Git over HTTPS. Gebruik GitHub Desktop-browseraanmelding, Git Credential Manager of GitHub CLI; geen productiecode gewijzigd.
 
+### Uitlogcontrole — 2026-10-18
+- T-041 gedeeltelijk geslaagd: na gevraagde logout toont de screenshot `/admin/login.php`. Heropenen van de afgeschermde `/admin/index.php` zonder opnieuw aanmelden is nog niet gecontroleerd. Documentatie bijgewerkt, geen productiecode gewijzigd.
+
 ### Browsertest — 2026-10-18
 - T-001 (FR-001): drie incognitocontroles voor kaveloverzicht (`/admin/index.php`), CSV-import (`/admin/import.php`) en kaveleditor (`/admin/kavel.php`) tonen loginformulier zonder afgeschermde inhoud. Op derde screenshot is de uiteindelijke URL `/admin/login.php` zichtbaar. Geldige login/logout en andere beveiligde routes blijven te testen. Geen gegevens gewijzigd.
 
