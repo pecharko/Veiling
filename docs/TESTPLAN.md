@@ -30,7 +30,7 @@
 | T-023 | FR-025 | Favoriet toevoegen/verwijderen, pagina herladen | Favorieten blijven lokaal per browser behouden; geen serveraccount nodig | Niet uitgevoerd |
 | T-024 | FR-026 | Galerie en delen/kopiëren kavel-link | Goede foto en bruikbare deelbare URL | Niet uitgevoerd |
 | T-025 | FR-027/028 | Adminoverzicht en systeemcontrole | Correcte tellingen, filters, controles en foutmeldingen | Niet uitgevoerd |
-| T-026 | FR-003 | Metadataquery voor `lots.lot_number` | Unieke DB-index bestaat op lotnummer | Niet uitgevoerd |
+| T-026 | FR-003 | `SHOW INDEX FROM lots;` via phpMyAdmin | Unieke DB-index uitsluitend op `lot_number` | **Geslaagd 18-10-2026** — screenshot: `Key_name=lot_number`, `Column_name=lot_number`, `Non_unique=0`, `Seq_in_index=1` |
 | T-027 | FR-015/017 | Gelijktijdige kavelwijziging tijdens snapshot/restore in testomgeving | Back-up en herstelde data zijn onderling consistent; geen verlies | Niet uitgevoerd |
 | T-028 | FR-013 | Kavel zonder foto en voorbeeld-CSV downloaden | Placeholder en CSV-download werken zonder 404 | Niet uitgevoerd |
 | T-029 | NFR-001 | GitHub-baseline scannen op hardcoded secrets, persoonsgegevens, snapshots | Geen gevoelige gegevens in getrackte bestanden | Niet uitgevoerd |
