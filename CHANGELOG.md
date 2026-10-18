@@ -9,6 +9,10 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - Niet-destructieve GitHub Actions-workflow toegevoegd voor PHP 8.2-syntaxcontrole bij push/pull request (`.github/workflows/php-lint.yml`); workflowresultaat nog niet als geslaagd bevestigd.
 - [Issue #5](https://github.com/pecharko/Veiling/issues/5) geopend voor verlies van kavelinvoer na fout en risico op gedeeltelijk opslaan bij foutieve fotoupload; T-038/T-039 opgenomen. Geen productiecode gewijzigd.
 
+### Beveiligingscontrole — 2026-10-18
+- Gebruiker kan na geldige aanmelding het ingelogde kaveloverzicht openen (T-001B). Screenshot toont 10 kavels en adminnavigatie, inclusief Back-up & herstel.
+- **P0 issue #6:** Chrome toont rood `Not Secure` bij `/admin/index.php`. Verbindingsveiligheid/certificaat nog niet bevestigd (T-040); verdere productiebeheertests uitstellen tot oplossing. Geen productiecode of database gewijzigd.
+
 ### Browsertest — 2026-10-18
 - T-001 (FR-001): drie incognitocontroles voor kaveloverzicht (`/admin/index.php`), CSV-import (`/admin/import.php`) en kaveleditor (`/admin/kavel.php`) tonen loginformulier zonder afgeschermde inhoud. Op derde screenshot is de uiteindelijke URL `/admin/login.php` zichtbaar. Geldige login/logout en andere beveiligde routes blijven te testen. Geen gegevens gewijzigd.
 
