@@ -35,6 +35,7 @@
 | T-028 | FR-013 | Kavel zonder foto en voorbeeld-CSV downloaden | Placeholder en CSV-download werken zonder 404 | Niet uitgevoerd |
 | T-029 | NFR-001 | GitHub-baseline scannen op hardcoded secrets, persoonsgegevens, snapshots | Geen gevoelige gegevens in getrackte bestanden | Niet uitgevoerd |
 | T-030 | FR-003 | Bestaande dubbele lotnummers opsporen met `SELECT lot_number, COUNT(*) AS aantal FROM lots GROUP BY lot_number HAVING COUNT(*) > 1 ORDER BY lot_number;` | Geen rijen (geen dubbele lotnummers) | **Geslaagd 18-10-2026** — phpMyAdmin-screenshot: empty result set, zero rows |
+| T-031 | FR-003 | `SHOW CREATE TABLE lots;` in phpMyAdmin | DDL bevat `UNIQUE KEY lot_number (lot_number)`, verwachte kolommen, defaults en indexen | **Geslaagd 18-10-2026** — volledige DDL getoond, opgenomen in `docs/DATABASE.md` (zonder omgevingsgebonden auto-incrementteller) |
 
 ## Registratie bij uitvoering
 
