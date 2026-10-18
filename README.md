@@ -2,7 +2,7 @@
 
 Deze repository bevat de **broncode en documentatie** van de online veilingcatalogus van 41 Lokeren: <https://41lokeren.be>.
 
-**Actuele productstatus (18 oktober 2026):** de CSV-import van kavels is op verzoek tijdelijk verwijderd en op **41lokeren.be actief uitgeschakeld** (GET/POST 404, menu en dashboard gecontroleerd); foto-import blijft beschikbaar. De kaveleditorcorrectie van [PR #7](https://github.com/pecharko/Veiling/pull/7) is in `main` gemerged en heeft 20 geïsoleerde HTTP/MySQL-integratiechecks doorstaan, maar **is nog niet op OVHcloud gepubliceerd**. Zie [uitrolinstructies](docs/DEPLOYMENT.md).
+**Actuele productstatus (18 oktober 2026):** de CSV-import van kavels is op verzoek tijdelijk verwijderd en op **41lokeren.be actief uitgeschakeld** (GET/POST 404, menu en dashboard gecontroleerd); foto-import blijft beschikbaar. De kaveleditorcorrectie van [PR #7](https://github.com/pecharko/Veiling/pull/7) is in `main` gemerged, heeft 20 geïsoleerde HTTP/MySQL-integratiechecks doorstaan en is **op 18-10-2026 via de aparte GitHub Actions SFTP-workflow naar OVHcloud uitgerold**. De technische deploy- en beveiligingssmoketests zijn geslaagd; de interactieve browseracceptatie blijft open. Zie [uitrolinstructies](docs/DEPLOYMENT.md).
 
 **Status (17 oktober 2026):** de actuele applicatiebroncode is door de gebruiker vanaf een OVHcloud-kopie naar deze repository gepusht en belangrijke PHP-bestanden zijn statisch geïnspecteerd. **Nog geen geteste/volledige herstelbaseline:** database, kavelfoto's, configuratiegeheimen en sommige ontbrekende assets zijn niet in Git opgeslagen. Zie [eerste code-audit](docs/CODE_AUDIT_2026-10-17.md).
 
