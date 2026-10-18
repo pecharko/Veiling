@@ -1,0 +1,76 @@
+name: Snapshot en herstel — geisoleerde tests
+
+on:
+  pull_request:
+    paths:
+      - 'private/snapshots.php'
+      - 'catalogus-public/admin/backup.php'
+      - 'tests/snapshot*'
+      - '.github/workflows/snapshot-integration.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot-isolated:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-password-only
+          MYSQL_DATABASE: auction_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-password-only"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - name: Checkout source (no production config or backups)
+        uses: actions/checkout@v4
+
+      - name: Set up isolated PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, zip, gd, curl, fileinfo
+          tools: none
+          coverage: none
+
+      - name: Initialize disposable auction database
+        env:
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+          CI_DB_USER: root
+          CI_DB_PASSWORD: ci-password-only
+        run: php tests/kavel_integration_setup.php
+
+      - name: Snapshot ZIP integrity and isolated destructive restore tests
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/snapshot_integration.php
+
+      - name: Exercise authenticated backup UI and HTTP snapshot flows
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S localhost:8090 -t catalogus-public > /tmp/snapshot-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..25}; do
+            if curl -fsS -o /dev/null http://localhost:8090/admin/login.php; then
+              break
+            fi
+            sleep 1
+          done
+          php tests/snapshot_http_integration.php || { tail -n 90 /tmp/snapshot-http.log; exit 1; }

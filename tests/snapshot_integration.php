@@ -1,0 +1,136 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Destructive snapshot/restore regression tests ONLY against isolated CI MySQL.
+ * Production execution is deliberately refused.
+ */
+$root = dirname(__DIR__);
+if (getenv('GITHUB_ACTIONS') !== 'true'
+    || getenv('CI_SNAPSHOT_TEST') !== 'yes'
+    || getenv('CI_DB_HOST') !== '127.0.0.1'
+    || getenv('CI_DB_NAME') !== 'auction_test') {
+    throw new RuntimeException('Run exclusively in the isolated GitHub Actions test database.');
+}
+
+require $root . '/private/bootstrap.php';
+require $root . '/private/snapshots.php';
+$pdo = db();
+if ($pdo->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test') {
+    throw new RuntimeException('Refusing to test against an unexpected database.');
+}
+$count = 0;
+function verify(bool $yes, string $message): void {
+    global $count;
+    ++$count;
+    if (!$yes) throw new RuntimeException('FAILED: ' . $message);
+    echo 'PASS: ' . $message . "\n";
+}
+function assert_throws(callable $fn, string $expected, string $message): void {
+    try { $fn(); }
+    catch (Throwable $e) {
+        verify(str_contains($e->getMessage(), $expected), $message);
+        return;
+    }
+    verify(false, $message . ' (unexpected success)');
+}
+
+$pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+$pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (?,?,?,?,?)")
+    ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published']);
+$lotId = (int)$pdo->lastInsertId();
+$pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
+    ->execute([hash('sha256','nonproduction-test-ip')]);
+$originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
+
+$relative = '2026/10/' . str_repeat('a', 32) . '.jpg';
+$extra = '2026/10/' . str_repeat('b', 32) . '.jpg';
+$uploads = $root . '/catalogus-public/uploads';
+$folder = $uploads . '/2026/10';
+if (!is_dir($folder) && !mkdir($folder, 0700, true)) throw new RuntimeException('Cannot create test upload directory.');
+$original = $uploads . '/' . $relative;
+$image = imagecreatetruecolor(48, 48);
+imagefill($image, 0, 0, imagecolorallocate($image, 160, 32, 64));
+imagejpeg($image, $original, 85);
+imagedestroy($image);
+$checksum = hash_file('sha256', $original);
+$pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
+    ->execute([$lotId,'uploads/'.$relative,1,'snapshot-test.jpg']);
+
+$initialStorage = snap_storage_stats();
+verify($initialStorage['total'] > 0 && $initialStorage['uploads'] >= filesize($original),
+       'Hosting size estimator includes snapshot photo without double-counting');
+verify($initialStorage['snapshots'] === 0, 'No snapshot existed before isolated test');
+
+$name = snap_create($pdo);
+verify(snap_name($name) && is_file(snap_path($name)), 'Snapshot created with safe filename');
+$listing = snap_listing();
+verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['size'] > 0,
+       'Snapshot listed with nonzero exact ZIP size');
+[$snapshot, $hashes, $photoBytes] = snap_verified($name);
+verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
+       'Snapshot contains all intended database records');
+verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original),
+       'Snapshot includes the exact original photo');
+$zip = new ZipArchive();
+if ($zip->open(snap_path($name)) !== true) throw new RuntimeException('Could not open snapshot ZIP');
+verify($zip->locateName('database.json') !== false && $zip->locateName('manifest.json') !== false,
+       'Snapshot ZIP contains database JSON and checksum manifest');
+$zip->close();
+
+$after = snap_storage_stats();
+verify($after['snapshots'] === filesize(snap_path($name)) && $after['total'] > $initialStorage['total'],
+       'Hosting total and snapshot subtotal increase after creation');
+
+$lock = snap_lock();
+try {
+    assert_throws(fn() => snap_create($pdo), 'Er loopt al', 'Concurrent snapshot creation blocked by snapshot lock');
+} finally {
+    flock($lock, LOCK_UN);
+    fclose($lock);
+}
+
+$badName = 'snapshot-20990101-000000-deadbeefdead.zip';
+$corrupted = snap_path($badName);
+if (!copy(snap_path($name), $corrupted)) throw new RuntimeException('Could not copy ZIP for corruption test');
+$bad = new ZipArchive();
+if ($bad->open($corrupted) !== true) throw new RuntimeException('Cannot edit corrupted snapshot fixture');
+$databaseJson = $bad->getFromName('database.json');
+if ($databaseJson === false) throw new RuntimeException('Missing db JSON');
+$bad->addFromString('database.json', $databaseJson . ' ');
+$bad->close();
+assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is rejected by checksum validation');
+
+$pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
+$pdo->exec("UPDATE settings SET title='Veranderde veiling'");
+$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid'");
+$pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
+unlink($original);
+file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
+
+snap_restore($pdo, $name);
+verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
+       'Restore returns the original lot title');
+verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
+       'Restore returns the original event settings');
+verify($pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn() === $originalAdmin,
+       'Restore returns the original administrator');
+verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 1,
+       'Restore returns login attempts');
+verify((int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE lot_id='.$lotId)->fetchColumn() === 1,
+       'Restore returns image database record and foreign key');
+verify(is_file($original) && hash_file('sha256', $original) === $checksum,
+       'Restore returns original photo content');
+verify(!is_file($uploads.'/'.$extra), 'Restore removes images added after snapshot');
+
+$afterRestore = snap_storage_stats();
+verify($afterRestore['snapshots'] === filesize(snap_path($name)) + filesize($corrupted),
+       'Storage breakdown counts both snapshots');
+verify($afterRestore['free'] === max(0, $afterRestore['quota'] - $afterRestore['total']),
+       'Estimated free space agrees with nominal quota');
+
+assert_throws(fn() => snap_path('../config.php'), 'Ongeldige snapshotnaam',
+              'Snapshot path traversal rejected');
+@unlink($corrupted);
+echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
