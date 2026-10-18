@@ -2,12 +2,6 @@ name: Kaveleditor integratietests (geisoleerd)
 
 on:
   pull_request:
-    paths:
-      - 'catalogus-public/admin/kavel.php'
-      - 'private/lot_form.php'
-      - 'private/images.php'
-      - 'tests/kavel*'
-      - '.github/workflows/kavel-integration.yml'
   workflow_dispatch:
 
 permissions:
