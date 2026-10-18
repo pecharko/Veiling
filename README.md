@@ -14,6 +14,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 - [Regressiecontrole fase 1](docs/REGRESSION_2026-10-18.md) — veilige volgorde voor aanmelden, kavelbeheer en CSV-import; broncodebevindingen.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
 - [Code-audit 17/10/2026](docs/CODE_AUDIT_2026-10-17.md) — statisch vastgestelde functionaliteit, risico's en opvolging.
+- [HTTPS-herstelplan](docs/HTTPS_REMEDIATION.md) — bewezen HTTP-login zonder redirect, gecontroleerde OVHcloud-aanpak en hertests.
 
 ## Huidige mapstructuur
 
