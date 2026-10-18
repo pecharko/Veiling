@@ -43,6 +43,10 @@ Een derde browserscreenshot toont het Chrome-sitebeveiligingspaneel van **41loke
 
 Na de tijdelijke succesvolle 302-test heeft de gebruiker de permanente 301 ingesteld. Twee herhaalde `curl -sSI`-controles tonen **`HTTP/1.1 301 Moved Permanently`**: voor `/admin/login.php` naar `https://41lokeren.be/admin/login.php`, en voor `/` naar `https://41lokeren.be/`. Samen met het eerdere Chrome-certificaatbewijs, de `HTTP/2 200` op de HTTPS-login en de redirectketentest zonder lus is de belangrijkste HTTP→HTTPS-beveiligingsfout voor de geteste routes hersteld. **T-040: redirect- en certificaatdeel geslaagd.** De andere adminroutes en de werking na logout staan nog open (T-041); het live `.htaccess`-bestand is nog niet als versiebeheerde broncode geverifieerd.
 
+### Eerste uitlogcontrole — T-041 (18 oktober 2026)
+
+De gebruiker deelde na het gevraagde uitloggen een screenshot waarop de loginpagina `/admin/login.php` in Chrome wordt getoond. De terugkeer naar het loginformulier is daarmee **visueel bevestigd**. De tweede stap van T-041 is **nog niet aangetoond**: in hetzelfde gewone browservenster de rechtstreekse URL `https://41lokeren.be/admin/index.php` openen zonder opnieuw aan te melden. Alleen als dan opnieuw de loginpagina verschijnt, is de volledige uitlog-/sessievernietigingstest geslaagd.
+
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
 **Issue [#5](https://github.com/pecharko/Veiling/issues/5) — P2: verlies van formulierinvoer na bewaarfout.**
