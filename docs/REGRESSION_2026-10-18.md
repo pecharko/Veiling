@@ -45,7 +45,7 @@ Na de tijdelijke succesvolle 302-test heeft de gebruiker de permanente 301 inges
 
 ### Eerste uitlogcontrole — T-041 (18 oktober 2026)
 
-De gebruiker deelde na het gevraagde uitloggen een screenshot waarop de loginpagina `/admin/login.php` in Chrome wordt getoond. De terugkeer naar het loginformulier is daarmee **visueel bevestigd**. De tweede stap van T-041 is **nog niet aangetoond**: in hetzelfde gewone browservenster de rechtstreekse URL `https://41lokeren.be/admin/index.php` openen zonder opnieuw aan te melden. Alleen als dan opnieuw de loginpagina verschijnt, is de volledige uitlog-/sessievernietigingstest geslaagd.
+De gebruiker deelde na het uitloggen een screenshot van de loginpagina `/admin/login.php` in Chrome. Daarna werd op verzoek in hetzelfde gewone browservenster de beveiligde URL `https://41lokeren.be/admin/index.php` opnieuw geopend zonder aanmelding; de nieuwe screenshot toont opnieuw `/admin/login.php` in de adresbalk. **T-041: geslaagd als visuele functionele uitlog-/toegangscontrole (18-10-2026)**. De PHP-sessie-ID, sessiestore en cookievernietiging zijn hiermee niet afzonderlijk technisch onderzocht.
 
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
