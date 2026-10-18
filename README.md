@@ -8,7 +8,7 @@ Deze repository bevat de **broncode en documentatie** van de online veilingcatal
 
 - [Functionele requirements](docs/REQUIREMENTS.md) — levend register met acceptatiecriteria en verificatiestatus.
 - [Technische architectuur](docs/ARCHITECTURE.md) — huidige opzet en openstaande verificatiepunten.
-- [Databaseschema](docs/DATABASE.md) — geverifieerde DDL van `lots`, `lot_images`, `settings` en `admins`; alleen `login_attempts` ontbreekt nog.
+- [Databaseschema](docs/DATABASE.md) — **alle vijf tabellen geverifieerd**: `lots`, `lot_images`, `settings`, `admins` en `login_attempts`.
 - [Uitrol en herstel](docs/DEPLOYMENT.md) — veilige werkwijze bij wijzigingen op OVHcloud.
 - [Testplan](docs/TESTPLAN.md) — minimale regressiecontroles.
 - [Wijzigingslogboek](CHANGELOG.md) — wijzigingen aan code en documentatie.
