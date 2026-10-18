@@ -1,6 +1,33 @@
 # Ontwikkelen, uitrollen en herstellen
 
-**Uitrolmodel:** voorlopig handmatige bestandenoverdracht naar OVHcloud via RemoteDrive. **Geen automatische deployment vanuit GitHub.**
+**Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
+
+## Gerichte code-release T-016/T-017 — opslagwaarschuwingen en snapshot-preflight (NOG NIET LIVE)
+
+GitHub PR #11, gemerged in code-commit `d98dbc8fb90e4019649eefc41c86998cdcbcbaeb`. **69 geïsoleerde GitHub Actions-tests geslaagd**: [69 tests](https://github.com/pecharko/Veiling/actions/runs/39127059404), [PHP-lint](https://github.com/pecharko/Veiling/actions/runs/39127059332). Code in GitHub is niet gelijk aan de live server.
+
+Gebruik **uitsluitend** de nieuwe workflow [`snapshot-storage-deploy.yml`](../.github/workflows/snapshot-storage-deploy.yml) en het eigen script [`deploy_snapshot_storage.py`](../scripts/deploy_snapshot_storage.py), nadat de voorbereidende PR is goedgekeurd en naar `main` is samengevoegd.
+
+**Strikte release-allowlist (altijd precies twee bestanden):**
+1. `private/snapshots.php` — de helperfunctie(s), eerst uploaden.
+2. `catalogus-public/admin/backup.php` — de beheerderspagina, pas daarna uploaden.
+
+Deze release bevat **geen** MySQL-mutaties, herstelactie, foto- of snapshotwijzigingen. Niet uploaden: `private/config.php`, `private/backups/`, `catalogus-public/uploads/`, `photo-inbox/`, `.htaccess`, FTP-credentials of andere bestanden.
+
+**Voorwaarden vóór productie:** controleer `main` HEAD, inhoud/hashes van beide bestanden, eerdere deployment, `plan`-modus en CI-tests. Leg de exact goedgekeurde workflow-commit en beide paden vast. Vraag afzonderlijke expliciete toestemming voor `deploy`.
+
+**Uitrolstappen:**
+1. In GitHub Actions → **Deploy T-016 T-017 opslagveiligheid (handmatig)** → **Run workflow**, branch **main**, mode **plan**, bevestiging leeg. Deze stap heeft geen SFTP-verbinding en wijzigt niets.
+2. Controleer dat **uitsluitend** de twee bovenstaande PHP-bestanden met hun SHA-256-hashes in het plan staan. Vraag expliciete gebruikersgoedkeuring voor de productie-release.
+3. Start pas daarna opnieuw de workflow met mode **deploy** en bevestiging **`DEPLOY SNAPSHOTS`**. Bevestig dat de bestaande geverifieerde SFTP-Secrets en `OVH_SFTP_BASE` aanwezig zijn zonder ze ooit zichtbaar te maken.
+4. De job valideert de juiste productiemappen en bestaande modules, haalt eerst de twee oude PHP-bestanden op en archiveert ze **vóór upload** in een privé artifact (`ovh-snapshot-storage-before-<run-id>`, 7 dagen bewaard).
+5. De job verifieert tijdens de upload per bestand opnieuw dat de remote bestanden ongewijzigd zijn; uploads vinden plaats in de afhankelijkheidsvolgorde (helper, adminpagina), gevolgd door een SHA-256-leescontrole.
+6. Read-only smoke tests: homepage GET **200**, loginpagina GET **200**, anonieme back-uppagina GET **303**, uitgeschakelde CSV-route **GET 404 en lege POST 404**. Geen snapshot aanmaken, downloaden, verwijderen of herstellen als automatische smoketest.
+7. Na een geslaagde job in de aangemelde admin handmatig controleren dat **Back-up & herstel** laadt en het normale opslagoverzicht toont; productiequota blijven indicatief. Geen simulaties of destructieve tests op productie.
+
+**Rollback:** bij uploadfout probeert de job onmiddellijk de oorspronkelijke PHP-bestanden te herstellen en te verifiëren. Als de job onverwacht stopt of de HTTP-check na de upload mislukt, beschouw de status dan als **onzeker**; controleer het privé back-upartifact en herstel uitsluitend de goedgekeurde oude versies via gecontroleerde SFTP, vervolgens smoke-testen. De automatische rollback vangt **niet** iedere server- of procesonderbreking op.
+
+De bestaande workflows `ovhcloud-deploy.yml` (historische CSV-blokkering) en `kavel-deploy.yml` (kaveleditor) hebben oude vaste bestandslijsten en zijn **niet geschikt** voor deze release.
 
 ## Geautomatiseerde, gecontroleerde SFTP-upload (nieuwe mogelijkheid)
 
