@@ -47,6 +47,11 @@ jobs:
       - name: Test lot editor form persistence
         run: php tests/lot_form_test.php
 
+      - name: Verify editor-only deployment files (offline)
+        run: |
+          python3 -m py_compile scripts/deploy_kavel_editor.py
+          python3 scripts/deploy_kavel_editor.py plan
+
       - name: Detect whitespace errors
         shell: bash
         run: |
