@@ -2,7 +2,7 @@
 
 **Project:** Veilingcatalogus 41 Lokeren  
 **Datum:** 18 oktober 2026  
-**Status:** bevestigd probleem, herstel nog **niet** op productie uitgerold.  
+**Status (18 oktober 2026):** permanente HTTP→HTTPS-redirect voor login en homepage **op productie bevestigd** en bijbehorende `.htaccess` **onder Git opgenomen**. Overige adminroutes en technische cookiecontroles nog open.  
 **Issue:** [#6 — dwing HTTP→HTTPS af](https://github.com/pecharko/Veiling/issues/6).
 
 ## Bevestigd bewijs
@@ -54,7 +54,7 @@ Wanneer dit gevalideerd is, verander `R=302` naar `R=301` en hertest. Controleer
 
 **Let op:** noch GitHub noch deze documentatie wijzigen de live OVHcloud-instellingen automatisch. De Apache-configuratie moet nog uitdrukkelijk en gecontroleerd worden geïnstalleerd.
 
-**Definitieve redirect geslaagd — 18 oktober 2026:** na de overstap van `R=302` naar `R=301` heeft de gebruiker tweemaal `curl -sSI` uitgevoerd: `http://41lokeren.be/admin/login.php` antwoordt met **`HTTP/1.1 301 Moved Permanently`** en `Location: https://41lokeren.be/admin/login.php`; `http://41lokeren.be/` geeft **`301`** met `Location: https://41lokeren.be/`. Eerder bevestigde controles: geldige TLS-verbinding in Chrome, direct HTTPS-login `HTTP/2 200`, geen redirectlus in de 302-test. **Vervolg:** uitloggen/sessie opnieuw testen, andere adminroutes nagaan en het daadwerkelijk actieve `.htaccess`-bestand gecontroleerd aan Git toevoegen. Uit de curl-uitvoer volgt niet met zekerheid de precieze inhoud of locatie van het live configuratiebestand.
+**Definitieve redirect geslaagd — 18 oktober 2026:** na de overstap van `R=302` naar `R=301` heeft de gebruiker tweemaal `curl -sSI` uitgevoerd: `http://41lokeren.be/admin/login.php` antwoordt met **`HTTP/1.1 301 Moved Permanently`** en `Location: https://41lokeren.be/admin/login.php`; `http://41lokeren.be/` geeft **`301`** met `Location: https://41lokeren.be/`. Eerder bevestigde controles: geldige TLS-verbinding in Chrome, direct HTTPS-login `HTTP/2 200`, geen redirectlus in de 302-test. **Vervolg:** uitloggen/sessie opnieuw testen, andere adminroutes en technisch cookiegedrag nagaan. De door de gebruiker gedeelde actuele documentroot-configuratie is inmiddels in Git opgenomen als [`catalogus-public/.htaccess`](../catalogus-public/.htaccess). Het bestandspad `catalogus-public/.htaccess` is gebaseerd op de door de gebruiker opgegeven documentroot en gedeelde inhoud; de commentaarregel in Git is verduidelijkt van 'tijdelijke test' naar 'permanente redirect'. De Apache-regels zelf zijn identiek.
 
 ## Na herstel
 
