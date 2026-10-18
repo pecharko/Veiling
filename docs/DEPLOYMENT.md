@@ -160,3 +160,6 @@ Bewaar een lokale, beveiligde kopie van productie PHP-configuratie, database en 
 **Eigen wijzigingen opslaan:** kijk de Changes-lijst na, schrijf een commitbericht, klik Commit to main of featurebranch en daarna Push origin.
 
 **Belangrijk:** Fetch/Pull halen alleen GitHub-commits op, niet de productiecode die intussen rechtstreeks op OVHcloud is aangepast.
+
+## Modern kaveloverzicht — geplande UI-release (niet live)
+Runtime-allowlist: uitsluitend `catalogus-public/admin/index.php` en `catalogus-public/admin/admin.css`. De CSS en de PHP moeten samen worden vrijgegeven. Bestaande snapshot-, kavel- en CSV-deployworkflows mogen hiervoor niet worden hergebruikt zonder expliciete allowlist-review. Eerst CI, read-only plan, productiecodeback-up en goedkeuring van exacte commit/paden; daarna pas SFTP, SHA-256 en read-only smoke-tests. Geen database-, foto- of snapshotwijzigingen. Na uitrol T-046 visueel uitvoeren.

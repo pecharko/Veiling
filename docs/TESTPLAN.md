@@ -68,3 +68,12 @@ Actiehouder en eventuele follow-up:
 ```
 
 **Let op:** voer T-012 t/m T-017, T-037 t/m T-039 en destructieve CSV-/CRUD-tests alleen uit met geschikte testdata of in een geïsoleerde testomgeving. Test geen risicovolle herstelactie rechtstreeks op productie.
+
+## T-046 — Modern kaveloverzicht (uit te voeren)
+- Controleer na login de vier statistieken tegen de bestaande gegevens.
+- Controleer dat de dubbele knoppenbalk verdwenen is en de bovenste navigatie werkt.
+- Test zoekterm, categorie, status, gecombineerde filters, lege resultaten en paginering.
+- Controleer mobiel (375 px), tablet en desktop, toetsenbordfocus en tabel-scroll.
+- Controleer dat bewerken het juiste kavel opent en dat er geen databasewijziging plaatsvindt bij filteren.
+- Controleer na deployment anonieme toegangsbeveiliging en bestaande CSV-404.
+**Status:** nog niet uitgevoerd; geen productieacceptatie claimen.
