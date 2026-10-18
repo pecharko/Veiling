@@ -39,6 +39,11 @@ jobs:
       - name: Verify CSV import is disabled in source
         run: php tests/csv_import_disabled_test.php
 
+      - name: Check OVH release manifest (offline, no credentials)
+        run: |
+          python3 -m py_compile scripts/deploy_ovh_sftp.py
+          python3 scripts/deploy_ovh_sftp.py plan
+
       - name: Detect whitespace errors
         shell: bash
         run: |
