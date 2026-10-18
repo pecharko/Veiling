@@ -91,7 +91,7 @@ jobs:
         if: inputs.mode == 'deploy'
         run: python scripts/deploy_snapshot_capacity.py upload
 
-      - name: Verify anonymous editor still requires login and CSV stays disabled
+      - name: Verify anonymous backup requires login and CSV stays disabled
         if: inputs.mode == 'deploy'
         shell: bash
         run: |
@@ -99,7 +99,7 @@ jobs:
           backup_code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/backup.php)
           csv_code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
           if [ "$backup_code" != '303' ] || [ "$csv_code" != '404' ]; then
-            echo "Smoke test failed: anonymous backup=$kavel_code, CSV=$csv_code"
+            echo "Smoke test failed: anonymous backup=$backup_code, CSV=$csv_code"
             exit 1
           fi
           echo 'Anonymous backup requires login (303); disabled CSV import still 404.'
