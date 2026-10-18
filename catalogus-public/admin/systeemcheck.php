@@ -31,15 +31,12 @@ report_item($rows, 'Configuratie buiten publieke map',
 report_item($rows, 'Fotomap voor publieke afbeeldingen',
   is_dir($root . '/uploads') && is_writable($root . '/uploads'),
   'catalogus-public/uploads/ moet bestaan en voor PHP beschrijfbaar zijn.');
-report_item($rows, 'Afgeschermde fotobulkmap',
-  is_dir($private . '/photo-inbox') && is_readable($private . '/photo-inbox') && is_writable($private . '/photo-inbox'),
-  'private/photo-inbox/ moet bestaan, en door PHP gelezen en opgeschoond kunnen worden.');
 $https = isset($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off' && (string)$_SERVER['HTTPS'] !== '';
 report_item($rows, 'HTTPS', $https, 'Open de beheeromgeving uitsluitend op een adres dat met https:// begint.');
 $upload = upload_limit_bytes((string)ini_get('upload_max_filesize'));
 $post = upload_limit_bytes((string)ini_get('post_max_size'));
 report_item($rows, 'PHP-uploadlimiet (foto’s)', $upload >= 8*1048576 && $post >= 9*1048576,
-  'upload_max_filesize=' . ini_get('upload_max_filesize') . ', post_max_size=' . ini_get('post_max_size') . '. Grote foto’s kun je ook in bulk via SFTP plaatsen.', true);
+  'upload_max_filesize=' . ini_get('upload_max_filesize') . ', post_max_size=' . ini_get('post_max_size') . '. Foto's voeg je afzonderlijk toe bij het aanmaken of bewerken van een kavel.', true);
 $dbOkay = false;
 $dbMessage = 'Nog niet gecontroleerd.';
 try {
