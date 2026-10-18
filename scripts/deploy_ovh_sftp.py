@@ -166,10 +166,11 @@ def upload() -> None:
                         continue
                     target = remote_path(root, name)
                     # Upload existing PHP file in place; original is stored in artifact.
+                    # Include this file in rollback even if an upload breaks halfway.
+                    changed.append(name)
                     with sftp.open(target, "wb") as remote:
                         remote.write(source[name])
                         remote.flush()
-                    changed.append(name)
                     with sftp.open(target, "rb") as verify:
                         if digest(verify.read()) != digest(source[name]):
                             raise RuntimeError(f"Checksumverschil na upload: {name}")
