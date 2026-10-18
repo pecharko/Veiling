@@ -4,6 +4,9 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Gecontroleerd — 2026-10-18
+- FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests en geschoond schema in GitHub blijven open.
+
 ### Toegevoegd — 2026-10-17
 - Private GitHub-repository ingericht als toekomstige broncode- en documentatiebasis.
 - Beveiligende `.gitignore` voor productiedata, geheime configuratie, snapshots en uploads.
