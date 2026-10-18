@@ -115,6 +115,7 @@ try {
     [$status] = send('/admin/backup.php', [
         'csrf'=>$csrf,'action'=>'delete','snapshot'=>$newName,'confirm'=>'VERWIJDER',
     ]);
+    clearstatcache(true, snap_path($newName));
     ensure($status === 303 && !is_file(snap_path($newName))
         && count(snap_listing()) === 1, 'Confirmed delete removes only selected snapshot');
 
