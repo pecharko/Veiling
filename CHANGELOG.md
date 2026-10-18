@@ -4,7 +4,9 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### PR #7 opnieuw geïntegreerd met actuele main (nog niet live)
+- **Kaveleditor PR #7:** werkelijke formulier- en fotouploadflows gevalideerd tegen geïsoleerde MySQL 8.4 en localhost PHP, GitHub Actions-run 39109809899 geslaagd. Afzonderlijke handmatige SFTP-deploymentworkflow voor uitsluitend twee editorbestanden voorbereid; nog geen automatische of live upload.
+
+### PR #7 opnieuw geïntegreerd met actuele main — isolatietests geslaagd, nog niet live
 - Formulierwaarden blijven staan bij validatie- of databankfout via `lot_form_values()`; uploadstatus wordt vóór INSERT/UPDATE gecontroleerd. Alleen deze kaveleditorcorrectie en tests zijn overgenomen, zonder de bestaande CSV-uitschakeling of SFTP-deployment terug te draaien.
 - PHP-unitchecks toegevoegd aan de bestaande GitHub Actions-controle. Echte integratietests op een geïsoleerde MySQL-database en een afzonderlijk goedgekeurde editor-deployment moeten nog volgen.
 
