@@ -1,8 +1,8 @@
 # Database — geverifieerde tabelstructuren
 
 **Project:** veilingcatalogus 41 Lokeren  
-**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE lots;` en `SHOW CREATE TABLE lot_images;` op **18 oktober 2026**.  
-**Status:** de tabellen `lots` en `lot_images` zijn als DDL bevestigd. De overige tabellen (`settings`, `admins`, `login_attempts`) zijn nog **niet** als schema gedocumenteerd.
+**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE` voor `lots`, `lot_images` en `settings` op **18 oktober 2026**.  
+**Status:** de tabellen `lots`, `lot_images` en `settings` zijn als DDL bevestigd. De overige tabellen (`admins`, `login_attempts`) zijn nog **niet** als schema gedocumenteerd.
 
 Deze documentatie bevat **uitsluitend structuur**, geen veilingrecords, persoonsgegevens of databasewachtwoorden.
 
@@ -102,12 +102,62 @@ CREATE TABLE `lot_images` (
 
 **T-032 geslaagd (18-10-2026):** tabelstructuur, foreign key en indexen zichtbaar in aangeleverde phpMyAdmin-screenshot. Dit is een **schemaverificatie**, niet een bewezen werking van verwijderen en bestandssynchronisatie.
 
+## Tabel `settings`
+
+**Bron:** screenshot van de volledige MySQL-uitvoer `SHOW CREATE TABLE settings;` (18 oktober 2026). De tabeldefinitie hieronder is overgenomen voor documentatiedoeleinden, zonder productiegegevens.
+
+~~~sql
+CREATE TABLE `settings` (
+  `id` tinyint unsigned NOT NULL,
+  `title` varchar(200) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `subtitle` varchar(220) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `introduction` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `event_date` date DEFAULT NULL,
+  `event_time` varchar(90) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `location` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `address` varchar(300) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `contact_email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+  `practical_info` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `is_published` tinyint(1) NOT NULL DEFAULT '0',
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+~~~
+
+### Velden
+
+| Kolom | Type | Betekenis |
+|---|---|---|
+| `id` | `tinyint unsigned`, NOT NULL, PK | Sleutel van instellingenrecord |
+| `title` | `varchar(200)`, NOT NULL | Naam van de veiling |
+| `subtitle` | `varchar(220)`, NOT NULL, default `''` | Ondertitel |
+| `introduction` | `text`, NOT NULL | Introductietekst voor bezoekers |
+| `event_date` | `date`, NULL toegestaan | Veilingdatum; nog niet gekende datum is mogelijk |
+| `event_time` | `varchar(90)`, NOT NULL, default `''` | Tijdstip als vrije tekst |
+| `location` | `varchar(190)`, NOT NULL, default `''` | Zaal/locatie |
+| `address` | `varchar(300)`, NOT NULL, default `''` | Adres |
+| `contact_email` | `varchar(190)`, NOT NULL, default `''` | Contactadres |
+| `practical_info` | `text`, NOT NULL | Praktische informatie |
+| `is_published` | `tinyint(1)`, NOT NULL, default `0` | Globale publicatieschakelaar |
+| `updated_at` | `timestamp`, automatisch aangepast | Laatste wijzigingsmoment |
+
+### Belangrijke technische eigenschappen
+
+- **Single-recordconventie:** `private/bootstrap.php` gebruikt `SELECT * FROM settings WHERE id=1` en de beheerpagina `admin/instellingen.php` werkt `WHERE id=1` bij. De database **dwingt alleen uniciteit van `id` af**, niet dat er precies één record bestaat of dat het ID altijd 1 is. Een initieel instellingenrecord is dus noodzakelijk.
+- **Publicatie:** de standaardwaarde `is_published=0` betekent verborgen; de PHP-applicatie beschouwt alleen waarde 1 als gepubliceerd. `tinyint(1)` is op zichzelf **geen database-CHECK op 0/1**.
+- **Validatie:** MySQL laat voor `title` een lege string toe, hoewel het PHP-formulier een niet-lege titel vereist. Het e-mailadres wordt in PHP gecontroleerd; de DDL zelf definieert geen e-mailvalidatie.
+- **Datum:** `event_date` is een echte MySQL-`date`, NULL toegestaan. `event_time` is bewust vrije tekst, geen MySQL-`time`.
+- **Sleutels/indexen:** alleen `PRIMARY KEY (id)`; geen foreign keys in de getoonde tabel.
+- **Engine/collation:** InnoDB, `utf8mb4_unicode_ci`.
+
+**T-034 geslaagd (18-10-2026):** schema van `settings` is bevestigd met aangeleverde phpMyAdmin-uitvoer. Dit bewijst uitsluitend de tabelstructuur; het opslaan, herladen en publiceren van veilinginformatie (T-010 en T-006) is hiermee **niet** interactief getest.
+
 ### Nog te verifiëren
 
 - Een duplicaat via de kaveleditor toont de gewenste foutmelding (T-003).
 - CSV-upsert met bestaande lotnummers werkt zoals bedoeld (T-005).
 - Gelijktijdige bewerkingen blijven correct en gebruikersvriendelijk.
-- Schema's, foreign keys en constraints van de overige drie tabellen (`settings`, `admins`, `login_attempts`) zijn nog niet aangeleverd.
+- Schema's, foreign keys en constraints van de overige twee tabellen (`admins`, `login_attempts`) zijn nog niet aangeleverd.
 - Test van cascaderende verwijdering en opruimen van fysieke afbeeldingsbestanden in een testomgeving (T-033).
 - Bij wijzigingen aan het schema moeten deze documentatie, `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md` en `CHANGELOG.md` samen worden bijgewerkt.
 
