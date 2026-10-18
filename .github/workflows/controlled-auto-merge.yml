@@ -1,0 +1,79 @@
+name: Controlled auto-merge (GitHub Free)
+
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+      - Kaveleditor integratietests (geisoleerd)
+      - Snapshot en herstel — geisoleerde tests
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: controlled-merge-main
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check exact PR revision, trusted approval and all CI before merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner, repo = context.repo.repo;
+            const source = context.payload.workflow_run;
+            const prs = source.pull_requests || [];
+            if (prs.length !== 1) { core.info('No unique PR attached; stop.'); return; }
+            const number = prs[0].number;
+            const {data: pr} = await github.rest.pulls.get({owner, repo, pull_number:number});
+            if (pr.state !== 'open' || pr.draft || pr.base.ref !== 'main' ||
+                pr.head.repo?.full_name !== context.repo.owner + '/' + repo ||
+                pr.head.sha !== source.head_sha || pr.mergeable !== true) {
+              core.info('PR is not a current mergeable same-repository PR; stop.'); return;
+            }
+            if (!pr.labels.some(l => l.name === 'auto-merge-approved')) {
+              core.info('Maintainer opt-in label missing; stop.'); return;
+            }
+            // Fail closed: only presentation CSS and documentation; no PHP, JS, workflow,
+            // deploy script, auth, database, backup, or production config changes.
+            const files = await github.paginate(github.rest.pulls.listFiles,
+              {owner,repo,pull_number:number,per_page:100});
+            if (!files.length || files.length > 30 || files.some(f =>
+              f.status !== 'modified' ||
+              !(/^(catalogus-public\/admin\/admin\.css|docs\/[A-Za-z0-9_.-]+\.md|CHANGELOG\.md)$/.test(f.filename)))) {
+              core.info('Changes outside restricted low-risk allowlist; manual merge required.'); return;
+            }
+            const required = [
+              'php-lint.yml',
+              'kavel-integration.yml',
+              'snapshot-integration.yml'
+            ];
+            for (const workflow_id of required) {
+              const {data} = await github.rest.actions.listWorkflowRuns({
+                owner,repo,workflow_id,head_sha:pr.head.sha,event:'pull_request',per_page:100
+              });
+              const matching = data.workflow_runs.filter(r =>
+                r.head_sha === pr.head.sha && r.event === 'pull_request' &&
+                r.pull_requests?.some(p => p.number === number));
+              matching.sort((a,b) => b.run_number-a.run_number);
+              if (!matching.length || matching[0].conclusion !== 'success') {
+                core.info('Missing or failing latest check: '+workflow_id); return;
+              }
+            }
+            const {data: fresh} = await github.rest.pulls.get({owner,repo,pull_number:number});
+            if (fresh.head.sha !== pr.head.sha || fresh.state !== 'open' ||
+                fresh.mergeable !== true ||
+                !fresh.labels.some(l=>l.name==='auto-merge-approved')) {
+              core.info('PR changed while checking; stop.'); return;
+            }
+            await github.rest.pulls.merge({
+              owner,repo,pull_number:number,sha:pr.head.sha,merge_method:'merge',
+              commit_title:'Merge approved low-risk PR #'+number
+            });
+            core.info('Merged approved low-risk PR #'+number);
