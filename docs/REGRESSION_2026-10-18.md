@@ -39,6 +39,10 @@ De gebruiker deelde na de instructie om met een bestaand beheerdersaccount in te
 
 Een derde browserscreenshot toont het Chrome-sitebeveiligingspaneel van **41lokeren.be** met de letterlijke meldingen **`Connection is secure`** en **`Certificate is valid`**. Daarmee is voor de op dat moment geopende beheerderspagina een veilige, door Chrome gevalideerde verbinding aangetoond. De oorspronkelijke rode waarschuwing is op recentere screenshots verdwenen. Deze browserbevestiging bewijst geen HTTP-redirect. **Aanvullend bewijs op 18-10-2026:** `curl -I http://41lokeren.be/admin/login.php` antwoordt met `HTTP/1.1 200 OK`, dus een automatische HTTP→HTTPS-redirect **ontbreekt aantoonbaar** voor die route. [Issue #6](https://github.com/pecharko/Veiling/issues/6) blijft daarom open voor de resterende HTTPS-hardeningcontrole. De administratie kan verder worden getest via uitdrukkelijke HTTPS-URL's, zonder destructieve acties.
 
+### Definitieve HTTPS-doorverwijzing bevestigd (18 oktober 2026)
+
+Na de tijdelijke succesvolle 302-test heeft de gebruiker de permanente 301 ingesteld. Twee herhaalde `curl -sSI`-controles tonen **`HTTP/1.1 301 Moved Permanently`**: voor `/admin/login.php` naar `https://41lokeren.be/admin/login.php`, en voor `/` naar `https://41lokeren.be/`. Samen met het eerdere Chrome-certificaatbewijs, de `HTTP/2 200` op de HTTPS-login en de redirectketentest zonder lus is de belangrijkste HTTP→HTTPS-beveiligingsfout voor de geteste routes hersteld. **T-040: redirect- en certificaatdeel geslaagd.** De andere adminroutes en de werking na logout staan nog open (T-041); het live `.htaccess`-bestand is nog niet als versiebeheerde broncode geverifieerd.
+
 ## Vastgesteld probleem in code (nog geen interactief testresultaat)
 
 **Issue [#5](https://github.com/pecharko/Veiling/issues/5) — P2: verlies van formulierinvoer na bewaarfout.**
