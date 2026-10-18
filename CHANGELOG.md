@@ -8,6 +8,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests en geschoond schema in GitHub blijven open.
 - FR-003: phpMyAdmin-duplicatenquery met `GROUP BY lot_number HAVING COUNT(*) > 1` gaf nul rijen terug. T-030 geslaagd; geen bestaande duplicaten.
 - FR-003: volledige `SHOW CREATE TABLE lots;`-uitvoer bevestigd en (zonder huidige `AUTO_INCREMENT`-tellerstand) gedocumenteerd in `docs/DATABASE.md`. T-031 geslaagd. Geen wijziging aan productiedatabase.
+- FR-007/008/010: `SHOW CREATE TABLE lot_images;` bevestigd: foreign key `fk_lot_image` met `ON DELETE CASCADE`, index voor fotovolgorde en unieke niet-NULL bronnaam per kavel. DDL toegevoegd aan `docs/DATABASE.md`, T-032 geslaagd. Fysieke fotobestanden worden niet door MySQL verwijderd; T-033 staat open.
 
 ### Toegevoegd — 2026-10-17
 - Private GitHub-repository ingericht als toekomstige broncode- en documentatiebasis.
