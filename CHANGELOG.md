@@ -4,15 +4,15 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### GitHub Actions → OVHcloud SFTP-deploy (nog niet op productie uitgevoerd)
+### Eerste automatische OVHcloud SFTP-deploy geslaagd — 2026-10-18
 - FR-030/T-043: handmatig startbare GitHub Actions-workflow toegevoegd met een offline `plan`-modus, aparte bevestigde `deploy`-modus, SFTP met vooraf geverifieerde SSH-hostsleutel en repositorysecrets.
 - De workflow is beperkt tot de vijf PHP-bestanden van de CSV-disable-release. Ze haalt de huidige versies van OVHcloud eerst op in een kort bewaard privé-back-upartifact, verifieert hashes en probeert bij uploadfouten de vorige bestanden te herstellen.
-- HTTP-smoketests eisen 404 voor GET en lege POST op `admin/import.php` na de upload. Geen automatische uitrol bij push; er zijn nog geen SFTP-credentials ingesteld of remote acties uitgevoerd.
+- HTTP-smoketests eisen 404 voor GET en lege POST op `admin/import.php` na de upload. Geen automatische uitrol bij push. Op 18-10-2026 heeft de gebruiker een expliciete `deploy` gestart; SFTP-hostsleutel, back-upartifact, uploads, checksums en GET-/POST-404-smoketests slaagden ([run 39109055677](https://github.com/pecharko/Veiling/actions/runs/39109055677)).
 
-### CSV-import tijdelijk verwijderd uit admin (nog niet uitgerold)
+### CSV-import tijdelijk verwijderd uit admin (productie uitgerold)
 - FR-009 en FR-029 op verzoek tijdelijk uitgeschakeld. Menulink en dashboardknop verdwijnen, oude route `catalogus-public/admin/import.php` is vervangen door een minimale handler die altijd HTTP 404 retourneert, ook voor POST (zonder databaseverbinding of schrijfopdracht).
 - Actief CSV-voorbeeldbestand verwijderd; oorspronkelijke parser en voorbeeld blijven in de Git-geschiedenis herstelbaar. Foto-import blijft behouden; tekst op systeemcheck en backup aangepast.
-- Regressiecontrole T-042 toegevoegd: ontbrekende links, 404 bij GET en POST, foto-import nog aanwezig. **Uitrol naar OVHcloud vereist**; louter GitHub aanpassen wijzigt productie niet.
+- Regressiecontrole T-042 toegevoegd: ontbrekende links, 404 bij GET en POST, foto-import nog aanwezig. **Uitrol via GitHub Actions-run 39109055677 geslaagd** op 18-10-2026: vijf PHP-bestanden via SFTP geplaatst, oude versies in herstelartifact bewaard, GET en lege POST naar import.php geven HTTP 404. Visuele controle van menu en behoud andere functies nog open.
 
 ### CSV-voorbeeldbestand hersteld — 2026-10-18
 - In de productie-admin mislukt de knop `Download voorbeeld-CSV`: Chrome probeert `voorbeeld-kavels.html` op te slaan en meldt dat het bestand niet beschikbaar is. De link in `admin/import.php` wees naar een statisch CSV-bestand dat niet in Git stond.
