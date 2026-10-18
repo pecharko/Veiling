@@ -66,6 +66,12 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
+  [$status] = request_page('/admin/fotos-bulk.php');
+  claim($status === 404, 'Old bulk photo import GET returns 404');
+  $lotsBeforeBulk = lot_count();
+  [$status] = request_page('/admin/fotos-bulk.php', ['action' => 'process', 'csrf' => 'unused']);
+  claim($status === 404 && lot_count() === $lotsBeforeBulk, 'Old bulk photo import POST returns 404 without lot changes');
   $csrf = token($html);
   $invalid = [
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
