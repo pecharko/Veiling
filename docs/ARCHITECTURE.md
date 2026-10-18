@@ -40,7 +40,7 @@ private/
 
 `admins`, `login_attempts`, `lots`, `lot_images`, `settings`.
 
-Er staat geen geversioneerd schema in de repository. Verifieer volledige schema's, indexen (**UNIQUE op `lots.lot_number`**), foreign keys en kolomtypen met een **geschoonde** schema-export of metadataquery. Publiceer geen productiegegevens of inlog-/passwordhashwaarden.
+**Het geverifieerde schema van `lots` staat in [DATABASE.md](DATABASE.md)** (bron: phpMyAdmin `SHOW CREATE TABLE lots;`, 18 oktober 2026). De tabel bevat onder meer de afzonderlijke `UNIQUE KEY lot_number (lot_number)`, de indexen `idx_public (status, lot_number)` en `idx_category (status, category)`, en gebruikt InnoDB. Voor `settings`, `admins`, `lot_images` en `login_attempts` ontbreken nog geverifieerde DDL's/foreign keys; publiceer geen productiegegevens, inlog- of passwordhashwaarden.
 
 ## Beveiligingsgrenzen
 
