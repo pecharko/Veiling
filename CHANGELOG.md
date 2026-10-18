@@ -11,7 +11,8 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ### Beveiligingscontrole — 2026-10-18
 - Gebruiker kan na geldige aanmelding het ingelogde kaveloverzicht openen (T-001B). Screenshot toont 10 kavels en adminnavigatie, inclusief Back-up & herstel.
-- **Issue #6 (bijgewerkt):** na een eerder rood `Not Secure` toont een nieuw Chrome-beveiligingspaneel voor `41lokeren.be` expliciet `Connection is secure` en `Certificate is valid`. TLS en certificaat zijn voor de getoonde verbinding bevestigd; T-040 gedeeltelijk geslaagd. HTTP→HTTPS-redirect en aanvullende sessie-/logouttests blijven open. Geen productiecode of database gewijzigd.
+- **P1 issue #6 (bevestigde fout):** Chrome toont `Connection is secure` en `Certificate is valid` over HTTPS, maar via `curl -I http://41lokeren.be/admin/login.php` is HTTP `200 OK` zonder redirect vastgesteld. NFR-007 niet voldaan; T-040 HTTP-afdwinging mislukt. Gecontroleerd herstelplan in `docs/HTTPS_REMEDIATION.md`; op dit moment nog **niet uitgerold**.
+- Afzonderlijk synchronisatieprobleem Mac: GitHub weigert accountwachtwoorden voor Git over HTTPS. Gebruik GitHub Desktop-browseraanmelding, Git Credential Manager of GitHub CLI; geen productiecode gewijzigd.
 
 ### Browsertest — 2026-10-18
 - T-001 (FR-001): drie incognitocontroles voor kaveloverzicht (`/admin/index.php`), CSV-import (`/admin/import.php`) en kaveleditor (`/admin/kavel.php`) tonen loginformulier zonder afgeschermde inhoud. Op derde screenshot is de uiteindelijke URL `/admin/login.php` zichtbaar. Geldige login/logout en andere beveiligde routes blijven te testen. Geen gegevens gewijzigd.
