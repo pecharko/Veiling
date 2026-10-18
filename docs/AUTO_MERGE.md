@@ -12,3 +12,7 @@ This workflow is deliberately **opt-in and narrow** because this private GitHub 
 - PRs that change this workflow require a manual merge and code review.
 
 To expand eligibility to PHP or other runtime code, first introduce enforceable protections and a security review. Do not simply widen the allowlist.
+
+## Verificatietest
+
+Een documentatie-PR met het label `auto-merge-approved` dient als gecontroleerde test: pas na drie geslaagde CI-controles op de actuele commit mag de workflow automatisch mergen. Dit voert geen productiedeployment uit.
