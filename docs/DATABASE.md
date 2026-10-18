@@ -1,8 +1,8 @@
 # Database — geverifieerde tabelstructuren
 
 **Project:** veilingcatalogus 41 Lokeren  
-**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE` voor `lots`, `lot_images`, `settings` en `admins` op **18 oktober 2026**.  
-**Status:** de tabellen `lots`, `lot_images`, `settings` en `admins` zijn als DDL bevestigd. Alleen `login_attempts` is nog **niet** als schema gedocumenteerd.
+**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE` voor **alle vijf** tabellen op **18 oktober 2026**.  
+**Status:** de schema's van `lots`, `lot_images`, `settings`, `admins` en `login_attempts` zijn als DDL bevestigd. **Functionele werking, herstelbaarheid en eventuele toekomstige migraties zijn hiermee niet bewezen.**
 
 Deze documentatie bevat **uitsluitend structuur**, geen veilingrecords, persoonsgegevens of databasewachtwoorden.
 
@@ -184,12 +184,43 @@ CREATE TABLE `admins` (
 
 **T-035 geslaagd (18-10-2026):** structuur van `admins`, unieke e-mailindex en hashkolom bevestigd op aangeleverd phpMyAdmin-screenshot. **Geen functionele login-, aanmaak- of autorisatietests uitgevoerd.**
 
+## Tabel `login_attempts`
+
+**Bron:** volledige phpMyAdmin-uitvoer van `SHOW CREATE TABLE login_attempts;`, screenshot 18 oktober 2026. De tabel heeft geen productiegegevens in dit document.
+
+~~~sql
+CREATE TABLE `login_attempts` (
+  `id` bigint unsigned NOT NULL AUTO_INCREMENT,
+  `ip_hash` char(64) CHARACTER SET ascii COLLATE ascii_general_ci NOT NULL,
+  `attempted_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_attempts` (`ip_hash`,`attempted_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+~~~
+
+### Velden en index
+
+| Kolom | Type | Betekenis |
+|---|---|---|
+| `id` | `bigint unsigned`, PK, AUTO_INCREMENT | Interne sleutel voor een mislukte aanmeldpoging |
+| `ip_hash` | `char(64)`, ASCII, NOT NULL | Hexadecimale SHA-256-hash van het IP-adres zoals de huidige PHP-code die opslaat |
+| `attempted_at` | `timestamp`, NOT NULL, default CURRENT_TIMESTAMP | Tijdstip van de poging |
+
+- **`idx_attempts(ip_hash,attempted_at)`** ondersteunt tellen van recente pogingen voor dezelfde IP-hash.
+- Er zijn geen foreign keys. De tabel koppelt mislukte pogingen **niet** rechtstreeks aan een account of e-mailadres.
+- In `catalogus-public/admin/login.php` wordt de IP-hash gevormd met `hash('sha256', REMOTE_ADDR)`. Bij een POST verwijdert de code pogingen ouder dan **24 uur** en weigert een poging als de database reeds **8** mislukkingen voor dezelfde hash uit de voorbije **15 minuten** telt. Bij succesvol inloggen worden de recente pogingen voor die IP-hash verwijderd.
+- **Privacy:** een deterministische SHA-256-hash van een IP-adres is niet automatisch anoniem; het blijft mogelijk een persoonsgegeven. Beperk inzage, bewaar niet langer dan nodig en publiceer geen echte hashes in GitHub. Uit het schema volgt niet dat logopschoning daadwerkelijk periodiek loopt: de huidige opschoning gebeurt alleen tijdens een login-POST.
+- **Beveiligingsgrens:** IP-gebaseerde rate limiting alleen is niet voldoende voor volledige bescherming tegen gedistribueerde aanvallen of gedeelde IP-adressen. De DDL toont infrastructuur, geen geslaagde aanvalstest.
+
+**T-036 geslaagd (18-10-2026):** primair sleutelveld, `char(64)`-hashkolom, timestamp en samengestelde index bevestigd via screenshot. **T-037 (inlogbeperking en opschoning) staat open** en hoort in een geïsoleerde testomgeving.
+
 ### Nog te verifiëren
 
 - Een duplicaat via de kaveleditor toont de gewenste foutmelding (T-003).
 - CSV-upsert met bestaande lotnummers werkt zoals bedoeld (T-005).
 - Gelijktijdige bewerkingen blijven correct en gebruikersvriendelijk.
-- Schema, indexen en constraints van de laatste tabel (`login_attempts`) zijn nog niet aangeleverd.
+- Alle vijf DDL's zijn opgenomen. Controleer bij toekomstige databasewijzigingen opnieuw of het gedocumenteerde schema overeenkomt met de server.
+- Loginrate-limiting en opschoning functioneel testen in een geïsoleerde omgeving (T-037).
 - Test van cascaderende verwijdering en opruimen van fysieke afbeeldingsbestanden in een testomgeving (T-033).
 - Bij wijzigingen aan het schema moeten deze documentatie, `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md` en `CHANGELOG.md` samen worden bijgewerkt.
 
