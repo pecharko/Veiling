@@ -163,3 +163,6 @@ Bewaar een lokale, beveiligde kopie van productie PHP-configuratie, database en 
 
 ## Modern kaveloverzicht — geplande UI-release (niet live)
 Runtime-allowlist: uitsluitend `catalogus-public/admin/index.php` en `catalogus-public/admin/admin.css`. De CSS en de PHP moeten samen worden vrijgegeven. Bestaande snapshot-, kavel- en CSV-deployworkflows mogen hiervoor niet worden hergebruikt zonder expliciete allowlist-review. Eerst CI, read-only plan, productiecodeback-up en goedkeuring van exacte commit/paden; daarna pas SFTP, SHA-256 en read-only smoke-tests. Geen database-, foto- of snapshotwijzigingen. Na uitrol T-046 visueel uitvoeren.
+
+### Dashboardrelease — specifieke workflow
+Gebruik `.github/workflows/dashboard-deploy.yml` met `scripts/deploy_modern_dashboard.py` (alleen `catalogus-public/admin/admin.css` gevolgd door `catalogus-public/admin/index.php`). Eerst `mode=plan`, daarna na afzonderlijke goedkeuring `mode=deploy` met bevestiging `DEPLOY DASHBOARD`. De workflow maakt een privé rollbackartifact (7 dagen), vergelijkt de remote bestanden met de back-up vóór schrijven en controleert SHA-256 na iedere upload. Na de uitrol: read-only controle van anonieme admin-loginredirect en CSV 404; aangemelde visuele acceptatie T-046 blijft verplicht. Geen data-, foto- of snapshotwijzigingen. Workflow pas na groene CI en merge beschikbaar op `main`.

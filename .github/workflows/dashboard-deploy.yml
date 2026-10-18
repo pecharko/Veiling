@@ -1,0 +1,105 @@
+name: Deploy modern dashboard naar OVHcloud (handmatig)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = geen verbinding; deploy = twee bestanden overzetten'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      confirmation:
+        description: 'Typ alleen voor een echte upload: DEPLOY DASHBOARD'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  ovh-dashboard:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout approved main branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate release allowlist offline
+        run: |
+          python -m py_compile scripts/deploy_modern_dashboard.py
+          python scripts/deploy_modern_dashboard.py plan
+
+      - name: Authorize production change
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != 'DEPLOY DASHBOARD' ]; then
+            echo 'Not authorized: enter DEPLOY DASHBOARD to upload.'
+            exit 1
+          fi
+          for name in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing SFTP secret or variable: $name"
+              exit 1
+            fi
+          done
+
+      - name: Install pinned SFTP client
+        if: inputs.mode == 'deploy'
+        run: python -m pip install 'paramiko==3.5.1'
+
+      - name: Back up current dashboard PHP and CSS
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_modern_dashboard.py backup
+
+      - name: Save private short-lived rollback artifact before write
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovh-dashboard-before-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload CSS first then dashboard PHP, verify and rollback on error
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_modern_dashboard.py upload
+
+      - name: Verify anonymous dashboard requires login and CSV stays disabled
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dashboard_code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/index.php)
+          csv_code=$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+          if [ "$dashboard_code" != '303' ] || [ "$csv_code" != '404' ]; then
+            echo "Smoke test failed: anonymous dashboard=$dashboard_code, CSV=$csv_code"
+            exit 1
+          fi
+          echo 'Anonymous dashboard requires login (303); disabled CSV import still 404.'
