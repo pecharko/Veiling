@@ -103,6 +103,8 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 4. De getoonde limiet is instelbaar of gedocumenteerd; de OVHcloud Manager is leidend bij afwijkingen.
 5. Controle van ruimte vóór snapshot voorkomt voorzienbare opslagoverschrijding; afwijkend OVH-quota wordt veilig behandeld.
 
+**Beveiligingsbevinding 18-10-2026 (FR-001 / NFR-007):** na een geldige aanmelding werd de beheerpagina `/admin/index.php` zichtbaar (T-001B), maar Chrome toonde rood **'Not Secure'** in de adresbalk. De oorzaak is nog niet bevestigd; [issue #6](https://github.com/pecharko/Veiling/issues/6) staat open voor onderzoek naar HTTPS/certificaat/HTTP-redirect (T-040). Geen verdere beheermutaties uitvoeren tot de verbinding is gevalideerd.
+
 ## Niet-functionele afspraken
 
 | ID | Afspraak | Verificatie |
@@ -113,6 +115,7 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 | NFR-004 | Database en foto-back-ups worden onafhankelijk van Git getest en extern bewaard. | Gedocumenteerde restoretest |
 | NFR-005 | Een release kan worden teruggedraaid met code-back-up en passend dataplan. | Deployment-checklist |
 | NFR-006 | Vereiste functionaliteit en tests worden in dezelfde codewijziging bijgewerkt. | Pull-request-checklist |
+| NFR-007 | Beheeromgeving uitsluitend via correct HTTPS bereikbaar, met valide certificaat en veilige cookies; HTTP wordt naar HTTPS omgeleid. | TLS-/browsercontrole T-040; na melding `Not Secure` op 18-10-2026 nog **niet aangetoond** |
 
 ## Traceerbaarheid en onderhoud
 
