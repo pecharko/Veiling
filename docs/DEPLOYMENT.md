@@ -2,6 +2,30 @@
 
 **Uitrolmodel:** voorlopig handmatige bestandenoverdracht naar OVHcloud via RemoteDrive. **Geen automatische deployment vanuit GitHub.**
 
+## Uitrol: CSV-import tijdelijk verwijderen (18 oktober 2026)
+
+**Pas na merge naar `main`**, synchroniseer GitHub Desktop met de repository. Maak vóór upload een lokale kopie van de huidige bestanden in de OVHcloud-productieomgeving.
+
+Upload **alle vijf** volgende bestanden vanaf de geactualiseerde repository met RemoteDrive, op exact dezelfde relatieve paden:
+
+1. `private/bootstrap.php` — verwijdert CSV-link uit het adminmenu;
+2. `catalogus-public/admin/index.php` — verwijdert knop 'Kavels importeren';
+3. `catalogus-public/admin/import.php` — vervangt de importfunctie door een HTTP-404-afhandeling die ook POST blokkeert;
+4. `catalogus-public/admin/systeemcheck.php` — verwijdert CSV-import als actieve systeemcheck;
+5. `catalogus-public/admin/backup.php` — verwijdert CSV-verwijzing uit de back-upaanbeveling.
+
+**Let op:** `admin/import.php` moet juist worden **overschreven**, niet alleen uit het menu worden verborgen. Verwijder het bestand **niet** uitsluitend uit Git of via de FTP-client, want de overblijvende serverversie kan dan nog imports uitvoeren. Als `catalogus-public/assets/voorbeeld-kavels.csv` intussen op OVHcloud was geplaatst, mag je **alleen dat niet meer gebruikte voorbeeldbestand** verwijderen (niet de volledige assets-map). Wijzig de database, bestaande kavels, snapshots, fotobestanden, `private/config.php` en `.htaccess` niet.
+
+**Na upload, uitsluitend veilig testen:**
+
+```bash
+curl -sSI https://41lokeren.be/admin/import.php | grep -iE '^(HTTP/|location:)'
+```
+
+Verwacht: `HTTP/2 404` (of HTTP/1.1 404, afhankelijk van protocol). Open daarnaast admin/index.php en controleer dat CSV-import uit menu en acties verdwenen is maar Foto-import en Back-up & herstel intact blijven. **POST-test alleen uitvoeren met een leeg verzoek (zonder CSV-bestand, zonder authenticatiegegevens):** `curl -sS -o /dev/null -w '%{http_code}\\n' -X POST https://41lokeren.be/admin/import.php`. Verwacht `404`. De test zonder data kan geen kavels toevoegen. Leg het resultaat vast als T-042.
+
+Rollback: herstel de vijf originele PHP-bestanden vanuit de vooraf gemaakte veilige kopie. Hiermee kan CSV-import weer actief worden; pas doen na expliciete beslissing. De oude importimplementatie blijft ook in de Git-geschiedenis beschikbaar.
+
 ## 1. Eerste import (17 oktober 2026 uitgevoerd, controles deels open)
 
 1. **Uitgevoerd volgens gebruiker:** actuele productiebroncode van `catalogus-public/` en `private/` gekopieerd naar `/Users/chrisdemol/Code/41Lokeren-Productie`.
