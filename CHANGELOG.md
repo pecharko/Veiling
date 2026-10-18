@@ -4,7 +4,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-- **Kaveleditor PR #7:** werkelijke formulier- en fotouploadflows gevalideerd tegen geïsoleerde MySQL 8.4 en localhost PHP, GitHub Actions-run 39109809899 geslaagd. De afzonderlijke handmatige SFTP-workflow heeft beide editorbestanden naar OVHcloud uitgerold. GitHub Actions-job `ovh-kavel` is geslaagd, inclusief back-upartifact en rooktest voor loginbeveiliging en uitgeschakelde CSV-import (screenshot 18-10-2026). Browseracceptatie nog te bevestigen.
+- **Kaveleditor PR #7:** werkelijke formulier- en fotouploadflows gevalideerd tegen geïsoleerde MySQL 8.4 en localhost PHP, GitHub Actions-run 39109809899 geslaagd. De afzonderlijke handmatige SFTP-workflow heeft beide editorbestanden naar OVHcloud uitgerold. GitHub Actions-job `ovh-kavel` is geslaagd, inclusief back-upartifact en rooktest voor loginbeveiliging en uitgeschakelde CSV-import (screenshot 18-10-2026). De beheerder heeft na de visuele nieuw-kavelcontrole op 18-10-2026 gemeld dat alles goed lijkt te werken; gebruikersacceptatie vastgelegd, zonder destructieve productietests.
 
 ### PR #7 — isolatietests en handmatige productie-uitrol geslaagd (18-10-2026)
 - Formulierwaarden blijven staan bij validatie- of databankfout via `lot_form_values()`; uploadstatus wordt vóór INSERT/UPDATE gecontroleerd. Alleen deze kaveleditorcorrectie en tests zijn overgenomen, zonder de bestaande CSV-uitschakeling of SFTP-deployment terug te draaien.
