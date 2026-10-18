@@ -1,0 +1,104 @@
+name: Deploy naar OVHcloud (handmatig)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = alleen bestanden tonen; deploy = vijf bestanden uploaden'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      confirmation:
+        description: 'Alleen voor deploy: typ exact DEPLOY'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  ovh-upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Check out approved main branch
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify fixed release list (no network)
+        run: python scripts/deploy_ovh_sftp.py plan
+
+      - name: Confirm production upload
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != 'DEPLOY' ]; then
+            echo 'Upload geannuleerd: typ exact DEPLOY in bevestigingsveld.'
+            exit 1
+          fi
+          for name in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!name:-}" ]; then
+              echo "Ontbrekende secret of variabele: $name"
+              exit 1
+            fi
+          done
+
+      - name: Install SFTP dependency
+        if: inputs.mode == 'deploy'
+        run: python -m pip install 'paramiko==3.5.1'
+
+      - name: Backup all five existing production files
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_ovh_sftp.py backup
+
+      - name: Store short-lived private rollback artifact before uploading
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ovh-predeploy-backup-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload only approved files (rollback on partial failure)
+        if: inputs.mode == 'deploy'
+        run: python scripts/deploy_ovh_sftp.py upload
+
+      - name: Check CSV-import route rejects GET and empty POST
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for method in GET POST; do
+            status=$(curl -sS --max-time 20 --retry 2 -o /dev/null -w '%{http_code}' -X "$method" https://41lokeren.be/admin/import.php)
+            if [ "$status" != '404' ]; then
+              echo "Controle MISLUKT: $method /admin/import.php geeft HTTP $status i.p.v. 404"
+              exit 1
+            fi
+            echo "Controle geslaagd: $method /admin/import.php -> HTTP 404"
+          done
