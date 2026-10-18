@@ -56,13 +56,6 @@ jobs:
           CI_DB_NAME: auction_test
         run: php tests/snapshot_integration.php
 
-      - name: Simulate 79/80/89/90 percent and low-quota snapshot rejection
-        env:
-          CI_SNAPSHOT_TEST: 'yes'
-          CI_DB_HOST: 127.0.0.1
-          CI_DB_NAME: auction_test
-        run: php tests/snapshot_storage_limits_test.php
-
       - name: Exercise authenticated backup UI and HTTP snapshot flows
         env:
           CI_SNAPSHOT_TEST: 'yes'
@@ -81,3 +74,11 @@ jobs:
             sleep 1
           done
           php tests/snapshot_http_integration.php || { tail -n 90 /tmp/snapshot-http.log; exit 1; }
+
+      - name: Simulate 79/80/89/90 percent and low-quota snapshot rejection
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/snapshot_storage_limits_test.php
+
