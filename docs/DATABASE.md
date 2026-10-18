@@ -1,8 +1,8 @@
 # Database — geverifieerde tabelstructuren
 
 **Project:** veilingcatalogus 41 Lokeren  
-**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE` voor `lots`, `lot_images` en `settings` op **18 oktober 2026**.  
-**Status:** de tabellen `lots`, `lot_images` en `settings` zijn als DDL bevestigd. De overige tabellen (`admins`, `login_attempts`) zijn nog **niet** als schema gedocumenteerd.
+**Bron:** phpMyAdmin op de OVHcloud-productiedatabase — door de gebruiker aangeleverde uitvoer van `SHOW CREATE TABLE` voor `lots`, `lot_images`, `settings` en `admins` op **18 oktober 2026**.  
+**Status:** de tabellen `lots`, `lot_images`, `settings` en `admins` zijn als DDL bevestigd. Alleen `login_attempts` is nog **niet** als schema gedocumenteerd.
 
 Deze documentatie bevat **uitsluitend structuur**, geen veilingrecords, persoonsgegevens of databasewachtwoorden.
 
@@ -152,12 +152,44 @@ CREATE TABLE `settings` (
 
 **T-034 geslaagd (18-10-2026):** schema van `settings` is bevestigd met aangeleverde phpMyAdmin-uitvoer. Dit bewijst uitsluitend de tabelstructuur; het opslaan, herladen en publiceren van veilinginformatie (T-010 en T-006) is hiermee **niet** interactief getest.
 
+## Tabel `admins`
+
+**Bron:** screenshot van de volledige MySQL-uitvoer `SHOW CREATE TABLE admins;` (18 oktober 2026). Het productiegebonden `AUTO_INCREMENT=2` is bewust niet in de herbruikbare definitie overgenomen. **Er zijn geen e-mailadressen of wachtwoordhashes uit de database overgenomen.**
+
+~~~sql
+CREATE TABLE `admins` (
+  `id` int unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(190) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+~~~
+
+### Velden en beveiliging
+
+| Kolom | Type | Betekenis |
+|---|---|---|
+| `id` | `int unsigned`, PK, AUTO_INCREMENT | Interne beheerders-ID |
+| `email` | `varchar(190)`, NOT NULL, UNIQUE | Uniek login-e-mailadres |
+| `password_hash` | `varchar(255)`, NOT NULL | Opgeslagen wachtwoordhash; **geen plaintextwachtwoord bedoeld** |
+| `created_at` | `timestamp`, default CURRENT_TIMESTAMP | Aanmaakdatum account |
+
+- **Unieke e-mail:** `UNIQUE KEY email (email)` voorkomt dubbele accountadressen volgens de ingestelde `utf8mb4_unicode_ci`-collatie. Collatie beïnvloedt de tekenvergelijking; onder deze collatie is de vergelijking normaal niet hoofdlettergevoelig.
+- **Authenticatie:** `catalogus-public/admin/login.php` vergelijkt het aangeboden wachtwoord met `password_verify()` tegen `password_hash`. De DDL zelf garandeert niet welk hash-algoritme gebruikt wordt; dat hoort bij de accountaanmaakcode en moet bij functionele beveiligingstests worden gecontroleerd.
+- **Autorisatie:** er is geen `role`-, `permission`- of `is_active`-veld in deze tabel. Het huidige `require_auth()` in `private/bootstrap.php` controleert uitsluitend op een ingelogde `admin_id`; fijnmazige rollen/rechten worden in de geïnspecteerde code niet afgedwongen.
+- **Bescherming van back-ups:** snapshots bevatten de tabel `admins`, inclusief wachtwoordhashes. ZIP-back-ups dus vertrouwelijk behandelen.
+- **Geen referentiële constraints:** behalve `PRIMARY KEY` en `UNIQUE email` toont de DDL geen extra indexen of foreign keys. De tabel gebruikt InnoDB en utf8mb4_unicode_ci.
+
+**T-035 geslaagd (18-10-2026):** structuur van `admins`, unieke e-mailindex en hashkolom bevestigd op aangeleverd phpMyAdmin-screenshot. **Geen functionele login-, aanmaak- of autorisatietests uitgevoerd.**
+
 ### Nog te verifiëren
 
 - Een duplicaat via de kaveleditor toont de gewenste foutmelding (T-003).
 - CSV-upsert met bestaande lotnummers werkt zoals bedoeld (T-005).
 - Gelijktijdige bewerkingen blijven correct en gebruikersvriendelijk.
-- Schema's, foreign keys en constraints van de overige twee tabellen (`admins`, `login_attempts`) zijn nog niet aangeleverd.
+- Schema, indexen en constraints van de laatste tabel (`login_attempts`) zijn nog niet aangeleverd.
 - Test van cascaderende verwijdering en opruimen van fysieke afbeeldingsbestanden in een testomgeving (T-033).
 - Bij wijzigingen aan het schema moeten deze documentatie, `docs/REQUIREMENTS.md`, `docs/TESTPLAN.md` en `CHANGELOG.md` samen worden bijgewerkt.
 
