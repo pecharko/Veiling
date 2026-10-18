@@ -6,6 +6,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ### Gecontroleerd — 2026-10-18
 - FR-003: de gebruiker bevestigde via phpMyAdmin (`SHOW INDEX FROM lots;`) een afzonderlijke UNIQUE-index op `lots.lot_number` (`Non_unique=0`). Geen databasewijziging vereist. T-026 geslaagd; kaveleditor-/CSV-/concurrencytests en geschoond schema in GitHub blijven open.
+- FR-003: phpMyAdmin-duplicatenquery met `GROUP BY lot_number HAVING COUNT(*) > 1` gaf nul rijen terug. T-030 geslaagd; geen bestaande duplicaten. Nog te ontvangen: `SHOW CREATE TABLE lots;` voor schemadocumentatie.
 
 ### Toegevoegd — 2026-10-17
 - Private GitHub-repository ingericht als toekomstige broncode- en documentatiebasis.
