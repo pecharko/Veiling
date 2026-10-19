@@ -167,6 +167,14 @@ Dit is **fail-closed incidentbeperking**, nog **geen automatische crashrecovery*
 
 T-052/T-053/T-054 zijn geïsoleerd geslaagd in [Snapshot-CI-run #39324527061](https://github.com/pecharko/Veiling/actions/runs/39324527061): journal/HTTP 503 na SIGKILL, een corrupt of halfgeschreven journal, achtergebleven fotomappen, gecontroleerd hervatten na CI-only reparatie, volledige pre-commit-rollback en een onduidelijke journalfase direct na geslaagde databasecommit. De gevreesde **onbekende commituitkomst** houdt het journal bewust actief in plaats van op basis van een vermoeden oude of nieuwe foto's weg te gooien. FR-017 is pas volledig geslaagd nadat de volgende fase een geverifieerde, idempotente herstel-/recoveryprocedure en toegangsbeheersing oplevert. **Niet uitgerold op productie; geen live restoretests.**
 
+## Fase 3B — alleen-lezen incidentdiagnose (in review)
+
+Voor issue #2 komt een extra privé-inspectiemodule `private/restore_diagnosis.php` en een uitsluitend via PHP CLI te starten tool `scripts/restore_diagnose.php --plan`. Deze gebruikt geen productiedata in CI, schrijft geen database- of fotobestand en **kan geen restore, rollback of onderhoudsmarker verwijderen**. De module vergelijkt de volledige feitelijke inhoud van alle vijf snapshot-MySQL-tabellen en alle `uploads/`-foto's met de ZIP. De ZIP wordt met de SHA-256 uit het veilige journal vergeleken; ook alle daadwerkelijke ZIP-fotobytes worden gecontroleerd, niet enkel hun manifest. Symlinks, vreemde bestanden, corrupt journal en onvolledige journalupdates zorgen voor fail-closed beoordeling. Het rapport bevat uitsluitend statusvelden, afwijkende *tabelnamen* en aantallen, geen gevoelige persoonsgegevens, wachtwoorden of bestandsinhoud.
+
+De diagnose geeft bewust **geen groen licht voor automatische herstelacties**. Zelfs `target_verified_pending_review` betekent alleen dat de huidige MySQL-rijen en fotobytes overeenkomen met het doelarchief; het journal en de onderhoudsblokkering blijven actief totdat een verantwoordelijke ook de externe veiligheidskopieën, toegangsrechten, lopende verzoeken en eventuele buitenapp-mutaties heeft beoordeeld. `mixed_or_unknown_keep_maintenance` en `blocked_unverified` verplichten dezelfde blokkering. Een `clear`-uitkomst betekent *alleen* dat er geen journal/oudemap-indicator werd gevonden, niet dat de hele dataset gecontroleerd of veilig is.
+
+De geïsoleerde regressies T-055, T-050B en T-054 bewijzen het onderscheid tussen processchade vóór commit, een volledige doeltoestand na commit, en afwijkende/gewijzigde archieven of foto's. **Niet op OVHcloud uitgerold; automatische/operator-autorisatiegestuurde herstelacties blijven voor een afzonderlijke fase.**
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.
