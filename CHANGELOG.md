@@ -4,10 +4,16 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### Deelverbetering snapshots: één consistente MySQL-read-view (in PR)
+### Fase 2 snapshotveiligheid — gedeelde MySQL-mutex voor adminmutaties (PR in voorbereiding)
+- Nieuwe privé-helper `private/catalog_mutex.php` coördineert alle appadmin-writes via connection-scoped `GET_LOCK`: kavels, foto's, veilinginstellingen, loginpogingen; niet via netwerkfilesysteem-`flock`.
+- `snap_create()` houdt de mutex vast van DB-selects tot na het sluiten van de foto-ZIP. `snap_restore()` beschermt de herstelbewerking; `admin/backup.php` houdt dezelfde, herhaald verworven mutex ook vast **tussen** de voorafgaande veiligheidssnapshot en het herstel.
+- Bij bezette mutex krijgt een admin-POST na vijf seconden een fail-closed HTTP 503; geen gedeeltelijke writes. Extra T-051-verificatie van lockisolatie, genest gebruik, vrijgave na SIGKILL, en een geblokkeerde HTTP-kavel-POST zonder DB-mutatie. **CI-resultaten nog af te wachten.**
+- **Niet opgelost:** publieke lezingen tijdens restore, externe DB/SFTP-schrijfacties zonder mutex, een persisterende hersteljournal en SIGKILL na fotoswap. Er is **geen** productiedeploy; handmatige review vereist.
+
+### Deelverbetering snapshots: één consistente MySQL-read-view (PR #31 gemerged, niet op productie)
 - `snap_create()` leest de vijf tabellen binnen één eigen `REPEATABLE READ`-transactie en sluit deze vóór het archiveren van foto's. Een al actieve PDO-transactie wordt uit voorzorg geweigerd.
 - T-050A is omgevormd tot een veiligheidstest: een gelijktijdige atomaire update levert een consistent oud paar van `settings` en `lots` op; ook transactieafsluiting en afwijzing van geneste transacties getest. **Geïsoleerde snapshot-CI geslaagd:** [run #39319327080](https://github.com/pecharko/Veiling/actions/runs/39319327080).
-- **Beperkingen:** nog geen app-brede foto-/schrijflock en geen crashbestendige restore. T-050B blijft een bewust geslaagde risicoreproductie. Niet op productie uitgerold; wijzigingen aan snapshotcode vragen handmatige review en nieuwe specifieke deployautorisatie.
+- **Fase-1-beperkingen:** nog geen app-brede foto-/schrijflock of crashbestendige restore bij het mergen van #31; in de daaropvolgende fase-2-PR wordt de applicatiegecoördineerde mutex voorgesteld, maar het crashherstel blijft open. T-050B blijft een bewust geslaagde risicoreproductie. Niet op productie uitgerold; wijzigingen aan snapshotcode vragen handmatige review en nieuwe specifieke deployautorisatie.
 
 ### Snapshotconsistentie en SIGKILL-onderzoek — 19-10-2026 (alleen CI/test)
 - Eerste reproduceerbare onderzoekstests T-050A (gemengde MySQL-read-momenten) en T-050B (SIGKILL na fotoswap vóór DB-herstel) toegevoegd voor issue #2, uitsluitend op fictieve GitHub Actions/MySQL-data.
