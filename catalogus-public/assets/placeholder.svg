@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" role="img" aria-labelledby="title desc">
+  <title id="title">Geen kavelfoto beschikbaar</title>
+  <desc id="desc">Neutrale illustratie als er nog geen foto van een kavel is toegevoegd.</desc>
+  <rect width="960" height="720" fill="#fbf5f0"/>
+  <rect x="38" y="38" width="884" height="644" rx="30" fill="#fffaf7" stroke="#e9dcd2" stroke-width="3"/>
+  <rect x="228" y="126" width="504" height="358" rx="18" fill="#f9eee9" stroke="#b9aaa0" stroke-width="8"/>
+  <circle cx="370" cy="244" r="38" fill="#dcbfb4"/>
+  <path d="M270 430 418 298l100 92 72-56 100 96" fill="none" stroke="#879e91" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="298" y="502" width="364" height="2" fill="#e9dcd2"/>
+  <text x="480" y="564" text-anchor="middle" fill="#850015" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="3">FOTO VOLGT</text>
+  <text x="480" y="610" text-anchor="middle" fill="#697971" font-family="Arial, Helvetica, sans-serif" font-size="19">41 LOKEREN · VEILINGCATALOGUS</text>
+</svg>
