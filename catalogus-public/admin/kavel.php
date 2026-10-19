@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require dirname(__DIR__, 2) . '/private/images.php';
+require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
 require_auth();
 $pdo=db();
@@ -11,6 +12,8 @@ if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$
 $error='';
 if(is_post()){
   check_csrf();
+  // Hold until request shutdown, including every DB and photo-file mutation.
+  catalog_lock_for_request($pdo);
   $action=(string)($_POST['action']??'save');
   if($action==='remove-photo'){
     $photoId=(int)($_POST['photo_id']??0);
