@@ -157,6 +157,14 @@ De mutex is verbindinggebonden op dezelfde MySQL-server, zodat de coördinatie n
 
 T-051 controleert twee concurrerende MySQL-verbindingen, re-entrant lockverdeling, automatisch vrijgeven bij een gestorven PHP-proces, en het fail-closed gedrag van kavel-POST. FR-015 is hiermee sterker voor **applicatiegecoördineerde** foto- en DB-schrijfacties; externe writes en crashherstel blijven open.
 
+## Fase 3A — privéhersteljournal en fail-closed onderhoud (in review)
+
+De beperkte fase-3A-wijziging voegt een privé `.restore-active.json` toe onder `private/backups/`. De engine schrijft vóór de eerste fotoswap een journal met willekeurige run-ID, snapshotnaam en checksum, oude/nieuwe mapidentifiers en fase; faseovergangen worden met een tijdelijk bestand en dezelfde-directory `rename()` gepubliceerd. Een resterend journal, ook wanneer het corrupt is of slechts een halfaangemaakt tijdelijk bestand bestaat, schakelt alle PHP-instappunten die `private/bootstrap.php` laden over op een neutrale HTTP 503-onderhoudspagina. Nieuwe snapshots en restores worden bij een onbeoordeelde marker geweigerd. Normaal herstel of volledige rollback van een afgehandelde pre-commit-fout ruimt de marker op.
+
+Dit is **fail-closed incidentbeperking**, nog **geen automatische crashrecovery**. Bij uitval tussen fotoswap en MySQL-commit kan de actieve fotomap nog afwijken van MySQL; de PHP-site toont die combinatie niet als werkende catalogus, maar bestaande statische URLs naar `uploads/`, caches, buitenapp-mutaties en requests die al bezig waren vallen buiten de eenvoudige PHP-gate. `fsync` van de journalfile wordt gebruikt waar beschikbaar, maar directory-durability bij een volledige hosting-/storagecrash kan op gedeelde hosting niet worden gegarandeerd. De beheerder heeft geen geautomatiseerde herstart- of rollbackactie in de UI; deskundige analyse met de originele database, het herstelarchief en de tijdelijk bewaarde mappen blijft noodzakelijk.
+
+T-052/T-053 moeten het journal, HTTP 503 bij SIGKILL, normaal opruimen, corrupte data, en volledige rollback van een geïnjecteerde pre-commit-SQL-fout bewijzen. De gevreesde **onbekende commituitkomst** houdt het journal bewust actief in plaats van op basis van een vermoeden oude of nieuwe foto's weg te gooien. FR-017 is pas volledig geslaagd nadat de volgende fase een geverifieerde, idempotente herstel-/recoveryprocedure en toegangsbeheersing oplevert. **Niet uitgerold op productie; geen live restoretests.**
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.
