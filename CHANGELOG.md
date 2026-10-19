@@ -4,15 +4,24 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### Kwaliteitsronde en regressiebewaking — 19-10-2026 (PR in voorbereiding)
+## Productierelease — 19 oktober 2026 (gecontroleerd en technisch geverifieerd)
+
+- Audit-PR's #25 (regressies + oude Fotobulk-tekst), #26 (kavelfoto-placeholder), #27 (POST+CSRF-uitloggen) en bijbehorende handmatige release-PR #28 zijn gemerged.
+- **Exacte productiecommit:** `8b2e6b8f444f67952620163c523e04c5807a032e` via `audit-release-deploy.yml`; [GitHub Actions-run #39203389883](https://github.com/pecharko/Veiling/actions/runs/39203389883) geslaagd op 19-10-2026, branch `main`. Slechts zes goedgekeurde runtimepaden overgezet en SHA-256 geverifieerd.
+- **Back-up:** vijf bestaande PHP/CSS-bestanden vooraf gekopieerd; de nieuwe `assets/placeholder.svg` was nog afwezig en is als nieuw vastgelegd. Privé rollbackartifact `ovh-audit-pr25-26-27-before-39203389883`, bewaartermijn tot 26-10-2026.
+- **Technische productiecontrole:** homepage, login en placeholder HTTP 200; beschermde adminroutes en anonieme logout HTTP 303; oude foto- en CSV-import GET en lege POST HTTP 404. Alle checks groen. Geen database-, kavelfoto-, snapshots-, `uploads/`- of configuratiewijzigingen.
+- **Nog open:** visuele acceptatie van placeholder bij een fotoloos kavel, ingelogd uitloggen via de nieuwe knop en behoud van normale kavel-fotoupload; **geen geauthenticeerde/destructieve productietests uitgevoerd**. Testplan T-028 en T-049.
+
+
+### Kwaliteitsronde en regressiebewaking — 19-10-2026 (PR #25 gemerged, daarna uitgerold)
 - Broncode-audit van authenticatie, kaveleditor, fotoupload, snapshotherstel en deployment met prioriteiten P1/P2/P3 vastgelegd in `docs/QUALITY_AUDIT_2026-10-19.md`. Bestaand snapshot-consistentierisico blijft open (#2); gedeeltelijke foto-opslag, GET-logout en beheerderssessieduur vergen opvolging.
 - Oude verwijzingen naar de niet-ondersteunde foto-import verwijderd uit de kaveleditor en de backupintroductie.
-- Bestaande PHP-CI uitgebreid van zes broncodecontroles voor CSV-import naar dertien controles voor CSV, bulkfoto-import, adminnavigatie en behoud van de individuele fotoupload (T-048). Nog geen wijziging op productie; PHP-PR vraagt review en afzonderlijke deployment.
+- Bestaande PHP-CI uitgebreid van zes broncodecontroles voor CSV-import naar dertien controles voor CSV, bulkfoto-import, adminnavigatie en behoud van de individuele fotoupload (T-048). Deze wijziging is in de hierboven geregistreerde productie-auditrelease opgenomen.
 
-### Bulkfoto-import definitief uitgeschakeld (19-10-2026; nog niet uitgerold)
+### Bulkfoto-import definitief uitgeschakeld (19-10-2026; eerder op productie uitgerold)
 - Op verzoek is de niet te ondersteunen bulkfoto-import via SFTP uit de adminnavigatie verwijderd. De oude route `admin/fotos-bulk.php` geeft voor GET en POST uitsluitend HTTP 404, zonder databaseverbinding, fotoverwerking of verwijdering van bestanden.
 - Verouderde systeemcontrole op `private/photo-inbox/` en de SFTP-bulkimporttip verwijderd. Reeds aanwezige bestanden in de inbox blijven onaangeroerd.
-- Upload en beheer van foto's binnen afzonderlijke kavels blijft beschikbaar. Geïsoleerde HTTP-regressietests uitgebreid; T-047 toegevoegd. **Productie is nog niet gewijzigd; gerichte deployment vereist aparte toestemming.**
+- Upload en beheer van foto's binnen afzonderlijke kavels blijft beschikbaar. Geïsoleerde HTTP-regressietests uitgebreid; T-047 toegevoegd. **De eerdere gerichte Foto-import-retirementrelease is inmiddels geslaagd en door de beheerder visueel bevestigd; de auditrelease controleert opnieuw de oude import-URL's.**
 
 ### Modern kaveloverzicht (PR in voorbereiding, niet live)
 - Dubbele actieknoppen onder de statistieken verwijderd; hoofdnavigatie bleef destijds de ingang voor nieuw kavel, foto-import en veilinginformatie (foto-import later uitgefaseerd).
