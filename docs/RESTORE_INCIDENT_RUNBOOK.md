@@ -18,6 +18,8 @@ Een proces kan na het verplaatsen van foto's zijn gestopt **vóór** of **ná** 
 
 ## Veilige technische diagnose (fase 3B, nog niet live)
 
+De module is geïsoleerd getest: [Snapshot-CI-run #39326595129](https://github.com/pecharko/Veiling/actions/runs/39326595129) bevat T-055 met tien veiligheids- en integriteitscontroles, aangevuld met T-050B/T-054. De code is **nog niet uitgerold op productie**.
+
 Een bevoegde technische operator kan **uitsluitend op een beveiligde offline kopie** van de code, MySQL-database, journal en fotomappen het diagnostische plan uitvoeren:
 
 ```sh
