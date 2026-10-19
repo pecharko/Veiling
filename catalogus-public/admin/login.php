@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
+require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require_no_index();
 admin_session();
 if (isset($_SESSION['admin_id'])) redirect('admin/index.php');
@@ -10,6 +11,8 @@ if ((int)$pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn() === 0) redire
 $ip = hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? 'onbekend'));
 if (is_post()) {
   check_csrf();
+  // login_attempts is also part of the exported/restored snapshot data.
+  catalog_lock_for_request($pdo);
   $pdo->exec("DELETE FROM login_attempts WHERE attempted_at < DATE_SUB(NOW(), INTERVAL 1 DAY)");
   $st = $pdo->prepare('SELECT COUNT(*) FROM login_attempts WHERE ip_hash=? AND attempted_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)');
   $st->execute([$ip]);

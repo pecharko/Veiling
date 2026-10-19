@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
+require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require_auth();
 
 $error = '';
@@ -11,6 +12,7 @@ $totalLots = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
 
 if (is_post()) {
   check_csrf();
+  catalog_lock_for_request($pdo);
   $fields = [
     'title' => mb_substr(trim((string)($_POST['title'] ?? '')), 0, 200),
     'subtitle' => mb_substr(trim((string)($_POST['subtitle'] ?? '')), 0, 220),

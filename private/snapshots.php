@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 /** 41 Lokeren snapshot engine; lives outside the public document root. */
+require_once __DIR__ . '/catalog_mutex.php';
 const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','updated_at'],
@@ -37,11 +38,13 @@ function snap_lock(){ $fp=fopen(snap_dir().'/.operation.lock','c'); if(!$fp||!fl
 /** Allow a simulated quota only through explicit internal calls (e.g. isolated CI tests). */
 function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
  if($quotaBytes<=0)throw new InvalidArgumentException('Ongeldige hostinglimiet.');
- snap_init();$lock=snap_lock();$tmp=null;
+ snap_init();$lock=snap_lock();$tmp=null;$catalogLocked=false;
  try{
+  // Exclude every participating writer until the ZIP has been finalized.
+  catalog_data_lock($pdo);$catalogLocked=true;
   // One InnoDB read view for ALL tables. Without this, concurrent commits can
   // make a snapshot contain old settings but newer lots or image references.
-  // Photo-file consistency still requires a separate application-wide barrier.
+  // Our advisory mutex remains held while both DB rows and photos are archived.
   if($pdo->inTransaction())throw new RuntimeException('Snapshot vereist een nieuwe, afzonderlijke databasetransactie.');
   $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
   $pdo->beginTransaction();
@@ -71,7 +74,11 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   }finally{$zip->close();}
   if(!rename($tmp,snap_path($name)))throw new RuntimeException('Kon snapshot niet afronden.');$tmp=null;
   return $name;
- }finally{if($tmp&&is_file($tmp))@unlink($tmp);flock($lock,LOCK_UN);fclose($lock);}
+ }finally{
+  if($tmp&&is_file($tmp))@unlink($tmp);
+  try{if($catalogLocked)catalog_data_unlock($pdo);}
+  finally{flock($lock,LOCK_UN);fclose($lock);}
+ }
 }
 function snap_verified(string $name): array {
  $path=snap_path($name);if(!is_file($path))throw new RuntimeException('Snapshot bestaat niet.');
@@ -97,8 +104,11 @@ function snap_verified(string $name): array {
  }finally{$zip->close();}
 }
 function snap_restore(PDO $pdo,string $name): void {
- snap_init();$lock=snap_lock();$stage=null;$old=null;$moved=false;
+ snap_init();$lock=snap_lock();$stage=null;$old=null;$moved=false;$catalogLocked=false;
  try{
+  // Exclude cooperating writers during restoration as well. A hard crash
+  // can still leave mixed DB/files: a durable recovery journal comes later.
+  catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
   if(!mkdir($stage,0700))throw new RuntimeException('Kan tijdelijke fotomap niet maken.');
@@ -127,7 +137,11 @@ function snap_restore(PDO $pdo,string $name): void {
    $pdo->commit();
   }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();snap_remove_tree($uploads);if($moved)rename($old,$uploads);throw $e;}
   if($moved)snap_remove_tree($old);
- }finally{if($stage&&is_dir($stage))snap_remove_tree($stage);flock($lock,LOCK_UN);fclose($lock);}
+ }finally{
+  if($stage&&is_dir($stage))snap_remove_tree($stage);
+  try{if($catalogLocked)catalog_data_unlock($pdo);}
+  finally{flock($lock,LOCK_UN);fclose($lock);}
+ }
 }
 function snap_remove_tree(string $dir): void {
  if(!is_dir($dir))return;

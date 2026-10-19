@@ -9,6 +9,14 @@ Na het mergen van PR #30 wordt als eerste, afzonderlijk te reviewen stap alleen 
 
 **Niet inbegrepen:** atomair opslaan van DB én bestanden, afschermen van live fotobewerkingen tijdens ZIP-opbouw, recoveryjournal, onderhoudsmodus en herstel na een crash. T-050B blijft daarom een rode veiligheidsbevinding hoewel zijn huidige risicoreproducerende CI-test groen is. Alle onderstaande bevindingen beschrijven de historische uitgangssituatie vóór de DB-fix. Er is geen productieautorisatie verleend.
 
+## Fase 2 in voorbereiding — application-wide MySQL-advisorylock
+
+Na merge van PR #31 staat de consistente MySQL-read-view op `main`, maar **niet op productie**. De volgende PR voegt `private/catalog_mutex.php` toe met MySQL `GET_LOCK`/`RELEASE_LOCK`. Alle momenteel bekende adminschrijfroutes (`kavel.php`, `instellingen.php`, `login.php`) moeten de mutex bezitten gedurende hun volledige POST, inclusief opslag/verwijdering van foto's. `snap_create()` en `snap_restore()` verwerven dezelfde mutex voor hun volledige bewerking; de backup-UI houdt de mutex ook buitenom vast over **veiligheidssnapshot en daadwerkelijke restore** zodat geen nieuwe adminwrite ertussen kan plaatsvinden.
+
+**T-051 geïsoleerd geslaagd op 19-10-2026:** [snapshot-CI-run #39321531424](https://github.com/pecharko/Veiling/actions/runs/39321531424) bevestigt dat concurrerende MySQL-verbindingen elkaar blokkeren, een nested functie kan dezelfde mutex veilig herhaald verwerven/vrijgeven, een geweigerde kavel-POST retourneert HTTP 503 zonder kavelmutatie en het stoppen van de eigenaar geeft de mutex op MySQL vrij. Niet-ondersteunde mutaties via phpMyAdmin of SFTP gebruiken de applicatiemutex niet. MySQL-connectieverlies kan het lock voortijdig vrijgeven; een duurzame hersteljournal blijft noodzakelijk voor volledige crashveiligheid.
+
+De mutex vervangt geen onderhoudsmodus: bezoekers kunnen nog data en foto's op verschillende momenten lezen tijdens een restore. Door een SIGKILL na de fotoswap blijft de actief getoonde fotomap inconsistent met de database. De huidige T-050B detecteert dit nog steeds **bewust als aanwezig risico**. Voor echte crashbestendigheid blijft een idempotent hersteljournal, onderhoudsblokkade en fault-injection van elke restorefase nodig; het issue blijft P1 en open.
+
 ## Vastgestelde risico's uit de huidige broncode
 
 1. **Snapshot van verschillende momenten.** `snap_create()` leest `settings`, `admins`, `lots`, `lot_images` en `login_attempts` via afzonderlijke SELECT-statements zonder expliciete `START TRANSACTION WITH CONSISTENT SNAPSHOT`. De exclusieve `.operation.lock` wordt uitsluitend door snapshot- en herstelacties gebruikt, niet door gewone kavel-, veilinginfo- of fotoschrijfacties. Een gelijktijdige, atomaire wijziging van bijvoorbeeld `settings` en `lots` kan in de ZIP verschijnen als de oude instellingen plus het nieuwe kavel.

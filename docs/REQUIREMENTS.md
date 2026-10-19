@@ -149,6 +149,14 @@ Bij [issue #2](https://github.com/pecharko/Veiling/issues/2) onderzoeken de geï
 
 De snapshotfunctie wordt aangescherpt zodat de vijf InnoDB-tabellen via een eigen `REPEATABLE READ`-transactie vanaf één DB-leesmoment worden geëxporteerd. T-050A verwacht na wijziging dat een gelijktijdige atomaire update **niet** als gemengde rijcombinatie verschijnt; de test controleert daarnaast transactieafsluiting en afwijzing van een al actieve oproeperstransactie. **Nog niet gemerged of live uitgerold.** Dit lost gelijktijdige wijziging/verwijdering van *bestanden* niet op en verandert niets aan de herstelprocedure met een procescrash (T-050B). FR-015 is dus slechts voor database-rijen verbeterd; FR-017 blijft open onder issue #2. Opnames met concurrente fotomutaties en crashjournal volgen afzonderlijk.
 
+## Fase 2 — gecoördineerde adminwrites en snapshots (in review)
+
+Voor [issue #2](https://github.com/pecharko/Veiling/issues/2) bevat de nieuwe fase-2-PR een MySQL `GET_LOCK`-mutex met vaste naam, gedeeld tussen `snap_create()`, `snap_restore()` en **alle op dit moment bekende app-routes** die een snapshot-tabel of kavelfoto wijzigen: `admin/kavel.php`, `admin/instellingen.php`, `admin/login.php`. Een gewone admin-POST wacht maximaal vijf seconden op een bezette mutex en wordt dan zonder gegevensmutatie met HTTP 503 geweigerd. Snapshots/restores wachten maximaal twintig seconden. Het beschermde traject omvat DB-export, foto-archivering, en een voorafgaande veiligheidssnapshot plus daaropvolgend herstel onder dezelfde buitenste mutex.
+
+De mutex is verbindinggebonden op dezelfde MySQL-server, zodat de coördinatie niet afhankelijk is van lokale bestandslocks op meerdere PHP-hosts. **Beperkingen:** handmatige SFTP-fotowijzigingen, directe phpMyAdmin-mutaties en externe scripts die de mutex niet gebruiken vallen buiten de bescherming; publieke GETs kunnen tijdens een restore nog een tijdelijk gemengde toestand zien. Bij SIGKILL na de fotoswap blijft het database-/fotomapcrashvenster bestaan (T-050B). Er is nog geen duurzame hersteljournal of onderhoudsmodus. Fase 2 is geen afgeronde FR-017-veiligheidsgarantie en mag niet zonder aparte goedgekeurde release op productie.
+
+T-051 controleert twee concurrerende MySQL-verbindingen, re-entrant lockverdeling, automatisch vrijgeven bij een gestorven PHP-proces, en het fail-closed gedrag van kavel-POST. FR-015 is hiermee sterker voor **applicatiegecoördineerde** foto- en DB-schrijfacties; externe writes en crashherstel blijven open.
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.
