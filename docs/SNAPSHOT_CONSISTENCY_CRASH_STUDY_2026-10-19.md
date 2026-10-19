@@ -3,6 +3,12 @@
 **Datum:** 19 oktober 2026  
 **Scope:** analyse en geïsoleerde, niet-productieve fault-injectiontests. Er zijn **geen** wijzigingen aan `private/snapshots.php`, `admin/backup.php`, productiedata of echte foto's. Dit document ontwerpt een toekomstige oplossing; het levert die oplossing **nog niet**.
 
+## Vervolg op reproduceerbare tests — beperkte DB-fix in aparte PR
+
+Na het mergen van PR #30 wordt als eerste, afzonderlijk te reviewen stap alleen de **databasehelft** van `snap_create()` aangepakt: `SET TRANSACTION ISOLATION LEVEL REPEATABLE READ`, een eigen `PDO::beginTransaction()`, alle `SNAP_TABLES` lezen en commit/rollback in alle foutpaden. Een bestaande transactie wordt geweigerd. Hiermee moeten alle vijf InnoDB-tabellen één consistent leesmoment delen. De aangepaste T-050A test dit expliciet met een gelijktijdige atomaire update; de oude onveilige uitkomst mag de test **niet** meer laten slagen.
+
+**Niet inbegrepen:** atomair opslaan van DB én bestanden, afschermen van live fotobewerkingen tijdens ZIP-opbouw, recoveryjournal, onderhoudsmodus en herstel na een crash. T-050B blijft daarom een rode veiligheidsbevinding hoewel zijn huidige risicoreproducerende CI-test groen is. Alle onderstaande bevindingen beschrijven de historische uitgangssituatie vóór de DB-fix. Er is geen productieautorisatie verleend.
+
 ## Vastgestelde risico's uit de huidige broncode
 
 1. **Snapshot van verschillende momenten.** `snap_create()` leest `settings`, `admins`, `lots`, `lot_images` en `login_attempts` via afzonderlijke SELECT-statements zonder expliciete `START TRANSACTION WITH CONSISTENT SNAPSHOT`. De exclusieve `.operation.lock` wordt uitsluitend door snapshot- en herstelacties gebruikt, niet door gewone kavel-, veilinginfo- of fotoschrijfacties. Een gelijktijdige, atomaire wijziging van bijvoorbeeld `settings` en `lots` kan in de ZIP verschijnen als de oude instellingen plus het nieuwe kavel.
