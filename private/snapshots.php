@@ -2,6 +2,7 @@
 declare(strict_types=1);
 /** 41 Lokeren snapshot engine; lives outside the public document root. */
 require_once __DIR__ . '/catalog_mutex.php';
+require_once __DIR__ . '/restore_journal.php';
 const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','updated_at'],
@@ -40,6 +41,8 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
  if($quotaBytes<=0)throw new InvalidArgumentException('Ongeldige hostinglimiet.');
  snap_init();$lock=snap_lock();$tmp=null;$catalogLocked=false;
  try{
+  // Do not archive mixed or unverified data during an interrupted restore.
+  restore_journal_require_clear();
   // Exclude every participating writer until the ZIP has been finalized.
   catalog_data_lock($pdo);$catalogLocked=true;
   // One InnoDB read view for ALL tables. Without this, concurrent commits can
@@ -104,10 +107,11 @@ function snap_verified(string $name): array {
  }finally{$zip->close();}
 }
 function snap_restore(PDO $pdo,string $name): void {
- snap_init();$lock=snap_lock();$stage=null;$old=null;$moved=false;$catalogLocked=false;
+ snap_init();$lock=snap_lock();$stage=null;$old=null;$catalogLocked=false;
+ $journal=null;$oldSaved=false;$newActive=false;$hadUploads=false;
+ $dbCommitted=false;$commitAttempted=false;
  try{
-  // Exclude cooperating writers during restoration as well. A hard crash
-  // can still leave mixed DB/files: a durable recovery journal comes later.
+  restore_journal_require_clear();
   catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
@@ -119,30 +123,78 @@ function snap_restore(PDO $pdo,string $name): void {
     $ctx=hash_init('sha256');while(!feof($src)){$part=fread($src,1024*1024);if($part===false)throw new RuntimeException('Leesfout in ZIP.');hash_update($ctx,$part);if(fwrite($out,$part)!==strlen($part))throw new RuntimeException('Schrijffout bij foto.');}fclose($out);fclose($src);
     if(!hash_equals($hash,hash_final($ctx)))throw new RuntimeException('Foto checksum ongeldig.');
    }}finally{$zip->close();}
-  $uploads=snap_uploads();$old=dirname($uploads).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
-  if(is_dir($uploads)){
-    // Keep the webserver security rule in the restored directory.
-    if(is_file($uploads.'/.htaccess'))copy($uploads.'/.htaccess',$stage.'/.htaccess');
-    if(!rename($uploads,$old))throw new RuntimeException('Kan huidige foto’s niet tijdelijk bewaren.');$moved=true;
-  }else {file_put_contents($stage.'/.htaccess',"Options -Indexes\n<FilesMatch \"(?i)\\.(?:php[0-9]*|phtml|phar|cgi|pl|sh|shtml|htaccess|sql|ini|env|log)$\">\nRequire all denied\n</FilesMatch>\n");}
-  if(!rename($stage,$uploads)){if($moved)rename($old,$uploads);throw new RuntimeException('Kan nieuwe fotomap niet activeren.');}$stage=null;
+  $uploads=snap_uploads();$hadUploads=is_dir($uploads);
+  if(is_link($uploads))throw new RuntimeException('De actieve fotomap mag geen symlink zijn.');
+  $old=dirname($uploads).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
+  if($hadUploads){
+    // The restored tree must retain existing webserver protections.
+    if(is_file($uploads.'/.htaccess')&&!copy($uploads.'/.htaccess',$stage.'/.htaccess'))
+      throw new RuntimeException('Kan foto-beveiligingsregel niet kopiëren.');
+  }else{
+    if(file_put_contents($stage.'/.htaccess',"Options -Indexes\n<FilesMatch \"(?i)\\.(?:php[0-9]*|phtml|phar|cgi|pl|sh|shtml|htaccess|sql|ini|env|log)$\">\nRequire all denied\n</FilesMatch>\n")===false)
+      throw new RuntimeException('Kan foto-beveiligingsregel niet aanmaken.');
+  }
+
+  // Journal is atomically published BEFORE either photo-directory rename.
+  // On SIGKILL it survives; bootstrap fails closed on subsequent PHP GETs.
+  $journal=restore_journal_begin($name,$old,$stage,$hadUploads);
+  if($hadUploads){
+    if(!rename($uploads,$old))throw new RuntimeException('Kan huidige foto’s niet tijdelijk bewaren.');
+    $oldSaved=true;
+    restore_journal_phase($journal,'old_saved');
+  }
+  if(!rename($stage,$uploads))throw new RuntimeException('Kan nieuwe fotomap niet activeren.');$stage=null;
+  $newActive=true;
+  restore_journal_phase($journal,'photos_active');
   try{
    $pdo->beginTransaction();
-   foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM `'.$table.'`');
+   foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
    foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
-    $columns=SNAP_INSERT[$table];$cols=implode(',',array_map(fn($x)=>'`'.$x.'`',$columns));$marks=implode(',',array_fill(0,count($columns),'?'));
-    $stmt=$pdo->prepare('INSERT INTO `'.$table.'` ('.$cols.') VALUES ('.$marks.')');
-    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($c)=>$row[$c],$columns));
+    $columns=SNAP_INSERT[$table];$cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
+    $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
+    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col],$columns));
    }
+   // If commit throws, the outcome can be ambiguous. Keep maintenance on.
+   $commitAttempted=true;
    $pdo->commit();
-  }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();snap_remove_tree($uploads);if($moved)rename($old,$uploads);throw $e;}
-  if($moved)snap_remove_tree($old);
+   $dbCommitted=true;
+  }catch(Throwable $e){
+    if($pdo->inTransaction())$pdo->rollBack();
+    throw $e;
+  }
+  restore_journal_phase($journal,'database_committed');
+  if($oldSaved){snap_remove_tree($old);$oldSaved=false;}
+  // The site may resume only after DB commit and final photo cleanup.
+  restore_journal_finish();$journal=null;
+ }catch(Throwable $e){
+  // Roll back only when SQL commit was definitely NOT attempted. If commit
+  // outcome is unknown, do not guess between old and new data; fail closed.
+  if($pdo->inTransaction())$pdo->rollBack();
+  if($journal!==null&&!$dbCommitted&&!$commitAttempted){
+    try{
+      if($newActive){
+        snap_remove_tree(snap_uploads());$newActive=false;
+      }
+      if($oldSaved){
+        if(!rename($old,snap_uploads()))throw new RuntimeException('Oude fotomap kon niet veilig worden teruggezet.');
+        $oldSaved=false;
+      }
+      restore_journal_finish();$journal=null;
+    }catch(Throwable $rollbackError){
+      error_log('[41Lokeren restore] Manual recovery required: '.$rollbackError->getMessage());
+      // Leave the journal in place, and preserve remaining recovery assets.
+    }
+  }
+  throw $e;
  }finally{
-  if($stage&&is_dir($stage))snap_remove_tree($stage);
+  // A pending journal is evidence needed for manual recovery. Never delete
+  // staging or old photos until a verified safe state has been restored.
+  if($journal===null&&$stage&&is_dir($stage))snap_remove_tree($stage);
   try{if($catalogLocked)catalog_data_unlock($pdo);}
   finally{flock($lock,LOCK_UN);fclose($lock);}
  }
 }
+
 function snap_remove_tree(string $dir): void {
  if(!is_dir($dir))return;
  $it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
