@@ -71,6 +71,7 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
   claim($status === 200 && !str_contains($systemcheck, 'Afgeschermde fotobulkmap') && !str_contains($systemcheck, 'bulk via SFTP'), 'System check no longer requires bulk photo import');
