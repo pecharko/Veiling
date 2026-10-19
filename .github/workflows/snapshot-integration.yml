@@ -77,3 +77,18 @@ jobs:
           CI_DB_NAME: auction_test
         run: php tests/snapshot_storage_limits_test.php
 
+      - name: T-050A detect mixed-time snapshots during concurrent atomic updates
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/snapshot_concurrent_probe.php
+
+      - name: T-050B reproduce SIGKILL restore crash window (disposable fixture only)
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/snapshot_sigkill_probe.php
+
+
