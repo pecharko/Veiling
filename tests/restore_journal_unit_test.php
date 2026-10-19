@@ -20,6 +20,7 @@ if(db()->query('SELECT DATABASE()')->fetchColumn()!=='auction_test') {
 if(restore_journal_pending())throw new RuntimeException('Journal pending before T-052 unit test.');
 $path=restore_journal_path();
 $tmp=restore_journal_dir().'/.restore-active.tmp-'.bin2hex(random_bytes(8));
+$orphan=dirname(snap_uploads()).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
 $done=0;
 function journal_test(bool $pass,string $name): void {
     global $done;
@@ -71,8 +72,23 @@ try {
     journal_fails(fn()=>restore_journal_finish(),
         'Onvoltooid','cannot clear verified journal while partial update exists');
     unlink($tmp);
+    if(!mkdir($orphan,0700))throw new RuntimeException('Cannot create isolated orphan-directory fixture.');
+    journal_test(restore_journal_pending(),
+        'an orphan previous-upload directory activates maintenance even if journal files are otherwise complete');
+    journal_fails(fn()=>restore_journal_finish(),
+        'achtergebleven','cannot clear journal while a previous-photo directory still exists');
+    rmdir($orphan);
     restore_journal_finish();
     journal_test(!restore_journal_pending(),'completed journal is cleared only after verification');
+
+    if(!mkdir($orphan,0700))throw new RuntimeException('Cannot recreate orphan-directory fixture.');
+    journal_test(restore_journal_pending(),
+        'an orphan previous-upload directory alone triggers fail-closed maintenance if journal is lost');
+    journal_fails(fn()=>restore_journal_require_clear(),
+        'onderbroken','orphan photo directory blocks new snapshot without a journal');
+    rmdir($orphan);
+    journal_test(!restore_journal_pending(),
+        'reviewed and removed CI orphan directory reopens the journal gate');
 
     file_put_contents($path,'{"format":"nonsense"}');
     journal_test(restore_journal_pending(),'corrupt journal still activates maintenance');
@@ -89,6 +105,7 @@ try {
     unlink($tmp);
     journal_test(!restore_journal_pending(),'manual cleanup after CI-only review releases guard');
 }finally{
+    if(is_dir($orphan))@rmdir($orphan);
     if(is_file($tmp))@unlink($tmp);
     if(is_file($path))@unlink($path);
 }
