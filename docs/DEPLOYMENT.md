@@ -2,6 +2,27 @@
 
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
 
+## Auditrelease PR #25, #26, #27 — voorbereid, NIET live (19-10-2026)
+
+De drie audit-PR's zijn gemerged in `main` (respectievelijk `a8d095ef4a26a967d5eaaeddc51fd3794f18061d`, `23507f8680a615ef57250b070846c0c9e333a8b9`, `e1022abc80fdff88febab078ef678942bd3209ae`). De wijzigingen zijn nog **niet op OVH uitgerold**. De aparte deployment-PR moet eerst securityreview en een handmatige merge krijgen, waarna de **nieuwe** exacte commit-SHA uit `main` als release-SHA geldt.
+
+De voorgestelde workflow `.github/workflows/audit-release-deploy.yml` met `scripts/deploy_audit_release.py` staat alleen de volgende zes runtimepaden toe, in uploadvolgorde:
+
+1. `catalogus-public/assets/placeholder.svg` — statische fallbackafbeelding, mogelijk nieuw op productie.
+2. `catalogus-public/admin/backup.php` — verwijderde bulkfoto-importtekst.
+3. `catalogus-public/admin/kavel.php` — verwijderde bulkfoto-importtekst.
+4. `catalogus-public/admin/admin.css` — navigatieknop voor beveiligd uitloggen.
+5. `catalogus-public/admin/logout.php` — alleen POST met geldig CSRF-token.
+6. `private/bootstrap.php` — CSRF-beveiligd POST-formulier in het adminmenu; **als laatste**, zodat oude en nieuwe uitlogroute zo kort mogelijk uiteenlopen.
+
+Releasegates: drie groene CI-checks op actuele PR-head en handmatige merge; vervolgens eerst `workflow_dispatch` op `main` met `mode=plan`, lege `release_sha` en lege `confirmation`. Dit toont de zes SHA-256-checksums zonder verbinding of schrijfacties. Verifieer het releasecommit, de hashes en de bestanden; vraag dan **aparte expliciete release- en finale deploygoedkeuring**. Alleen voor `mode=deploy` vereist de workflow `release_sha` exact gelijk aan `GITHUB_SHA` en `confirmation=DEPLOY AUDIT RELEASE`. SFTP gebruikt de bestaande vastgepinde SSH-hostkey en gecontroleerde remote root.
+
+De productieversies van de vijf bestaande bestanden en eventueel een al aanwezige placeholder worden vóór de upload geback-upt in een privé GitHub Actions-artifact (7 dagen). Een op productie ontbrekende placeholder wordt in het manifest expliciet als **afwezig** vastgelegd, zodat deze alleen bij foutieve upload terug verwijderd kan worden. Productiedrift blokkeert de upload. Na ieder bestand wordt de SHA-256 teruggelezen; een fout activeert best-effort rollback. Uploads zijn niet atomisch als één eenheid; houd de admin gedurende de korte vrijgave bij voorkeur vrij van gelijktijdig gebruik.
+
+De read-only HTTPS-tests controleren homepage, SVG-URL (200), login, afgeschermde adminroutes (303), anonieme logout (303), CSV- en bulkfoto-import GET + lege POST (404). De beheerdersacceptatie nadien omvat nav-uitloggen op een **test-/beheerderssessie** en het heropenen van de beveiligde admin, zichtbaarheid van fotofallback op een kavel zonder foto, foto-uploadformulier in kaveleditor en correcte back-uppagina. **Geen** destructieve testen op productie. Deze SFTP-code-release verandert geen database, bestaande foto's, `uploads/`, snapshots of configuratie.
+
+
+
 ## Uitfaseren bulkfoto-import — voorbereiding, nog niet live (19-10-2026)
 
 **Afzonderlijke voorgestelde workflow:** `.github/workflows/photo-import-retirement-deploy.yml` met `scripts/deploy_photo_import_retirement.py` (PR voor handmatige review). De workflow is alleen handmatig startbaar op `main` en controleert het door de beheerder ingegeven exacte `release_sha` plus bevestiging `DEPLOY PHOTO RETIRE` vóór elke SFTP-verbinding. Test eerst `mode=plan` met lege bevestiging en controleer de drie SHA-256-hashes; dit doet geen netwerkverbinding. Een geslaagd plan geeft geen toestemming voor upload.
