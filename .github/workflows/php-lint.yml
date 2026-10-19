@@ -65,6 +65,12 @@ jobs:
           python3 -m py_compile scripts/deploy_photo_import_retirement.py
           python3 scripts/deploy_photo_import_retirement.py plan
 
+      - name: Verify audited six-file release plan offline
+        run: |
+          python3 -m py_compile scripts/deploy_audit_release.py
+          python3 scripts/deploy_audit_release.py plan
+          python3 tests/audit_release_plan_test.py
+
       - name: Detect whitespace errors
         shell: bash
         run: |
