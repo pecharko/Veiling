@@ -9,6 +9,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - `private/bootstrap.php` retourneert HTTP 503 voor publiek/admin-PHP zolang een journal of halfaangemaakt updatebestand bestaat; geen geauthenticeerde bypass. `snap_create()` en `snap_restore()` weigeren acties bij achtergebleven herstelindicatoren.
 - Bij een afgehandelde SQL-fout **vóór een commitpoging** worden de foto's en InnoDB-rijen teruggezet en de journalmarker gewist. Bij onbekende SQL-commituitkomst, fout na commit of processtop blijft de marker staan, met het beschikbare fotobewijs.
 - CI-tests T-052 (duurzaam markerformaat, SIGKILL, neutrale HTTP 503 en terugkeer na gecontroleerde fictieve reparatie) en T-053 (SQL-fout, rollback van tijdelijke database/foto's) toegevoegd. **CI nog te verifiëren.**
+- **T-054 toegevoegd:** echte SIGKILL onmiddellijk na geslaagde DB-commit maar vóór publicatie van de nieuwe journalfase; een verouderde fase mag nooit tot blinde rollback leiden. De geïsoleerde test controleert de DB-inhoud en alle archieffotohashes vóór een CI-only opruiming. CI-resultaat nog af te wachten.
 - **Open:** automatische of beheerde herstelprocedure, publieke statische assets en caches tijdens onderhoud, opslagcrash-/directory-`fsync`-garanties, herstel bij alle mogelijke commit-/photo-swapfasen. Deze PR is niet uitgerold op OVHcloud; handmatige security- en back-upreview verplicht.
 
 
