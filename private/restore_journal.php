@@ -22,7 +22,10 @@ function restore_journal_pending(): bool {
     $path = restore_journal_path();
     if (is_file($path) || is_link($path)) return true;
     // If PHP died while building an atomic journal update, fail closed too.
-    return (bool)(glob(restore_journal_dir() . '/.restore-active.tmp-*') ?: []);
+    if (glob(restore_journal_dir() . '/.restore-active.tmp-*')) return true;
+    // Defense in depth: an orphan prior-uploads directory indicates a restore
+    // may have moved live photos even if a storage crash lost the journal entry.
+    return (bool)(glob(dirname(__DIR__) . '/catalogus-public/.uploads-before-restore-*') ?: []);
 }
 function restore_journal_require_clear(): void {
     if (restore_journal_pending()) {
@@ -160,8 +163,9 @@ function restore_journal_phase(array &$journal, string $phase): void {
 function restore_journal_finish(): void {
     // Never silently erase a corrupt journal or an incomplete temp update.
     restore_journal_read();
-    if (glob(restore_journal_dir() . '/.restore-active.tmp-*')) {
-        throw new RuntimeException('Onvoltooid hersteljournal; handmatige controle vereist.');
+    if (glob(restore_journal_dir() . '/.restore-active.tmp-*')
+        || glob(dirname(__DIR__) . '/catalogus-public/.uploads-before-restore-*')) {
+        throw new RuntimeException('Onvoltooid hersteljournal of achtergebleven fotomap; handmatige controle vereist.');
     }
     if (!unlink(restore_journal_path())) {
         throw new RuntimeException('Kon hersteljournal niet veilig beëindigen.');
