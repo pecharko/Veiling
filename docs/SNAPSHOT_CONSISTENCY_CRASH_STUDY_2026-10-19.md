@@ -23,6 +23,8 @@ Na merges #30–#32 zijn de MySQL-tabelmomenten en applicatiegecoördineerde fot
 
 De huidige oplossing stopt niet vanzelf een corruptie van DB+files in het proces zelf; hij voorkomt alleen dat het PHP-portaal na een crash die mogelijke inconsistentie ongemerkt presenteert. Ook een DB-commit met onbekende uitkomst wordt **niet** automatisch teruggedraaid. T-050B/T-052 moeten een echte SIGKILL en de onderhoudsstatus aantonen; T-053 moet een geïnjecteerde SQL-fout vóór commit volledig kunnen terugdraaien. Statische foto-URLs, CDN/browsercaches, al begonnen verzoeken en direct DB-/SFTP-gebruik zijn nog onbeheerd. File-`fsync` garandeert niet vanzelf dat de directoryentry op alle OVH-filesystemen crashdurable is.
 
+**Extra regressie T-054:** een succesvolle MySQL-commit kan gevolgd worden door SIGKILL vóór de PHP-code de journalfase bijwerkt. De journalfase `photos_active` bewijst dan **niet** dat de database nog de oude toestand heeft. Test daarom zowel een crash vóór commit (T-050B/T-052) als onmiddellijk erna (T-054). Alleen na verificatie van doelgegevens en SHA-256 van de ZIP-foto's mag in de geïsoleerde testomgeving het achtergebleven fotobewijs worden opgeruimd. De productieapplicatie doet dit nadrukkelijk niet automatisch.
+
 **Volgende stap na fase 3A:** bewijs eerst afzonderlijk welke MySQL-versie gecommit is (oude/nieuwe toestand) met een duurzame DB-markering of gevalideerde datafingerprint, maak een operator-geautoriseerde idempotente recoveryprocedure voor de verschillende fotomap- en transactiefasen en test elk SIGKILL-venster in CI. Pas daarna kan de onderhoudsblokkering gecontroleerd worden opgeheven. Uit veiligheid blijft een live restore verboden als test.
 
 ## Vastgestelde risico's uit de huidige broncode
