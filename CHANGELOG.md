@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Snapshotconsistentie en SIGKILL-onderzoek — 19-10-2026 (alleen CI/test)
+- Eerste reproduceerbare onderzoekstests T-050A (gemengde MySQL-read-momenten) en T-050B (SIGKILL na fotoswap vóór DB-herstel) toegevoegd voor issue #2, uitsluitend op fictieve GitHub Actions/MySQL-data.
+- De tests instrumenteren alleen tijdelijke kopieën van `private/snapshots.php` in een afzonderlijk PHP-testproces; bestaande productiecode, foto's en snapshots zijn ongewijzigd.
+- Ontwerpkeuzes en veilige herstelstrategie beschreven in `docs/SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md`. **Deze tests detecteren een risico, zij verhelpen het niet.** Een uitvoerbare productieoplossing vraagt een afzonderlijke beveiligingsreview.
+
 ## Productierelease — 19 oktober 2026 (gecontroleerd en technisch geverifieerd)
 
 - Audit-PR's #25 (regressies + oude Fotobulk-tekst), #26 (kavelfoto-placeholder), #27 (POST+CSRF-uitloggen) en bijbehorende handmatige release-PR #28 zijn gemerged.
