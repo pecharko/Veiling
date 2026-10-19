@@ -7,7 +7,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 ### Fase 2 snapshotveiligheid — gedeelde MySQL-mutex voor adminmutaties (PR in voorbereiding)
 - Nieuwe privé-helper `private/catalog_mutex.php` coördineert alle appadmin-writes via connection-scoped `GET_LOCK`: kavels, foto's, veilinginstellingen, loginpogingen; niet via netwerkfilesysteem-`flock`.
 - `snap_create()` houdt de mutex vast van DB-selects tot na het sluiten van de foto-ZIP. `snap_restore()` beschermt de herstelbewerking; `admin/backup.php` houdt dezelfde, herhaald verworven mutex ook vast **tussen** de voorafgaande veiligheidssnapshot en het herstel.
-- Bij bezette mutex krijgt een admin-POST na vijf seconden een fail-closed HTTP 503; geen gedeeltelijke writes. Extra T-051-verificatie van lockisolatie, genest gebruik, vrijgave na SIGKILL, en een geblokkeerde HTTP-kavel-POST zonder DB-mutatie. **CI-resultaten nog af te wachten.**
+- Bij bezette mutex krijgt een admin-POST na vijf seconden een fail-closed HTTP 503; geen gedeeltelijke writes. Extra T-051-verificatie van lockisolatie, genest gebruik, vrijgave na SIGKILL, en een geblokkeerde HTTP-kavel-POST zonder DB-mutatie. **Geïsoleerd getest en geslaagd:** [snapshot-CI-run #39321531424](https://github.com/pecharko/Veiling/actions/runs/39321531424) en [kavel-CI-run #39321530958](https://github.com/pecharko/Veiling/actions/runs/39321530958).
 - **Niet opgelost:** publieke lezingen tijdens restore, externe DB/SFTP-schrijfacties zonder mutex, een persisterende hersteljournal en SIGKILL na fotoswap. Er is **geen** productiedeploy; handmatige review vereist.
 
 ### Deelverbetering snapshots: één consistente MySQL-read-view (PR #31 gemerged, niet op productie)
