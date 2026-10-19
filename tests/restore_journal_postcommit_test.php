@@ -113,6 +113,15 @@ try {
   }
  }
  echo "PASS T-054: independent disposable DB and photo checks confirm the target snapshot committed.\n";
+ require_once $root.'/private/restore_diagnosis.php';
+ $diagnosis=restore_recovery_diagnose($pdo);
+ if($diagnosis['status']!=='target_verified_pending_review'
+    ||$diagnosis['database_matches_target']!==true
+    ||$diagnosis['active_photos_match_target']!==true
+    ||$diagnosis['maintenance_must_remain']!==true){
+    throw new RuntimeException('Read-only diagnosis failed to verify full target after post-commit SIGKILL.');
+ }
+ echo "PASS T-055: after post-commit SIGKILL all tables and photos match but journal stays pending review.\n";
  try{
   snap_create($pdo);
   throw new RuntimeException('New snapshot was accepted during unresolved post-commit journal.');
