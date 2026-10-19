@@ -71,6 +71,8 @@ Testcodes mogen alleen draaien met `GITHUB_ACTIONS=true`, `CI_SNAPSHOT_TEST=yes`
 - Geen hersteltest op productie. Het eerste productiepad zou een alleen-codewijziging via expliciet toegestane bestandslijst, offline plan, hashcontrole, pre-upload-codeback-up, read-only smoke-tests en afzonderlijke dubbele goedkeuring moeten zijn.
 - Open issue #2 tot de tests niet alleen de crash reproduceren maar ook het herstel na echte processtop in disposable CI met automatische detectie aantonen.
 
+Voor de handmatige triage van een echte processtop, uitsluitend met veilige leesacties, zie ook [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md). Dit is geen automatische hersteltool.
+
 ## Voorlopige noodprocedure (alleen voor incidentanalyse; niet blind uitvoeren)
 
 Als een herstelactiescherm onverwacht stopt: **geen** nieuwe snapshots, uploads, deletes of restorepogingen uitvoeren totdat de toestand is vastgesteld. Noteer het tijdstip en de fout, controleer onder strikt beperkte toegang of `.uploads-before-restore-*` en herstelstaging bestaan en bewaar die zonder verwijdering. Bepaal daarna met offline kopieën welke MySQL- en foto-versie bij elkaar hoort; probeer geen `mv` of database-rollback op productie zonder een apart goedgekeurd incidentplan en actuele back-up. Bevoegde beheerder/hostingexpert voert herstel met gecontroleerde downtime uit.
