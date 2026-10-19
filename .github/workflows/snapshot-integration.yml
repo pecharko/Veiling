@@ -118,3 +118,10 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/restore_journal_postcommit_test.php
+
+      - name: T-055 readonly recovery diagnosis compares entire DB and all archive photos
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/restore_diagnosis_integration.php
