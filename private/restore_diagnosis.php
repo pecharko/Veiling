@@ -98,10 +98,12 @@ function recovery_compare_photos(string $root,array $manifest): array {
         return ['matches_target'=>false,'reason'=>'active_photos_missing_or_unsafe'];
     $actual=[];$unexpected=0;
     $iterator=new RecursiveIteratorIterator(
-        new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS));
+        new RecursiveDirectoryIterator($root,FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST);
     foreach($iterator as $file){
         if($file->isLink())
             return ['matches_target'=>false,'reason'=>'symlink_in_active_photos'];
+        if($file->isDir())continue;
         if(!$file->isFile())
             return ['matches_target'=>false,'reason'=>'non_file_in_active_photos'];
         $relative=str_replace(chr(92),'/',substr(
@@ -186,6 +188,11 @@ function restore_recovery_diagnose(PDO $pdo): array {
                 'reason'=>'database_or_archive_verification_failed',
             ]);
         }
+        // Check the archived ZIP was not changed while it was being read.
+        $digestAfter=hash_file('sha256',$zipPath);
+        if($digestAfter===false||!hash_equals($journal['snapshot_sha256'],$digestAfter))
+            return recovery_report('blocked_unverified',[
+                'reason'=>'target_archive_changed_during_diagnosis']);
         $status=$db['matches_target']&&$photos['matches_target']
             ?'target_verified_pending_review':'mixed_or_unknown_keep_maintenance';
         return recovery_report($status,[
