@@ -60,6 +60,8 @@
 
 | T-050 | FR-015/017/019/020 | Consistent MySQL-leesmoment en SIGKILL-herstel (geïsoleerd) | **T-050A:** tijdens één atomaire update van `settings` en `lots` moet de ZIP beide tabellen uit dezelfde toestand lezen; een gemengde toestand faalt de test. **T-050B:** een geforceerde SIGKILL na fotoswap toont nog steeds het openstaande herstelrisico. | **Fase-1-fix geïsoleerd gevalideerd op 19-10-2026:** `REPEATABLE READ` voor vijf InnoDB-tabellen; T-050A vereist veilige invariant en is geslaagd in [snapshot-CI-run #39319327080](https://github.com/pecharko/Veiling/actions/runs/39319327080). T-050B blijft bewust een risicoreproductie en geen herstelbewijs. Concurrerende fotowijzigingen en crashjournal blijven open (issue #2). |
 
+| T-051 | FR-015/FR-017 | MySQL-advisorylock voor snapshot, fotobeheer en restoreveiligheidskopie (geïsoleerd) | Verschillende PDO-connecties kunnen niet tegelijk muteren/snapshotten; re-entrant nested lock houdt tussen veiligheidskopie en herstel vast; geldige kavel-POST bij bezette mutex geeft HTTP 503 zonder datawijziging; op SIGKILL wordt de connection-scoped MySQL-lock vrijgegeven. | **In PR — CI-resultaten afwachten.** `tests/catalog_mutex_integration.php` en een extra geïsoleerde HTTP-kaveltest; alleen lokale `auction_test`-gegevens. Niet bedoeld als bewijs van automatisch herstel na een crash (T-050B blijft open). |
+
 ## Registratie bij uitvoering
 
 Gebruik per testronde dit sjabloon:
