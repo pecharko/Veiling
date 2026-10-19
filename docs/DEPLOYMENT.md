@@ -4,6 +4,19 @@
 
 **Noodprocedure bij onverwacht HTTP 503 na herstel:** [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md). Maak alleen kopieën van journal, data en fotomappen; verwijder niet blind een veiligheidsmarker.
 
+**Belangrijke gezamenlijke release-afhankelijkheden PR #31–#33:** de verbeteringen zijn in GitHub ontwikkeld maar **geen van de runtimewijzigingen uit PR #31, #32 of #33 staan al op productie**. Een toekomstige gerichte code-uitrol moet daarom deze **acht runtimepaden samen** behandelen:
+
+1. `private/catalog_mutex.php` — nieuwe MySQL-write-mutex uit PR #32
+2. `private/restore_journal.php` — nieuw onderhoudsjournal uit PR #33
+3. `private/snapshots.php` — gecombineerde DB-consistentie, mutex en journal uit PR #31–#33
+4. `catalogus-public/admin/kavel.php` — schrijfvergrendeling
+5. `catalogus-public/admin/instellingen.php` — schrijfvergrendeling
+6. `catalogus-public/admin/login.php` — vergrendeling voor loginpogingen
+7. `catalogus-public/admin/backup.php` — buitenste veiligheidssnapshot-/restorelock
+8. `private/bootstrap.php` — nieuwe PHP-maintenance-gate
+
+Upload beide nieuwe helpers **eerst**, daarna de afhankelijke private/admin-PHP-code; activeer `private/bootstrap.php` pas **als laatste**. Verifieer vóór een daadwerkelijke uitrol dat deze allowlist alle runtime-afhankelijkheden en de actuele productieverschillen dekt. Tijdens niet-atomair uitrollen van afhankelijke bestanden mogen beheerders geen mutaties doen of restores starten; het releaseplan moet hiervoor een gecontroleerd venster en rollback voorzien. Bestanden uit `private/backups/`, `uploads/`, databases, journal of echte snapshots zijn **nooit** onderdeel van de code-upload zonder afzonderlijke expliciete incidentautorisatie.
+
 **Fase 3A (in PR, niet live):** de fail-closed hersteljournalwijziging omvat `private/restore_journal.php` (nieuw), `private/bootstrap.php` en `private/snapshots.php`. De helper MOET vóór de twee PHP-afhankelijkheden worden geüpload; oude deploymentworkflows mogen niet hergebruikt worden zonder exacte allowlist. Nieuwe journaldata wordt uitsluitend tijdens een toekomstige herstelactie op `private/backups/` geschreven, niet tijdens een code-deployment. Een onverwachte `.restore-active.json`, `.restore-active.tmp-*` of `.uploads-before-restore-*` (ook zonder journal) houdt de PHP-site met HTTP 503 offline totdat een expert de situatie heeft beoordeeld. **Verwijder de marker niet blind; verwijder ook geen `.uploads-before-restore-*` of `.restore-*` map zonder incidentplan en veilige externe kopie.**
 
 Relevante productiegate bij een latere release: hercontroleer `main`-SHA, drie groene CI-runs, SHA-256 per exact geallowlist pad, afstand tot bestaande productiecode (drift), 7-daagse privécodeback-up, rollback, handmatig offline plan en twee afzonderlijke release/deploytoestemmingen. Bij eerste uitrol moet de opslageis (hostingvolume en accountquota) gecontroleerd worden. **Op productie geen SIGKILL-proeven of herstelacties.** Deze fase biedt onderhoudsbeperking, **geen bewezen automatische recovery**. PHP-only blokkering beschermt niet rechtstreeks statische foto-URLs of externe caches; volledige onderhoudsmodus vergt extra maatregelen.
