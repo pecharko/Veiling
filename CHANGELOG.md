@@ -4,7 +4,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
-### Fase 3B — alleen-lezen hersteldiagnose (PR in voorbereiding)
+### Fase 3B — alleen-lezen hersteldiagnose (PR #34, geïsoleerd CI geslaagd)
 - `private/restore_diagnosis.php` vergelijkt een onderbroken herstel met een geverifieerd, onveranderd snapshotarchief: alle vijf InnoDB-tabellen, alle ZIP-fotohashes én de volledige actieve fotomap. Gebruik van de bestaande MySQL-advisorylock voorkomt gelijktijdige deelnemende appschrijfacties tijdens de controle.
 - Nieuw `scripts/restore_diagnose.php --plan`, uitsluitend CLI en **zonder herstel-, clear- of rollbackcommando**. Rapporteert alleen niet-gevoelige statusvelden en geen persoonsgegevens.
 - T-055 plus uitbreidingen van T-050B/T-054 tonen op wegwerpdata dat de diagnose *voor* de commit afwijkende MySQL-rijen detecteert en *na* de commit een complete doeltoestand kan herkennen, terwijl het journal actief blijft en geen automatisch herstel wordt uitgevoerd.
