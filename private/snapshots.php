@@ -156,7 +156,7 @@ function snap_restore(PDO $pdo,string $name): void {
    }
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
-   $pdo->commit();
+   if(!$pdo->commit())throw new RuntimeException('Databasecommit kon niet worden bevestigd.');
    $dbCommitted=true;
   }catch(Throwable $e){
     if($pdo->inTransaction())$pdo->rollBack();
