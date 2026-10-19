@@ -31,7 +31,7 @@ Dit document beschrijft functies die in de huidige GitHub-broncode zijn aangetro
 | FR-007 | Foto's tonen en verwijderen | Kavelfoto's verschijnen in admin en op publieke pagina's; verwijderactie is beschermd en doelgericht. | Statisch bevestigd |
 | FR-008 | Hoofdfoto bepalen | De foto met de laagste sorteerwaarde wordt als hoofdfoto gebruikt. | Statisch bevestigd |
 | FR-009 | CSV-import van kavels | **Voorlopig niet beschikbaar:** geen menu/dashboardlink, rechtstreekse GET/POST naar `/admin/import.php` stopt met HTTP 404 zonder datamutatie; oude implementatie later herstelbaar via Git. | Tijdelijk uitgeschakeld — geverifieerd op OVHcloud 18-10-2026 (T-042): GET/lege POST beide HTTP 404 in run 39109055677; gebruikersscreenshot bevestigt afwezigheid in menu én dashboard, op dat moment links Foto-import en Back-up & herstel aanwezig (historische waarneming) |
-| FR-010 | Bulkimport van kavelfoto's (niet ondersteund) | **Definitief geschrapt:** geen admin-menulink; directe GET en POST naar `/admin/fotos-bulk.php` stoppen met HTTP 404, zonder database- of bestandsmutaties. Bestaande bestanden in `private/photo-inbox/` worden niet verwijderd; individuele fotoupload per kavel (FR-007/008) blijft werken. | Codewijziging voorbereid op 19-10-2026; productie-uitrol en HTTP-verificatie nog vereist (T-047) |
+| FR-010 | Bulkimport van kavelfoto's (niet ondersteund) | **Definitief geschrapt:** geen admin-menulink; directe GET en POST naar `/admin/fotos-bulk.php` geven HTTP 404 zonder mutaties. Bestaande data onder `private/photo-inbox/` blijven onaangeroerd; individuele fotoupload per kavel blijft beschikbaar. | **Technisch geverifieerd op productie 19-10-2026:** eerdere retirement-release en opnieuw [auditrun #39203389883](https://github.com/pecharko/Veiling/actions/runs/39203389883), GET en lege POST HTTP 404; menu door beheerder eerder visueel bevestigd (T-047). |
 | FR-011 | Veilinginformatie beheren | Naam, ondertitel, inleiding, datum, tijd, locatie, adres, e-mail en praktische informatie kunnen worden opgeslagen. | Statisch bevestigd |
 | FR-012 | Zichtbaarheid volledige catalogus | Beheerder kan de publieke catalogus aan/uitzetten, onafhankelijk van status per kavel. | Statisch bevestigd |
 | FR-013 | Publieke catalogus en kavelpagina | Bezoeker kan zichtbare kavels en hun informatie/foto's bekijken zonder beheerrechten. | Statisch bevestigd |
@@ -133,6 +133,13 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 | NFR-005 | Een release kan worden teruggedraaid met code-back-up en passend dataplan. | Deployment-checklist |
 | NFR-006 | Vereiste functionaliteit en tests worden in dezelfde codewijziging bijgewerkt. | Pull-request-checklist |
 | NFR-007 | Beheeromgeving uitsluitend via correct HTTPS bereikbaar, met valide certificaat en veilige cookies; HTTP wordt naar HTTPS omgeleid. | **Gedeeltelijk aangetoond 18-10-2026:** Chrome valideert HTTPS-certificaat en HTTP-login geeft na aanpassing tijdelijke `302` naar HTTPS. directe HTTPS-login, redirectketen zonder lus en definitieve 301 voor login/homepage bevestigd; overige adminroutes en sessiecookie-/logoutgedrag nog open (T-040/T-041). |
+
+## Statusupdate auditproductierelease — 19 oktober 2026
+
+- **FR-001 / FR-022 (beheerder, CSRF):** POST+CSRF-uitloggen is geïmplementeerd en geslaagd in geïsoleerde HTTP-tests van PR #27. [Productierun #39203389883](https://github.com/pecharko/Veiling/actions/runs/39203389883) verifieert het nieuwe `admin/logout.php` met SHA-256 en de anonieme redirect (HTTP 303). **Aangemelde productiefunctietest en visuele acceptatie nog open** (T-049).
+- **FR-006 / FR-007 / FR-013 (fotoloze kavels):** nieuwe `assets/placeholder.svg` was vóór release niet aanwezig en is daarna met SHA-256 gecontroleerd; publiek HTTPS-verzoek geeft HTTP 200. **Weergave van een echt kavel zonder foto in een browser nog open** (T-028).
+- **FR-010:** vervallen bulkfoto-import blijft HTTP 404 voor GET en lege POST; gebruikerscontrole van het adminmenu werd al bij de vorige retirement-release bevestigd (T-047).
+- **NFR-005 / NFR-006:** release van zes vaste runtimepaden op commit `8b2e6b8f444f67952620163c523e04c5807a032e` uitgevoerd. GitHub-run `39203389883` is groen, met driftcontrole, read-backchecksums en privé rollbackartifact `ovh-audit-pr25-26-27-before-39203389883` (tot 26-10-2026). De daadwerkelijke rollback is **niet** op productie getest. Database, uploads, kavelfoto's en snapshots zijn niet gewijzigd door de workflow.
 
 ## Traceerbaarheid en onderhoud
 
