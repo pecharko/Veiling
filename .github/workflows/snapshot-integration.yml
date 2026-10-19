@@ -91,4 +91,9 @@ jobs:
           CI_DB_NAME: auction_test
         run: php tests/snapshot_sigkill_probe.php
 
-
+      - name: T-051 verify MySQL mutex and nested snapshot plus restore
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/catalog_mutex_integration.php
