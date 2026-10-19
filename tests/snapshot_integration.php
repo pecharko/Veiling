@@ -92,6 +92,16 @@ try {
     fclose($lock);
 }
 
+// Never silently inherit or commit a caller's transaction.
+$pdo->beginTransaction();
+try {
+    assert_throws(fn() => snap_create($pdo), 'afzonderlijke databasetransactie',
+                  'Snapshot refuses an already active caller transaction');
+    verify($pdo->inTransaction(), 'Rejected snapshot leaves caller transaction in place');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+}
+
 $badName = 'snapshot-20990101-000000-deadbeefdead.zip';
 $corrupted = snap_path($badName);
 if (!copy(snap_path($name), $corrupted)) throw new RuntimeException('Could not copy ZIP for corruption test');
