@@ -27,6 +27,12 @@ De huidige oplossing stopt niet vanzelf een corruptie van DB+files in het proces
 
 **Volgende stap na fase 3A:** bewijs eerst afzonderlijk welke MySQL-versie gecommit is (oude/nieuwe toestand) met een duurzame DB-markering of gevalideerde datafingerprint, maak een operator-geautoriseerde idempotente recoveryprocedure voor de verschillende fotomap- en transactiefasen en test elk SIGKILL-venster in CI. Pas daarna kan de onderhoudsblokkering gecontroleerd worden opgeheven. Uit veiligheid blijft een live restore verboden als test.
 
+## Fase 3B — read-only classificatie vóór iedere recoveryactie (in review)
+
+Na merge van PR #33 bevat de broncode een fail-closed hersteljournal en een geteste onderhoudsblokkering. De volgende veiligheidsstap is een **alleen-lezen incidentinspectie** (`private/restore_diagnosis.php`, `scripts/restore_diagnose.php --plan`): een inspecteur vergelijkt de bron-ZIP-checksum met het journal, valideert alle fotobytes binnen de ZIP, controleert alle vijf MySQL-tabellen in één consistent leesmoment en controleert de complete actieve fotomap zonder symlinks of onverwachte bestanden. Hij meldt afwijkingen of een mogelijke complete doeltoestand als niet-gevoelige status.
+
+**Een journalfase is nooit commitbewijs.** T-050B controleert dat de classifier de gemengde DB/fototoestand na een pre-commit-SIGKILL herkent; T-054 controleert dat de classifier na een post-commit-SIGKILL de doeldatabase én foto's kan herkennen maar **de onderhoudsmarker niet wist**. T-055 controleert uiteenlopende DB- en fotowijzigingen, gemanipuleerde ZIP-hash, onvolledige journalgegevens, een verweesde fotomap en het ontbreken van herstelmutatiecommando's. Dit biedt geen automatische recovery, geen volledige bescherming van statische foto-URLs en geen algemene garantie tegen directe SQL/SFTP-wijzigingen. Alle proeven uitsluitend in CI.
+
 ## Vastgestelde risico's uit de huidige broncode
 
 1. **Snapshot van verschillende momenten.** `snap_create()` leest `settings`, `admins`, `lots`, `lot_images` en `login_attempts` via afzonderlijke SELECT-statements zonder expliciete `START TRANSACTION WITH CONSISTENT SNAPSHOT`. De exclusieve `.operation.lock` wordt uitsluitend door snapshot- en herstelacties gebruikt, niet door gewone kavel-, veilinginfo- of fotoschrijfacties. Een gelijktijdige, atomaire wijziging van bijvoorbeeld `settings` en `lots` kan in de ZIP verschijnen als de oude instellingen plus het nieuwe kavel.
