@@ -55,6 +55,8 @@
 
 | T-047 | FR-010/FR-007 | Bulkfoto-import permanent verwijderen | Geen link `Foto-import` of `fotos-bulk.php` in adminnavigatie; GET en POST op `/admin/fotos-bulk.php` geven 404 zonder datamutatie; systeemcheck vereist `photo-inbox` niet meer; foto-upload via kaveleditor blijft functioneren. | Code en regressietests voorbereid 19-10-2026. GitHub-CI op PR en read-only productie HTTP/visuele acceptatie nog uit te voeren. Geen productie-POST met foto's. |
 
+| T-048 | FR-010/FR-007 | Geen terugkeer van uitgeschakelde imports of verouderde bulkfototekst | CI broncodecontroles: beide 404-routes blijven inert, geen menulink of bulk-SFTP-check, kavelgebonden foto-upload blijft zichtbaar en beheerschermen adviseren geen bulkfoto-import meer. | Nieuw in audit-PR 19-10-2026; CI-resultaat en productieacceptatie nog vast te leggen. |
+
 ## Registratie bij uitvoering
 
 Gebruik per testronde dit sjabloon:
