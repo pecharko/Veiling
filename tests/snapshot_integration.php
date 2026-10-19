@@ -121,6 +121,7 @@ unlink($original);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
 snap_restore($pdo, $name);
+verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
