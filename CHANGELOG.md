@@ -10,7 +10,7 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - **Exacte productiecommit:** `8b2e6b8f444f67952620163c523e04c5807a032e` via `audit-release-deploy.yml`; [GitHub Actions-run #39203389883](https://github.com/pecharko/Veiling/actions/runs/39203389883) geslaagd op 19-10-2026, branch `main`. Slechts zes goedgekeurde runtimepaden overgezet en SHA-256 geverifieerd.
 - **Back-up:** vijf bestaande PHP/CSS-bestanden vooraf gekopieerd; de nieuwe `assets/placeholder.svg` was nog afwezig en is als nieuw vastgelegd. Privé rollbackartifact `ovh-audit-pr25-26-27-before-39203389883`, bewaartermijn tot 26-10-2026.
 - **Technische productiecontrole:** homepage, login en placeholder HTTP 200; beschermde adminroutes en anonieme logout HTTP 303; oude foto- en CSV-import GET en lege POST HTTP 404. Alle checks groen. Geen database-, kavelfoto-, snapshots-, `uploads/`- of configuratiewijzigingen.
-- **Nog open:** visuele acceptatie van placeholder bij een fotoloos kavel, ingelogd uitloggen via de nieuwe knop en behoud van normale kavel-fotoupload; **geen geauthenticeerde/destructieve productietests uitgevoerd**. Testplan T-028 en T-049.
+- **Functionele acceptatie 19-10-2026:** beheerder bevestigt na checklist voor fotoloze kavelplaceholder, ingelogd uitloggen/heropenen en behoud van de fotouploadfunctie: 'alles werkt'. Geen afzonderlijke screenshots of destructieve productieproeven; de automatisering testte uitsluitend geïsoleerde geauthenticeerde HTTP-scenario's en read-only productie-HTTP. Zie T-028/T-049. Mobiel/toetsenbord en crashbestendige snapshot-restore blijven buiten deze release.
 
 
 ### Kwaliteitsronde en regressiebewaking — 19-10-2026 (PR #25 gemerged, daarna uitgerold)
