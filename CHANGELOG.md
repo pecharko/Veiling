@@ -4,6 +4,14 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Fase 3A — privéhersteljournal en fail-closed PHP-onderhoud (PR in voorbereiding)
+- Nieuwe `private/restore_journal.php` met privé `private/backups/.restore-active.json`; publiceer journal vóór het verwisselen van fotomappen. Fases: voorbereid, oude map opzij, nieuwe foto's actief, databasecommitted. Fasebestanden worden atomair vervangen met waar beschikbaar file-`fsync`.
+- `private/bootstrap.php` retourneert HTTP 503 voor publiek/admin-PHP zolang een journal of halfaangemaakt updatebestand bestaat; geen geauthenticeerde bypass. `snap_create()` en `snap_restore()` weigeren acties bij achtergebleven herstelindicatoren.
+- Bij een afgehandelde SQL-fout **vóór een commitpoging** worden de foto's en InnoDB-rijen teruggezet en de journalmarker gewist. Bij onbekende SQL-commituitkomst, fout na commit of processtop blijft de marker staan, met het beschikbare fotobewijs.
+- CI-tests T-052 (duurzaam markerformaat, SIGKILL, neutrale HTTP 503 en terugkeer na gecontroleerde fictieve reparatie) en T-053 (SQL-fout, rollback van tijdelijke database/foto's) toegevoegd. **CI nog te verifiëren.**
+- **Open:** automatische of beheerde herstelprocedure, publieke statische assets en caches tijdens onderhoud, opslagcrash-/directory-`fsync`-garanties, herstel bij alle mogelijke commit-/photo-swapfasen. Deze PR is niet uitgerold op OVHcloud; handmatige security- en back-upreview verplicht.
+
+
 ### Fase 2 snapshotveiligheid — gedeelde MySQL-mutex voor adminmutaties (PR in voorbereiding)
 - Nieuwe privé-helper `private/catalog_mutex.php` coördineert alle appadmin-writes via connection-scoped `GET_LOCK`: kavels, foto's, veilinginstellingen, loginpogingen; niet via netwerkfilesysteem-`flock`.
 - `snap_create()` houdt de mutex vast van DB-selects tot na het sluiten van de foto-ZIP. `snap_restore()` beschermt de herstelbewerking; `admin/backup.php` houdt dezelfde, herhaald verworven mutex ook vast **tussen** de voorafgaande veiligheidssnapshot en het herstel.
