@@ -57,6 +57,11 @@ body:not(.login-body) > header,header.admin-header,.admin-header {background:var
 body:not(.login-body) > header a,header.admin-header a,.admin-header a {color:#fff}
 nav {display:flex;flex-wrap:wrap;align-items:center;gap:9px 20px}
 nav a {font-weight:700}
+/* Match navigation links while keeping logout a CSRF-protected POST button. */
+.admin-header .admin-logout-form {display:inline-flex;align-items:center;margin:0}
+.admin-header .admin-logout-button {appearance:none;border:0;background:transparent;color:#fff;padding:0;margin:0;font:inherit;font-weight:700;line-height:inherit;cursor:pointer}
+.admin-header .admin-logout-button:hover {text-decoration:underline}
+.admin-header .admin-logout-button:focus-visible {outline:3px solid var(--ochre);outline-offset:4px;border-radius:2px}
 body:not(.login-body) > nav {padding:14px clamp(18px,4vw,42px);border-bottom:1px solid var(--line);background:#fff}
 body:not(.login-body) > main,main.container,.admin-container,.container,.wrap,.wrapper {width:min(1220px,calc(100% - 36px));margin:30px auto}
 body:not(.login-body) > main.login-card {width:min(100%,470px)}

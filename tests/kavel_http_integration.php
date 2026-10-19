@@ -71,6 +71,7 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
   claim($status === 200 && !str_contains($systemcheck, 'Afgeschermde fotobulkmap') && !str_contains($systemcheck, 'bulk via SFTP'), 'System check no longer requires bulk photo import');
@@ -150,6 +151,22 @@ try {
     'action'=>'save', 'lot_number'=>'40', 'title'=>'No csrf'
   ]);
   claim($status === 403 && !by_number(40), 'CSRF rejection and no write');
+
+  // Logout is a state-changing action and must require a valid POST + CSRF.
+  [$status] = request_page('/admin/logout.php');
+  claim($status === 405, 'Authenticated GET logout is rejected without destroying session');
+  [$status, $stillLoggedIn] = request_page('/admin/kavel.php');
+  claim($status === 200 && str_contains($stillLoggedIn, 'lot-editor-form'), 'GET logout keeps authenticated session');
+  [$status] = request_page('/admin/logout.php', ['csrf' => 'invalid']);
+  claim($status === 403, 'Logout POST without a valid CSRF token is refused');
+  [$status, $stillLoggedIn] = request_page('/admin/kavel.php');
+  claim($status === 200 && str_contains($stillLoggedIn, 'lot-editor-form'), 'Rejected logout POST preserves authenticated session');
+  [$status] = request_page('/admin/logout.php', ['csrf' => token($stillLoggedIn)]);
+  claim($status === 303, 'Valid logout POST redirects to login');
+  [$status] = request_page('/admin/kavel.php');
+  claim($status === 303, 'Admin route is protected after logout');
+  [$status] = request_page('/admin/logout.php');
+  claim($status === 303, 'Unauthenticated logout remains behind login');
 
   echo "Kavel editor integration: {$count} checks passed on isolated localhost/MySQL.\n";
 } finally {
