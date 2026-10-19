@@ -116,9 +116,10 @@ try {
         'a disposable child PHP worker acquired the catalog lock');
     gate_blocked($peer, 'child lock prevents concurrent parent writer');
     proc_terminate($child, 9);
-    $child = null;
     fclose($pipes[1]);
     fclose($pipes[2]);
+    proc_close($child);
+    $child = null;
     // A dead MySQL session releases named locks automatically.
     $released = false;
     for ($attempt = 0; $attempt < 10; $attempt++) {
