@@ -36,7 +36,8 @@ function catalog_data_unlock(PDO $pdo): void {
 /** For POST handlers that may redirect/exit: release the mutex on PHP shutdown. */
 function catalog_lock_for_request(PDO $pdo): void {
     try {
-        catalog_data_lock($pdo);
+        // Interactive form requests fail closed with a short, bounded retry window.
+        catalog_data_lock($pdo, 5);
     } catch (Throwable $e) {
         error_log('[41Lokeren catalog lock] ' . $e->getMessage());
         http_response_code(503);
