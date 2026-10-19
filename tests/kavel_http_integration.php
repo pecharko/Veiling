@@ -5,6 +5,7 @@ declare(strict_types=1);
  * No OVHcloud endpoints, secrets, or production accounts are used.
  */
 require dirname(__DIR__) . '/private/bootstrap.php';
+require dirname(__DIR__) . '/private/catalog_mutex.php';
 
 $base = 'http://localhost:8090';
 $jar = tempnam(sys_get_temp_dir(), 'catalog-ci-cookie');
@@ -71,6 +72,21 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  // A concurrent snapshot/restore owns the MySQL lock: valid POST must
+  // fail closed before either SQL or photo-file mutations.
+  catalog_data_lock(db(), 0);
+  try {
+    [$status, $blockedBody] = request_page('/admin/kavel.php', [
+      'csrf' => token($html), 'action' => 'save',
+      'lot_number' => '876543', 'title' => 'Must not be inserted'
+    ]);
+    claim($status === 503 && !by_number(876543)
+        && str_contains($blockedBody, 'tijdelijk bezig'),
+        'T-051 concurrent backup lock rejects lot POST with HTTP 503 and no DB mutation');
+  } finally {
+    catalog_data_unlock(db());
+  }
+
   claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
