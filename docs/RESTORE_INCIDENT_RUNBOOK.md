@@ -16,6 +16,18 @@ Een proces kan na het verplaatsen van foto's zijn gestopt **vóór** of **ná** 
 4. Maak een afzonderlijke, read-only database-export via phpMyAdmin of een goedgekeurde hostingback-upfunctie en bewaar die buiten de hosting. Snapshots bevatten ook accounts en wachtwoordhashes: behandel downloads als vertrouwelijke persoonsgegevens.
 5. Laat een deskundige de MySQL-toestand en fotoverwijzingen onafhankelijk vergelijken met (a) het doelarchief én (b) de veiligheidskopie van vlak vóór de restore. Controleer bestandspaden, SHA-256 van foto's en de benodigde adminaccounts. De journal-`snapshot_sha256` helpt de juiste ZIP te identificeren.
 
+## Veilige technische diagnose (fase 3B, nog niet live)
+
+Een bevoegde technische operator kan **uitsluitend op een beveiligde offline kopie** van de code, MySQL-database, journal en fotomappen het diagnostische plan uitvoeren:
+
+```sh
+php scripts/restore_diagnose.php --plan
+```
+
+Dit commando verwijdert of hernoemt niets, schrijft geen SQL-rijen en wist nooit een journal. Het resultaat bevat onder meer `database_matches_target`, `active_photos_match_target`, `archive_photo_hashes_verified` en een conservatieve status. Mogelijke uitkomsten: `target_verified_pending_review` (alle MySQL-rijen en actieve foto's gelijk aan het doelarchief, **maar nog geen hersteltoestemming**), `mixed_or_unknown_keep_maintenance` (afwijkingen), `blocked_unverified` (ontbrekend/onveilig bewijs) of `clear` (geen herstelmarker gevonden; **geen** volledige data-integriteitscontrole). Iedere situatie met een marker blijft in onderhoud totdat het hele incidentprotocol en de verantwoordelijke akkoord zijn.
+
+Bewaar de complete bewijsbestanden vóór diagnose. De tool vertrouwt niet op de journalfase als bewijs van SQL-commit, controleert de ZIP-hash opnieuw na lezing en geeft geen persoonsgegevens uit de database terug. Hij biedt bewust **geen** `--restore`, `--clear` of `--rollback`. De huidige OVHcloud-hosting hoeft geen PHP CLI te ondersteunen om deze diagnose veilig uit te voeren op een onafhankelijke kopie.
+
 ## Mogelijke toestanden en beslismomenten
 
 | Geobserveerd na controle | Potentieel passend herstelpad | Belangrijke voorwaarde |
