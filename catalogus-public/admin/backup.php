@@ -20,9 +20,15 @@ if(is_post()){
   elseif($action==='restore'){
    $name=(string)($_POST['snapshot']??'');
    if(($_POST['confirm']??'')!=='HERSTEL')throw new RuntimeException('Typ HERSTEL om terugzetten te bevestigen.');
-   // Safety snapshot before overwriting anything. Restore aborts if this fails.
-   $safety=snap_create(db());
-   snap_restore(db(),$name);
+   // Keep one MySQL advisory lock across BOTH steps: no concurrent admin
+   // write can slip between the safety snapshot and the actual restore.
+   // Nested locks inside snap_create/snap_restore are balanced on this PDO.
+   $pdo=db();
+   catalog_data_lock($pdo);
+   try{
+    $safety=snap_create($pdo);
+    snap_restore($pdo,$name);
+   }finally{catalog_data_unlock($pdo);}
    admin_session();$_SESSION=[];session_regenerate_id(true);
    flash('Snapshot hersteld. Meld opnieuw aan. Voor de herstelactie is een veiligheidskopie gemaakt: '.$safety);
    redirect('admin/login.php');
