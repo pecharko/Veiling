@@ -64,6 +64,7 @@ verify($initialStorage['total'] > 0 && $initialStorage['uploads'] >= filesize($o
 verify($initialStorage['snapshots'] === 0, 'No snapshot existed before isolated test');
 
 $name = snap_create($pdo);
+verify(!$pdo->inTransaction(), 'Successful snapshot ends consistent read transaction before archiving photos');
 verify(snap_name($name) && is_file(snap_path($name)), 'Snapshot created with safe filename');
 $listing = snap_listing();
 verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['size'] > 0,
