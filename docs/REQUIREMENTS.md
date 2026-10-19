@@ -157,6 +157,8 @@ De mutex is verbindinggebonden op dezelfde MySQL-server, zodat de coördinatie n
 
 T-051 controleert twee concurrerende MySQL-verbindingen, re-entrant lockverdeling, automatisch vrijgeven bij een gestorven PHP-proces, en het fail-closed gedrag van kavel-POST. FR-015 is hiermee sterker voor **applicatiegecoördineerde** foto- en DB-schrijfacties; externe writes en crashherstel blijven open.
 
+**Incidentrunbook:** [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md) beschrijft welke read-only bewijzen nodig zijn voordat iemand een onderbroken herstel mag hervatten of de onderhoudsblokkering opheffen.
+
 ## Fase 3A — privéhersteljournal en fail-closed onderhoud (in review)
 
 De beperkte fase-3A-wijziging voegt een privé `.restore-active.json` toe onder `private/backups/`. De engine schrijft vóór de eerste fotoswap een journal met willekeurige run-ID, snapshotnaam en checksum, oude/nieuwe mapidentifiers en fase; faseovergangen worden met een tijdelijk bestand en dezelfde-directory `rename()` gepubliceerd. Een resterend journal, een achtergebleven oude fotomap (ook zonder journal) of een halfaangemaakt tijdelijk journalbestand schakelt alle PHP-instappunten die `private/bootstrap.php` laden over op een neutrale HTTP 503-onderhoudspagina. Nieuwe snapshots en restores worden bij een onbeoordeelde marker geweigerd. Normaal herstel of volledige rollback van een afgehandelde pre-commit-fout ruimt de marker op.
