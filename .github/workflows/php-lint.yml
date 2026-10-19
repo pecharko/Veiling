@@ -39,6 +39,9 @@ jobs:
       - name: Verify CSV import is disabled in source
         run: php tests/csv_import_disabled_test.php
 
+      - name: Check photo-less lot placeholder asset
+        run: php tests/site_assets_test.php
+
       - name: Check OVH release manifest (offline, no credentials)
         run: |
           python3 -m py_compile scripts/deploy_ovh_sftp.py
