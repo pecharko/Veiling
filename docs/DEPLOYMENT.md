@@ -2,6 +2,8 @@
 
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
 
+**Fase-1-fix in review:** voor een consistente MySQL-read-view wordt uitsluitend `private/snapshots.php` als runtimebestand aangepast. Deze PR is **niet** geschikt voor bestaande SFTP-deployworkflows zonder exacte allowlist en dubbele toestemming. Geen nieuwe productie-back-up of restore uitvoeren als proef. Filesystem-lock, foto-consistentie en crashbestendige restore ontbreken nog.
+
 **Let op — snapshotcrashonderzoek, issue #2 (19-10-2026):** T-050A/T-050B zijn *risicoreproducerende* CI-tests, niet een restorefix. Hun groene uitkomst autoriseert **geen** productiewijziging. [Onderzoek en voorgesteld herstelprotocol](SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md). Bewaar bij een onderbroken herstel beide database- en foto-toestanden; herstel niet op goed geluk en draai geen destructieve test op de live hosting.
 
 

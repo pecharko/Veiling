@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Deelverbetering snapshots: één consistente MySQL-read-view (in PR)
+- `snap_create()` leest de vijf tabellen binnen één eigen `REPEATABLE READ`-transactie en sluit deze vóór het archiveren van foto's. Een al actieve PDO-transactie wordt uit voorzorg geweigerd.
+- T-050A is omgevormd tot een veiligheidstest: een gelijktijdige atomaire update levert een consistent oud paar van `settings` en `lots` op; ook transactieafsluiting en afwijzing van geneste transacties getest. **Geïsoleerde snapshot-CI geslaagd:** [run #39319327080](https://github.com/pecharko/Veiling/actions/runs/39319327080).
+- **Beperkingen:** nog geen app-brede foto-/schrijflock en geen crashbestendige restore. T-050B blijft een bewust geslaagde risicoreproductie. Niet op productie uitgerold; wijzigingen aan snapshotcode vragen handmatige review en nieuwe specifieke deployautorisatie.
+
 ### Snapshotconsistentie en SIGKILL-onderzoek — 19-10-2026 (alleen CI/test)
 - Eerste reproduceerbare onderzoekstests T-050A (gemengde MySQL-read-momenten) en T-050B (SIGKILL na fotoswap vóór DB-herstel) toegevoegd voor issue #2, uitsluitend op fictieve GitHub Actions/MySQL-data.
 - De tests instrumenteren alleen tijdelijke kopieën van `private/snapshots.php` in een afzonderlijk PHP-testproces; bestaande productiecode, foto's en snapshots zijn ongewijzigd.

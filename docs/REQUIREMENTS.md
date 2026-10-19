@@ -145,6 +145,10 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 
 Bij [issue #2](https://github.com/pecharko/Veiling/issues/2) onderzoeken de geïsoleerde tests T-050A/T-050B de grenzen van FR-015/FR-017. De huidige `snap_create()` leest tabellen zonder consistente DB-readtransactie of applicatiebrede fotolock; `snap_restore()` wisselt eerst de uploadmap, daarna commit hij databasegegevens. De voorbereiding reproduceert naar verwachting een gemengde snapshot en een inconsistent crashvenster. **Dit is nog geen productieherstel of oplossing.** Bestaande capaciteitstests FR-019/020 blijven ongewijzigd en moeten opnieuw getest worden bij een toekomstig crashbestendig ontwerp met tijdelijke extra opslag. Zie [onderzoeksdocument](SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md).
 
+## Deeloplossing: consistente MySQL-leesweergave bij snapshots (in review)
+
+De snapshotfunctie wordt aangescherpt zodat de vijf InnoDB-tabellen via een eigen `REPEATABLE READ`-transactie vanaf één DB-leesmoment worden geëxporteerd. T-050A verwacht na wijziging dat een gelijktijdige atomaire update **niet** als gemengde rijcombinatie verschijnt; de test controleert daarnaast transactieafsluiting en afwijzing van een al actieve oproeperstransactie. **Nog niet gemerged of live uitgerold.** Dit lost gelijktijdige wijziging/verwijdering van *bestanden* niet op en verandert niets aan de herstelprocedure met een procescrash (T-050B). FR-015 is dus slechts voor database-rijen verbeterd; FR-017 blijft open onder issue #2. Opnames met concurrente fotomutaties en crashjournal volgen afzonderlijk.
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.

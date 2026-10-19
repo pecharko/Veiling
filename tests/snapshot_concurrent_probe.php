@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 /**
- * T-050A: demonstrate a mixed-time snapshot using disposable MySQL.
- * PASS means the current consistency weakness was detected, NOT fixed.
+ * T-050A: verify one consistent MySQL read view using disposable MySQL.
+ * PASS means concurrent atomic database changes cannot be split across snapshot tables.
  * This test injects a pause into a temporary COPY of snapshots.php,
  * never the application source and never OVHcloud.
  */
@@ -77,10 +77,10 @@ try{
  $lots=array_values(array_filter($data['tables']['lots'],
    static fn(array $lot):bool=>(int)$lot['lot_number']===101));
  if(count($lots)!==1)throw new RuntimeException('Expected lot missing from snapshot.');
- if($oldSettings!=='CI state before'||$lots[0]['title']!=='CI state after'){
-  throw new RuntimeException('Did not reproduce mixed snapshot; review transaction assumptions.');
+ if($oldSettings!=='CI state before'||$lots[0]['title']!=='CI state before'){
+  throw new RuntimeException('Mixed database read view detected; settings and lots must share the same pre-commit state.');
  }
- echo "PASS T-050A: current snapshot combined old settings and newer lot despite a single atomic DB commit (risk reproduced, not fixed).\n";
+ echo "PASS T-050A: snapshot captured settings and lots from one consistent pre-commit MySQL read view.\n";
 }finally{
  @unlink($ready);@unlink($release);@unlink($probe);
  if(is_resource($child)){proc_terminate($child,9);foreach($pipes as $p)if(is_resource($p))fclose($p);proc_close($child);}

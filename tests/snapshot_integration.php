@@ -64,6 +64,7 @@ verify($initialStorage['total'] > 0 && $initialStorage['uploads'] >= filesize($o
 verify($initialStorage['snapshots'] === 0, 'No snapshot existed before isolated test');
 
 $name = snap_create($pdo);
+verify(!$pdo->inTransaction(), 'Successful snapshot ends consistent read transaction before archiving photos');
 verify(snap_name($name) && is_file(snap_path($name)), 'Snapshot created with safe filename');
 $listing = snap_listing();
 verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['size'] > 0,
@@ -89,6 +90,16 @@ try {
 } finally {
     flock($lock, LOCK_UN);
     fclose($lock);
+}
+
+// Never silently inherit or commit a caller's transaction.
+$pdo->beginTransaction();
+try {
+    assert_throws(fn() => snap_create($pdo), 'afzonderlijke databasetransactie',
+                  'Snapshot refuses an already active caller transaction');
+    verify($pdo->inTransaction(), 'Rejected snapshot leaves caller transaction in place');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
 }
 
 $badName = 'snapshot-20990101-000000-deadbeefdead.zip';
