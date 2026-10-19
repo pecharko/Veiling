@@ -4,6 +4,13 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Fase 3B — alleen-lezen hersteldiagnose (PR in voorbereiding)
+- `private/restore_diagnosis.php` vergelijkt een onderbroken herstel met een geverifieerd, onveranderd snapshotarchief: alle vijf InnoDB-tabellen, alle ZIP-fotohashes én de volledige actieve fotomap. Gebruik van de bestaande MySQL-advisorylock voorkomt gelijktijdige deelnemende appschrijfacties tijdens de controle.
+- Nieuw `scripts/restore_diagnose.php --plan`, uitsluitend CLI en **zonder herstel-, clear- of rollbackcommando**. Rapporteert alleen niet-gevoelige statusvelden en geen persoonsgegevens.
+- T-055 plus uitbreidingen van T-050B/T-054 tonen op wegwerpdata dat de diagnose *voor* de commit afwijkende MySQL-rijen detecteert en *na* de commit een complete doeltoestand kan herkennen, terwijl het journal actief blijft en geen automatisch herstel wordt uitgevoerd.
+- **Open:** veilige bediende/idempotente recoveryactie onder uitdrukkelijke menselijk controle, buitenapp-bewerkingen, statische foto-URL's en een geverifieerde productie-release. Dit is **geen** automatische restoreoplossing.
+
+
 ### Fase 3A — privéhersteljournal en fail-closed PHP-onderhoud (PR in voorbereiding)
 - Nieuwe `private/restore_journal.php` met privé `private/backups/.restore-active.json`; publiceer journal vóór het verwisselen van fotomappen. Fases: voorbereid, oude map opzij, nieuwe foto's actief, databasecommitted. Fasebestanden worden atomair vervangen met waar beschikbaar file-`fsync`.
 - `private/bootstrap.php` retourneert HTTP 503 voor publiek/admin-PHP zolang een journal, halfaangemaakt updatebestand of verweesde oude fotomap bestaat; geen geauthenticeerde bypass. `snap_create()` en `snap_restore()` weigeren acties bij achtergebleven herstelindicatoren.
