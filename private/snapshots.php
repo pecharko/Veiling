@@ -39,7 +39,19 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
  if($quotaBytes<=0)throw new InvalidArgumentException('Ongeldige hostinglimiet.');
  snap_init();$lock=snap_lock();$tmp=null;
  try{
-  $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
+  // One InnoDB read view for ALL tables. Without this, concurrent commits can
+  // make a snapshot contain old settings but newer lots or image references.
+  // Photo-file consistency still requires a separate application-wide barrier.
+  if($pdo->inTransaction())throw new RuntimeException('Snapshot vereist een nieuwe, afzonderlijke databasetransactie.');
+  $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+  $pdo->beginTransaction();
+  try{
+   $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
+   $pdo->commit();
+  }catch(Throwable $e){
+   if($pdo->inTransaction())$pdo->rollBack();
+   throw $e;
+  }
   $assets=snap_assets(); $bytes=0;foreach($assets as $path)$bytes+=(int)filesize($path);
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
