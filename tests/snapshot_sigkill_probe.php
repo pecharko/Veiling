@@ -1,9 +1,11 @@
 <?php
 declare(strict_types=1);
+
 /**
- * T-050B: forcibly SIGKILL a child restore just after it swaps uploads,
- * but before the DB transaction starts. PASS means the existing crash window
- * is reproduced. No production PHP code or production files are modified.
+ * T-050B/T-052: kill isolated restore AFTER photo swap, BEFORE DB commit.
+ * The durable journal must prevent further PHP page/admin access until
+ * the original disposable CI data has been manually put back and checked.
+ * This deliberately does NOT simulate recovery on production.
  */
 $root=dirname(__DIR__);
 if(getenv('GITHUB_ACTIONS')!=='true'
@@ -22,46 +24,59 @@ if(!function_exists('posix_kill') || !function_exists('proc_open')){
  throw new RuntimeException('SIGKILL probe requires PHP posix and proc_open.');
 }
 $source=(string)file_get_contents($root.'/private/snapshots.php');
-$needle='}$stage=null;';
-if(substr_count($source,$needle)!==1)throw new RuntimeException('Review changed restore swap checkpoint.');
+$needle="  restore_journal_phase(\$journal,'photos_active');";
+if(substr_count($source,$needle)!==1)throw new RuntimeException('Review changed restore crash checkpoint.');
 $replacement=$needle."\n".<<<'PHP'
   if(getenv('CI_KILL_AT_SWAP')==='yes'){
-    file_put_contents((string)getenv('CI_CRASH_MARKER'),'swapped');
+    file_put_contents((string)getenv('CI_CRASH_MARKER'),'photos_active');
     posix_kill(getmypid(),9);
     exit(91);
   }
 PHP;
 $probe=$root.'/private/.ci-crash-'.bin2hex(random_bytes(6)).'.php';
 $marker=sys_get_temp_dir().'/ci-snapshot-kill-'.bin2hex(random_bytes(8));
-$uploads=snap_uploads();
-$base=dirname($uploads);
+$uploads=snap_uploads();$base=dirname($uploads);
 $currentOnlyRel='2026/10/'.str_repeat('c',32).'.jpg';
 $currentOnly=$uploads.'/'.$currentOnlyRel;
 $oldDirs=glob($base.'/.uploads-before-restore-*')?:[];
-if(count($oldDirs)!==0)throw new RuntimeException('Leftover restore directory before isolated crash test.');
+if($oldDirs || restore_journal_pending())throw new RuntimeException('Existing recovery evidence before isolated test.');
 $lotId=(int)$pdo->query('SELECT id FROM lots WHERE lot_number=101')->fetchColumn();
 if($lotId<=0)throw new RuntimeException('Expected disposable lot #101 missing.');
 $originalTitle=(string)$pdo->query('SELECT title FROM lots WHERE id='.$lotId)->fetchColumn();
-$child=null;$pipes=[];$priorDirectory=null;$toDelete=null;$newImageId=0;
-try{
+$child=null;$pipes=[];$server=null;$serverPipes=[];$priorDirectory=null;$toDelete=null;$newImageId=0;
+$recovered=false;
+
+function journal_http_get(string $path): array {
+ $ch=curl_init('http://127.0.0.1:8097'.$path);
+ curl_setopt_array($ch,[
+  CURLOPT_RETURNTRANSFER=>true,CURLOPT_FOLLOWLOCATION=>false,
+  CURLOPT_CONNECTTIMEOUT=>1,CURLOPT_TIMEOUT=>4
+ ]);
+ $data=curl_exec($ch);
+ $status=(int)curl_getinfo($ch,CURLINFO_RESPONSE_CODE);
+ curl_close($ch);
+ return [$status,$data===false?'':(string)$data];
+}
+try {
  $target=null;
  foreach(snap_listing() as $item){
-  [$db]=snap_verified($item['name']);
-  foreach($db['tables']['lots'] as $lot){
+  [$database]=snap_verified($item['name']);
+  foreach($database['tables']['lots'] as $lot){
    if((int)$lot['lot_number']===101){$target=$item['name'];break 2;}
   }
  }
- if($target===null)throw new RuntimeException('No verified CI fixture snapshot to restore.');
+ if($target===null)throw new RuntimeException('No verified CI fixture snapshot.');
  file_put_contents($probe,str_replace($needle,$replacement,$source),LOCK_EX);
  $pdo->exec("UPDATE lots SET title='CI old data after simulated crash' WHERE lot_number=101");
  if(!is_dir(dirname($currentOnly)))mkdir(dirname($currentOnly),0700,true);
- $img=imagecreatetruecolor(30,30);
- imagefill($img,0,0,imagecolorallocate($img,12,42,83));
- if(!imagejpeg($img,$currentOnly,90))throw new RuntimeException('Cannot write disposable image.');
- imagedestroy($img);
+ $image=imagecreatetruecolor(30,30);
+ imagefill($image,0,0,imagecolorallocate($image,12,42,83));
+ if(!imagejpeg($image,$currentOnly,90))throw new RuntimeException('Cannot write disposable photo.');
+ imagedestroy($image);
  $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
   ->execute([$lotId,'uploads/'.$currentOnlyRel,999,'ci-crash-only.jpg']);
  $newImageId=(int)$pdo->lastInsertId();
+
  $call='require '.var_export($root.'/private/bootstrap.php',true).';'
       .'require '.var_export($probe,true).';snap_restore(db(),'.var_export($target,true).');';
  $child=proc_open([PHP_BINARY,'-r',$call],
@@ -69,52 +84,104 @@ try{
   array_merge(getenv(),['CI_KILL_AT_SWAP'=>'yes','CI_CRASH_MARKER'=>$marker]));
  if(!is_resource($child))throw new RuntimeException('Cannot start isolated restore child.');
  fclose($pipes[0]);
- $stdout=stream_get_contents($pipes[1]);
- $stderr=stream_get_contents($pipes[2]);
+ $stdout=stream_get_contents($pipes[1]);$stderr=stream_get_contents($pipes[2]);
  fclose($pipes[1]);fclose($pipes[2]);$pipes=[];
  $status=proc_close($child);$child=null;
- if($status===0 || !is_file($marker)){
-  throw new RuntimeException('Child did not crash after directory swap: '.$stderr.' '.$stdout);
- }
- echo "PASS T-050B: child was SIGKILLed at the photo-swap/DB boundary.\n";
- $dirs=glob($base.'/.uploads-before-restore-*')?:[];
- if(count($dirs)!==1 || !is_dir($dirs[0]))throw new RuntimeException('Old uploads not preserved.');
- $priorDirectory=$dirs[0];
- echo "PASS T-050B: original photos remain recoverable in old private directory.\n";
- $missing=!is_file($currentOnly);
- $stillLinked=(int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE id='.$newImageId)->fetchColumn()===1;
- $oldData=(string)$pdo->query('SELECT title FROM lots WHERE id='.$lotId)->fetchColumn()
-  ==='CI old data after simulated crash';
- if(!$missing || !$stillLinked || !$oldData || !is_file($priorDirectory.'/'.$currentOnlyRel)){
-  throw new RuntimeException('Expected DB/photo inconsistency not reproduced.');
- }
- echo "PASS T-050B: old database still links an image absent from active uploads (risk reproduced, not fixed).\n";
+ if($status===0 || !is_file($marker))throw new RuntimeException('SIGKILL was not reached: '.$stderr.' '.$stdout);
+ echo "PASS T-050B: restore process was SIGKILLed after photo swap and before DB transaction.\n";
 
- // Only the disposable CI fixture is manually recovered. The application
- // currently has NO automatic crash-recovery journal. Never do this on live.
+ if(!restore_journal_pending())throw new RuntimeException('Missing durable crash journal after SIGKILL.');
+ $journal=restore_journal_read();
+ if($journal['phase']!=='photos_active'||$journal['snapshot']!==$target){
+  throw new RuntimeException('Restore journal does not preserve expected crash phase/snapshot.');
+ }
+ echo "PASS T-052: private journal survives SIGKILL with validated restore metadata.\n";
+ $dirs=glob($base.'/.uploads-before-restore-*')?:[];
+ if(count($dirs)!==1 || !is_dir($dirs[0]))throw new RuntimeException('Original photos not retained.');
+ $priorDirectory=$dirs[0];
+ if($journal['old_uploads']!==basename($priorDirectory)
+    ||!is_file($priorDirectory.'/'.$currentOnlyRel)
+    ||is_file($currentOnly)
+    ||(int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE id='.$newImageId)->fetchColumn()!==1){
+  throw new RuntimeException('Current DB/photo mismatch or backup identity not reproduced.');
+ }
+ echo "PASS T-050B: preserved prior files and original DB reveal dangerous interrupted restore.\n";
+
+ try{
+  snap_create($pdo);
+  throw new RuntimeException('New snapshot unexpectedly succeeded while journal was pending.');
+ }catch(RuntimeException $e){
+  if(!str_contains($e->getMessage(),'onderbroken'))throw $e;
+ }
+ echo "PASS T-052: pending journal also blocks direct attempts to create another snapshot.\n";
+
+ // The web entrypoint must refuse BOTH visitor and administrator PHP pages,
+ // even though the terminated MySQL lock owner no longer holds GET_LOCK.
+ $server=proc_open([PHP_BINARY,'-S','127.0.0.1:8097','-t',$root.'/catalogus-public'],
+  [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$serverPipes,$root);
+ if(!is_resource($server))throw new RuntimeException('Cannot launch local PHP test server.');
+ fclose($serverPipes[0]);
+ $ready=false;
+ for($i=0;$i<30;$i++){
+  [$http,$body]=journal_http_get('/index.php');
+  if($http===503){$ready=true;break;}
+  usleep(100000);
+ }
+ if(!$ready)throw new RuntimeException('HTTP maintenance response was not served.');
+ foreach(['/index.php','/admin/login.php','/admin/kavel.php','/admin/backup.php'] as $route){
+  [$http,$body]=journal_http_get($route);
+  if($http!==503 || !str_contains($body,'tijdelijk niet beschikbaar')
+     || str_contains($body,'ci-crash-only') || str_contains($body,'password_hash')){
+    throw new RuntimeException("Maintenance gate did not safely block {$route}: {$http}");
+  }
+ }
+ echo "PASS T-052: public catalog and all tested admin PHP routes fail closed with HTTP 503.\n";
+
+ // CI-fixture-only operator recovery; NEVER automate a production rollback by
+ // guessing whether the database COMMIT did or did not complete.
  $toDelete=$base.'/.ci-restored-temp-'.bin2hex(random_bytes(6));
- if(!rename($uploads,$toDelete) || !rename($priorDirectory,$uploads)){
-  throw new RuntimeException('Isolated fixture directory swap recovery failed.');
+ if(!rename($uploads,$toDelete)||!rename($priorDirectory,$uploads)){
+  throw new RuntimeException('Disposable fixture repair failed.');
  }
  $priorDirectory=null;
  snap_remove_tree($toDelete);$toDelete=null;
- if(!is_file($currentOnly))throw new RuntimeException('Fixture-only recovery did not restore original image.');
- echo "PASS T-050B: operator-style manual recovery works in disposable CI (not automatic recovery).\n";
-}finally{
+ if(!is_file($currentOnly))throw new RuntimeException('Fixture photo was not recovered.');
+ $pdo->prepare('DELETE FROM lot_images WHERE id=?')->execute([$newImageId]);$newImageId=0;
+ $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute([$originalTitle,$lotId]);
+ @unlink($currentOnly);
+ $check=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE source_name=?');
+ $check->execute(['ci-crash-only.jpg']);
+ if((int)$check->fetchColumn()!==0)throw new RuntimeException('Disposable photo metadata not repaired.');
+ restore_journal_finish();$recovered=true;
+ if(restore_journal_pending())throw new RuntimeException('Maintenance persisted after safe fixture repair.');
+ [$home]=journal_http_get('/index.php');
+ [$login]=journal_http_get('/admin/login.php');
+ if($home!==200||$login!==200)throw new RuntimeException("HTTP did not reopen after fixture recovery: {$home}/{$login}");
+ echo "PASS T-052: maintenance cleared only after verified disposable fixture repair; homepage/login reopen.\n";
+}finally {
  @unlink($probe);@unlink($marker);
  if(is_resource($child)){
   proc_terminate($child,9);
   foreach($pipes as $pipe)if(is_resource($pipe))fclose($pipe);
   proc_close($child);
  }
- if($priorDirectory!==null && is_dir($priorDirectory)){
+ if(is_resource($server)){
+  proc_terminate($server,9);
+  foreach($serverPipes as $pipe)if(is_resource($pipe))fclose($pipe);
+  proc_close($server);
+ }
+ if($priorDirectory!==null&&is_dir($priorDirectory)){
   if(is_dir($uploads)){
    $stale=$base.'/.ci-stale-'.bin2hex(random_bytes(6));
-   if(rename($uploads,$stale) && rename($priorDirectory,$uploads))snap_remove_tree($stale);
+   if(rename($uploads,$stale)&&rename($priorDirectory,$uploads))snap_remove_tree($stale);
   }else rename($priorDirectory,$uploads);
  }
- if($toDelete!==null && is_dir($toDelete))snap_remove_tree($toDelete);
- @unlink($currentOnly);
+ if($toDelete!==null&&is_dir($toDelete))snap_remove_tree($toDelete);
  if($newImageId>0)$pdo->prepare('DELETE FROM lot_images WHERE id=?')->execute([$newImageId]);
  $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute([$originalTitle,$lotId]);
+ @unlink($currentOnly);
+ if(!$recovered&&restore_journal_pending()){
+  // Only CI cleanup after attempted fixture repair; failures still fail CI.
+  @unlink(restore_journal_path());
+ }
 }

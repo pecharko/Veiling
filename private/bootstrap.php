@@ -4,6 +4,11 @@ error_reporting(E_ALL);
 ini_set('display_errors', '0');
 date_default_timezone_set('Europe/Brussels');
 
+// Fail closed on every PHP entry point after an interrupted restore.
+// This checks only private filesystem markers; no DB/hosting credentials needed.
+require_once __DIR__ . '/restore_journal.php';
+restore_journal_gate_web();
+
 $configFile = __DIR__ . '/config.php';
 if (!is_file($configFile)) {
   http_response_code(503);

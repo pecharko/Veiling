@@ -17,6 +17,16 @@ Na merge van PR #31 staat de consistente MySQL-read-view op `main`, maar **niet 
 
 De mutex vervangt geen onderhoudsmodus: bezoekers kunnen nog data en foto's op verschillende momenten lezen tijdens een restore. Door een SIGKILL na de fotoswap blijft de actief getoonde fotomap inconsistent met de database. De huidige T-050B detecteert dit nog steeds **bewust als aanwezig risico**. Voor echte crashbestendigheid blijft een idempotent hersteljournal, onderhoudsblokkade en fault-injection van elke restorefase nodig; het issue blijft P1 en open.
 
+## Fase 3A — fail-closed hersteljournal (in PR, niet live)
+
+Na merges #30–#32 zijn de MySQL-tabelmomenten en applicatiegecoördineerde foto-/adminwrites verbeterd in GitHub, maar de runtime is niet op productie bijgewerkt. De volgende ontwikkelstap publiceert onder `private/backups/` een kleine privé `.restore-active.json` vóór de eerste directory-rename. De fasen (`prepared`, `old_saved`, `photos_active`, `database_committed`) worden als atomair vervangende bestanden bijgewerkt; oude en tijdelijke bestanden blijven behouden zolang een hersteluitkomst onzeker is. `bootstrap.php` schakelt PHP-pagina's van site en admin over op HTTP 503 als de marker, een onvoltooid journaltempbestand of een verweesde oude fotomap aanwezig is. Na een **bewezen complete** restore of afgehandelde pre-commit-rollback wordt de marker gewist.
+
+De huidige oplossing stopt niet vanzelf een corruptie van DB+files in het proces zelf; hij voorkomt alleen dat het PHP-portaal na een crash die mogelijke inconsistentie ongemerkt presenteert. Ook een DB-commit met onbekende uitkomst wordt **niet** automatisch teruggedraaid. **In [geïsoleerde Snapshot-CI-run #39324527061](https://github.com/pecharko/Veiling/actions/runs/39324527061) geslaagd:** T-050B/T-052 tonen echte SIGKILL en onderhoudsstatus; T-053 rolt een geïnjecteerde SQL-fout vóór commit volledig terug. T-054 toont de blijvende blokkering wanneer een reeds gecommitte database nog een verouderde journalfase heeft. Statische foto-URLs, CDN/browsercaches, al begonnen verzoeken en direct DB-/SFTP-gebruik zijn nog onbeheerd. File-`fsync` garandeert niet vanzelf dat de directoryentry op alle OVH-filesystemen crashdurable is.
+
+**Extra regressie T-054:** een succesvolle MySQL-commit kan gevolgd worden door SIGKILL vóór de PHP-code de journalfase bijwerkt. De journalfase `photos_active` bewijst dan **niet** dat de database nog de oude toestand heeft. Test daarom zowel een crash vóór commit (T-050B/T-052) als onmiddellijk erna (T-054). Alleen na verificatie van doelgegevens en SHA-256 van de ZIP-foto's mag in de geïsoleerde testomgeving het achtergebleven fotobewijs worden opgeruimd. De productieapplicatie doet dit nadrukkelijk niet automatisch.
+
+**Volgende stap na fase 3A:** bewijs eerst afzonderlijk welke MySQL-versie gecommit is (oude/nieuwe toestand) met een duurzame DB-markering of gevalideerde datafingerprint, maak een operator-geautoriseerde idempotente recoveryprocedure voor de verschillende fotomap- en transactiefasen en test elk SIGKILL-venster in CI. Pas daarna kan de onderhoudsblokkering gecontroleerd worden opgeheven. Uit veiligheid blijft een live restore verboden als test.
+
 ## Vastgestelde risico's uit de huidige broncode
 
 1. **Snapshot van verschillende momenten.** `snap_create()` leest `settings`, `admins`, `lots`, `lot_images` en `login_attempts` via afzonderlijke SELECT-statements zonder expliciete `START TRANSACTION WITH CONSISTENT SNAPSHOT`. De exclusieve `.operation.lock` wordt uitsluitend door snapshot- en herstelacties gebruikt, niet door gewone kavel-, veilinginfo- of fotoschrijfacties. Een gelijktijdige, atomaire wijziging van bijvoorbeeld `settings` en `lots` kan in de ZIP verschijnen als de oude instellingen plus het nieuwe kavel.
@@ -60,6 +70,8 @@ Testcodes mogen alleen draaien met `GITHUB_ACTIONS=true`, `CI_SNAPSHOT_TEST=yes`
 - Eerst een aparte runtime-PR met tests voor herstelbaarheid (groene **veilige** invarianten), documenten FR-015/017/019/020, rollback- en migratiedocumenten, gevolgd door handmatige review.
 - Geen hersteltest op productie. Het eerste productiepad zou een alleen-codewijziging via expliciet toegestane bestandslijst, offline plan, hashcontrole, pre-upload-codeback-up, read-only smoke-tests en afzonderlijke dubbele goedkeuring moeten zijn.
 - Open issue #2 tot de tests niet alleen de crash reproduceren maar ook het herstel na echte processtop in disposable CI met automatische detectie aantonen.
+
+Voor de handmatige triage van een echte processtop, uitsluitend met veilige leesacties, zie ook [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md). Dit is geen automatische hersteltool.
 
 ## Voorlopige noodprocedure (alleen voor incidentanalyse; niet blind uitvoeren)
 
