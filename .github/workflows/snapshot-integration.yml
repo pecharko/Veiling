@@ -111,3 +111,10 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/catalog_mutex_integration.php
+
+      - name: T-054 SIGKILL after DB commit retains ambiguous journal until verification
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/restore_journal_postcommit_test.php
