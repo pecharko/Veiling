@@ -44,7 +44,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   catalog_data_lock($pdo);$catalogLocked=true;
   // One InnoDB read view for ALL tables. Without this, concurrent commits can
   // make a snapshot contain old settings but newer lots or image references.
-  // Photo-file consistency still requires a separate application-wide barrier.
+  // Our advisory mutex remains held while both DB rows and photos are archived.
   if($pdo->inTransaction())throw new RuntimeException('Snapshot vereist een nieuwe, afzonderlijke databasetransactie.');
   $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
   $pdo->beginTransaction();
