@@ -4,6 +4,11 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Kwaliteitsronde en regressiebewaking — 19-10-2026 (PR in voorbereiding)
+- Broncode-audit van authenticatie, kaveleditor, fotoupload, snapshotherstel en deployment met prioriteiten P1/P2/P3 vastgelegd in `docs/QUALITY_AUDIT_2026-10-19.md`. Bestaand snapshot-consistentierisico blijft open (#2); gedeeltelijke foto-opslag, GET-logout en beheerderssessieduur vergen opvolging.
+- Oude verwijzingen naar de niet-ondersteunde foto-import verwijderd uit de kaveleditor en de backupintroductie.
+- Bestaande PHP-CI uitgebreid van zes broncodecontroles voor CSV-import naar dertien controles voor CSV, bulkfoto-import, adminnavigatie en behoud van de individuele fotoupload (T-048). Nog geen wijziging op productie; PHP-PR vraagt review en afzonderlijke deployment.
+
 ### Bulkfoto-import definitief uitgeschakeld (19-10-2026; nog niet uitgerold)
 - Op verzoek is de niet te ondersteunen bulkfoto-import via SFTP uit de adminnavigatie verwijderd. De oude route `admin/fotos-bulk.php` geeft voor GET en POST uitsluitend HTTP 404, zonder databaseverbinding, fotoverwerking of verwijdering van bestanden.
 - Verouderde systeemcontrole op `private/photo-inbox/` en de SFTP-bulkimporttip verwijderd. Reeds aanwezige bestanden in de inbox blijven onaangeroerd.
