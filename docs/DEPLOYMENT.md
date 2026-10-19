@@ -2,6 +2,9 @@
 
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
 
+**Let op — snapshotcrashonderzoek, issue #2 (19-10-2026):** T-050A/T-050B zijn *risicoreproducerende* CI-tests, niet een restorefix. Hun groene uitkomst autoriseert **geen** productiewijziging. [Onderzoek en voorgesteld herstelprotocol](SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md). Bewaar bij een onderbroken herstel beide database- en foto-toestanden; herstel niet op goed geluk en draai geen destructieve test op de live hosting.
+
+
 ## Auditrelease PR #25, #26, #27 — technisch live geverifieerd (19-10-2026)
 
 De drie audit-PR's zijn gemerged in `main` (respectievelijk `a8d095ef4a26a967d5eaaeddc51fd3794f18061d`, `23507f8680a615ef57250b070846c0c9e333a8b9`, `e1022abc80fdff88febab078ef678942bd3209ae`). Ook deployment-PR #28 is handmatig gemerged. **Productierelease is geslaagd** via exact commit `8b2e6b8f444f67952620163c523e04c5807a032e` op 19-10-2026; [workflow-run #39203389883](https://github.com/pecharko/Veiling/actions/runs/39203389883) (29 seconden). Alle zes bestanden zijn op productie geüpload en met SHA-256 read-back geverifieerd. Vijf bestaande bestanden zijn vóór de upload veilig bewaard; `assets/placeholder.svg` was niet op productie aanwezig en is als nieuw bestand vastgelegd. Privé recovery-artifact `ovh-audit-pr25-26-27-before-39203389883`, vervalt 26-10-2026.

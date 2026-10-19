@@ -141,6 +141,10 @@ De broncode van **FR-001** (login/CSRF), **FR-002/004** (kavelbeheer en validati
 - **FR-010:** vervallen bulkfoto-import blijft HTTP 404 voor GET en lege POST; gebruikerscontrole van het adminmenu werd al bij de vorige retirement-release bevestigd (T-047).
 - **NFR-005 / NFR-006:** release van zes vaste runtimepaden op commit `8b2e6b8f444f67952620163c523e04c5807a032e` uitgevoerd. GitHub-run `39203389883` is groen, met driftcontrole, read-backchecksums en privé rollbackartifact `ovh-audit-pr25-26-27-before-39203389883` (tot 26-10-2026). De daadwerkelijke rollback is **niet** op productie getest. Database, uploads, kavelfoto's en snapshots zijn niet gewijzigd door de workflow.
 
+## Onderzoek snapshotconsistentie en herstelcrashes (19 oktober 2026)
+
+Bij [issue #2](https://github.com/pecharko/Veiling/issues/2) onderzoeken de geïsoleerde tests T-050A/T-050B de grenzen van FR-015/FR-017. De huidige `snap_create()` leest tabellen zonder consistente DB-readtransactie of applicatiebrede fotolock; `snap_restore()` wisselt eerst de uploadmap, daarna commit hij databasegegevens. De voorbereiding reproduceert naar verwachting een gemengde snapshot en een inconsistent crashvenster. **Dit is nog geen productieherstel of oplossing.** Bestaande capaciteitstests FR-019/020 blijven ongewijzigd en moeten opnieuw getest worden bij een toekomstig crashbestendig ontwerp met tijdelijke extra opslag. Zie [onderzoeksdocument](SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md).
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.
