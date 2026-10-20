@@ -1,0 +1,108 @@
+name: Controleer OVH herstelrelease via SFTP (alleen lezen)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Volledige 40-karakter main SHA uit het offline releaseplan'
+        required: true
+        type: string
+      confirmation:
+        description: 'Typ READ ONLY SFTP PREFLIGHT voor uitsluitend lezende OVH-controle'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+# Exclude simultaneous older production SFTP deploy workflows.
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  remote-read-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Require explicit permission to inspect OVH without writes
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != 'READ ONLY SFTP PREFLIGHT' ]; then
+            echo 'Refused: explicit READ ONLY SFTP PREFLIGHT required.'
+            exit 1
+          fi
+          if [ "${#RELEASE_SHA}" -ne 40 ] || [ "$RELEASE_SHA" != "$GITHUB_SHA" ]; then
+            echo 'Refused: SHA must exactly match current selected main commit.'
+            exit 1
+          fi
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!key:-}" ]; then
+              echo "Refused: SFTP secret/variable not configured: $key"
+              exit 1
+            fi
+          done
+          echo 'Manual read-only connection authorized. Upload is NOT available.'
+
+      - name: Checkout full approved main history for historical baseline
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up PHP 8.2 for exact offline source lint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+
+      - name: Validate source and fake-SFTP safety controls BEFORE remote access
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/plan_catalog_recovery_release.py scripts/preflight_catalog_recovery_remote.py tests/recovery_remote_preflight_test.py
+          python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > /dev/null
+          python3 tests/recovery_remote_preflight_test.py
+          echo 'Source and fake SFTP checks pass; no production connection made so far.'
+
+      - name: Install existing pinned SFTP Python client
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+
+      - name: Read ONLY: compare six remote PHP files, absent helpers and restore markers
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/preflight_catalog_recovery_remote.py \
+            --release-sha "$RELEASE_SHA" > recovery-remote-preflight.json
+          cat recovery-remote-preflight.json
+          echo 'SFTP inspection completed. Zero remote writes, uploads, backups or SQL.'
+
+      - name: Keep non-sensitive preflight hash report for manual review (7 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-remote-preflight-${{ github.run_id }}
+          path: recovery-remote-preflight.json
+          retention-days: 7
+          if-no-files-found: error
