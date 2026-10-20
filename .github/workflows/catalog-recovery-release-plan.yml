@@ -1,0 +1,59 @@
+name: Plan catalog recovery runtime release (read-only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Full 40-character main commit SHA to inspect (no deployment)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: catalog-recovery-release-plan
+  cancel-in-progress: false
+
+jobs:
+  plan-only:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact main SHA
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Set up PHP for linting
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+
+      - name: Verify exact SHA, allowlist, dependencies, PHP lint and local hashes
+        shell: bash
+        env:
+          APPROVED_RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/plan_catalog_recovery_release.py
+          python3 scripts/plan_catalog_recovery_release.py \
+            --release-sha "$APPROVED_RELEASE_SHA" > release-plan.json
+          cat release-plan.json
+          echo 'PLAN ONLY: no SFTP, SQL, OVH credentials, uploads or backups touched.'
+
+      - name: Keep offline source manifest for manual review (7 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-source-plan-${{ github.run_id }}
+          path: release-plan.json
+          retention-days: 7
+          if-no-files-found: error
