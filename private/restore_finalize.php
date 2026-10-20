@@ -168,9 +168,14 @@ function recovery_finalize_plan(PDO $pdo, string $safetyName, string $operator):
         try{$receipt = json_decode($bytes,true,32,JSON_THROW_ON_ERROR);}
         catch(Throwable $error){return $blocked('invalid_existing_approval_receipt');}
         if (!is_array($receipt) ||
+            ($receipt['format']??null)!=='41lokeren-restore-finalized-v1' ||
             ($receipt['run_id']??null)!==$journal['run_id'] ||
             ($receipt['target_sha256']??null)!==$journal['snapshot_sha256'] ||
-            ($receipt['safety_sha256']??null)!==$safety['sha256']) {
+            ($receipt['safety_sha256']??null)!==$safety['sha256'] ||
+            ($receipt['operator']??null)!==$operator ||
+            ($receipt['read_only_diagnosis_confirmed']??null)!==true ||
+            ($receipt['old_photos_privately_preserved']??null)!==is_dir($savedPath) ||
+            is_dir($oldPath)) {
             return $blocked('existing_receipt_mismatch');
         }
         if (!is_dir($savedPath) && $journal['uploads_existed']
