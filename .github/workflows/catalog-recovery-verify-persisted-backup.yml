@@ -1,0 +1,83 @@
+name: Verify persisted recovery rollback artifact (no uploads)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact current main SHA'
+        required: true
+        type: string
+      backup_run_id:
+        description: 'Successful separate read-only code backup workflow run ID'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  verify-persisted-artifact:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      BACKUP_RUN_ID: ${{ inputs.backup_run_id }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Validate exact commit and backup run ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || [[ "$RELEASE_SHA" != "$GITHUB_SHA" ]]; then
+            echo 'STOP: release SHA not current main'
+            exit 1
+          fi
+          if [[ ! "$BACKUP_RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo 'STOP: invalid backup run ID'
+            exit 1
+          fi
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify completed independent read-only backup run
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/$REPO/actions/runs/$BACKUP_RUN_ID")"
+          if [[ "$(jq -r '.status' <<<"$run_json")" != completed ]] ||
+             [[ "$(jq -r '.conclusion' <<<"$run_json")" != success ]] ||
+             [[ "$(jq -r '.head_sha' <<<"$run_json")" != "$RELEASE_SHA" ]] ||
+             [[ "$(jq -r '.event' <<<"$run_json")" != workflow_dispatch ]] ||
+             [[ "$(jq -r '.path' <<<"$run_json")" != '.github/workflows/catalog-recovery-code-backup.yml' ]]; then
+            echo 'STOP: backup run not successful, manual or pinned to this SHA/workflow'
+            exit 1
+          fi
+      - name: Download persisted GitHub artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -m 700 -p retrieved-backup
+          gh run download "$BACKUP_RUN_ID" \
+            --repo "$REPO" \
+            --name "recovery-code-rollback-$BACKUP_RUN_ID" \
+            --dir retrieved-backup
+          test -f retrieved-backup/original-code.zip
+      - name: Compare persisted backup with six audited originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/verify_persisted_recovery_backup.py \
+            --release-sha "$RELEASE_SHA" \
+            --artifact retrieved-backup/original-code.zip
+          echo 'PASS: independent GitHub rollback evidence verified. NO DEPLOY ALLOWED.'
