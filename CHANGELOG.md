@@ -1,5 +1,12 @@
 # Wijzigingslogboek
 
+## Read-only SFTP-controle na geslaagd offline bronplan (nieuwe security-PR, NIET LIVE)
+
+- De handmatige offline [releaseplanrun #39378597480](https://github.com/pecharko/Veiling/actions/runs/39378597480) is geslaagd op `ab4534c417bcf33b09cc13bc2de1ff726c068660`. Acht bestanden en hun source-SHA-256 zijn bevestigd; geen SFTP of deployment.
+- Nieuwe `scripts/preflight_catalog_recovery_remote.py` en uitsluitend handmatige `catalog-recovery-remote-preflight.yml`: gepinde SSH-hostkey, zes oude PHP-bestanden exact vergelijken met auditbaseline, twee nieuwe helpers expliciet afwezig en herstelmarkers detecteren. SFTP alleen via `lstat`, `listdir`, `open("rb")`. **Geen enkele upload, wijziging of databaseactie.**
+- **T-060: 15 controles geslaagd** in [PHP-CI-run #39379852405](https://github.com/pecharko/Veiling/actions/runs/39379852405) op 20-10-2026, uitsluitend met gesimuleerde SFTP. Ook de kaveleditor- en snapshotregressies op die codeversie waren groen. [Procedure](docs/RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md); geen live SFTP-verbinding uitgevoerd.
+- Security-/deploymentworkflows vereisen menselijke review. Ook na merge wordt niet automatisch contact met OVHcloud gemaakt; daarvoor is een nieuwe expliciete handmatige actie nodig.
+
 ## Voorbereiding achtpaden-snapshotcode-release (in PR, nog niet live)
 - Nieuwe [releasechecklist](docs/RECOVERY_RELEASE_READINESS_2026-10-20.md) voor de uit PR #31–#37 opgebouwde runtime: exact acht bestandsafhankelijkheden, expliciete uitsluiting van gegevens, foto's, journalen en aparte operator-CLI-programma's.
 - ``scripts/plan_catalog_recovery_release.py`` en handmatige ``catalog-recovery-release-plan.yml`` maken uitsluitend **offline** bron-SHA-256/PHP-lint-manifest van één goedgekeurde ``main``-commit. De drie bestaande CI-suites blijven verplicht. **Geen deploymodus, geen SFTP-connectie en geen productieaanpassing.**

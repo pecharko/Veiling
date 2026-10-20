@@ -25,6 +25,10 @@ De laatste technisch bevestigde OVHcloud-code-uitrol was [de auditrelease #39203
 
 De snapshotmodule maakt een **data-only** back-up (database en foto's), geen broncodeback-up. De hier beschreven private code-rollback blijft afzonderlijk.
 
+## Na het geverifieerde offline plan: aparte read-only remote preflight
+
+De broncode-only [run #39378597480](https://github.com/pecharko/Veiling/actions/runs/39378597480) is **20 oktober 2026 geslaagd** op `ab4534c417bcf33b09cc13bc2de1ff726c068660`; een zeven dagen bewaard JSON-artifact is beschikbaar. De volgende fase [RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md](RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md) beschrijft een **aparte, opt-in, uitsluitend lezende** SFTP-controle van de daadwerkelijke productiecode, verwachte ontbrekende helpers en herstelmarkers. Dit is nog geen recht om live te inspecteren of te uploaden; de operator moet de workflow na menselijke review/merge **zelf en uitdrukkelijk** starten. Na latere repositorycommits moet ook de actuele bron-SHA opnieuw geverifieerd worden.
+
 ## Nieuwe offline planfase (geen productieconnectie)
 
 Na menselijke review en merge van de plan-PR kan men in GitHub Actions handmatig **Plan catalog recovery runtime release (read-only)** kiezen op ``main``, met de volledige 40-tekens-SHA van die ``main``-commit. De workflow heeft uitsluitend ``workflow_dispatch``, géén deploymodus, géén productie-environment en **geen SFTP-secrets**.
