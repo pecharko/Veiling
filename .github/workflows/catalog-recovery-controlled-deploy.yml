@@ -1,0 +1,73 @@
+name: Catalog recovery controlled release gate (no uploads)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact current 40-character main SHA'
+        required: true
+        type: string
+      mode:
+        description: 'Only plan is currently implemented; deploy always stops'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  release-gate:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Refuse production uploads until all safety gates are implemented
+        shell: bash
+        env:
+          REQUESTED_MODE: ${{ inputs.mode }}
+        run: |
+          set -euo pipefail
+          if [ "$REQUESTED_MODE" != 'plan' ]; then
+            echo 'STOP: eight-file upload NOT IMPLEMENTED. No SFTP connection attempted.'
+            echo 'Require independently verified offsite data backup, rollback backup, OVH compatibility, maintenance window, audited deploy script and two separate authorizations.'
+            exit 1
+          fi
+      - name: Checkout exact selected main revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Validate release SHA and eight-file offline manifest
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/plan_catalog_recovery_release.py
+          python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > catalog-recovery-gate-plan.json
+          cat catalog-recovery-gate-plan.json
+          echo 'PASS: offline source plan only. No secrets loaded, no remote reads or writes.'
+      - name: Preserve offline plan for review
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog-recovery-gate-plan-${{ github.run_id }}
+          path: catalog-recovery-gate-plan.json
+          retention-days: 7
+          if-no-files-found: error
