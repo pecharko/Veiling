@@ -8,7 +8,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
 from plan_catalog_recovery_release import FILES
-from recovery_release_transaction import simulate_transaction
+from recovery_release_transaction import simulate_transaction, simulate_backup_guarded_transaction
+from recovery_backup_evidence import code_backup_manifest
 
 
 class FakeHandle:
@@ -77,6 +78,35 @@ FILES_ON_SERVER = {ROOT + "/" + name: old for name, old in OLD.items()
 
 
 class TransactionTests(unittest.TestCase):
+    def test_archived_code_verified_before_any_write(self):
+        remote = FakeSftp(FILES_ON_SERVER)
+        saved = {k: v for k, v in OLD.items() if v is not None}
+        manifest = code_backup_manifest(OLD)
+        touched = simulate_backup_guarded_transaction(
+            remote, ROOT, OLD, NEW, manifest, saved)
+        self.assertEqual(touched, list(FILES))
+
+    def test_corrupted_archive_blocks_all_writes(self):
+        remote = FakeSftp(FILES_ON_SERVER)
+        saved = {k: v for k, v in OLD.items() if v is not None}
+        manifest = code_backup_manifest(OLD)
+        saved[FILES[2]] = b"tampered"
+        with self.assertRaises(ValueError):
+            simulate_backup_guarded_transaction(
+                remote, ROOT, OLD, NEW, manifest, saved)
+        self.assertEqual(remote.writes, [])
+
+    def test_archive_baseline_mismatch_blocks_all_writes(self):
+        remote = FakeSftp(FILES_ON_SERVER)
+        saved = {k: v for k, v in OLD.items() if v is not None}
+        manifest = code_backup_manifest(OLD)
+        changed_original = dict(OLD)
+        changed_original[FILES[2]] = b"other original"
+        with self.assertRaisesRegex(RuntimeError, "Rollback bytes differ"):
+            simulate_backup_guarded_transaction(
+                remote, ROOT, changed_original, NEW, manifest, saved)
+        self.assertEqual(remote.writes, [])
+
     def test_success_order(self):
         remote = FakeSftp(FILES_ON_SERVER)
         touched = simulate_transaction(remote, ROOT, OLD, NEW)
