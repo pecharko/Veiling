@@ -212,7 +212,8 @@ function recovery_finalize_plan(PDO $pdo, string $safetyName, string $operator):
  */
 function recovery_finalize_approved(
     PDO $pdo, string $safetyName, string $operator,
-    string $runId, string $challenge, string $confirmation
+    string $externalCopySha256, string $runId, string $challenge,
+    string $confirmation
 ): array {
     if (PHP_SAPI !== 'cli') {
         throw new RuntimeException('Uitsluitend via gecontroleerde PHP CLI toegestaan.');
@@ -231,6 +232,8 @@ function recovery_finalize_approved(
         catalog_data_lock($pdo, 0);$catalogLocked=true;
         $plan = recovery_finalize_plan($pdo, $safetyName, $operator);
         if (!$plan['ready'] ||
+            !preg_match('/^[a-f0-9]{64}$/D', $externalCopySha256) ||
+            !hash_equals($externalCopySha256, $plan['safety_sha256']) ||
             !hash_equals($runId, $plan['run_id']) ||
             !hash_equals($challenge, $plan['approval_challenge'])) {
             throw new RuntimeException('Diagnose of goedkeuring is gewijzigd. Maak een nieuw plan en herbeoordeel.');
