@@ -2,6 +2,12 @@
 
 **Baseline:** 17 oktober 2026 · **Status:** statische broncode-inspectie uitgevoerd; databaseconstraint en `lots`-schema bevestigd op 18 oktober 2026; overige acceptatietests nog open · **Beheer:** GitHub, samen met de code. Zie [eerste code-audit](CODE_AUDIT_2026-10-17.md).
 
+## Fase T-060 — lezen van OVHcloud-runtime vóór eventuele release
+
+De onafhankelijk bevestigde broncodeplanrun [#39378597480](https://github.com/pecharko/Veiling/actions/runs/39378597480) verifieerde de acht PHP-bestanden uitsluitend lokaal. Een volgende aparte, handmatig te autoriseren `workflow_dispatch` mag met gepinde SSH-hostkey via het bestaande SFTP-account **uitsluitend lezen**, waarna hij de zes bestaande runtimebestanden byte-voor-byte vergelijkt met de laatst bevestigde productieauditcommit en de twee nieuwe helpers als expliciet afwezig verwacht. De tool bekijkt alleen de **namen** van eventuele resterende private herstelmarkers/foto-stagemappen; codebestanden worden tweemaal gelezen. Bij drift, symlink, marker of onbekende root geldt STOP. Nieuwe `scripts/preflight_catalog_recovery_remote.py`, [runbook](RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md) en T-060-fake-SFTP-tests bevatten **geen SFTP-schrijfactie, upload of herstelactie**.
+
+Dit bewijst niet dat het SFTP-account uitsluitend leesrechten heeft; de werkelijke read-only beperking zit in de gereviewde tool en workflow. Geen automatisch starten, geen secrets in chat, geen productie-back-up of upload. De daadwerkelijke deployment vereist een **afzonderlijk menselijk goedgekeurde workflow** en expliciete tweeledige toestemmingen.
+
 ## Productiereleasegereedheid — snapshot- en herstelwijzigingen (20 oktober 2026)
 
 Na de merge van PR #37 zijn de runtimewijzigingen uit PR #31–#37 nog uitsluitend broncode op GitHub; [releasechecklist](RECOVERY_RELEASE_READINESS_2026-10-20.md) identificeert precies **acht** interafhankelijke PHP-runtimepaden. De losstaande operator-CLI-tools uit fase 3B–3E behoren niet tot die gewone code-uitrol. Een apart **plan-only** script genereert alleen broncodechecksums en PHP-syntaxresultaten, zonder productieverbinding of mutatie. Dit is geen productiegereedheids- of veiligheidsbewijs: SFTP-drift, herstelmarkers, hostingvereisten, data-only offsite-back-up, beveiligde rollbackcode, onderhoudsvenster, expliciete autorisatie en productietests moeten later onafhankelijk volgen. P1-issue #2 blijft open.
