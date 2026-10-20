@@ -56,6 +56,25 @@ def verify_release_inputs(original: dict, replacement: dict) -> None:
             raise ValueError("Invalid replacement")
 
 
+def simulate_backup_guarded_transaction(
+    sftp, root: str, original: dict, replacement: dict,
+    backup_manifest: dict, archived_originals: dict[str, bytes],
+) -> list[str]:
+    """Offline test-only: reject missing/corrupt code rollback before ANY write.
+
+    Important: valid bytes in memory are not evidence that a GitHub artifact
+    was uploaded or is durably retained. A real deployment runner must prove
+    artifact persistence separately and still require the human release gates.
+    """
+    from recovery_backup_evidence import verify_code_backup
+    verify_release_inputs(original, replacement)
+    verify_code_backup(backup_manifest, archived_originals)
+    for name in FILES:
+        if name not in NEW_HELPERS and archived_originals[name] != original[name]:
+            raise RuntimeError("Rollback bytes differ from audited remote baseline")
+    return simulate_transaction(sftp, root, original, replacement)
+
+
 def simulate_transaction(sftp, root: str, original: dict, replacement: dict) -> list[str]:
     """Test-only; mutates supplied fake SFTP. No production entrypoint.
 
