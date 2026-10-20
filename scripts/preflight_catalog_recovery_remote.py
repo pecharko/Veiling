@@ -130,6 +130,12 @@ def inspect_sftp_readonly(
     """All SFTP operations are lstat/open(rb)/listdir: no remote writes."""
     if not root or "\n" in root or "\r" in root:
         raise PreflightStop("Invalid configured SFTP root")
+    try:
+        root_info = sftp.lstat(root)
+    except OSError as exc:
+        raise PreflightStop("Configured SFTP root does not exist") from exc
+    if not stat.S_ISDIR(root_info.st_mode):
+        raise PreflightStop("Configured SFTP root must be a real directory")
     entries = manifest["files"]
     if len(entries) != 8 or tuple(item["path"] for item in entries) != FILES:
         raise PreflightStop("Offline release manifest does not cover exact allowlist")
