@@ -125,3 +125,10 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/restore_diagnosis_integration.php
+
+      - name: T-056 simulate approved finalize-only recovery after SIGKILL (disposable CI)
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/restore_finalize_integration.php
