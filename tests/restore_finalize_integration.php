@@ -158,6 +158,16 @@ try{
     $pdo->prepare('UPDATE lots SET title=?,updated_at=? WHERE lot_number=101')
         ->execute([$targetLot['title'],$targetLot['updated_at']]);
 
+    $savedPhotoBytes=file_get_contents($oldDir.'/'.$extraRel);
+    if($savedPhotoBytes===false)throw new RuntimeException('Cannot read CI saved photo evidence.');
+    file_put_contents($oldDir.'/'.$extraRel,'ci tampered previous photo');
+    $wrongPhotos=recovery_finalize_plan($pdo,$safety,$operator);
+    finalize_test($wrongPhotos['ready']===false
+        &&$wrongPhotos['reason']==='saved_photos_mismatch_safety_zip'
+        &&restore_journal_pending(),
+        'tampered pre-restore photo evidence blocks approval without clearing journal');
+    file_put_contents($oldDir.'/'.$extraRel,$savedPhotoBytes);
+
     // Different command-line operator must use a different plan approval.
     $different=recovery_finalize_plan($pdo,$safety,'another-operator');
     finalize_test($different['approval_challenge']!==$plan['approval_challenge'],
@@ -216,6 +226,13 @@ PHP;
        && !is_dir($oldDir) && is_dir($evidence) && !is_file($receipt),
        'SIGKILL during finalization preserves old photos in private and leaves journal active');
 
+    file_put_contents($receipt,'not valid JSON',LOCK_EX);
+    $invalidReceipt=recovery_finalize_plan($pdo,$safety,$operator);
+    finalize_test($invalidReceipt['ready']===false
+       &&$invalidReceipt['reason']==='invalid_existing_approval_receipt'
+       &&restore_journal_pending(),
+       'corrupt previous approval receipt leaves interrupted restore in maintenance');
+    unlink($receipt);
     $resumed=recovery_finalize_plan($pdo,$safety,$operator);
     finalize_test($resumed['ready']===true
        &&$resumed['preservation_plan']==='old_photos_already_privately_preserved'
