@@ -58,6 +58,20 @@ De uitkomst `original_database_and_photos_verified` betekent alleen dat **alle v
 
 **Nooit uitvoeren op de live hosting als experiment.** Als database, oudere foto's, doelarchief of externe kopie niet volledig kunnen worden aangetoond, blijft HTTP 503 actief. Een gemengde DB-commit of ontbrekend origineel fotoarchief vereist een aparte, door een deskundige goedgekeurde reconstructie. Deze fase is in review en nog niet op productie uitgerold. De drie herstel-/herstartgrenzen, checksumcontrole en handmatige goedkeuringsketen zijn **geïsoleerd getest met 22 geslaagde T-057-controles** in [Snapshot-CI-run #39374712561](https://github.com/pecharko/Veiling/actions/runs/39374712561).
 
+## Bij onbekende of gemengde databasetoestand: dubbele referentievergelijking (fase 3E, nog niet live)
+
+Een database kan door bijkomende storingen, externe schrijvers of beschadiging noch exact overeenkomen met de veiligheidskopie, noch met de doelsnapshot. **Geen van de bestaande herstelcommando's mag dan worden uitgevoerd.** Een nieuwe, strikt alleen-lezen diagnose is op een geïsoleerde kopie mogelijk:
+
+```sh
+php scripts/restore_mixed_diagnose.php --plan --safety-snapshot <naam-van-veiligheidszip>
+```
+
+Ze vergelijkt alle vijf tabellen in hetzelfde consistente MySQL-leesmoment met **beide** archieven. Het rapport toont slechts per tabel `both`, `safety_only`, `target_only` of `neither`, samen met niet-gevoelige bestandshashindicaties. De tool controleert apart actieve, voorheen actieve en privé bewaarde fotosets en vraagt nogmaals database- en archiefchecks op om tussentijdse wijzigingen niet stilzwijgend te accepteren.
+
+Een resultaat `database_not_equal_to_either_archive` is **geen** opdracht om rijen uit beide ZIP's te combineren: admins, kavels en fotorelaties kunnen dan ongeldig worden. Ook `safety_state_matches_but_keep_maintenance` of `target_state_matches_but_keep_maintenance` heft de blokkering **niet** op; de specifieke bestaande herstelpaden vereisen nog steeds afzonderlijke toestemming, bewijs en gecontroleerde externe kopieën. Onjuist of onvoldoende bewijs geeft `blocked_unverified`. De diagnose heeft **geen** commando om bestanden te verplaatsen, SQL te wijzigen of de journalmarker te verwijderen.
+
+Deze stap is niet op OVHcloud beschikbaar totdat een afzonderlijke code-release expliciet geautoriseerd is. Voor echt gemengde data blijft alleen deskundig onderzoek op een afgesloten kopie toegestaan.
+
 ## Mogelijke toestanden en beslismomenten
 
 | Geobserveerd na controle | Potentieel passend herstelpad | Belangrijke voorwaarde |
