@@ -18,6 +18,10 @@ on:
         description: 'Verified external data ZIP full SHA256'
         required: true
         type: string
+      maintenance_window:
+        description: 'Type ADMIN WRITES PAUSED after confirming quiet maintenance window'
+        required: true
+        type: string
       confirmation:
         description: 'Type DEPLOY EIGHT FILES TO 41LOKEREN'
         required: true
@@ -42,6 +46,7 @@ jobs:
       BACKUP_RUN: ${{ inputs.backup_run_id }}
       DATA_HASH: ${{ inputs.data_backup_sha256 }}
       CONFIRMATION: ${{ inputs.confirmation }}
+      MAINTENANCE_WINDOW: ${{ inputs.maintenance_window }}
       DEPLOY_ENABLED: ${{ vars.RECOVERY_EIGHTFILE_DEPLOY_ENABLED }}
       OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
       OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
@@ -58,6 +63,7 @@ jobs:
           [[ "$APPROVAL_RUN" =~ ^[0-9]+$ && "$BACKUP_RUN" =~ ^[0-9]+$ ]] || exit 1
           [[ "$DATA_HASH" =~ ^[0-9a-fA-F]{64}$ ]] || exit 1
           [[ "$CONFIRMATION" == 'DEPLOY EIGHT FILES TO 41LOKEREN' ]] || exit 1
+          [[ "$MAINTENANCE_WINDOW" == 'ADMIN WRITES PAUSED' ]] || exit 1
           [[ -n "$OVH_SFTP_HOST" && -n "$OVH_SFTP_USER" && -n "$OVH_SFTP_PASSWORD" && -n "$OVH_SFTP_KNOWN_HOSTS" && -n "$OVH_SFTP_BASE" ]] || exit 1
       - name: 'Gate: check separate completed manual release approval'
         shell: bash
