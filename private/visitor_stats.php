@@ -17,6 +17,9 @@ function track_catalog_view(?int $lotId = null): void
         $pdo = db();
         $stmt = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date, visitor_id, page_kind, lot_id, views) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE views = views + 1');
         $stmt->execute([$day, $identifier, $lotId === null ? 'home' : 'lot', $lotId ?? 0]);
+        if (random_int(1, 100) === 1) {
+            $pdo->exec('DELETE FROM visitor_stats_daily WHERE visit_date < UTC_DATE() - INTERVAL 29 DAY');
+        }
     } catch (PDOException $exception) {
         error_log('Analytics unavailable: ' . $exception->getCode());
     }
