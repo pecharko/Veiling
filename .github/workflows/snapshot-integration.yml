@@ -139,3 +139,10 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/restore_precommit_integration.php
+
+      - name: T-058 forensic read-only diagnosis of mixed database and photo evidence
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/restore_mixed_diagnosis_integration.php
