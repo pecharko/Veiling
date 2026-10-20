@@ -1,0 +1,122 @@
+name: Catalog recovery production release manual
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Full reviewed main commit SHA'
+        required: true
+        type: string
+      approval_run_id:
+        description: 'Successful separate manual release approval run ID'
+        required: true
+        type: string
+      backup_run_id:
+        description: 'Successful read-only code backup run ID'
+        required: true
+        type: string
+      data_backup_sha256:
+        description: 'Verified external data ZIP full SHA256'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type DEPLOY EIGHT FILES TO 41LOKEREN'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      APPROVAL_RUN: ${{ inputs.approval_run_id }}
+      BACKUP_RUN: ${{ inputs.backup_run_id }}
+      DATA_HASH: ${{ inputs.data_backup_sha256 }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      DEPLOY_ENABLED: ${{ vars.RECOVERY_EIGHTFILE_DEPLOY_ENABLED }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: 'Gate: disabled unless owner opts in'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_ENABLED" == 'true' ]] || { echo 'STOP disabled deploy'; exit 1; }
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          [[ "$APPROVAL_RUN" =~ ^[0-9]+$ && "$BACKUP_RUN" =~ ^[0-9]+$ ]] || exit 1
+          [[ "$DATA_HASH" =~ ^[0-9a-fA-F]{64}$ ]] || exit 1
+          [[ "$CONFIRMATION" == 'DEPLOY EIGHT FILES TO 41LOKEREN' ]] || exit 1
+          [[ -n "$OVH_SFTP_HOST" && -n "$OVH_SFTP_USER" && -n "$OVH_SFTP_PASSWORD" && -n "$OVH_SFTP_KNOWN_HOSTS" && -n "$OVH_SFTP_BASE" ]] || exit 1
+      - name: 'Gate: check separate completed manual release approval'
+        shell: bash
+        run: |
+          set -euo pipefail
+          approval="$(gh api "repos/$REPO/actions/runs/$APPROVAL_RUN")"
+          [[ "$(jq -r '.status' <<<"$approval")" == completed ]] || exit 1
+          [[ "$(jq -r '.conclusion' <<<"$approval")" == success ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<<"$approval")" == "$RELEASE_SHA" ]] || exit 1
+          [[ "$(jq -r '.event' <<<"$approval")" == workflow_dispatch ]] || exit 1
+          [[ "$(jq -r '.path' <<<"$approval")" == '.github/workflows/catalog-recovery-release-approval.yml' ]] || exit 1
+      - name: 'Gate: check completed independent read-only backup'
+        shell: bash
+        run: |
+          set -euo pipefail
+          backup="$(gh api "repos/$REPO/actions/runs/$BACKUP_RUN")"
+          [[ "$(jq -r '.status' <<<"$backup")" == completed ]] || exit 1
+          [[ "$(jq -r '.conclusion' <<<"$backup")" == success ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<<"$backup")" == "$RELEASE_SHA" ]] || exit 1
+          [[ "$(jq -r '.event' <<<"$backup")" == workflow_dispatch ]] || exit 1
+          [[ "$(jq -r '.path' <<<"$backup")" == '.github/workflows/catalog-recovery-code-backup.yml' ]] || exit 1
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Gate: offline tests and release manifest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/recovery_deploy_gate_test.py
+          python3 tests/recovery_release_transaction_test.py
+          python3 tests/recovery_backup_evidence_test.py
+          python3 tests/recovery_rollback_zip_test.py
+          python3 tests/minimum_safe_recovery_uploader_test.py
+          python3 tests/recovery_manual_release_gates_test.py
+          python3 tests/verify_persisted_recovery_backup_test.py
+          python3 tests/verified_recovery_sftp_adapter_test.py
+          python3 tests/run_authorized_eightfile_release_test.py
+          python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > /dev/null
+      - name: 'Gate: download and verify persisted code rollback'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 -p verified-private
+          gh run download "$BACKUP_RUN" --repo "$REPO" --name "recovery-code-rollback-$BACKUP_RUN" --dir verified-private
+          python3 scripts/verify_persisted_recovery_backup.py --release-sha "$RELEASE_SHA" --artifact verified-private/original-code.zip
+      - name: Install pinned SSH client
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: 'Deploy: upload exactly eight PHP files with rollback'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/recovery_production_cli.py --release-sha "$RELEASE_SHA" --artifact verified-private/original-code.zip
