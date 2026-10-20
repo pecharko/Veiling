@@ -24,13 +24,13 @@ function finalize_cli_usage(): never {
        "Usage: php scripts/restore_finalize.php --plan --safety-snapshot NAME --operator ID\n".
        "   OR: php scripts/restore_finalize.php --finalize --safety-snapshot NAME --operator ID ".
        "--run-id HEX32 --challenge HEX64 ".
-       "--confirmation PHRASE --external-copy-verified PHRASE\n".
+       "--confirmation PHRASE --external-copy-verified PHRASE --external-copy-sha256 HEX64\n".
        "Never execute before independent review and approved external backups.\n");
     exit(64);
 }
 $args=$argv;array_shift($args);
 $allowed=['--plan','--finalize','--safety-snapshot','--operator','--run-id',
-          '--challenge','--confirmation','--external-copy-verified'];
+          '--challenge','--confirmation','--external-copy-verified','--external-copy-sha256'];
 $values=[];
 while ($args) {
     $key=array_shift($args);
@@ -49,7 +49,7 @@ if ($isPlan===$isFinal ||
     finalize_cli_usage();
 }
 if ($isPlan && count($values)!==3)finalize_cli_usage();
-if ($isFinal && count($values)!==7)finalize_cli_usage();
+if ($isFinal && count($values)!==8)finalize_cli_usage();
 
 try {
     require dirname(__DIR__).'/private/bootstrap.php';
@@ -68,7 +68,8 @@ try {
         throw new RuntimeException('External backup must be independently confirmed.');
     }
     $done=recovery_finalize_approved($pdo,$safety,$operator,
-        $values['--run-id'],$values['--challenge'],$values['--confirmation']);
+        $values['--external-copy-sha256'],$values['--run-id'],
+        $values['--challenge'],$values['--confirmation']);
     echo json_encode($done,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR)."\n";
     exit(0);
 } catch (Throwable $error) {
