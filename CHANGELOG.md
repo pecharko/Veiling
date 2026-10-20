@@ -10,6 +10,14 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - Geïsoleerde T-057-test met pre-commit-SIGKILL, verkeerde token/ZIP/offsite-hash, gewijzigde DB en foto's, twee bijkomende SIGKILL-punten en veilige hervatting. **22 T-057-controles geslaagd** in geïsoleerde [Snapshot-CI-run #39374712561](https://github.com/pecharko/Veiling/actions/runs/39374712561) op 20-10-2026. Drie CI-suites groen op de geteste PR-head.
 - Onbekende/gemengde SQL-toestand, ontbrekende oude fotomap, directe database-/SFTP-wijzigingen en volledige hostcrashes blijven buiten deze beperkte herstelactie. Geen productie-uitrol.
 
+
+### Fase 3E — alleen-lezen diagnose bij gemengde hersteltoestanden (PR in voorbereiding)
+- `private/restore_mixed_diagnosis.php`: vergelijk de volledige database in één consistente MySQL-read-view met **beide** afzonderlijk gevalideerde ZIP's; rapporteer per tabel `both`, `safety_only`, `target_only` of `neither`, zonder persoonsgegevens of rowdata.
+- Controleer SHA-256 van alle ZIP-fotobytes, het complete actieve fotobestandenset, de vorige uploads en beide privé bewaarde herstelmappen. Herlees de databasestatus, de actieve foto's en beide ZIP-/journalchecksums om veranderingen tijdens diagnose te detecteren.
+- CLI `scripts/restore_mixed_diagnose.php --plan --safety-snapshot ...` geeft uitsluitend een onderzoeksrapport. **Geen SQL-writes, geen fotowijzigingen, geen herstel, geen maintenance-clear.**
+- Nieuwe T-058 simuleert volledige doeltoestand, gemengde veiligheid-/doeltabellen, derde onbekende rijtoestand, beschadigd fotobewijs/ZIP, ontbrekend journal en weigering van muterende CLI-argumenten. **CI-resultaten nog af te wachten.**
+- **Beperkingen:** detectie is geen herstel; direct SQL/SFTP-verkeer, externe backups en statische foto-URLs blijven onder aparte incidentcontrole. Geen productie-upload.
+
 ## [Unreleased]
 
 ### Fase 3C — gecontroleerd, expliciet goedgekeurd herstel afronden (PR in voorbereiding)
