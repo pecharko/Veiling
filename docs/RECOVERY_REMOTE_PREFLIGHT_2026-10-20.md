@@ -33,7 +33,7 @@ STOP zonder nieuwe baseline of upload bij: onbekende hostkey, onjuiste SFTP-root
 
 ## T-060: geïsoleerd en verplicht
 
-`tests/recovery_remote_preflight_test.py` simuleert een SFTP-server met alleen `lstat`, `listdir` en `open("rb")`. Er is geen echte verbinding. De tests verifiëren een volledig geldige oude productieboom, gewijzigde PHP-code, onverwachte nieuwe helper, symlinks, missende mappen, onbekende applicatie, meerdere typen herstelmarkers, bestanden die tijdens het lezen veranderen en een onvolledige allowlist. De PHP/repository-CI voert T-060 uit en vereist historische Git-inhoud zodat de gecontroleerde oude productiecommit beschikbaar is.
+`tests/recovery_remote_preflight_test.py` simuleert een SFTP-server met alleen `lstat`, `listdir` en `open("rb")`. Er is geen echte verbinding. De tests verifiëren een volledig geldige oude productieboom, gewijzigde PHP-code, onverwachte nieuwe helper, symlinks, missende mappen, onbekende applicatie, meerdere typen herstelmarkers, bestanden die tijdens het lezen veranderen en een onvolledige allowlist. **T-060 is geïsoleerd geslaagd (15 controles)** in [PHP-CI-run #39379852405](https://github.com/pecharko/Veiling/actions/runs/39379852405) op 20 oktober 2026. De PHP/repository-CI voert T-060 uit en vereist historische Git-inhoud zodat de gecontroleerde oude productiecommit beschikbaar is. De definitieve PR-head moet opnieuw drie groene CI-controles hebben.
 
 ## Wat dit nadrukkelijk niet bewijst
 
