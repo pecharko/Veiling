@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## Voorbereiding achtpaden-snapshotcode-release (in PR, nog niet live)
+- Nieuwe [releasechecklist](docs/RECOVERY_RELEASE_READINESS_2026-10-20.md) voor de uit PR #31–#37 opgebouwde runtime: exact acht bestandsafhankelijkheden, expliciete uitsluiting van gegevens, foto's, journalen en aparte operator-CLI-programma's.
+- ``scripts/plan_catalog_recovery_release.py`` en handmatige ``catalog-recovery-release-plan.yml`` maken uitsluitend **offline** bron-SHA-256/PHP-lint-manifest van één goedgekeurde ``main``-commit. De drie bestaande CI-suites blijven verplicht. **Geen deploymodus, geen SFTP-connectie en geen productieaanpassing.**
+- Productiedriftcontrole, recente externe data-only backup, 7-daagse private codebackup, hostkey/SFTP-root, admin-onderhoudsvenster, read-only rooktests en twee afzonderlijke expliciete productietoestemmingen moeten vóór een latere gerichte deploy nog plaatsvinden.
+
 Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatieversies hieronder zijn **overgenomen uit eerdere projectbesprekingen**; zonder import van productiebroncode zijn ze **niet onafhankelijk geverifieerd**.
 
 
