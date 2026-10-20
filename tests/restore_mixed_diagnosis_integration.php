@@ -157,6 +157,13 @@ try {
 
     // Corrupted old photos are flagged without modifying the active target.
     file_put_contents($oldPhoto,'CI forensic damaged previous photo');
+    $firstUntrusted = recovery_mixed_tree_fingerprint($oldDir);
+    file_put_contents($oldPhoto,'CI forensic different damaged previous photo');
+    $secondUntrusted = recovery_mixed_tree_fingerprint($oldDir);
+    mixed_check($firstUntrusted !== null &&
+        $secondUntrusted !== null &&
+        !hash_equals($firstUntrusted, $secondUntrusted),
+        'full evidence fingerprints detect changes even when both photos are already untrusted');
     $badOld = restore_mixed_diagnose($pdo, $safety);
     mixed_check($badOld['photo_set_states']['original_previous']['present']
         && !$badOld['photo_set_states']['original_previous']['matches_safety']
