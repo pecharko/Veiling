@@ -131,6 +131,11 @@ def main():
         "unexpectedly exists",
     )
     expect_fail(
+        "deny symlinked configured SFTP root",
+        lambda s: s.links.add(BASE),
+        "Configured SFTP root must be a real directory",
+    )
+    expect_fail(
         "deny symlink for existing PHP",
         lambda s: s.links.add(posixpath.join(BASE, "private/snapshots.php")),
         "not a regular file",
