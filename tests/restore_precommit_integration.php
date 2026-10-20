@@ -72,7 +72,7 @@ foreach (snap_listing() as $item) {
     }
 }
 if ($target===null)throw new RuntimeException('Target CI snapshot missing.');
-$relative='2026/10/'.str_repeat('a',32).'.jpg';
+$relative='2026/10/'.bin2hex(random_bytes(16)).'.jpg';
 $current=snap_uploads().'/'.$relative;
 $extraId=0;$safety=null;$journal=null;$savedTarget=null;$receipt=null;
 $files=[];$flags=[];$photoHash=null;$completed=false;
