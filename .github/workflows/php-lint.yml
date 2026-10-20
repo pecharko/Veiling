@@ -71,6 +71,15 @@ jobs:
           python3 scripts/deploy_audit_release.py plan
           python3 tests/audit_release_plan_test.py
 
+      - name: Verify eight-file recovery release source manifest (offline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/plan_catalog_recovery_release.py
+          python3 scripts/plan_catalog_recovery_release.py \
+            --release-sha "$(git rev-parse HEAD)" > /dev/null
+          echo 'Offline plan validated; no production access.'
+
       - name: Detect whitespace errors
         shell: bash
         run: |
