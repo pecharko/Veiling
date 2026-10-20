@@ -134,13 +134,13 @@ try{
        'CLI plan does not mutate any data and requires separate approval');
 
     finalize_reject(fn()=>recovery_finalize_approved($pdo,$safety,$operator,
-       $plan['run_id'],str_repeat('0',64),RECOVERY_FINALIZE_CONFIRM),
+       $plan['safety_sha256'],$plan['run_id'],str_repeat('0',64),RECOVERY_FINALIZE_CONFIRM),
        'incorrect approval challenge cannot clear restore maintenance');
     finalize_reject(fn()=>recovery_finalize_approved($pdo,$safety,$operator,
-       $plan['run_id'],$plan['approval_challenge'],'wrong confirmation'),
+       $plan['safety_sha256'],$plan['run_id'],$plan['approval_challenge'],'wrong confirmation'),
        'wrong explicit approval phrase is rejected');
     finalize_reject(fn()=>recovery_finalize_approved($pdo,$target,$operator,
-       $plan['run_id'],$plan['approval_challenge'],RECOVERY_FINALIZE_CONFIRM),
+       $plan['safety_sha256'],$plan['run_id'],$plan['approval_challenge'],RECOVERY_FINALIZE_CONFIRM),
        'the target ZIP cannot substitute for a separate safety snapshot');
     finalize_test(restore_journal_pending() && is_dir($oldDir)
        && !is_dir($evidence) && !is_file($receipt),
@@ -177,10 +177,20 @@ try{
        '--finalize','--safety-snapshot',$safety,'--operator',$operator,
        '--run-id',$plan['run_id'],'--challenge',$plan['approval_challenge'],
        '--confirmation',RECOVERY_FINALIZE_CONFIRM,
-       '--external-copy-verified','NO'], $root);
+       '--external-copy-verified','NO',
+       '--external-copy-sha256',$plan['safety_sha256']], $root);
     finalize_test($code===3 && restore_journal_pending()
        && is_dir($oldDir) && !is_file($receipt),
        'CLI requires a separate explicit attestation of verified offsite copy');
+
+    [$code,$out,$err]=finalize_cli([
+       '--finalize','--safety-snapshot',$safety,'--operator',$operator,
+       '--run-id',$plan['run_id'],'--challenge',$plan['approval_challenge'],
+       '--confirmation',RECOVERY_FINALIZE_CONFIRM,
+       '--external-copy-verified','IK HEB EEN EXTERNE KOPIE GECONTROLEERD',
+       '--external-copy-sha256',str_repeat('0',64)],$root);
+    finalize_test($code===3 && restore_journal_pending() && is_dir($oldDir),
+       'external backup hash must match the exact safety ZIP SHA-256');
 
     // Kill another DISPOSABLE PHP process after it has moved old photos to
     // the private recovery directory, but BEFORE it can write a receipt and
@@ -206,7 +216,8 @@ PHP;
     $killCall='require '.var_export($root.'/private/bootstrap.php',true).';'
        .'require '.var_export($killHelper,true).';'
        .'recovery_finalize_approved(db(),'.var_export($safety,true).','
-       .var_export($operator,true).','.var_export($plan['run_id'],true).','
+       .var_export($operator,true).','.var_export($plan['safety_sha256'],true).','
+       .var_export($plan['run_id'],true).','
        .var_export($plan['approval_challenge'],true).','
        .var_export(RECOVERY_FINALIZE_CONFIRM,true).');';
     $child=proc_open([PHP_BINARY,'-r',$killCall],
@@ -239,7 +250,7 @@ PHP;
        &&$resumed['approval_challenge']!==$plan['approval_challenge'],
        'crashed finalization requires a new approval challenge for already-preserved evidence');
     finalize_reject(fn()=>recovery_finalize_approved($pdo,$safety,$operator,
-       $plan['run_id'],$plan['approval_challenge'],RECOVERY_FINALIZE_CONFIRM),
+       $plan['safety_sha256'],$plan['run_id'],$plan['approval_challenge'],RECOVERY_FINALIZE_CONFIRM),
        'old approval challenge cannot resume an interrupted finalization');
     $plan=$resumed;
 
@@ -249,7 +260,8 @@ PHP;
        '--finalize','--safety-snapshot',$safety,'--operator',$operator,
        '--run-id',$plan['run_id'],'--challenge',$plan['approval_challenge'],
        '--confirmation',RECOVERY_FINALIZE_CONFIRM,
-       '--external-copy-verified','IK HEB EEN EXTERNE KOPIE GECONTROLEERD'
+       '--external-copy-verified','IK HEB EEN EXTERNE KOPIE GECONTROLEERD',
+       '--external-copy-sha256',$plan['safety_sha256']
     ],$root);
     if($code!==0)throw new RuntimeException('Approved CI CLI failed: '.$err.' '.$out);
     $done=json_decode($out,true,512,JSON_THROW_ON_ERROR);
@@ -277,7 +289,8 @@ PHP;
        '--finalize','--safety-snapshot',$safety,'--operator',$operator,
        '--run-id',$plan['run_id'],'--challenge',$plan['approval_challenge'],
        '--confirmation',RECOVERY_FINALIZE_CONFIRM,
-       '--external-copy-verified','IK HEB EEN EXTERNE KOPIE GECONTROLEERD'
+       '--external-copy-verified','IK HEB EEN EXTERNE KOPIE GECONTROLEERD',
+       '--external-copy-sha256',$plan['safety_sha256']
     ],$root);
     finalize_test($code===3 && is_dir($evidence) && is_file($receipt)
        &&!restore_journal_pending(),
