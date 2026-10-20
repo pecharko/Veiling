@@ -244,6 +244,21 @@ PHP;
        &&restore_journal_pending(),
        'corrupt previous approval receipt leaves interrupted restore in maintenance');
     unlink($receipt);
+    file_put_contents($receipt,json_encode([
+        'format'=>'41lokeren-restore-finalized-v1',
+        'run_id'=>$plan['run_id'],
+        'target_sha256'=>$plan['target_sha256'],
+        'safety_sha256'=>$plan['safety_sha256'],
+        'operator'=>'unknown-writer',
+        'read_only_diagnosis_confirmed'=>true,
+        'old_photos_privately_preserved'=>true,
+    ],JSON_THROW_ON_ERROR),LOCK_EX);
+    $wrongReceipt=recovery_finalize_plan($pdo,$safety,$operator);
+    finalize_test($wrongReceipt['ready']===false
+       &&$wrongReceipt['reason']==='existing_receipt_mismatch'
+       &&restore_journal_pending(),
+       'mismatched operator in otherwise plausible approval receipt fails closed');
+    unlink($receipt);
     $resumed=recovery_finalize_plan($pdo,$safety,$operator);
     finalize_test($resumed['ready']===true
        &&$resumed['preservation_plan']==='old_photos_already_privately_preserved'
