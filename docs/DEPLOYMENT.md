@@ -1,5 +1,7 @@
 # Ontwikkelen, uitrollen en herstellen
 
+**Read-only SFTP-releasepreflight — in ontwikkeling, NIET LIVE:** de offline bronplannerun [#39378597480](https://github.com/pecharko/Veiling/actions/runs/39378597480) was groen op commit `ab4534c417bcf33b09cc13bc2de1ff726c068660`. De volgende stap is een **afzonderlijke handmatig te starten en te bevestigen uitsluitend lezende SFTP-workflow**, beschreven in [RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md](RECOVERY_REMOTE_PREFLIGHT_2026-10-20.md). Deze controle vergelijkt de remote codes met de geverifieerde auditbaseline en blokkeert bij drift of achtergebleven herstelmarkers. Hij kan geen bestanden of database wijzigen, maakt geen backup en geeft **geen toestemming om te deployen**.
+
 **Releasevoorbereiding na PR #37 — NIET LIVE:** [RECOVERY_RELEASE_READINESS_2026-10-20.md](RECOVERY_RELEASE_READINESS_2026-10-20.md) inventariseert acht onderling afhankelijke PHP-runtimebestanden, uitgesloten gegevens/operatorhelpers, en alle noodzakelijke productiegates. Nieuwe ``scripts/plan_catalog_recovery_release.py`` en handmatige ``catalog-recovery-release-plan.yml`` maken uitsluitend een **offline** achtpaden/SHA-256/PHP-lint-manifest; geen SFTP, geen back-ups, geen echte deploy. Eerst securityreview/merge en actuele drie groene CI-suites, daarna apart toestemming voor productierelease én daadwerkelijke deployment.
 
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
