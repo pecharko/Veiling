@@ -70,7 +70,7 @@ Ze vergelijkt alle vijf tabellen in hetzelfde consistente MySQL-leesmoment met *
 
 Een resultaat `database_not_equal_to_either_archive` is **geen** opdracht om rijen uit beide ZIP's te combineren: admins, kavels en fotorelaties kunnen dan ongeldig worden. Ook `safety_state_matches_but_keep_maintenance` of `target_state_matches_but_keep_maintenance` heft de blokkering **niet** op; de specifieke bestaande herstelpaden vereisen nog steeds afzonderlijke toestemming, bewijs en gecontroleerde externe kopieën. Onjuist of onvoldoende bewijs geeft `blocked_unverified`. De diagnose heeft **geen** commando om bestanden te verplaatsen, SQL te wijzigen of de journalmarker te verwijderen.
 
-Deze stap is niet op OVHcloud beschikbaar totdat een afzonderlijke code-release expliciet geautoriseerd is. Voor echt gemengde data blijft alleen deskundig onderzoek op een afgesloten kopie toegestaan.
+Deze read-only module is alleen met fictieve gegevens getest: **16 geslaagde T-058-controles** in [Snapshot-CI-run #39376629673](https://github.com/pecharko/Veiling/actions/runs/39376629673). Deze stap is niet op OVHcloud beschikbaar totdat een afzonderlijke code-release expliciet geautoriseerd is. Voor echt gemengde data blijft alleen deskundig onderzoek op een afgesloten kopie toegestaan.
 
 ## Mogelijke toestanden en beslismomenten
 
