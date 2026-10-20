@@ -88,7 +88,7 @@ jobs:
       - name: Install existing pinned SFTP Python client
         run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
 
-      - name: Read ONLY: compare six remote PHP files, absent helpers and restore markers
+      - name: 'Read ONLY: compare six remote PHP files, absent helpers and restore markers'
         shell: bash
         env:
           RELEASE_SHA: ${{ inputs.release_sha }}
