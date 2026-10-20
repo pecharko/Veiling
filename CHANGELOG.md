@@ -2,6 +2,14 @@
 
 Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatieversies hieronder zijn **overgenomen uit eerdere projectbesprekingen**; zonder import van productiebroncode zijn ze **niet onafhankelijk geverifieerd**.
 
+
+### Fase 3D — goedgekeurd terugplaatsen originele foto's na pre-commit-SIGKILL (in PR)
+- Nieuwe `private/restore_precommit.php` en `scripts/restore_precommit.php` met read-only `--plan` en afzonderlijk expliciet goedgekeurde `--rollback`. **Alleen mogelijk** wanneer alle vijf MySQL-tabellen exact overeenkomen met de pre-restore veiligheids-ZIP en beide volledige fotoverzamelingen identiek zijn aan hun afzonderlijk gevalideerde ZIP's.
+- Verifieert de externe veiligheidskopie-SHA-256, archiveert de doelfoto's zonder verwijderen in private back-ups, zet de originele map terug zonder SQL-mutaties en maakt een auditreceipt; het hersteljournal wordt **als laatste** gewist.
+- Drie afzonderlijk gevalideerde statussen ondersteunen processtop na elk van de twee filesystem-renames. Een gewijzigde status vereist een nieuw controleplan én nieuwe operatorgoedkeuring.
+- Geïsoleerde T-057-test met pre-commit-SIGKILL, verkeerde token/ZIP/offsite-hash, gewijzigde DB en foto's, twee bijkomende SIGKILL-punten en veilige hervatting. **CI-resultaat nog te bepalen.**
+- Onbekende/gemengde SQL-toestand, ontbrekende oude fotomap, directe database-/SFTP-wijzigingen en volledige hostcrashes blijven buiten deze beperkte herstelactie. Geen productie-uitrol.
+
 ## [Unreleased]
 
 ### Fase 3C — gecontroleerd, expliciet goedgekeurd herstel afronden (PR in voorbereiding)
