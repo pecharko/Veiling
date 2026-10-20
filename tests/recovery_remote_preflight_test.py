@@ -112,6 +112,7 @@ def expect_fail(title, modify, expected=None):
     raise AssertionError("Dangerous preflight unexpectedly accepted: " + title)
 
 def main():
+    global TESTS
     if len(BASELINE) != 6 or len(NEW_HELPERS) != 2:
         raise AssertionError("Historical runtime boundary changed")
     expect_pass("six exact baseline PHP files, two absent helpers and no journal")
@@ -191,11 +192,6 @@ def main():
         lambda s: setattr(s, "flip_on_third", posixpath.join(BASE,"private/bootstrap.php")),
         "Remote code changed during read",
     )
-    expect_fail(
-        "deny release manifest with a non-allowlisted runtime file",
-        lambda s: None,
-        None,
-    ) if False else None
     modified = dict(MANIFEST)
     modified["files"] = list(MANIFEST["files"])[:-1]
     fake = FakeSftp()
@@ -203,7 +199,6 @@ def main():
         inspect_sftp_readonly(fake, BASE, BASELINE, modified)
         raise AssertionError("Incorrect release manifest unexpectedly accepted")
     except PreflightStop:
-        global TESTS
         TESTS += 1
         print("PASS T-060: missing required runtime item blocks preflight")
     print(f"T-060: {TESTS} strictly offline preflight checks passed.")
