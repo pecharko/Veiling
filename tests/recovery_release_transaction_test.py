@@ -121,6 +121,21 @@ class TransactionTests(unittest.TestCase):
         self.assertEqual(remote.files, FILES_ON_SERVER)
         self.assertEqual(remote.removes, [ROOT + "/" + FILES[1], ROOT + "/" + FILES[0]])
 
+    def test_zero_byte_new_helper_is_removed_on_failed_upload(self):
+        class EmptyHelperFailureSftp(FakeSftp):
+            def open(self, path, mode):
+                if mode == "wb" and path == ROOT + "/" + FILES[0] and not self.failed_once:
+                    self.failed_once = True
+                    self.files[path] = b""
+                    raise OSError("SFTP created zero-byte file before failing")
+                return super().open(path, mode)
+
+        remote = EmptyHelperFailureSftp(FILES_ON_SERVER)
+        with self.assertRaisesRegex(RuntimeError, "offline rollback verified"):
+            simulate_transaction(remote, ROOT, OLD, NEW)
+        self.assertEqual(remote.files, FILES_ON_SERVER)
+        self.assertEqual(remote.removes, [ROOT + "/" + FILES[0]])
+
     def test_drift_stops_without_write(self):
         remote = FakeSftp(FILES_ON_SERVER)
         remote.files[ROOT + "/" + FILES[2]] = b"changed"

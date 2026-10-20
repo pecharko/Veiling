@@ -105,9 +105,20 @@ def simulate_transaction(sftp, root: str, original: dict, replacement: dict) -> 
             old = original[name]
             try:
                 if old is None:
-                    if read(sftp, path, absent_allowed=True) is not None:
+                    # A failed SFTP create/write can leave an EMPTY helper.
+                    # read() rejects empty code files, so inspect existence
+                    # with lstat and remove only this allowlisted new helper.
+                    try:
+                        sftp.lstat(path)
+                    except FileNotFoundError:
+                        pass
+                    else:
                         sftp.remove(path)
-                    if read(sftp, path, absent_allowed=True) is not None:
+                    try:
+                        sftp.lstat(path)
+                    except FileNotFoundError:
+                        pass
+                    else:
                         raise RuntimeError("New helper remained after rollback")
                 else:
                     with sftp.open(path, "wb") as handle:
