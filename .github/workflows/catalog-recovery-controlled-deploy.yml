@@ -67,6 +67,7 @@ jobs:
           python3 tests/minimum_safe_recovery_uploader_test.py
           python3 tests/recovery_manual_release_gates_test.py
           python3 tests/verify_persisted_recovery_backup_test.py
+          python3 tests/run_authorized_eightfile_release_test.py
           python3 -m py_compile scripts/plan_catalog_recovery_release.py
           python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > catalog-recovery-gate-plan.json
           cat catalog-recovery-gate-plan.json
