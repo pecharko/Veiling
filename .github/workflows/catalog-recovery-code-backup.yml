@@ -1,0 +1,95 @@
+name: Capture recovery code rollback (read only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact full current main SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type READ ONLY CODE BACKUP to authorize remote reads'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  read-only-code-backup:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Refuse unapproved production read
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          if [ "$CONFIRMATION" != 'READ ONLY CODE BACKUP' ]; then
+            echo 'STOP: explicit remote read authorization required'
+            exit 1
+          fi
+          if [ "${#RELEASE_SHA}" -ne 40 ] || [ "$RELEASE_SHA" != "$GITHUB_SHA" ]; then
+            echo 'STOP: selected main SHA differs from approved release'
+            exit 1
+          fi
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            if [ -z "${!key:-}" ]; then
+              echo "STOP: missing SFTP setting: $key"
+              exit 1
+            fi
+          done
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Validate offline backup helpers before OVH read
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/capture_recovery_code_backup.py scripts/recovery_rollback_zip.py
+          python3 tests/recovery_rollback_zip_test.py
+          python3 tests/recovery_remote_code_backup_test.py
+          python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > /dev/null
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: Capture six original files by read-only SFTP
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 -p code-rollback-private
+          python3 scripts/capture_recovery_code_backup.py --release-sha "$RELEASE_SHA" --output code-rollback-private/original-code.zip
+      - name: Preserve private repository artifact for seven days
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-code-rollback-${{ github.run_id }}
+          path: code-rollback-private/original-code.zip
+          retention-days: 7
+          if-no-files-found: error
