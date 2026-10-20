@@ -8,6 +8,8 @@ $st = db()->prepare("SELECT * FROM lots WHERE lot_number=? AND status='published
 $st->execute([$lotNum]);
 $lot = $st->fetch();
 if (!$lot) { http_response_code(404); exit('Kavel niet gevonden.'); }
+require_once dirname(__DIR__) . '/private/visitor_stats.php';
+track_catalog_view((int)$lot['id']);
 $imagesSt = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY sort_order, id');
 $imagesSt->execute([(int)$lot['id']]);
 $images = $imagesSt->fetchAll(PDO::FETCH_COLUMN);
