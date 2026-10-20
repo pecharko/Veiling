@@ -2,6 +2,10 @@
 
 **Baseline:** 17 oktober 2026 · **Status:** statische broncode-inspectie uitgevoerd; databaseconstraint en `lots`-schema bevestigd op 18 oktober 2026; overige acceptatietests nog open · **Beheer:** GitHub, samen met de code. Zie [eerste code-audit](CODE_AUDIT_2026-10-17.md).
 
+## Productiereleasegereedheid — snapshot- en herstelwijzigingen (20 oktober 2026)
+
+Na de merge van PR #37 zijn de runtimewijzigingen uit PR #31–#37 nog uitsluitend broncode op GitHub; [releasechecklist](RECOVERY_RELEASE_READINESS_2026-10-20.md) identificeert precies **acht** interafhankelijke PHP-runtimepaden. De losstaande operator-CLI-tools uit fase 3B–3E behoren niet tot die gewone code-uitrol. Een apart **plan-only** script genereert alleen broncodechecksums en PHP-syntaxresultaten, zonder productieverbinding of mutatie. Dit is geen productiegereedheids- of veiligheidsbewijs: SFTP-drift, herstelmarkers, hostingvereisten, data-only offsite-back-up, beveiligde rollbackcode, onderhoudsvenster, expliciete autorisatie en productietests moeten later onafhankelijk volgen. P1-issue #2 blijft open.
+
 ## Doel en scope
 
 De applicatie beheert en publiceert de online catalogus van een **fysieke** veiling van 41 Lokeren. Thema: *Kunst, Lifestyle & Vintage — Veiling 2027*. Datum, locatie en goed doel worden later definitief ingevuld. De catalogus maakt **geen online biedingen** mogelijk.
