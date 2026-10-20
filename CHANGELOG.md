@@ -4,6 +4,14 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 
 ## [Unreleased]
 
+### Fase 3C — gecontroleerd, expliciet goedgekeurd herstel afronden (PR in voorbereiding)
+- Nieuwe `private/restore_finalize.php` en `scripts/restore_finalize.php`: beperkt tot **finaliseren wanneer doeldatabase én alle doelfoto's aantoonbaar exact correct zijn**, zonder SQL-restore, foto-overschrijving of automatische rollback.
+- `--plan` is read-only. Afzonderlijke `--finalize` vereist operatorcode, SHA-256-challenge gebonden aan journal/ZIP-hashes, een exacte toestemmingszin én bevestiging van een afzonderlijk gecontroleerde externe kopie. Onder snapshot- en MySQL-lock wordt bewijs opnieuw geverifieerd.
+- Oude foto's worden met een rename op hetzelfde filesystem bewaard in `private/backups/`; een beperkt privébewijs blijft bewaard. **Hersteljournal wordt pas als laatste verwijderd**, en alleen als alle controles opnieuw slagen. Herhaling of verkeerde toestemming wordt geweigerd.
+- Nieuwe T-056 in geïsoleerde snapshot-CI test veilige plan/finalize, onveranderde targetdata, geweigerde handelingen, behouden originele foto's en auditreceipt. **CI nog af te wachten.**
+- **Nog niet opgelost:** automatische herstelactie voor een werkelijk gemengde database-/fototoestand na crash vóór commit, externe schrijvers, volledige hostingcrash-durability en directe statische foto-URL's. **Geen productie-upload of echte restore vanuit deze PR.**
+
+
 ### Fase 3B — alleen-lezen hersteldiagnose (PR #34, geïsoleerd CI geslaagd)
 - `private/restore_diagnosis.php` vergelijkt een onderbroken herstel met een geverifieerd, onveranderd snapshotarchief: alle vijf InnoDB-tabellen, alle ZIP-fotohashes én de volledige actieve fotomap. Gebruik van de bestaande MySQL-advisorylock voorkomt gelijktijdige deelnemende appschrijfacties tijdens de controle.
 - Nieuw `scripts/restore_diagnose.php --plan`, uitsluitend CLI en **zonder herstel-, clear- of rollbackcommando**. Rapporteert alleen niet-gevoelige statusvelden en geen persoonsgegevens.
