@@ -12,7 +12,7 @@
 - Gehashte bezoekersinformatie kan nog steeds persoonsgegevens zijn. Juridische/privacyreview en update van privacyverklaring zijn verplicht voor activatie; cookievrij betekent niet automatisch AVG-vrij.
 
 ## Afzonderlijke installatieprocedure
-1. Laat CI, privacyreview en de bestaande restore/snapshot-compatibiliteit expliciet controleren. Een nieuwe tabel kan door vaste backup-tabellijsten overgeslagen worden.
+1. Laat CI, privacyreview en de bestaande restore/snapshot-compatibiliteit expliciet controleren. De bestaande snapshotmodule gebruikt een vaste lijst met tabellen en neemt visitor_stats_daily momenteel NIET mee. Dit is voor vluchtige analytics verdedigbaar, maar moet expliciet als productbeslissing worden goedgekeurd; restore zet analytics dus niet terug.
 2. Maak en verifieer vooraf een DATA-ONLY snapshot. Controleer de 250 MB MySQL-quota.
 3. Voer `database/visitor_stats.sql` na expliciete autorisatie handmatig uit op OVH. Controleer naam en indexen.
 4. Configureer in `private/config.php` een `analytics_secret` met minstens 32 cryptografisch willekeurige tekens. Deel deze nooit in chat of commits. Zonder sleutel registreert de app niets.
