@@ -6,9 +6,11 @@ They never contact OVH and never perform writes.
 """
 from pathlib import Path
 import re
+import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
 WORKFLOW = ROOT / ".github/workflows/catalog-recovery-controlled-deploy.yml"
 
 
