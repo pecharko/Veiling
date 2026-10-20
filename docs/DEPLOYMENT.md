@@ -1,5 +1,7 @@
 # Ontwikkelen, uitrollen en herstellen
 
+**Releasevoorbereiding na PR #37 — NIET LIVE:** [RECOVERY_RELEASE_READINESS_2026-10-20.md](RECOVERY_RELEASE_READINESS_2026-10-20.md) inventariseert acht onderling afhankelijke PHP-runtimebestanden, uitgesloten gegevens/operatorhelpers, en alle noodzakelijke productiegates. Nieuwe ``scripts/plan_catalog_recovery_release.py`` en handmatige ``catalog-recovery-release-plan.yml`` maken uitsluitend een **offline** achtpaden/SHA-256/PHP-lint-manifest; geen SFTP, geen back-ups, geen echte deploy. Eerst securityreview/merge en actuele drie groene CI-suites, daarna apart toestemming voor productierelease én daadwerkelijke deployment.
+
 **Uitrolmodel:** handmatig goedgekeurde GitHub Actions/SFTP-releases met een expliciete bestandslijst. Een commit/merge wijzigt OVHcloud **niet automatisch**. RemoteDrive is enkel een fallback.
 
 **Noodprocedure bij onverwacht HTTP 503 na herstel:** [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md). Maak alleen kopieën van journal, data en fotomappen; verwijder niet blind een veiligheidsmarker.
