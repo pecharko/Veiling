@@ -110,6 +110,44 @@ function recovery_mixed_photo_sets(
 }
 
 /**
+ * Independently hash EVERY physical evidence file, even when its content
+ * matches NEITHER archive. Comparing only booleans like matches_target=false
+ * would otherwise miss one unexpected photo changing into another.
+ *
+ * Full paths and these internal fingerprints are NEVER returned to CLI.
+ */
+function recovery_mixed_tree_fingerprint(string $root): ?string {
+    if (is_link($root)) throw new RuntimeException('Symlink in incident evidence.');
+    if (!is_dir($root)) {
+        if (file_exists($root)) throw new RuntimeException('Unexpected evidence file.');
+        return null;
+    }
+    $entries = [];
+    $iterator = new RecursiveIteratorIterator(
+        new RecursiveDirectoryIterator($root, FilesystemIterator::SKIP_DOTS),
+        RecursiveIteratorIterator::SELF_FIRST
+    );
+    foreach ($iterator as $file) {
+        if ($file->isLink()) throw new RuntimeException('Symlink inside photo evidence.');
+        if ($file->isDir()) continue;
+        if (!$file->isFile()) throw new RuntimeException('Unexpected photo evidence node.');
+        $relative = str_replace(chr(92), '/',
+            substr($file->getPathname(), strlen($root) + 1));
+        if (array_key_exists($relative, $entries)) {
+            throw new RuntimeException('Duplicate evidence file.');
+        }
+        $sha = hash_file('sha256', $file->getPathname());
+        if ($sha === false) throw new RuntimeException('Unreadable photo evidence.');
+        $entries[$relative] = $sha;
+        if (count($entries) > 20000) {
+            throw new RuntimeException('Too many photo evidence files.');
+        }
+    }
+    ksort($entries, SORT_STRING);
+    return hash('sha256', json_encode($entries, JSON_THROW_ON_ERROR));
+}
+
+/**
  * Read-only forensic plan. Requires valid original-safety ZIP. The journal
  * phase is informational only; it is NEVER sufficient evidence of DB commit.
  *
@@ -187,23 +225,37 @@ function restore_mixed_diagnose(PDO $pdo, string $safetyName): array {
                 'privately_preserved_target' => $preservedTarget,
                 'privately_preserved_original' => $preservedOld,
             ];
+            $photoFingerprintsBefore = [];
+            foreach ($locations as $label => $location) {
+                $photoFingerprintsBefore[$label] =
+                    recovery_mixed_tree_fingerprint($location);
+            }
             $photos = recovery_mixed_photo_sets(
                 $locations, $safetyHashes, $targetHashes
             );
             $secondDb = recovery_mixed_db_view($pdo, $safety, $target);
+            $photoFingerprintsAfter = [];
+            foreach ($locations as $label => $location) {
+                $photoFingerprintsAfter[$label] =
+                    recovery_mixed_tree_fingerprint($location);
+            }
         } catch (Throwable $error) {
             return recovery_mixed_block('database_zip_or_photo_verification_failed');
         }
         if ($initialDb['fingerprints_internal'] !== $secondDb['fingerprints_internal']) {
             return recovery_mixed_block('database_changed_during_review');
         }
+        if ($photoFingerprintsBefore !== $photoFingerprintsAfter) {
+            return recovery_mixed_block('photo_evidence_changed_during_review');
+        }
         if (!hash_equals($initialJournalHash, (string)hash_file('sha256', $journalPath)) ||
             !hash_equals($targetHash, (string)hash_file('sha256', $targetPath)) ||
             !hash_equals($safetyHash, (string)hash_file('sha256', $safetyPath))) {
             return recovery_mixed_block('evidence_changed_during_review');
         }
-        // Recheck all active bytes after the second DB read, not solely
-        // filenames or sizes, before giving any positive classification.
+        // Also independently reclassify active photos against each complete
+        // ZIP manifest after the second DB read. The full-tree fingerprint
+        // above detects changes even when both classifications stay false.
         $active = recovery_mixed_photo_sets(
             ['active' => snap_uploads()], $safetyHashes, $targetHashes
         )['active'];
