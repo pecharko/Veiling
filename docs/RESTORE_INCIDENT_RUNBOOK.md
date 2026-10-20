@@ -30,6 +30,22 @@ Dit commando verwijdert of hernoemt niets, schrijft geen SQL-rijen en wist nooit
 
 Bewaar de complete bewijsbestanden vóór diagnose. De tool vertrouwt niet op de journalfase als bewijs van SQL-commit, controleert de ZIP-hash opnieuw na lezing en geeft geen persoonsgegevens uit de database terug. Hij biedt bewust **geen** `--restore`, `--clear` of `--rollback`. De huidige OVHcloud-hosting hoeft geen PHP CLI te ondersteunen om deze diagnose veilig uit te voeren op een onafhankelijke kopie.
 
+## Alleen bij exact volledig herstelde doeltoestand: menselijke afronding (fase 3C, nog niet live)
+
+De nieuwe tool `scripts/restore_finalize.php` heeft **bewust slechts twee functies**: een alleen-lezen `--plan` en een apart, expliciet geautoriseerd `--finalize`. Beiden zijn alleen via PHP CLI mogelijk. De operator dient vóór een beslissing een onafhankelijke externe kopie te controleren van de veiligheids-ZIP, het herstelarchief en de oorspronkelijke foto's.
+
+Voor een bevoegde operator, op een **beveiligde geïsoleerde kopie** van de testomgeving:
+
+```sh
+php scripts/restore_finalize.php --plan --safety-snapshot <naam-van-veiligheidszip> --operator <operatorcode>
+```
+
+Het JSON-rapport toont of de database én foto's van de actieve site gelijk zijn aan de gekozen doelsnapshot en of de originele fotomap bij de afzonderlijke veiligheids-ZIP hoort. Alleen de status `verified_target_requires_explicit_approval` geeft een *mogelijke* finale vervolgstap aan — **geen automatische toestemming**. De operator moet een afzonderlijk autorisatieproces volgen en daarna een exacte, aan het plan gebonden `run_id` en `approval_challenge` doorgeven, met de toestemmingszin, de verklaring van gecontroleerde externe back-up en de SHA-256 die de operator **op die externe veiligheids-ZIP** heeft berekend (op macOS bijvoorbeeld `shasum -a 256 /pad/naar/veiligheidskopie.zip`). De CLI vergelijkt die SHA-256 met de geverifieerde safety-ZIP op de server. De tool accepteert niet zomaar een bevestiging zonder beide waarden. De volledige CLI-syntaxis wordt door de helpmelding getoond; deze runbook geeft opzettelijk geen uitvoerbaar productiecommando.
+
+Na geldige finale toestemming verifieert de tool alles opnieuw. Hij verplaatst oude fotobestanden **zonder verwijderen** naar `private/backups/.restore-preserved-old-<run-id>`, maakt een privéauditbewijs `private/backups/.restore-finalized-<run-id>.json` en verwijdert het actieve hersteljournal als allerlaatste stap. Bij een nieuwe onderbreking vóór die laatste stap blijft onderhoud actief en is een nieuw plan nodig. Een werkelijk gemengde, onduidelijke of ontbrekende toestand **blijft geblokkeerd**; hiervoor is nog geen veilige automatische herstelfunctie.
+
+**Op productie niet uitvoeren** voordat deze fase apart is gereviewd, op de hosting is gevalideerd, de code formeel is uitgerold én er uitdrukkelijke incidentautorisatie is gegeven. De huidige runtime op 41lokeren.be bevat deze nieuwe tool nog niet.
+
 ## Mogelijke toestanden en beslismomenten
 
 | Geobserveerd na controle | Potentieel passend herstelpad | Belangrijke voorwaarde |
@@ -46,6 +62,8 @@ Bewaar de complete bewijsbestanden vóór diagnose. De tool vertrouwt niet op de
 De onderhoudsindicator mag pas worden verwijderd nadat de gegevens en foto's een **bewezen overeenkomstige toestand** vormen, een volledige externe veiligheidskopie bestaat en de herstelbeslissing is gedocumenteerd en uitdrukkelijk door de verantwoordelijke is goedgekeurd. Daarna: read-only HTTP-controles, beheerdersaanmelding, kaveloverzicht, fotokoppelingen, unieke lotnummers en integriteit van de downloadbare snapshot-ZIP controleren.
 
 **Doe niet:** het journal verwijderen om HTTP 503 weg te krijgen, foto's over de actieve map heen kopiëren zonder hashvergelijking, `restore` nogmaals starten, of een SQL-dump importeren zonder afzonderlijk incidentplan. Deze handleiding bevat bewust geen ongeteste productie-`mv`-, `rm`- of SQL-writecommando's.
+
+**Fase-3C-verificatie:** de geïsoleerde [Snapshot-CI-run #39372914703](https://github.com/pecharko/Veiling/actions/runs/39372914703) bevestigt 25 tests voor goedkeuring, offsite-SHA-vergelijking, crash tijdens private evidencepreservering, veilige hervatting met nieuwe challenge en weigering van herhaald vrijgeven. De test is uitgevoerd zonder enige live productiegegevens.
 
 ## Wat is in CI aantoonbaar getest?
 
