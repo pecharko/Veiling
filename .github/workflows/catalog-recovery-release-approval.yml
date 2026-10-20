@@ -1,0 +1,29 @@
+name: Catalog recovery release approval (no upload)
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact main SHA'
+        required: true
+        type: string
+      approval:
+        description: 'Type APPROVE EIGHT FILE RELEASE'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  human-release-approval:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify separately authorized release stage
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          APPROVAL: ${{ inputs.approval }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" == "$GITHUB_SHA" ]] && [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          [[ "$APPROVAL" == 'APPROVE EIGHT FILE RELEASE' ]] || exit 1
+          echo 'Release review recorded. This does not authorize a deploy.'
