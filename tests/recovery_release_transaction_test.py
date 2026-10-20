@@ -105,6 +105,25 @@ class TransactionTests(unittest.TestCase):
             simulate_transaction(remote, ROOT, OLD, NEW)
         self.assertEqual(remote.writes, [])
 
+    def test_rollback_failure_is_reported_not_hidden(self):
+        class RollbackFailureSftp(FakeSftp):
+            def open(self, path, mode):
+                if (mode == "wb" and self.failed_once
+                        and path == ROOT + "/" + FILES[2]):
+                    raise OSError("injected failure restoring original")
+                return super().open(path, mode)
+
+        remote = RollbackFailureSftp(FILES_ON_SERVER, ROOT + "/" + FILES[3])
+        with self.assertRaisesRegex(RuntimeError, "ROLLBACK INCOMPLETE"):
+            simulate_transaction(remote, ROOT, OLD, NEW)
+        self.assertNotEqual(remote.files, FILES_ON_SERVER)
+
+    def test_wrong_root_is_rejected_without_writes(self):
+        remote = FakeSftp(FILES_ON_SERVER)
+        with self.assertRaises(ValueError):
+            simulate_transaction(remote, "../untrusted", OLD, NEW)
+        self.assertEqual(remote.writes, [])
+
     def test_exact_allowlist_required(self):
         remote = FakeSftp(FILES_ON_SERVER)
         changed = dict(NEW)
