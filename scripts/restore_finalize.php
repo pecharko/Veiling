@@ -49,7 +49,7 @@ if ($isPlan===$isFinal ||
     finalize_cli_usage();
 }
 if ($isPlan && count($values)!==3)finalize_cli_usage();
-if ($isFinal && count($values)!==8)finalize_cli_usage();
+if ($isFinal && count($values)!==7)finalize_cli_usage();
 
 try {
     require dirname(__DIR__).'/private/bootstrap.php';
