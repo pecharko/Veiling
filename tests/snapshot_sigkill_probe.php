@@ -106,6 +106,15 @@ try {
   throw new RuntimeException('Current DB/photo mismatch or backup identity not reproduced.');
  }
  echo "PASS T-050B: preserved prior files and original DB reveal dangerous interrupted restore.\n";
+ require_once $root.'/private/restore_diagnosis.php';
+ $diagnosis=restore_recovery_diagnose($pdo);
+ if($diagnosis['status']!=='mixed_or_unknown_keep_maintenance'
+    ||$diagnosis['database_matches_target']!==false
+    ||$diagnosis['active_photos_match_target']!==true
+    ||$diagnosis['maintenance_must_remain']!==true){
+    throw new RuntimeException('Read-only diagnosis failed to detect pre-commit DB/photo mismatch.');
+ }
+ echo "PASS T-055: after pre-commit SIGKILL only photos match target; report stays blocked.\n";
 
  try{
   snap_create($pdo);

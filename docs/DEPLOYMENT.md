@@ -4,6 +4,8 @@
 
 **Noodprocedure bij onverwacht HTTP 503 na herstel:** [RESTORE_INCIDENT_RUNBOOK.md](RESTORE_INCIDENT_RUNBOOK.md). Maak alleen kopieën van journal, data en fotomappen; verwijder niet blind een veiligheidsmarker.
 
+**Fase 3B (in voorbereiding; niet live):** de read-only diagnosemodules `private/restore_diagnosis.php` en `scripts/restore_diagnose.php` worden niet automatisch uitgevoerd en zijn geen vervanging voor een geautoriseerd incidentherstel. `php scripts/restore_diagnose.php --plan` is uitsluitend bedoeld voor een beveiligde **offline kopie** van de applicatie, een bijbehorende read-only onderzochte database en herstelbestanden, of voor een bevoegde technische operator. De CLI retourneert alleen een diagnose en kan niets terugzetten of vrijgeven. Het resultaat `target_verified_pending_review` is **geen toestemming** om de journalmarker of oude fotomap te verwijderen; blijf het incidentrunbook volgen. **Geen SFTP-deploy of test op de live productieomgeving in deze PR.**
+
 **Belangrijke gezamenlijke release-afhankelijkheden PR #31–#33:** de verbeteringen zijn in GitHub ontwikkeld maar **geen van de runtimewijzigingen uit PR #31, #32 of #33 staan al op productie**. Een toekomstige gerichte code-uitrol moet daarom deze **acht runtimepaden samen** behandelen:
 
 1. `private/catalog_mutex.php` — nieuwe MySQL-write-mutex uit PR #32
