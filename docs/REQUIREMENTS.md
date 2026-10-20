@@ -175,6 +175,14 @@ De diagnose geeft bewust **geen groen licht voor automatische herstelacties**. Z
 
 De geïsoleerde regressies T-055, T-050B en T-054 bewijzen het onderscheid tussen processchade vóór commit, een volledige doeltoestand na commit, en afwijkende/gewijzigde archieven of foto's. **Niet op OVHcloud uitgerold; automatische/operator-autorisatiegestuurde herstelacties blijven voor een afzonderlijke fase.**
 
+## Fase 3C — expliciet goedgekeurde afronding van volledig herstelde toestand (in review)
+
+Een operator kan alleen nadat fase-3B-diagnose **de volledige doeldatabase én alle actieve foto's byte-voor-byte gelijk aan een gecontroleerd doelarchief heeft aangetoond**, een herstel incident afsluiten. De nieuwe privéhelper `private/restore_finalize.php` en de afzonderlijke CLI `scripts/restore_finalize.php` bevatten **geen SQL-herstel, foto-overschrijving, fotoverwijdering of automatische rollback**. `--plan` levert uitsluitend een status en een SHA-256-challenge, gebonden aan journalrun-ID, exacte doel-/veiligheids-ZIP-hashes, operatorcode, journalfase en het bewaarde fotobewijs. De `--finalize`-actie mag alleen via CLI onder een bevoegde operatoraccount, met die challenge, expliciete Nederlandse toestemmingszin en afzonderlijke verklaring dat de **externe** veiligheidskopie door de operator gecontroleerd is.
+
+De actieroute neemt dezelfde snapshot-`flock` en MySQL-advisorylock, verifieert het plan opnieuw, bewaart de originele fotomap door een **rename op hetzelfde filesystem** naar een afgeschermde locatie onder `private/backups/`, verifieert dat die fotobytes identiek zijn aan de aangewezen pre-restore veiligheids-ZIP en controleert de doeldatabase en doel-foto's **opnieuw**. Ze schrijft een beperkt private auditreceipt; pas daarna wordt het hersteljournal verwijderd. Wanneer PHP tussentijds wordt gestopt, blijft het journal staan; bij een nieuwe herstelpoging moet een **nieuw plan** en een nieuwe handmatige goedkeuring volgen. Achtergebleven oude foto's worden niet automatisch verwijderd.
+
+**Restrictie:** dit is uitsluitend *finalisatie* van een reeds bewezen correct afgeronde restore (bijvoorbeeld SIGKILL vlak ná MySQL-commit). Een crash vóór commit met gemengde DB/foto's kan hierdoor **niet** worden hersteld; die blijft in onderhoud voor afzonderlijke, deskundig geautoriseerde reconstructie. Rechtstreekse wijzigingen via SQL/SFTP, storagecrashes, statische foto-URL's en niet bewezen externe kopieën blijven risico's. De verklaring over een externe back-up is een menselijke attestatie, geen door CI geverifieerde cloudback-up. **Geen nieuwe productie-uitrol, live herstel of automatische toestemming vanuit deze PR.** T-056 toetst een post-commit-SIGKILL, verkeerd token, gewijzigde database, ontbrekende kopiebevestiging, bewaarde voorherstel-foto's en herhaalde uitvoering op wegwerpfoto's.
+
 ## Traceerbaarheid en onderhoud
 
 - Bewaar per requirement de ID ongewijzigd. Gebruik nieuwe ID's voor nieuwe functies.
