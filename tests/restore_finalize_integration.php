@@ -77,6 +77,7 @@ $extraRel='2026/10/'.str_repeat('f',32).'.jpg';
 $extraFile=snap_uploads().'/'.$extraRel;
 $safety=null;$extraId=0;$child=null;$pipes=[];
 $journalData=null;$evidence=null;$receipt=null;$completed=false;
+$killHelper=null;$killMarker=null;
 try{
     // Make a BEFORE-restoration safety ZIP matching the photos stored in
     // the old uploads directory, then crash after the target DB is committed.
@@ -171,6 +172,60 @@ try{
        && is_dir($oldDir) && !is_file($receipt),
        'CLI requires a separate explicit attestation of verified offsite copy');
 
+    // Kill another DISPOSABLE PHP process after it has moved old photos to
+    // the private recovery directory, but BEFORE it can write a receipt and
+    // remove the maintenance journal. Only a fresh operator plan may resume.
+    $killHelper=$root.'/private/.ci-finalize-kill-'.bin2hex(random_bytes(6)).'.php';
+    $killMarker=sys_get_temp_dir().'/ci-finalize-kill-'.bin2hex(random_bytes(6));
+    $helperSource=(string)file_get_contents($root.'/private/restore_finalize.php');
+    $point=<<<'PHP'
+            if (!rename($oldPath, $savedPath)) {
+                throw new RuntimeException('Kon oude foto’s niet privé bewaren.');
+            }
+PHP;
+    $fault=$point."\n".<<<'PHP'
+            if(getenv('CI_FINALIZE_KILL')==='yes'){
+                file_put_contents((string)getenv('CI_FINALIZE_KILL_MARKER'),'private_evidence_saved');
+                posix_kill(getmypid(),9);
+                exit(93);
+            }
+PHP;
+    if(substr_count($helperSource,$point)!==1)
+        throw new RuntimeException('Approved finalizer injection checkpoint changed.');
+    file_put_contents($killHelper,str_replace($point,$fault,$helperSource),LOCK_EX);
+    $killCall='require '.var_export($root.'/private/bootstrap.php',true).';'
+       .'require '.var_export($killHelper,true).';'
+       .'recovery_finalize_approved(db(),'.var_export($safety,true).','
+       .var_export($operator,true).','.var_export($plan['run_id'],true).','
+       .var_export($plan['approval_challenge'],true).','
+       .var_export(RECOVERY_FINALIZE_CONFIRM,true).');';
+    $child=proc_open([PHP_BINARY,'-r',$killCall],
+       [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,$root,
+       array_merge(getenv(),[
+           'CI_FINALIZE_KILL'=>'yes',
+           'CI_FINALIZE_KILL_MARKER'=>$killMarker
+       ]));
+    if(!is_resource($child))throw new RuntimeException('Cannot start CI interrupted finalization.');
+    fclose($pipes[0]);
+    $killOut=stream_get_contents($pipes[1]);
+    $killErr=stream_get_contents($pipes[2]);
+    fclose($pipes[1]);fclose($pipes[2]);$pipes=[];
+    $killStatus=proc_close($child);$child=null;
+    finalize_test($killStatus!==0 && is_file($killMarker)
+       && restore_journal_pending()
+       && !is_dir($oldDir) && is_dir($evidence) && !is_file($receipt),
+       'SIGKILL during finalization preserves old photos in private and leaves journal active');
+
+    $resumed=recovery_finalize_plan($pdo,$safety,$operator);
+    finalize_test($resumed['ready']===true
+       &&$resumed['preservation_plan']==='old_photos_already_privately_preserved'
+       &&$resumed['approval_challenge']!==$plan['approval_challenge'],
+       'crashed finalization requires a new approval challenge for already-preserved evidence');
+    finalize_reject(fn()=>recovery_finalize_approved($pdo,$safety,$operator,
+       $plan['run_id'],$plan['approval_challenge'],RECOVERY_FINALIZE_CONFIRM),
+       'old approval challenge cannot resume an interrupted finalization');
+    $plan=$resumed;
+
     // This is the ONLY destructive step, and only on disposable GitHub CI
     // fixtures. User approval is simulated as part of the unit test.
     [$code,$out,$err]=finalize_cli([
@@ -212,6 +267,8 @@ try{
        'repeat approval is rejected without changing preserved evidence');
 } finally {
     @unlink($fixture);@unlink($flag);
+    if($killHelper!==null)@unlink($killHelper);
+    if($killMarker!==null)@unlink($killMarker);
     if(is_resource($child)){
        proc_terminate($child,9);
        foreach($pipes as $pipe)if(is_resource($pipe))fclose($pipe);
