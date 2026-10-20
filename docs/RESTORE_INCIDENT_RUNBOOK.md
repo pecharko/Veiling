@@ -63,6 +63,8 @@ De onderhoudsindicator mag pas worden verwijderd nadat de gegevens en foto's een
 
 **Doe niet:** het journal verwijderen om HTTP 503 weg te krijgen, foto's over de actieve map heen kopiëren zonder hashvergelijking, `restore` nogmaals starten, of een SQL-dump importeren zonder afzonderlijk incidentplan. Deze handleiding bevat bewust geen ongeteste productie-`mv`-, `rm`- of SQL-writecommando's.
 
+**Fase-3C-verificatie:** de geïsoleerde [Snapshot-CI-run #39372914703](https://github.com/pecharko/Veiling/actions/runs/39372914703) bevestigt 25 tests voor goedkeuring, offsite-SHA-vergelijking, crash tijdens private evidencepreservering, veilige hervatting met nieuwe challenge en weigering van herhaald vrijgeven. De test is uitgevoerd zonder enige live productiegegevens.
+
 ## Wat is in CI aantoonbaar getest?
 
 - **T-050A:** consistente MySQL-snapshot bij gelijktijdige update.
