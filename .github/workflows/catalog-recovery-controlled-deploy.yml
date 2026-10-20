@@ -63,6 +63,7 @@ jobs:
           python3 tests/recovery_deploy_gate_test.py
           python3 tests/recovery_release_transaction_test.py
           python3 tests/recovery_backup_evidence_test.py
+          python3 tests/recovery_rollback_zip_test.py
           python3 -m py_compile scripts/plan_catalog_recovery_release.py
           python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > catalog-recovery-gate-plan.json
           cat catalog-recovery-gate-plan.json
