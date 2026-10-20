@@ -46,6 +46,18 @@ Na geldige finale toestemming verifieert de tool alles opnieuw. Hij verplaatst o
 
 **Op productie niet uitvoeren** voordat deze fase apart is gereviewd, op de hosting is gevalideerd, de code formeel is uitgerold én er uitdrukkelijke incidentautorisatie is gegeven. De huidige runtime op 41lokeren.be bevat deze nieuwe tool nog niet.
 
+## Alleen bij bevestigde pre-commit-crash: originele foto's gecontroleerd terugplaatsen (fase 3D; nog niet live)
+
+Een SIGKILL **na de fotoswap, maar vóór de databasecommit**, kan databasegegevens van vóór het herstel laten staan terwijl de actieve foto's al naar de doelsnapshot zijn overgeschakeld. Hiervoor is een nauw beperkt extra pad ontworpen. Een bevoegde operator kan uitsluitend op een beveiligde **wegwerp-/incidentkopie** een read-only voorstel inspecteren:
+
+```sh
+php scripts/restore_precommit.php --plan --safety-snapshot <naam-van-veiligheidszip> --operator <operatorcode>
+```
+
+De uitkomst `original_database_and_photos_verified` betekent alleen dat **alle vijf tabellen** van de actuele database identiek zijn aan de veiligheidssnapshot, alle oude fotobytes en alle doelfotobytes correct bij hun eigen ZIP passen en de maptoestand ondubbelzinnig is. Een latere `--rollback` vergt **nieuwe, afzonderlijke toestemming**, exacte run-ID en bijbehorende SHA-256-challenge, een ingestemde Nederlandse bevestigingszin én de afzonderlijk berekende SHA-256 van de *offsite* safety-ZIP. De tool kan geen SQL terugzetten: hij bewaart de doelfoto's privé, plaatst de oude fotomap terug, controleert de integriteit opnieuw en heft onderhoud pas als allerlaatste stap op. De drie tussentoestanden zijn herhaalbaar **na nieuw onderzoek en nieuwe autorisatie**, zonder fotobytes te verwijderen.
+
+**Nooit uitvoeren op de live hosting als experiment.** Als database, oudere foto's, doelarchief of externe kopie niet volledig kunnen worden aangetoond, blijft HTTP 503 actief. Een gemengde DB-commit of ontbrekend origineel fotoarchief vereist een aparte, door een deskundige goedgekeurde reconstructie. Deze fase is in review en nog niet op productie uitgerold.
+
 ## Mogelijke toestanden en beslismomenten
 
 | Geobserveerd na controle | Potentieel passend herstelpad | Belangrijke voorwaarde |
