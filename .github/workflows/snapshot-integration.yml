@@ -132,3 +132,10 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/restore_finalize_integration.php
+
+      - name: T-057 pre-commit crash photo-only rollback with two resumable SIGKILL checkpoints
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/restore_precommit_integration.php
