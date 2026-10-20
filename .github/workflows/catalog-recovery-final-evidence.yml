@@ -1,0 +1,100 @@
+name: Catalog recovery final evidence gate (no uploads)
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact current main commit SHA (40 hex characters)'
+        required: true
+        type: string
+      backup_run_id:
+        description: 'Read-only backup run ID whose artifact is already stored'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  final-evidence:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      BACKUP_RUN_ID: ${{ inputs.backup_run_id }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: 'Gate: exact main SHA and valid backup ID'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]] && [[ "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          [[ "$BACKUP_RUN_ID" =~ ^[0-9]+$ ]] || exit 1
+      - name: Check out immutable reviewed commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Gate: offline test and PHP manifest'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tests/recovery_deploy_gate_test.py
+          python3 tests/recovery_release_transaction_test.py
+          python3 tests/recovery_backup_evidence_test.py
+          python3 tests/recovery_rollback_zip_test.py
+          python3 tests/minimum_safe_recovery_uploader_test.py
+          python3 tests/recovery_manual_release_gates_test.py
+          python3 tests/verify_persisted_recovery_backup_test.py
+          python3 tests/verified_recovery_sftp_adapter_test.py
+          python3 tests/run_authorized_eightfile_release_test.py
+          python3 scripts/plan_catalog_recovery_release.py --release-sha "$RELEASE_SHA" > recovery-final-offline-plan.json
+      - name: 'Gate: separately completed read-only backup workflow'
+        shell: bash
+        run: |
+          set -euo pipefail
+          run_json="$(gh api "repos/$REPO/actions/runs/$BACKUP_RUN_ID")"
+          [[ "$(jq -r '.status' <<<"$run_json")" == completed ]] || exit 1
+          [[ "$(jq -r '.conclusion' <<<"$run_json")" == success ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<<"$run_json")" == "$RELEASE_SHA" ]] || exit 1
+          [[ "$(jq -r '.event' <<<"$run_json")" == workflow_dispatch ]] || exit 1
+          [[ "$(jq -r '.path' <<<"$run_json")" == .github/workflows/catalog-recovery-code-backup.yml ]] || exit 1
+      - name: 'Gate: independently download and verify persisted rollback'
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 -p downloaded-private
+          gh run download "$BACKUP_RUN_ID" --repo "$REPO" --name "recovery-code-rollback-$BACKUP_RUN_ID" --dir downloaded-private
+          python3 scripts/verify_persisted_recovery_backup.py --release-sha "$RELEASE_SHA" --artifact downloaded-private/original-code.zip
+          echo 'Verified persisted rollback evidence. Still NO authority to deploy.'
+      - name: Retain source-only manifest for human approval
+        uses: actions/upload-artifact@v4
+        with:
+          name: recovery-final-plan-${{ github.run_id }}
+          path: recovery-final-offline-plan.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: 'STOP: production upload requires separate release and deploy consent'
+        shell: bash
+        run: |
+          echo 'PASS: independent offline release readiness only.'
+          echo 'No OVH production connection, no database access, no SFTP write.'
+          echo 'Do not interpret this workflow as authorization or proof of an active maintenance window.'
