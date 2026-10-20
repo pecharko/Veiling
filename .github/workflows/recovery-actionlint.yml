@@ -1,0 +1,48 @@
+name: Validate recovery release workflows
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/catalog-recovery-*.yml'
+      - '.github/workflows/recovery-actionlint.yml'
+      - 'scripts/recovery_release_transaction.py'
+      - 'tests/recovery_release_transaction_test.py'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recovery-workflow-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Install pinned actionlint
+        run: go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+      - name: Validate all recovery workflow YAML with actionlint
+        shell: bash
+        run: |
+          set -euo pipefail
+          actionlint="$(go env GOPATH)/bin/actionlint"
+          "$actionlint" \
+            .github/workflows/catalog-recovery-production-deploy.yml \
+            .github/workflows/catalog-recovery-release-approval.yml \
+            .github/workflows/catalog-recovery-controlled-deploy.yml \
+            .github/workflows/catalog-recovery-code-backup.yml \
+            .github/workflows/catalog-recovery-final-evidence.yml \
+            .github/workflows/catalog-recovery-verify-persisted-backup.yml \
+            .github/workflows/catalog-recovery-remote-preflight.yml \
+            .github/workflows/recovery-actionlint.yml
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline fault-injection and rollback tests
+        run: |
+          set -euo pipefail
+          python3 tests/recovery_release_transaction_test.py
+          python3 tests/minimum_safe_recovery_uploader_test.py
+          python3 tests/verified_recovery_sftp_adapter_test.py
+          python3 tests/run_authorized_eightfile_release_test.py
