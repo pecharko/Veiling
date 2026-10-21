@@ -45,3 +45,11 @@ An added two-session isolated MySQL regression holds an uncommitted `SELECT ... 
 ## Synthetic cyclic deadlock regression
 
 A separate isolated-MySQL test now forks a second PHP process, creates independent PDO connections, has each hold a row lock on opposite historical UTC dates, and requests the other's lock concurrently. It checks that InnoDB reports a deadlock victim (`1213`), releases both transactions, and verifies that normal archiving works afterward. This is a **synthetic database deadlock**, not a guaranteed archive-versus-archive deadlock. The test is conditional on `pcntl_fork` and `stream_socket_pair` availability; CI must verify these functions are present, otherwise the scenario is skipped and cannot be claimed tested. No production operation is authorized.
+
+## Technische review 2026-10-21 — vrijgavevoorwaarden
+
+- Exacte CI-head `385aef28ab827a9cdc4883aa0312c1195506927a`: alle vier controles geslaagd. MySQL-job bevestigt expliciet `Cyclic InnoDB deadlock regression passed: victim 1213 and archive recovery` en 3.000 bronrecords in 0,016 s bij gemeten PHP-piek 2,0 MiB.
+- Dit is een **synthetische twee-verbindingen-deadlock** en een kleine geïsoleerde dataset; het bewijst niet dat twee gelijktijdige archiefverzoeken veilig zijn en meet geen MySQL-side geheugen-, tijdelijke-schijf- of undo-ruimte op OVH.
+- **Blokkerend voor runtimevrijgave:** volledige historische `SELECT ... FOR UPDATE` blijft gedurende alle SQL-aggregaties en deletes vergrendeld. Beoordeel maximumduur, concurrentie met bezoekersregistraties en adminverzoeken, herstel na lock wait/deadlock en databasequota vóór productie.
+- **Blokkerend voor schema/datarelease:** maak een controleerbare statistiek-SQL-back-up, test herstel in isolatie en review migratie/ruimtebeslag. Een groene GitHub-CI is geen productie-autorisatie.
+- **Mergegate:** deze Draft PR bevat database-archivering en gegevensintegriteit en vereist daarom menselijke review en expliciete mergebeslissing; nooit auto-merge. Release en eventueel databasescript krijgen elk afzonderlijke autorisatie. Geen productieacties zijn uitgevoerd.
