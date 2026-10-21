@@ -222,11 +222,26 @@ $loadInsert = $pdo->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor
 for ($n = 0; $n < $loadRows; $n++) {
     $loadInsert->execute([$loadDate, str_pad(dechex(50000 + $n), 64, '0', STR_PAD_LEFT)]);
 }
+// Read per-session MySQL counters to distinguish database-side work
+// from PHP memory. These counters are diagnostic, not hard CI thresholds.
+$serverCounters = static function (PDO $connection): array {
+    $data = [];
+    foreach ($connection->query("SHOW SESSION STATUS WHERE Variable_name IN ('Created_tmp_disk_tables','Created_tmp_tables','Handler_read_next')") as $row) {
+        $data[(string)$row['Variable_name']] = (int)$row['Value'];
+    }
+    return $data;
+};
+$mysqlBefore = $serverCounters($pdo);
 $memoryBefore = memory_get_peak_usage(true);
 $loadStarted = microtime(true);
 $loadResult = archive_visitor_stats_before($pdo, $cutoff);
 $loadSeconds = microtime(true) - $loadStarted;
+$mysqlAfter = $serverCounters($pdo);
 $memoryAfter = memory_get_peak_usage(true);
+fwrite(STDOUT, sprintf("Archive MySQL session counters: temp tables +%d, disk temp tables +%d, index rows read +%d\\n",
+    ($mysqlAfter['Created_tmp_tables'] ?? 0) - ($mysqlBefore['Created_tmp_tables'] ?? 0),
+    ($mysqlAfter['Created_tmp_disk_tables'] ?? 0) - ($mysqlBefore['Created_tmp_disk_tables'] ?? 0),
+    ($mysqlAfter['Handler_read_next'] ?? 0) - ($mysqlBefore['Handler_read_next'] ?? 0)));
 check($loadResult['rows'] === $loadRows && $loadResult['views'] === $loadRows
     && $loadResult['days'] === 1, 'High-volume daily archive failed');
 $loadCheck = $pdo->prepare('SELECT visitor_days, views FROM visitor_stats_day_totals WHERE visit_date=?');
