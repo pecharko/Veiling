@@ -114,6 +114,11 @@ $other = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('AN
     PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
 ]);
 $pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+// The earlier fork invalidated inherited MySQL sockets; use a fresh peer session.
+$other = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
 $other->beginTransaction();
 try {
     $lock = $other->prepare('UPDATE visitor_stats_daily SET views=views+1 WHERE visit_date=?');
