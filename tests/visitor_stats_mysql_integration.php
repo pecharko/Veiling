@@ -268,7 +268,9 @@ check($conflictRecovery['rows'] === 1 && $conflictRecovery['views'] === 9, 'Arch
 // Each transaction owns a different row, then requests the other's row.
 // Fork a child to allow genuinely simultaneous blocking requests. A deadlock
 // victim must receive MySQL 1213; both transactions are rolled back.
-check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),\n    'Isolated CI must support fork and socket IPC for mandatory deadlock regression');\n{
+check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),
+    'Isolated CI must support fork and socket IPC for mandatory deadlock regression');
+{
     $deadA = gmdate('Y-m-d', strtotime('-100 days'));
     $deadB = gmdate('Y-m-d', strtotime('-101 days'));
     $add->execute([$deadA, $a, 'home', 0, 1]);
