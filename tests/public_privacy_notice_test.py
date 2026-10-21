@@ -15,7 +15,8 @@ class PublicPrivacyTests(unittest.TestCase):
         self.assertIn("tot het einde van de veiling in 2027 en daarna verwijderd",page)
         self.assertNotIn("opschoning",page)
         self.assertIn("filter_var($contact, FILTER_VALIDATE_EMAIL)",page)
-        self.assertIn("rechtsgrond en concrete maximale bewaartermijn",page)
+        self.assertIn("Verantwoordelijke organisatie:</strong> 41 Lokeren",page)
+        self.assertIn("rechtsgrond en de proportionaliteit van de bewaartermijn",page)
         self.assertIn("interne kavel-ID",page)
     def test_analytics_code_untouched(self):
         source=(root/"private/visitor_stats.php").read_text()
