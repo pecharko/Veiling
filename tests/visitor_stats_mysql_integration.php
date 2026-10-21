@@ -233,4 +233,31 @@ check((int)$loadTotals['visitor_days'] === $loadRows
 check($memoryAfter < 64 * 1024 * 1024, 'High-volume archive exceeded PHP peak memory safety envelope');
 fwrite(STDOUT, sprintf("Archive load regression: %d rows, %.3fs, peak PHP memory %.1f MiB (before %.1f MiB)\\n",
     $loadRows, $loadSeconds, $memoryAfter / 1048576, $memoryBefore / 1048576));
+// Deterministic conflicting row-lock regression: the archive must fail closed
+// while another connection owns an uncommitted lock, then recover correctly.
+$conflictDay = gmdate('Y-m-d', strtotime('-96 days'));
+$add->execute([$conflictDay, $a, 'lot', 31, 9]);
+$pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+$other->beginTransaction();
+try {
+    $held = $other->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+    $held->execute([$conflictDay]);
+    check($held->fetch(PDO::FETCH_ASSOC) !== false, 'Could not acquire competing row lock');
+    $held->closeCursor();
+    $conflicted = false;
+    try {
+        archive_visitor_stats_before($pdo, $cutoff);
+    } catch (PDOException $exception) {
+        $conflicted = in_array((string)($exception->errorInfo[1] ?? ''), ['1205','1213'], true);
+    }
+    check($conflicted, 'Archive committed while competing historic row lock was held');
+    check(!$pdo->inTransaction(), 'Archive left transaction open on row-lock conflict');
+    $dayCount = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+    $dayCount->execute([$conflictDay]);
+    check((int)$dayCount->fetchColumn() === 0, 'Archive inserted aggregate despite failed lock');
+} finally {
+    if ($other->inTransaction()) $other->rollBack();
+}
+$conflictRecovery = archive_visitor_stats_before($pdo, $cutoff);
+check($conflictRecovery['rows'] === 1 && $conflictRecovery['views'] === 9, 'Archive failed after historic row lock was released');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
