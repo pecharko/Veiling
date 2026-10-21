@@ -416,6 +416,44 @@ try {
 $recoveredBatch = archive_visitor_stats_one_day($pdo, $cutoff);
 check($recoveredBatch['rows'] === 1 && $recoveredBatch['views'] === 6,
     'One-day archive did not resume after competing lock released');
+// Two independent manual archive requests targeting the same oldest historical UTC day.
+// The second must fail closed under the first request's row lock; once released,
+// only one daily/lot aggregate may exist and a retry must be idempotent.
+$doubleDay = gmdate('Y-m-d', strtotime('-107 days'));
+$add->execute([$doubleDay, $a, 'lot', 58, 9]);
+$competitor = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+$competitor->exec('SET SESSION innodb_lock_wait_timeout=1');
+$pdo->beginTransaction();
+try {
+    $held = $pdo->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+    $held->execute([$doubleDay]);
+    check($held->fetch(PDO::FETCH_ASSOC) !== false, 'Cannot reserve oldest archive date');
+    $held->closeCursor();
+    $contended = false;
+    try {
+        archive_visitor_stats_one_day($competitor, $cutoff);
+    } catch (PDOException $ex) {
+        $contended = in_array((string)($ex->errorInfo[1] ?? ''), ['1205','1213'], true);
+    }
+    check($contended && !$competitor->inTransaction(), 'Second archive request must fail closed under first lock');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+}
+$winner = archive_visitor_stats_one_day($pdo, $cutoff);
+check($winner['days'] === 1 && $winner['rows'] === 1 && $winner['views'] === 9,
+    'First archival request after lock release must commit exactly once');
+check(archive_visitor_stats_one_day($competitor, $cutoff)['days'] === 0,
+    'Second archival request must be idempotent after first commit');
+$uniqueDay = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+$uniqueDay->execute([$doubleDay]);
+check((int)$uniqueDay->fetchColumn() === 1, 'Double archive created duplicate daily aggregates');
+$uniqueLot = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_lot_totals WHERE visit_date=? AND lot_id=58');
+$uniqueLot->execute([$doubleDay]);
+check((int)$uniqueLot->fetchColumn() === 1, 'Double archive created duplicate lot aggregates');
+fwrite(STDOUT, "Two competing manual one-day archive requests passed: lock refusal, retry, unique aggregates\\n");
 fwrite(STDOUT, "Experimental one-day concurrent row-lock regression passed\\n");
 fwrite(STDOUT, "Experimental one-day archival passed: isolated commits and resume\\n");
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
