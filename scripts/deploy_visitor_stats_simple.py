@@ -58,7 +58,7 @@ def upload_no_rollback(sftp, root, manifest, source: dict[str, bytes]):
                     raise PreflightStop("Existing target changed immediately before upload: " + name)
             # Simple rollout intentionally has no remote backup and no rollback.
             # Exclusive create for new files; overwrite existing code only after checks.
-            mode = "xb" if name in NEW else "wb"
+            mode = "wxb" if name in NEW else "wb"  # Paramiko: exclusive AND writable
             with sftp.open(remote_path, mode) as f:
                 f.write(source[name])
                 f.flush()
