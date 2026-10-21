@@ -18,12 +18,26 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
     $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $pdo->beginTransaction();
     try {
-        // Distinct dates are small and bounded by the number of calendar days,
-        // rather than by the number of individual visitors.
-        $days = $pdo->prepare('SELECT DISTINCT visit_date FROM visitor_stats_daily WHERE visit_date < ? ORDER BY visit_date');
-        $days->execute([$cutoff]);
-        $dates = $days->fetchAll(PDO::FETCH_COLUMN);
-        $days->closeCursor();
+        // Lock the ENTIRE historical prefix before enumerating days. Under
+        // InnoDB REPEATABLE READ this range scan also next-key-locks gaps,
+        // including dates with no existing records. Stream instead of buffering
+        // visitor rows; retain only distinct UTC dates in PHP.
+        $dates = [];
+        $previousDay = null;
+        $days = $pdo->prepare('SELECT visit_date FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date < ? ORDER BY visit_date FOR UPDATE');
+        $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+        try {
+            $days->execute([$cutoff]);
+            while (($day = $days->fetchColumn()) !== false) {
+                if ($day !== $previousDay) {
+                    $dates[] = (string)$day;
+                    $previousDay = $day;
+                }
+            }
+        } finally {
+            $days->closeCursor();
+            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+        }
         $rowCount = 0;
         $sourceViews = 0;
         $insertDay = $pdo->prepare("INSERT INTO visitor_stats_day_totals (visit_date, visitor_days, views, lot_views)
