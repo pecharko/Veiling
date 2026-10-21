@@ -119,7 +119,8 @@ def install(sftp, root, expected_sha: str, token: str) -> None:
     created = False
     stage = "create-temp"
     try:
-        with sftp.open(temporary, "x") as handle:
+        # Paramiko needs both write and exclusive flags: x alone creates read-only.
+        with sftp.open(temporary, "wx") as handle:
             created = True
             stage = "set-private-permissions"
             sftp.chmod(temporary, 0o600)

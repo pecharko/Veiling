@@ -64,6 +64,31 @@ class Tests(unittest.TestCase):
         self.assertNotIn(secret_marker, str(caught.exception))
         fake.posix_rename.assert_not_called()
 
+    def test_temp_sftp_open_is_exclusive_and_writable(self):
+        """Regression for production run 39609692869 (write-temp)."""
+        from unittest.mock import MagicMock
+        fake = MagicMock()
+        baseline = c.sha(BASE)
+        modes = []
+
+        def check_open(path, mode):
+            modes.append(mode)
+            # Refuse a read-only exclusive create such as 'x'.
+            self.assertIn("x", mode)
+            self.assertIn("w", mode)
+            raise OSError("simulated remote failure: should not print secrets")
+
+        fake.open.side_effect = check_open
+        with patch.object(c, "inspect", return_value=(baseline, 0o644)), \
+             patch.object(c, "read_private_config", return_value=(BASE, 0o644)), \
+             patch.object(c, "php_lint"), \
+             patch.object(c, "restore_markers_clear"):
+            with self.assertRaises(c.SafeStageFailure) as failure:
+                c.install(fake, "/home/test", baseline, "12345")
+        self.assertEqual(modes, ["wx"])
+        self.assertEqual(failure.exception.stage, "create-temp")
+        fake.posix_rename.assert_not_called()
+
     def test_install_stops_on_config_drift_before_sftp_writes(self):
         from unittest.mock import MagicMock
         fake = MagicMock()
