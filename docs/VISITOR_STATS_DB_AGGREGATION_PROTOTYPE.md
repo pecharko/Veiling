@@ -1,0 +1,11 @@
+# SQL-aggregatie per UTC-dag — onderzoeksprototype
+
+**NIET releaseklaar, geen productie-ingreep.**
+
+In deze branch vervangt SQL-side groepering de PHP-arrays met per dag en kavel unieke bezoekerscodes. De archivering loopt per historische UTC-dag door `INSERT ... SELECT COUNT(DISTINCT visitor_id)` en telt views in MySQL. Alle dagen blijven vooralsnog in **een enkele transactie** om te voorkomen dat bij fouten een deel van de historische dagen definitief gearchiveerd wordt.
+
+Isolatietests omvatten nu 1001 bezoekersrecords op een historische datum plus eerdere testen voor tellingen, conflict, foutdata, herstel en behoud van recente gegevens. De vroegere 1000-recordgrens is daarom uit deze onderzoeksbranch verwijderd.
+
+**Openstaande blokkeringen**: aantonen dat de transactie onder gelijktijdige INSERT/UPDATE-gebeurtenissen daadwerkelijk voldoende locks houdt; test MySQL 8.4 en queryplannen; lockduur/performance bij grotere gegevensvolumes; PHP/PDO MySQL buffered result bij de datumlijst; database-temporary-table ruimte bij `COUNT(DISTINCT)`; deadline-/memorygrenzen. Tot dan NIET mergen of deployen. Alternatief: begrensde batches met hervatbare checkpoints, na aparte evaluatie van gedeeltelijke archivering.
+
+SQL-schema, GitHub Actions-workflows, publieke tracking en OVH zijn niet gewijzigd. Geen automatische opschoning.
