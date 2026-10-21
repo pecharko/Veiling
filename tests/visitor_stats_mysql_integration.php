@@ -367,6 +367,8 @@ check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),
 require dirname(__DIR__) . '/private/visitor_stats_archive_one_day_experimental.php';
 $batchFirst = gmdate('Y-m-d', strtotime('-105 days'));
 $batchSecond = gmdate('Y-m-d', strtotime('-104 days'));
+// Re-prepare after the fork: $add belongs to the closed original PDO connection.
+$add = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),?,?,?)');
 $add->execute([$batchFirst,$a,'home',0,3]);
 $add->execute([$batchSecond,$b,'lot',42,4]);
 $one = archive_visitor_stats_one_day($pdo, $cutoff);
