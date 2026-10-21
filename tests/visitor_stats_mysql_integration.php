@@ -69,4 +69,18 @@ $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date = ?')->execute([
 $recovered = archive_visitor_stats_before($pdo, $cutoff);
 check($recovered['rows'] === 1 && $recovered['views'] === 3, 'Valid archive after malformed rollback failed');
 check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === 1, 'Recent visit not preserved after recovery');
+// More than the safe 1000-record PHP limit must fail before any aggregate writes.
+$overflowDay = gmdate('Y-m-d', strtotime('-49 days'));
+$overAdd = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),\'home\',0,1)');
+for ($n = 0; $n < 1001; $n++) {
+    $overAdd->execute([$overflowDay, str_pad(dechex($n + 1), 64, '0', STR_PAD_LEFT)]);
+}
+$beforeSource = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+$beforeAggregate = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn();
+$overflowFailed = false;
+try { archive_visitor_stats_before($pdo, $cutoff); } catch (RuntimeException $ex) { $overflowFailed = str_contains($ex->getMessage(), 'limit'); }
+check($overflowFailed, 'Oversized archive must fail closed');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === $beforeSource, 'Oversized archive removed detail rows');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn() === $beforeAggregate, 'Oversized archive wrote aggregates');
+check(!$pdo->inTransaction(), 'Oversized archive left transaction open');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";

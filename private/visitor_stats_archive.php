@@ -8,6 +8,9 @@ declare(strict_types=1);
  */
 function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
 {
+    // Fail closed before allocating unbounded PHP arrays. A later reviewed
+    // batching design is required for larger campaigns.
+    $maxRowsPerArchive = 1000;
     $limit = gmdate('Y-m-d', strtotime('-30 days'));
     $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
     if (!$parsed || $parsed->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
@@ -16,13 +19,16 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
     $pdo->beginTransaction();
     try {
         // Lock old source rows; active days and currently incoming visits are excluded.
-        $select = $pdo->prepare('SELECT visit_date, visitor_id, page_kind, lot_id, views FROM visitor_stats_daily WHERE visit_date < ? ORDER BY visit_date, visitor_id, page_kind, lot_id FOR UPDATE');
+        $select = $pdo->prepare('SELECT visit_date, visitor_id, page_kind, lot_id, views FROM visitor_stats_daily WHERE visit_date < ? ORDER BY visit_date, visitor_id, page_kind, lot_id LIMIT 1001 FOR UPDATE');
         $select->execute([$cutoff]);
         $dates = [];
         $lots = [];
         $rowCount = 0;
         $sourceViews = 0;
         while (($r = $select->fetch(PDO::FETCH_ASSOC)) !== false) {
+            if ($rowCount >= $maxRowsPerArchive) {
+                throw new RuntimeException('Analytics archive exceeds safe per-run record limit');
+            }
             $day = (string)$r['visit_date'];
             $id = bin2hex((string)$r['visitor_id']);
             $views = (int)$r['views'];
