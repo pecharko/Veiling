@@ -9,3 +9,7 @@ Isolatietests omvatten nu 1001 bezoekersrecords op een historische datum plus ee
 **Openstaande blokkeringen**: aantonen dat de transactie onder gelijktijdige INSERT/UPDATE-gebeurtenissen daadwerkelijk voldoende locks houdt; test MySQL 8.4 en queryplannen; lockduur/performance bij grotere gegevensvolumes; PHP/PDO MySQL buffered result bij de datumlijst; database-temporary-table ruimte bij `COUNT(DISTINCT)`; deadline-/memorygrenzen. Tot dan NIET mergen of deployen. Alternatief: begrensde batches met hervatbare checkpoints, na aparte evaluatie van gedeeltelijke archivering.
 
 SQL-schema, GitHub Actions-workflows, publieke tracking en OVH zijn niet gewijzigd. Geen automatische opschoning.
+
+## Isolated concurrency check added
+
+Two independent MySQL sessions now test an uncommitted UPDATE lock on a historic source record. The archive must fail closed with lock-wait error, roll back without deleting details or retaining day aggregates, and succeed after the competing transaction is rolled back. This tests an **existing-row lock conflict only**. It does **not** establish protection against a concurrent new INSERT into the archived day (phantom row) or all possible isolation levels. No production authorization until those cases, lock scope and query plans are independently proven safe.
