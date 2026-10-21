@@ -389,6 +389,11 @@ check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0, 'One-day archi
 $batchLocked = gmdate('Y-m-d', strtotime('-106 days'));
 $add->execute([$batchLocked,$a,'lot',57,6]);
 $pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+// A fresh peer PDO is needed after the earlier child process exits.
+$other = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
 $other->beginTransaction();
 try {
     $heldBatch = $other->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
