@@ -12,12 +12,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 FILES = (
+    "catalogus-public/privacy.php",
     "private/visitor_stats.php",
     "catalogus-public/admin/statistieken.php",
     "private/bootstrap.php",
     "catalogus-public/index.php",
     "catalogus-public/kavel.php",
-    "catalogus-public/privacy.php",
 )
 MARKERS = {
     "private/visitor_stats.php": ("function track_catalog_view(", "analytics_secret", "visitor_stats_daily"),
