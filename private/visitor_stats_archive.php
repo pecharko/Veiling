@@ -14,7 +14,7 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
     if (!$parsed || $parsed->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Grensdatum moet ten minste 30 UTC-dagen geleden zijn.');
     }
-    $pdo->beginTransaction();
+    // Repeatable-read next-key locks are required to exclude inserts into an\n    // archived UTC day while its counts and aggregates are being computed.\n    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');\n    $pdo->beginTransaction();
     try {
         // Distinct dates are small and bounded by the number of calendar days,
         // rather than by the number of individual visitors.
@@ -32,17 +32,30 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
             SELECT visit_date, lot_id, COUNT(DISTINCT visitor_id), SUM(views)
               FROM visitor_stats_daily WHERE visit_date=? AND page_kind='lot'
               GROUP BY visit_date, lot_id");
-        $validate = $pdo->prepare("SELECT COUNT(*) rows_total, COALESCE(SUM(views),0) views_total,
-              COALESCE(SUM(CASE WHEN page_kind NOT IN ('home','lot') OR views < 1 THEN 1 ELSE 0 END),0) bad_rows
-              FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE");
+        // Use an unbuffered locking range scan: the PRIMARY key begins with visit_date.
+        // This locks existing rows and the corresponding index gap in InnoDB RR,
+        // but never buffers all visitor identifiers in PHP.
+        $validate = $pdo->prepare('SELECT page_kind, views FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date=? FOR UPDATE');
         $delete = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?');
         foreach ($dates as $day) {
-            $validate->execute([$day]);
-            $counts = $validate->fetch(PDO::FETCH_ASSOC);
-            $validate->closeCursor();
-            if ((int)$counts['bad_rows'] !== 0) throw new RuntimeException('Invalid analytics source record');
-            $n = (int)$counts['rows_total'];
-            $views = (int)$counts['views_total'];
+            $n = 0;
+            $views = 0;
+            // PDO MySQL otherwise buffers the complete result in client memory.
+            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
+            try {
+                $validate->execute([$day]);
+                while (($record = $validate->fetch(PDO::FETCH_ASSOC)) !== false) {
+                    if (!in_array($record['page_kind'], ['home', 'lot'], true)
+                        || (int)$record['views'] < 1) {
+                        throw new RuntimeException('Invalid analytics source record');
+                    }
+                    $n++;
+                    $views += (int)$record['views'];
+                }
+            } finally {
+                $validate->closeCursor();
+                $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+            }
             if ($n === 0) continue;
             // SQL-side aggregation; no visitor ID values materialized in PHP.
             $insertDay->execute([$day]);
