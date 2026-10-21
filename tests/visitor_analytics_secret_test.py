@@ -40,5 +40,38 @@ class Tests(unittest.TestCase):
             c.inspect(FakeSFTP(),"/test")
             secret.token_hex.assert_not_called()
 
+    def test_pending_temp_inventory_read_only(self):
+        class Fake:
+            def listdir(self, path):
+                return [".config-analytics-39606484975.tmp", "config.php",
+                        ".config-analytics-xyz.tmp", ".other"]
+        self.assertEqual(c.pending_temp_count(Fake(), "/home/test"), 2)
+
+    def test_diagnostics_do_not_disclose_sensitive_sftp_errors(self):
+        from unittest.mock import MagicMock
+        fake = MagicMock()
+        secret_marker = "SECRET_VALUE_NEVER_LOG_THIS"
+        fake.open.side_effect = RuntimeError(secret_marker)
+        fake.listdir.return_value = []
+        baseline = c.sha(BASE)
+        with patch.object(c, "inspect", return_value=(baseline, 0o644)), \
+             patch.object(c, "read_private_config", return_value=(BASE, 0o644)), \
+             patch.object(c, "php_lint"), \
+             patch.object(c, "restore_markers_clear"):
+            with self.assertRaises(c.SafeStageFailure) as caught:
+                c.install(fake, "/home/test", baseline, "12345")
+        self.assertEqual(caught.exception.stage, "create-temp")
+        self.assertNotIn(secret_marker, str(caught.exception))
+        fake.posix_rename.assert_not_called()
+
+    def test_install_stops_on_config_drift_before_sftp_writes(self):
+        from unittest.mock import MagicMock
+        fake = MagicMock()
+        with patch.object(c, "inspect", return_value=("a"*64, 0o644)):
+            with self.assertRaises(c.PreflightStop):
+                c.install(fake, "/home/test", "b"*64, "12345")
+        fake.open.assert_not_called()
+        fake.posix_rename.assert_not_called()
+
 if __name__=="__main__":
     unittest.main()

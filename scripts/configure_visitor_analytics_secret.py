@@ -23,6 +23,21 @@ from preflight_visitor_stats_remote import (
 CONFIG = "private/config.php"
 MAX_CONFIG_BYTES = 256 * 1024
 
+class SafeStageFailure(RuntimeError):
+    """Only a fixed, nonsecret stage identifier is allowed in logs."""
+
+    def __init__(self, stage: str):
+        self.stage = stage
+        super().__init__("Stopped at safe stage: " + stage)
+
+
+def pending_temp_count(sftp, root):
+    """Count leftovers without disclosing filenames or reading secret material."""
+    entries = sftp.listdir(path_at(root, "private"))
+    return sum(name.startswith(".config-analytics-") and name.endswith(".tmp")
+               for name in entries)
+
+
 def sha(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
@@ -99,31 +114,41 @@ def install(sftp, root, expected_sha: str, token: str) -> None:
         raise PreflightStop("Config drift immediately before install")
     remote = path_at(root, CONFIG)
     temporary = path_at(root, "private/.config-analytics-" + token + ".tmp")
-    # Set permissions on a NEW temporary file before copying any content.
+    # Failures are reported by fixed stage ONLY; never echo exception text,
+    # config contents, credentials, secret, or remote directory listing.
     created = False
+    stage = "create-temp"
     try:
         with sftp.open(temporary, "x") as handle:
             created = True
+            stage = "set-private-permissions"
             sftp.chmod(temporary, 0o600)
+            stage = "write-temp"
             handle.write(updated)
             handle.flush()
+        stage = "validate-temp"
         st = sftp.lstat(temporary)
         if not stat.S_ISREG(st.st_mode) or st.st_size != len(updated):
             raise PreflightStop("Temp file validation failed")
         with sftp.open(temporary, "rb") as handle:
             if sha(handle.read(MAX_CONFIG_BYTES+1)) != sha(updated):
                 raise PreflightStop("Temp checksum failed")
+        stage = "check-drift"
         if sha(read_private_config(sftp, root)[0]) != expected_sha:
             raise PreflightStop("Config changed before atomic rename")
         restore_markers_clear(sftp, root)
-        # OVH must support atomic overwrite; refuse unsafe copy-over fallback.
+        stage = "atomic-replace"
         sftp.posix_rename(temporary, remote)
         created = False
+        stage = "verify-final"
         with sftp.open(remote, "rb") as handle:
             actual = handle.read(MAX_CONFIG_BYTES + 1)
         if actual != updated:
             raise PreflightStop("Post-install content mismatch; operator intervention required")
         print("Configuration updated and verified; secret value withheld.")
+    except Exception:
+        # No error interpolation: SFTP exceptions may contain sensitive paths.
+        raise SafeStageFailure(stage) from None
     finally:
         if created:
             try:
@@ -145,6 +170,8 @@ def main():
             with client.open_sftp() as sftp:
                 if args.mode == "inspect":
                     digest, _ = inspect(sftp, root)
+                    leftover = pending_temp_count(sftp, root)
+                    print("Read-only pending temp count: " + str(leftover))
                     print("READ-ONLY config status: analytics_secret absent; PHP syntax valid.")
                     print("Config SHA256 baseline: " + digest)
                     print("No remote writes; no secret generated.")
@@ -155,8 +182,11 @@ def main():
         finally:
             client.close()
         return 0
+    except SafeStageFailure as exc:
+        print("STOP: install failed at stage " + exc.stage + "; remote state must be checked. No secret disclosed.", file=sys.stderr)
+        return 1
     except Exception:
-        print("STOP: analytics config operation not approved or unsuccessful. No secret disclosed.", file=sys.stderr)
+        print("STOP: analytics config validation failed before final write, or inspection failed. Remote state must be checked. No secret disclosed.", file=sys.stderr)
         return 1
 
 if __name__=="__main__":
