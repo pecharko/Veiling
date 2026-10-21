@@ -268,7 +268,7 @@ check($conflictRecovery['rows'] === 1 && $conflictRecovery['views'] === 9, 'Arch
 // Each transaction owns a different row, then requests the other's row.
 // Fork a child to allow genuinely simultaneous blocking requests. A deadlock
 // victim must receive MySQL 1213; both transactions are rolled back.
-if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
+check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),\n    'Isolated CI must support fork and socket IPC for mandatory deadlock regression');\n{
     $deadA = gmdate('Y-m-d', strtotime('-100 days'));
     $deadB = gmdate('Y-m-d', strtotime('-101 days'));
     $add->execute([$deadA, $a, 'home', 0, 1]);
@@ -324,6 +324,6 @@ if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
     $afterCycle = archive_visitor_stats_before($pdo, $cutoff);
-    check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');
+    check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');\n    fwrite(STDOUT, "Cyclic InnoDB deadlock regression passed: victim 1213 and archive recovery\\n");
 }
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
