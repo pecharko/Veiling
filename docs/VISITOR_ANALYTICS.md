@@ -1,6 +1,6 @@
 # Bezoekersstatistieken - veilige introductie
 
-**Status:** ontwikkeld op featurebranch; NIET uitgerold. De MySQL-migratie raakt schema en vergt expliciete review.
+**Status 21 oktober 2026:** statistieken-PHP nog NIET uitgerold. MySQL-tabel is afzonderlijk aangelegd en `analytics_secret` werd via GitHub Actions-run 39612725640 geïnstalleerd. Privacyreview en de productie-release van de vijf PHP-bestanden zijn nog openstaande gates.
 
 ## Werking
 - Alleen GET op publieke homepage en gepubliceerde kavelpagina telt. Geen adminverkeer.
@@ -8,7 +8,7 @@
 - Dagelijkse pseudonieme HMAC van datum, IP en user-agent; de geheime sleutel staat uitsluitend in private config en nooit in Git. Ruwe IP/user-agent worden niet in de statistiektabel bewaard.
 - Een bezoeker wordt slechts binnen dezelfde UTC-dag herkend. **30-dagen unieke bezoekersdagen**, geen werkelijke unieke personen over 30 dagen: terugkerende personen tellen op nieuwe dagen opnieuw mee.
 - De top-10-statistiek telt detailpaginaweergaven van kavels, niet unieke geïnteresseerden.
-- De tabel bewaart maximaal ongeveer 30 dagen. Opschoning gebeurt steekproefsgewijs op 1% van geslaagde bezoeken: bij weinig verkeer kan data langer blijven staan. Voor gegarandeerde retentie is een apart geplande cleanup vereist.
+- Deze PR verandert opschoning naar **elk geregistreerd bezoek**, vóór het opslaan van de nieuwe gebeurtenis. Hierdoor worden verlopen rijen niet langer steekproefsgewijs verwijderd. **Dit is nog steeds geen gegarandeerde 30-dagenlimiet wanneer het bezoekverkeer stopt.** Vóór activering is een afzonderlijke dagelijks geplande cleanup met geverifieerde uitvoer en afzonderlijke autorisatie nodig; de exacte OVH-voorziening (cron of DB-event) is nog niet bevestigd.
 - Gehashte bezoekersinformatie kan nog steeds persoonsgegevens zijn. Juridische/privacyreview en update van privacyverklaring zijn verplicht voor activatie; cookievrij betekent niet automatisch AVG-vrij.
 
 ## Afzonderlijke installatieprocedure
@@ -28,3 +28,15 @@
 - Andere dag telt dezelfde browser opnieuw.
 - Administratie vereist login.
 - Migratie en restore onafhankelijk goedgekeurd en getest.
+
+## Privacy- en activatiebesluit (OPEN — geen toestemming tot productie-uitrol)
+
+- **Verwerkingsverantwoordelijke:** 41 Lokeren / organiserende rechtspersoon en contactpunt nog formeel vast te stellen vóór livegang.
+- **Verwerkte informatie:** IP-adres en user-agent worden tijdens een GET verwerkt voor de HMAC; in de statistiekentabel wordt enkel een per UTC-dag gepseudonimiseerd 32-byte ID, dag, soort pagina, kavel-ID en weergaveteller opgeslagen. Pseudonimisering is **geen anonimisering**. Hosting- en webserverlogs vallen buiten deze module en vragen een afzonderlijk beleid.
+- **Doel:** interne, geaggregeerde bezoekers- en kavelstatistieken; geen advertenties, externe trackers of marketingprofielen.
+- **Rechtsgrond:** nog door verantwoordelijke/privacyadviseur vast te leggen. Zonder afgeronde proportionaliteits- en transparantiebeoordeling wordt de module niet geactiveerd; cookievrij betekent niet automatisch toestemmings- of AVG-vrij.
+- **DNT:** browserheader DNT=1 wordt gerespecteerd; botdetectie is best effort. Dit is geen volledig opt-out- of privacyrechtenproces.
+- **Transparantie:** vóór livegang een duidelijk bereikbare publiek zichtbare privacyverklaring met doel, gegevenscategorieën, bewaartermijn, rechtsgrond, contact/rechten en eventuele ontvangers/hosting. Publicatietekst pas na eigenaarreview.
+- **Bewaartermijn:** per GET opschonen is een vangnet; zelfstandig, dagelijks bewaartermijnbeheer blijft **blokkerend** vóór productie-activering. Zonder bezoeken mag de tabel niet onbeperkt blijven bestaan.
+- **Back-up en herstel:** `visitor_stats_daily` zit niet in de data-only snapshots. Bewust bevestigen als vluchtige statistiek (bij herstel mogelijk verloren), en apart vastleggen hoe overige logs/back-ups worden behandeld.
+- **Activeringsvoorwaarden:** privacyverklaring + rechtsgrond bevestigd, periodieke cleanup aantoonbaar ingepland en getest, MySQL quota/indices geverifieerd, nieuw offline releaseplan, expliciete release- én finale deployautorisatie. Alleen na deze gates deployen.
