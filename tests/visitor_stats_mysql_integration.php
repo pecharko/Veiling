@@ -264,4 +264,59 @@ try {
 }
 $conflictRecovery = archive_visitor_stats_before($pdo, $cutoff);
 check($conflictRecovery['rows'] === 1 && $conflictRecovery['views'] === 9, 'Archive failed after historic row lock was released');
+// Deterministic two-session cyclic deadlock, isolated DB only.
+// Each transaction owns a different row, then requests the other's row.
+// Fork a child to allow genuinely simultaneous blocking requests. A deadlock
+// victim must receive MySQL 1213; both transactions are rolled back.
+if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
+    $deadA = gmdate('Y-m-d', strtotime('-100 days'));
+    $deadB = gmdate('Y-m-d', strtotime('-101 days'));
+    $add->execute([$deadA, $a, 'home', 0, 1]);
+    $add->execute([$deadB, $a, 'home', 0, 1]);
+    $channels = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
+    check(is_array($channels), 'Deadlock test could not allocate IPC');
+    $pid = pcntl_fork();
+    check($pid >= 0, 'Deadlock test failed to fork');
+    if ($pid === 0) {
+        fclose($channels[0]);
+        $childDb = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $childDb->exec('SET SESSION innodb_lock_wait_timeout=5');
+        $childDb->beginTransaction();
+        try {
+            $lock = $childDb->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+            $lock->execute([$deadB]); $lock->closeCursor();
+            fwrite($channels[1], "ready\\n");
+            fgets($channels[1]);
+            $lock->execute([$deadA]); $lock->closeCursor();
+            fwrite($channels[1], "ok\\n");
+        } catch (PDOException $ex) {
+            fwrite($channels[1], "error:" . (string)($ex->errorInfo[1] ?? '') . "\\n");
+        } finally {
+            if ($childDb->inTransaction()) $childDb->rollBack();
+            fclose($channels[1]);
+        }
+        exit(0);
+    }
+    fclose($channels[1]);
+    $pdo->exec('SET SESSION innodb_lock_wait_timeout=5');
+    $pdo->beginTransaction();
+    try {
+        $mainLock = $pdo->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+        $mainLock->execute([$deadA]); $mainLock->closeCursor();
+        check(trim((string)fgets($channels[0])) === 'ready', 'Child did not lock second date');
+        fwrite($channels[0], "go\\n");
+        $parentError = '';
+        try { $mainLock->execute([$deadB]); $mainLock->closeCursor(); }
+        catch (PDOException $ex) { $parentError = (string)($ex->errorInfo[1] ?? ''); }
+        $childStatus = trim((string)fgets($channels[0]));
+        check($parentError === '1213' || $childStatus === 'error:1213',
+            'Cyclic lock conflict did not produce deadlock victim');
+    } finally {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        fclose($channels[0]);
+        pcntl_waitpid($pid, $status);
+    }
+    $afterCycle = archive_visitor_stats_before($pdo, $cutoff);
+    check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');
+}
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
