@@ -45,4 +45,15 @@
 
 - De eigenaar heeft expliciet gevraagd **geen geplande automatische opschoning** en **geen opschoning bij elk websitebezoek** te configureren.
 - De trackingcode mag uitsluitend tellers opslaan of bijwerken; de trackingcode mag geen analytics-rijen verwijderen.
-- Er is nog geen handmatige verwijderprocedure of controlefrequentie overeengekomen. Bij ontbreken daarvan is retentie onbeperkt en blijft activering geblokkeerd. Geen productiegegevens wissen zonder afzonderlijke uitdrukkelijke toestemming.
+- De adminmodule bevat in deze PR een handmatige verwijderprocedure: alle statistiekrecords of alle records strikt vóór een UTC-datum. Bevestiging is tweestaps met CSRF en sessie-token (5 minuten). Geen automatische verwijdering. De verwijderprocedure is pas bruikbaar **na een afzonderlijk toegestane productie-uitrol van de admincode**.
+- De organisator moet nog de concrete handmatige controlefrequentie, maximale bewaartermijn, verantwoordelijke en registratie van uitgevoerde verwijderingen vastleggen. Zonder naleefbaar beleid blijft privacy-activatie geblokkeerd. Geen productiegegevens wissen door de PR, tests of merge.
+
+## Beheerprocedure: handmatig verwijderen (voorbereid, niet live)
+
+1. Meld aan als beheerder, open **Statistieken** en ga naar **Statistiekgegevens handmatig verwijderen**.
+2. Kies **Verwijder alle statistieken** of **Verwijder alles vóór een datum**. De datum is een strikte exclusieve grens in UTC: bijvoorbeeld vóór 2026-10-01 wist alleen records t/m 2026-09-30.
+3. De eerste POST met CSRF toont een read-only aantal betrokken database-rijen. Er gebeurt nog geen verwijdering.
+4. Een tweede POST vereist opnieuw CSRF, een eenmalig sessietoken dat 5 minuten geldig is, de letterlijke bevestiging **VERWIJDER**, en de expliciete browserwaarschuwing. Het aantal rijen kan tussen preview en uitvoering wijzigen.
+5. Bij succes toont de admin een melding met het aantal daadwerkelijk verwijderde rijen. De SQL is beperkt tot `DELETE FROM visitor_stats_daily` (alles) of een gebonden datumparameter `WHERE visit_date < ?`. Geen TRUNCATE, geen broncode of andere tabellen wijzigen.
+6. Deze actie is onomkeerbaar binnen de statistiekenmodule: de data-only snapshots bevatten `visitor_stats_daily` niet. Een afzonderlijk bewaarbeleid en een handmatig controlelog buiten de analytics-tabel blijven organisatorische verplichtingen.
+7. De gebruikerskeuze is uitdrukkelijk **geen dagelijkse taak en geen opschoning bij bezoeken**. Zonder daadwerkelijk handmatig wissen groeien historische rijen verder ondanks het 30-dagenfilter op het dashboard.
