@@ -285,12 +285,12 @@ if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
         try {
             $lock = $childDb->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
             $lock->execute([$deadB]); $lock->closeCursor();
-            fwrite($channels[1], "ready\\n");
+            fwrite($channels[1], "ready\n");
             fgets($channels[1]);
             $lock->execute([$deadA]); $lock->closeCursor();
-            fwrite($channels[1], "ok\\n");
+            fwrite($channels[1], "ok\n");
         } catch (PDOException $ex) {
-            fwrite($channels[1], "error:" . (string)($ex->errorInfo[1] ?? '') . "\\n");
+            fwrite($channels[1], "error:" . (string)($ex->errorInfo[1] ?? '') . "\n");
         } finally {
             if ($childDb->inTransaction()) $childDb->rollBack();
             fclose($channels[1]);
@@ -304,7 +304,7 @@ if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
         $mainLock = $pdo->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
         $mainLock->execute([$deadA]); $mainLock->closeCursor();
         check(trim((string)fgets($channels[0])) === 'ready', 'Child did not lock second date');
-        fwrite($channels[0], "go\\n");
+        fwrite($channels[0], "go\n");
         $parentError = '';
         try { $mainLock->execute([$deadB]); $mainLock->closeCursor(); }
         catch (PDOException $ex) { $parentError = (string)($ex->errorInfo[1] ?? ''); }
