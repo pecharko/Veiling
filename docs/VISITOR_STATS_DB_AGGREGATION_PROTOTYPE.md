@@ -33,3 +33,7 @@ The archiver's initial day discovery now uses an unbuffered `SELECT visit_date .
 ## End-to-end archive / phantom INSERT regression
 
 An end-to-end test now starts an uncommitted INSERT for a previously empty historical UTC date on a second MySQL connection, then calls the real `archive_visitor_stats_before()` on the first connection with a short lock timeout. Expected: archive fails closed without a persisted aggregate, no open transaction remains; after INSERT commits, a fresh archive includes it. This intentionally exposes unsafe historical-prefix locking if the archive returns success. The test must actually pass on the latest PR SHA before approving anything. This is distinct from the earlier gap-lock primitive tests; there is still no production validation or authorization.
+
+## Isolated load regression — 3,000 historical records
+
+A new test in `tests/visitor_stats_mysql_integration.php` inserts 3,000 distinct visitors into an isolated historical UTC day, runs the real archiver, checks aggregate counts and source deletion, measures elapsed time and peak PHP memory, and fails if PHP peak memory reaches 64 MiB. There is deliberately no strict wall-clock threshold on a shared CI runner. This is a small-scale regression, NOT a production-scale benchmark; MySQL server memory, disk, temporary-table use, lock waits, and worst-case campaign sizes remain unproven. No schema, workflow or production actions.
