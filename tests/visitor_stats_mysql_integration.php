@@ -135,4 +135,31 @@ $lockAggregate->execute([$lockDay]);
 check((int)$lockAggregate->fetchColumn() === 0, 'Concurrent conflict committed archive aggregate');
 $afterLock = archive_visitor_stats_before($pdo, $cutoff);
 check($afterLock['rows'] === 1 && $afterLock['views'] === 2, 'Archive did not recover after lock release');
+// Two sessions: verify historical date-range gap locks prevent an INSERT
+// while an archiving transaction holds the matching range. This tests lock
+// primitives; it is NOT by itself proof that the archiver obtains them.
+$phantomDay = gmdate('Y-m-d', strtotime('-70 days'));
+$add->execute([$phantomDay, $a, 'home', 0, 1]);
+$pdo->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+$pdo->beginTransaction();
+try {
+    // Intentionally use the index-leading visit_date and locking read.
+    $rangeLock = $pdo->prepare('SELECT visit_date,visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+    $rangeLock->execute([$phantomDay]);
+    $rangeLock->fetchAll(PDO::FETCH_ASSOC);
+    $rangeLock->closeCursor();
+    $other->exec('SET SESSION innodb_lock_wait_timeout=1');
+    $phantomInsert = $other->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
+    $insertBlocked = false;
+    try {
+        $phantomInsert->execute([$phantomDay, str_repeat('ee', 32)]);
+    } catch (PDOException $ex) {
+        $insertBlocked = in_array((string)$ex->errorInfo[1], ['1205','1213'], true);
+    }
+    check($insertBlocked, 'Historic date-range locking read allowed phantom INSERT');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+}
+$phantomResult = archive_visitor_stats_before($pdo, $cutoff);
+check($phantomResult['rows'] === 1 && $phantomResult['views'] === 1, 'Archive failed after range-lock release');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
