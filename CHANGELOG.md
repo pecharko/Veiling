@@ -1,5 +1,10 @@
 # Wijzigingslogboek
 
+## 2026-10-21 — Achtbestanden-productierelease afgerond
+
+**Productierelease 21 oktober 2026 — GESLAAGD:** uitsluitend de acht PHP-runtimebestanden van commit `148754f5053896d20bb797152a020042ec749c4e` zijn naar `https://41lokeren.be` uitgerold via [GitHub Actions #39542794517](https://github.com/pecharko/Veiling/actions/runs/39542794517). De gebruiker bevestigde 5/5 functionele productie-acceptaties en nadien dat repositoryvariabele `RECOVERY_EIGHTFILE_DEPLOY_ENABLED=false` staat; die variabelewaarde is niet onafhankelijk via GitHub API geverifieerd. [Offline plan #39504561584](https://github.com/pecharko/Veiling/actions/runs/39504561584), [read-only codeback-up #39504709223](https://github.com/pecharko/Veiling/actions/runs/39504709223), [opgeslagen rollbackverificatie #39504930353](https://github.com/pecharko/Veiling/actions/runs/39504930353) en [eerste formele goedkeuring #39506720702](https://github.com/pecharko/Veiling/actions/runs/39506720702) waren groen op dezelfde SHA. Definitieve tweede toestemming apart in chat gegeven; vervolgens handmatige `workflow_dispatch`. De externe data-ZIP is door de beheerder als getest en extern bewaard bevestigd. De ZIP dateert van 18 oktober en is geen bewijs dat eventuele latere datawijzigingen erin zitten. Private rollbackartifact `recovery-code-rollback-39504709223` vervalt op 27 oktober 2026; voor latere releases altijd nieuwe back-ups en autorisaties. Bestaande hieronder vermelde **NIET LIVE**-passages beschrijven historische voorbereidingsfasen en niet de actuele status. Geen codewijziging, productie-upload of tweede deployment in deze documentatie-PR.
+
+
 ## Read-only SFTP-controle na geslaagd offline bronplan (nieuwe security-PR, NIET LIVE)
 
 - De handmatige offline [releaseplanrun #39378597480](https://github.com/pecharko/Veiling/actions/runs/39378597480) is geslaagd op `ab4534c417bcf33b09cc13bc2de1ff726c068660`. Acht bestanden en hun source-SHA-256 zijn bevestigd; geen SFTP of deployment.
