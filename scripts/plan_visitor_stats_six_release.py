@@ -39,7 +39,7 @@ def plan(sha: str) -> dict:
         raise ValueError("Expected exact 40-hex commit SHA")
     if git("rev-parse", "HEAD").decode().strip() != sha:
         raise ValueError("Release SHA does not match checked-out HEAD")
-    if len(FILES) != 6 or len(set(FILES)) != 5 or set(FILES) != set(MARKERS):
+    if len(FILES) != 6 or len(set(FILES)) != 6 or set(FILES) != set(MARKERS):
         raise ValueError("Fixed allowlist invariant violated")
     entries = []
     for path in FILES:
