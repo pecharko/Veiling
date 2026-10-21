@@ -33,7 +33,7 @@ $add->execute([$old,$b,'lot',8,4]);
 $add->execute([$recent,$a,'home',0,1]);
 $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 $r = archive_visitor_stats_before($pdo,$cutoff);
-check($pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY) === false,
+check((bool)$pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY) === false,
     'Archive unexpectedly altered caller PDO buffering configuration');
 $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 check($r['rows']===4 && $r['days']===1 && $r['views']===10,'Incorrect archival result');
