@@ -1,0 +1,97 @@
+name: Admin favicon two-file release (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Plan only or separately authorized deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact current main SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'Deploy only: type DEPLOY ADMIN FAVICON'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  favicon:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      MODE: ${{ inputs.mode }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: 'Gate: exact reviewed release and manual deploy confirmation'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          if [[ "$MODE" == deploy ]]; then
+            [[ "$CONFIRMATION" == 'DEPLOY ADMIN FAVICON' ]] || exit 1
+            for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+              [[ -n "${!key:-}" ]] || exit 1
+            done
+          fi
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+          coverage: none
+      - name: 'Gate: PHP lint and fixed two-file plan'
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l private/bootstrap.php
+          php -l catalogus-public/admin/login.php
+          python3 -m py_compile scripts/favicon_release.py
+          python3 scripts/favicon_release.py plan
+      - name: Install pinned SFTP client
+        if: inputs.mode == 'deploy'
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: 'Gate: backup exact current live files (read only)'
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/favicon_release.py backup
+      - name: Persist private two-file rollback
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: admin-favicon-rollback-${{ github.run_id }}
+          path: deployment-backups/favicon/
+          retention-days: 7
+          if-no-files-found: error
+      - name: 'Deploy: two files with SHA-256 and rollback'
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/favicon_release.py deploy
+      - name: 'Check: public and admin endpoints read only'
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/favicon.png)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)" = 404
