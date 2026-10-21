@@ -11,7 +11,7 @@ class PublicPrivacyTests(unittest.TestCase):
         for src in (home,lot):
             self.assertIn("url('privacy.php')",src)
     def test_truthful_text_and_contacts(self):
-        self.assertIn("gepus",page.replace("gepseudonimiseerde","gepus"))
+        self.assertIn("gepseudonimiseerde", page)
         self.assertIn("geen automatische opschoning",page)
         self.assertIn("filter_var($contact, FILTER_VALIDATE_EMAIL)",page)
         self.assertIn("rechtsgrond en concrete maximale bewaartermijn",page)
