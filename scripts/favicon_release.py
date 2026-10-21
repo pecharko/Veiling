@@ -80,12 +80,47 @@ def main(mode):
                 }, indent=2))
                 print("Read-only remote code backup prepared, no upload")
                 return
-            raise RuntimeError("Upload requires separately reviewed deployment mode")
+            if mode == "deploy":
+                manifest = json.loads((BACKUP / "manifest.json").read_text())
+                if manifest.get("baseline") != BASELINE or set(manifest.get("sha256", {})) != set(FILES):
+                    raise RuntimeError("Unexpected rollback manifest")
+                for name in FILES:
+                    saved = (BACKUP / name).read_bytes()
+                    if saved != remote[name] or digest(saved) != manifest["sha256"][name]:
+                        raise RuntimeError("Corrupted/stale rollback or production drift: " + name)
+                touched = []
+                try:
+                    for name in FILES:
+                        path = posixpath.join(base, name)
+                        touched.append(name)
+                        with sftp.open(path, "wb") as stream:
+                            stream.write(new[name])
+                            stream.flush()
+                        if remote_read(sftp, path) != new[name]:
+                            raise RuntimeError("Post-upload SHA mismatch: " + name)
+                        print("Uploaded and verified: " + name)
+                except Exception as upload_error:
+                    failed = []
+                    for name in reversed(touched):
+                        try:
+                            path = posixpath.join(base, name)
+                            with sftp.open(path, "wb") as stream:
+                                stream.write(remote[name])
+                                stream.flush()
+                            if remote_read(sftp, path) != remote[name]:
+                                raise RuntimeError("Rollback SHA mismatch")
+                        except Exception:
+                            failed.append(name)
+                    if failed:
+                        raise RuntimeError("UPLOAD FAILED; ROLLBACK INCOMPLETE: " + ", ".join(failed)) from upload_error
+                    raise RuntimeError("UPLOAD FAILED; rollback verified") from upload_error
+                return
+            raise RuntimeError("Unknown mode")
     finally:
         client.close()
 
 if __name__ == "__main__":
     import sys
-    if len(sys.argv) != 2 or sys.argv[1] not in ("plan", "backup"):
-        raise SystemExit("Usage: favicon_release.py plan|backup")
+    if len(sys.argv) != 2 or sys.argv[1] not in ("plan", "backup", "deploy"):
+        raise SystemExit("Usage: favicon_release.py plan|backup|deploy")
     main(sys.argv[1])
