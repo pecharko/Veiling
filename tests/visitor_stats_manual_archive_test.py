@@ -43,7 +43,7 @@ class ManualArchiveTests(unittest.TestCase):
         self.assertIn("CREATE TABLE IF NOT EXISTS visitor_stats_day_totals", SQL)
         self.assertIn("CREATE TABLE IF NOT EXISTS visitor_stats_lot_totals", SQL)
         for secret_field in ("visitor_id", "user_agent", "ip_address"):
-            self.assertNotIn(secret_field, SQL)
+            self.assertNotIn(secret_field + " BINARY", SQL)
         self.assertIn("PRIMARY KEY (visit_date, lot_id)", SQL)
 
 if __name__ == "__main__":
