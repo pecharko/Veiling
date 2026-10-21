@@ -44,6 +44,11 @@ class Tests(unittest.TestCase):
         for forbidden in ("private/config.php", "sftp.remove(", "sftp.rename(", "sftp.put("):
             self.assertNotIn(forbidden, code)
 
+    def test_new_sftp_file_is_exclusive_and_writable(self):
+        code = Path(d.__file__).read_text()
+        self.assertIn('mode = "wxb" if name in NEW else "wb"', code)
+        self.assertNotIn('mode = "xb" if name in NEW', code)
+
     def test_rollback_call_detection_does_not_match_upload_no_rollback(self):
         pattern = r"(?<![A-Za-z0-9_])rollback\s*\("
         self.assertIsNone(re.search(pattern, "upload_no_rollback(sftp, root, manifest, files)"))
