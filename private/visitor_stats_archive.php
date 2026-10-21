@@ -22,6 +22,12 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
         // InnoDB REPEATABLE READ this range scan also next-key-locks gaps,
         // including dates with no existing records. Stream instead of buffering
         // visitor rows; retain only distinct UTC dates in PHP.
+        // Fail closed before any aggregates/deletes if a manual operation would
+        // process more rows than the tested operational envelope. The range
+        // scan still locks the full historic prefix: this is a safety guard,
+        // NOT a short-lock batch implementation.
+        $maxSourceRows = 20000;
+        $scannedRows = 0;
         $dates = [];
         $previousDay = null;
         $days = $pdo->prepare('SELECT visit_date FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date < ? ORDER BY visit_date FOR UPDATE');
@@ -30,6 +36,9 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
         try {
             $days->execute([$cutoff]);
             while (($day = $days->fetchColumn()) !== false) {
+                if (++$scannedRows > $maxSourceRows) {
+                    throw new RuntimeException('Archive exceeds manual source-row safety limit (20000)');
+                }
                 if ($day !== $previousDay) {
                     $dates[] = (string)$day;
                     $previousDay = $day;
