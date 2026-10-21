@@ -3,15 +3,48 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
 require_no_index();
+require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
 $deleteError = '';
 $deletePreview = null;
+$archivePreview = null;
 if (is_post()) {
     check_csrf();
     $action = (string)($_POST['action'] ?? '');
-    if ($action === 'preview_delete') {
+    if ($action === 'preview_archive') {
+        unset($_SESSION['analytics_archive_pending']);
+        try {
+            $cutoff = gmdate('Y-m-d', strtotime('-30 days'));
+            $stmt = db()->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
+            $stmt->execute([$cutoff]);
+            $count = (int)$stmt->fetchColumn();
+            $token = bin2hex(random_bytes(24));
+            $_SESSION['analytics_archive_pending'] = ['token' => $token, 'cutoff' => $cutoff, 'expires' => time() + 300];
+            $archivePreview = ['token' => $token, 'cutoff' => $cutoff, 'count' => $count];
+        } catch (Throwable $e) {
+            $deleteError = 'Kon archivering niet voorbereiden. Controleer of de geautoriseerde aggregatietabellen bestaan.';
+        }
+    } elseif ($action === 'confirm_archive') {
+        $pending = $_SESSION['analytics_archive_pending'] ?? null;
+        unset($_SESSION['analytics_archive_pending']);
+        if (!is_array($pending) || !is_string($pending['token'] ?? null)
+            || !hash_equals($pending['token'], (string)($_POST['preview_token'] ?? ''))
+            || (int)($pending['expires'] ?? 0) < time()
+            || (string)($_POST['confirmation'] ?? '') !== 'ARCHIVEER') {
+            $deleteError = 'Archiveringsbevestiging ongeldig of verlopen.';
+        } else {
+            try {
+                $result = archive_visitor_stats_before(db(), (string)$pending['cutoff']);
+                flash((string)$result['rows'] . ' detailrecords veilig samengevat en verwijderd.');
+                redirect('admin/statistieken.php');
+            } catch (Throwable $e) {
+                error_log('Manual analytics archive failed; no details logged.');
+                $deleteError = 'Archivering gestopt. Er zijn geen gedeeltelijke wijzigingen doorgevoerd; controleer het databaseschema.';
+            }
+        }
+    } elseif ($action === 'preview_delete') {
         unset($_SESSION['analytics_delete_pending']);
         $scope = (string)($_POST['scope'] ?? '');
         $cutoff = (string)($_POST['cutoff'] ?? '');
@@ -32,8 +65,12 @@ if (is_post()) {
                     $countStmt = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
                     $countStmt->execute([$cutoff]);
                     $count = (int)$countStmt->fetchColumn();
+                    $extra = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date < ?');
+                    $extra->execute([$cutoff]);
+                    $count += (int)$extra->fetchColumn();
                 } else {
                     $count = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+                    $count += (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn();
                 }
                 $token = bin2hex(random_bytes(24));
                 $_SESSION['analytics_delete_pending'] = [
@@ -64,7 +101,9 @@ if (is_post()) {
         } else {
             try {
                 $pdo = db();
-                // No TRUNCATE, no dynamic table name; only statistics rows.
+                // Delete both detailed and aggregated analytics atomically.
+                // No TRUNCATE, no dynamic table names, no changes to lots/accounts.
+                $pdo->beginTransaction();
                 if ($pending['scope'] === 'before') {
                     $cutoff = (string)($pending['cutoff'] ?? '');
                     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
@@ -73,15 +112,24 @@ if (is_post()) {
                         || $cutoff > gmdate('Y-m-d')) {
                         throw new RuntimeException('Ongeldige opgeslagen grensdatum.');
                     }
-                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date < ?');
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_lot_totals WHERE visit_date < ?');
+                    $stmt->execute([$cutoff]);
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date < ?');
                     $stmt->execute([$cutoff]);
                     $deleted = $stmt->rowCount();
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date < ?');
+                    $stmt->execute([$cutoff]);
+                    $deleted += $stmt->rowCount();
                 } else {
-                    $deleted = $pdo->exec('DELETE FROM visitor_stats_daily');
+                    $pdo->exec('DELETE FROM visitor_stats_lot_totals');
+                    $deleted = $pdo->exec('DELETE FROM visitor_stats_day_totals');
+                    $deleted += $pdo->exec('DELETE FROM visitor_stats_daily');
                 }
+                $pdo->commit();
                 flash((string)$deleted . ' statistiekrecords definitief verwijderd.');
                 redirect('admin/statistieken.php');
             } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 error_log('Analytics deletion failed (no sensitive details logged).');
                 $deleteError = 'Verwijderen mislukt. Controleer de statistieken en probeer alleen na onderzoek opnieuw.';
             }
@@ -95,11 +143,21 @@ $summary = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 $daily = [];
 $top = [];
 $available = true;
+$campaign = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 try {
     $pdo = db();
     $summary = $pdo->query("SELECT COUNT(DISTINCT CONCAT(visit_date,HEX(visitor_id))) visitors, COALESCE(SUM(views),0) views, COALESCE(SUM(CASE WHEN page_kind='lot' THEN views ELSE 0 END),0) lot_views FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY")->fetch();
     $daily = $pdo->query("SELECT visit_date, COUNT(*) visitors, SUM(views) views FROM (SELECT visit_date, visitor_id, SUM(views) views FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY GROUP BY visit_date, visitor_id) daily_visitors GROUP BY visit_date ORDER BY visit_date DESC")->fetchAll();
     $top = $pdo->query("SELECT l.lot_number, l.title, SUM(v.views) views FROM visitor_stats_daily v INNER JOIN lots l ON l.id=v.lot_id WHERE v.page_kind='lot' AND v.visit_date >= UTC_DATE() - INTERVAL 29 DAY GROUP BY l.id, l.lot_number, l.title ORDER BY views DESC, l.lot_number LIMIT 10")->fetchAll();
+    // Historical aggregates and active unarchived days have disjoint dates.
+    $campaign = $pdo->query("SELECT COALESCE(SUM(visitor_days),0) visitors, COALESCE(SUM(views),0) views, COALESCE(SUM(lot_views),0) lot_views FROM (
+      SELECT visitor_days, views, lot_views FROM visitor_stats_day_totals
+      UNION ALL
+      SELECT COUNT(DISTINCT visitor_id) visitor_days, SUM(views) views,
+        SUM(CASE WHEN page_kind='lot' THEN views ELSE 0 END) lot_views
+      FROM visitor_stats_daily GROUP BY visit_date
+    ) complete_days")->fetch();
+
 } catch (PDOException $exception) {
     $available = false;
 }
@@ -115,6 +173,10 @@ admin_top('Bezoekersstatistieken');
       <div class="dashboard-stat"><div><small>PAGINAWEERGAVEN</small><div><strong><?=e((string)$summary['views'])?></strong></div></div></div>
       <div class="dashboard-stat"><div><small>KAVELWEERGAVEN</small><div><strong><?=e((string)$summary['lot_views'])?></strong></div></div></div>
     </div>
+    <section class="dashboard-panel"><h2>Volledige veilingcampagne (tot vandaag)</h2>
+      <p>Bezoekersdagen: <strong><?=e((string)$campaign['visitors'])?></strong> · Paginaweergaven: <strong><?=e((string)$campaign['views'])?></strong> · Kavelweergaven: <strong><?=e((string)$campaign['lot_views'])?></strong>.</p>
+      <p>Dit zijn dagelijkse bezoekersschattingen, niet het aantal unieke personen over alle dagen.</p>
+    </section>
     <section class="dashboard-panel"><h2>Bezoekers per dag</h2>
       <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th>Dag (UTC)</th><th>Unieke bezoekers</th><th>Paginaweergaven</th></tr></thead><tbody>
       <?php foreach ($daily as $day): ?><tr><td><?=e($day['visit_date'])?></td><td><?=e((string)$day['visitors'])?></td><td><?=e((string)$day['views'])?></td></tr><?php endforeach; ?>
@@ -128,9 +190,31 @@ admin_top('Bezoekersstatistieken');
       </tbody></table></div>
     </section>
   <?php endif; ?>
+  <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
+    <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
+    <p>Alleen na jouw bevestiging worden dag- en kavelstatistieken van afgesloten dagen ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden pas na succesvolle opslag in dezelfde database-transactie verwijderd. Er is geen automatische opschoning.</p>
+    <?php if ($archivePreview !== null): ?>
+      <p><strong><?=e((string)$archivePreview['count'])?></strong> detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in aanmerking.</p>
+      <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Archiveren en detailcodes definitief wissen?');">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="confirm_archive">
+        <input type="hidden" name="preview_token" value="<?=e($archivePreview['token'])?>">
+        <label for="analytics-archive-confirm">Typ ARCHIVEER ter bevestiging</label>
+        <input id="analytics-archive-confirm" name="confirmation" required autocomplete="off">
+        <button type="submit" class="primary">Archiveren en codes wissen</button>
+        <a href="<?=e(url('admin/statistieken.php'))?>">Annuleren</a>
+      </form>
+    <?php else: ?>
+      <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="preview_archive">
+        <button type="submit" <?=!$available?'disabled':''?>>Bekijk te archiveren gegevens</button>
+      </form>
+    <?php endif; ?>
+  </section>
   <section class="dashboard-panel" aria-labelledby="analytics-delete-title">
     <h2 id="analytics-delete-title">Statistiekgegevens handmatig verwijderen</h2>
-    <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet.</p>
+    <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet. Ook geaggregeerde statistieken worden verwijderd.</p>
     <?php if ($deleteError !== ''): ?><div class="alert error" role="alert"><?=e($deleteError)?></div><?php endif; ?>
     <?php if ($deletePreview !== null): ?>
       <div class="alert" role="status">
