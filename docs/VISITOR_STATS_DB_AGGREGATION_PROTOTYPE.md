@@ -68,3 +68,7 @@ Voer vóór runtimevrijgave in een **wegwerpdatabase** met productie-achtige, ni
 6. Voor productie: maak een apart verifieerbaar data-only SQL-back-up- en herstelplan voor de drie statistiektabellen; review schema-impact en privacybewaring. Geen enkele databasehandeling is door deze PR geautoriseerd.
 
 Uitkomst huidige review: **niet vrijgeven voor productieruntime op basis van de 3.000-rijentest alleen**. Geen productiebenchmarks of productiegegevens geraadpleegd.
+
+## Prototype veiligheidslimiet, nog geen batchverwerking
+
+De archiveringsfunctie weigert een handmatige opdracht zodra de historische prefix meer dan **20.000 bronrijen** bevat, vóór aggregatie of verwijdering. De geïsoleerde regressietest controleert dat 20.001 bronrijen geen aggregaten of dataverlies veroorzaken en dat een teruggebrachte dataset van 15.000 rijen vervolgens wordt verwerkt. Dit is een conservatieve **fail-closed bovengrens**, niet de gevraagde daadwerkelijke batcharchivering. De bestaande `FOR UPDATE`-prefixscan loopt ook bij weigering over maximaal 20.001 records en legt hierbij locks; locks en MySQL-capaciteit in productie zijn nog niet gekwantificeerd. Bij meer dan 20.000 historische bronrijen is archivering niet mogelijk totdat een afzonderlijk ontworpen en getest kort-transactiebatchmechanisme is geïmplementeerd. Geen automatische herhaling, migratie, merge of productiehandeling.
