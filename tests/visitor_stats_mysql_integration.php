@@ -210,4 +210,27 @@ try {
 }
 $raceArchive = archive_visitor_stats_before($pdo, $cutoff);
 check($raceArchive['rows'] === 1 && $raceArchive['views'] === 1, 'Retry after concurrent historical INSERT failed');
+// Bounded-client-memory load regression, isolated MySQL only. No wall-clock
+// assertion: shared CI runners have variable scheduling and DB speed.
+$loadDate = gmdate('Y-m-d', strtotime('-91 days'));
+$loadRows = 3000;
+$loadInsert = $pdo->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
+for ($n = 0; $n < $loadRows; $n++) {
+    $loadInsert->execute([$loadDate, str_pad(dechex(50000 + $n), 64, '0', STR_PAD_LEFT)]);
+}
+$memoryBefore = memory_get_peak_usage(true);
+$loadStarted = microtime(true);
+$loadResult = archive_visitor_stats_before($pdo, $cutoff);
+$loadSeconds = microtime(true) - $loadStarted;
+$memoryAfter = memory_get_peak_usage(true);
+check($loadResult['rows'] === $loadRows && $loadResult['views'] === $loadRows
+    && $loadResult['days'] === 1, 'High-volume daily archive failed');
+$loadCheck = $pdo->prepare('SELECT visitor_days, views FROM visitor_stats_day_totals WHERE visit_date=?');
+$loadCheck->execute([$loadDate]);
+$loadTotals = $loadCheck->fetch(PDO::FETCH_ASSOC);
+check((int)$loadTotals['visitor_days'] === $loadRows
+    && (int)$loadTotals['views'] === $loadRows, 'High-volume distinct totals mismatch');
+check($memoryAfter < 64 * 1024 * 1024, 'High-volume archive exceeded PHP peak memory safety envelope');
+fwrite(STDOUT, sprintf("Archive load regression: %d rows, %.3fs, peak PHP memory %.1f MiB (before %.1f MiB)\\n",
+    $loadRows, $loadSeconds, $memoryAfter / 1048576, $memoryBefore / 1048576));
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
