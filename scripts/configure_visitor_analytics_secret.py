@@ -104,7 +104,7 @@ def install(sftp, root, expected_sha: str, token: str) -> None:
     try:
         with sftp.open(temporary, "x") as handle:
             created = True
-            handle.chmod(mode & 0o600)
+            sftp.chmod(temporary, 0o600)
             handle.write(updated)
             handle.flush()
         st = sftp.lstat(temporary)
