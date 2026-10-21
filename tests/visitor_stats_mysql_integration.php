@@ -3,7 +3,7 @@ declare(strict_types=1);
 /** Isolated MySQL integration: uses ONLY fresh temporary test database supplied in CI. */
 require dirname(__DIR__) . '/private/visitor_stats_archive.php';
 $dsn = (string)(getenv('ANALYTICS_TEST_DSN') ?: '');
-if (!str_starts_with($dsn, 'mysql:') || !str_contains($dsn, 'dbname=visitor_stats_ci')) {
+if (!str_starts_with($dsn, 'mysql:host=127.0.0.1;port=3306;dbname=visitor_stats_ci;') || !str_contains($dsn, 'charset=utf8mb4')) {
     fwrite(STDERR, "Refusing non-isolated test DSN\n"); exit(2);
 }
 $pdo = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
@@ -14,8 +14,13 @@ function check(bool $value, string $message): void {
     if (!$value) throw new RuntimeException($message);
 }
 $pdo->exec('CREATE TABLE visitor_stats_daily (visit_date DATE NOT NULL, visitor_id BINARY(32) NOT NULL, page_kind VARCHAR(8) NOT NULL, lot_id BIGINT UNSIGNED NOT NULL DEFAULT 0, views INT UNSIGNED NOT NULL DEFAULT 1, PRIMARY KEY (visit_date, visitor_id, page_kind, lot_id), KEY idx_lot_top (visit_date, page_kind, lot_id)) ENGINE=InnoDB');
-$pdo->exec('CREATE TABLE visitor_stats_day_totals (visit_date DATE NOT NULL PRIMARY KEY, visitor_days INT UNSIGNED NOT NULL, views BIGINT UNSIGNED NOT NULL, lot_views BIGINT UNSIGNED NOT NULL) ENGINE=InnoDB');
-$pdo->exec('CREATE TABLE visitor_stats_lot_totals (visit_date DATE NOT NULL, lot_id BIGINT UNSIGNED NOT NULL, visitor_days INT UNSIGNED NOT NULL, views BIGINT UNSIGNED NOT NULL, PRIMARY KEY(visit_date,lot_id), KEY idx_lot_total(lot_id,visit_date)) ENGINE=InnoDB');
+$migration = file_get_contents(dirname(__DIR__) . '/database/visitor_stats_aggregates.sql');
+if (!is_string($migration)) throw new RuntimeException('Test migration missing');
+foreach (explode(';', $migration) as $statement) {
+    // Strip SQL-only comment lines before executing individual DDL statements.
+    $statement = preg_replace('/^\\s*--[^\\n]*$/m', '', $statement);
+    if (trim((string)$statement) !== '') $pdo->exec((string)$statement);
+}
 $old = gmdate('Y-m-d', strtotime('-45 days'));
 $recent = gmdate('Y-m-d', strtotime('-2 days'));
 $cutoff = gmdate('Y-m-d', strtotime('-30 days'));
