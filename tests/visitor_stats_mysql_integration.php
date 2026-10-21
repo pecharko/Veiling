@@ -83,4 +83,22 @@ $largeTotals->execute([$largeDay]);
 $largeRow = $largeTotals->fetch(PDO::FETCH_ASSOC);
 check((int)$largeRow['visitor_days'] === 1001 && (int)$largeRow['views'] === 1001, 'Large daily unique visitors mismatch');
 check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === 1, 'Recent visit lost in large run');
+// Multi-day atomicity: a later-day conflict must roll back earlier-day aggregates.
+$firstDay = gmdate('Y-m-d', strtotime('-60 days'));
+$secondDay = gmdate('Y-m-d', strtotime('-59 days'));
+$add->execute([$firstDay, $a, 'home', 0, 7]);
+$add->execute([$secondDay, $b, 'lot', 12, 5]);
+$pdo->prepare('INSERT INTO visitor_stats_day_totals (visit_date,visitor_days,views,lot_views) VALUES (?,1,99,0)')->execute([$secondDay]);
+$beforeCount = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+$multiFailed = false;
+try { archive_visitor_stats_before($pdo, $cutoff); } catch (PDOException $ex) { $multiFailed = true; }
+check($multiFailed, 'Later-day duplicate must stop multi-day archive');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === $beforeCount, 'Multi-day rollback removed source records');
+$firstArchive = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+$firstArchive->execute([$firstDay]);
+check((int)$firstArchive->fetchColumn() === 0, 'Earlier-day aggregate survived failed multi-day transaction');
+$pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date=?')->execute([$secondDay]);
+$multiRecovered = archive_visitor_stats_before($pdo, $cutoff);
+check($multiRecovered['rows'] === 2 && $multiRecovered['views'] === 12 && $multiRecovered['days'] === 2, 'Multi-day recovery incorrect');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === 1, 'Recent record removed in multi-day recovery');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
