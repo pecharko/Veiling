@@ -13,6 +13,14 @@ Beoogde rechtsgrond is artikel 6(1)(f) AVG, **gerechtvaardigd belang**; dit is n
 
 **Voorlopige toets:** het belang is concreet en in beginsel legitiem, op voorwaarde dat 41 Lokeren dit effectief gebruikt voor de veiling en het geen ruimer commercieel doel wordt.
 
+### Aanvullend organisatorisch doel: evaluatie na afloop van de veiling
+
+41 Lokeren wil na afloop van de liefdadigheidsveiling van 2027 onderbouwen welke kavels in welke campagneperiodes belangstelling kregen, zodat de vereniging de presentatie, communicatie en selectie van kavels bij toekomstige liefdadigheidsveilingen kan verbeteren. Daarbij wil zij per kavel en periode zowel paginaweergaven als unieke **bezoekersdagen** kunnen analyseren. Dit laat bijvoorbeeld toe om te onderscheiden tussen veel herhaalde raadplegingen binnen één dag en een bredere dagelijkse belangstelling, en om inzichten uit de gehele campagne opnieuw te berekenen bij de eindevaluatie.
+
+De daggebonden HMAC-identifier kan functioneel worden gebruikt om binnen één UTC-dag herhaalde raadplegingen te onderscheiden. Hij maakt **geen** betrouwbare herkenning van dezelfde persoon over verschillende dagen mogelijk. De huidige adminweergave toont bovendien slechts 30 dagen; een rapport over de volledige campagne vereist een afzonderlijke analyse of functionele uitbreiding. Er is geen bewijs dat een dergelijke volledige eindevaluatie momenteel is geïmplementeerd of daadwerkelijk uitgevoerd.
+
+**Noodzakelijkheidstoets:** deze organisatorische motivering is plausibel maar bewijst nog niet dat alle pseudonieme dagcodes tot en met 31 oktober 2027 moeten blijven bestaan. Geaggregeerde aantallen per dag en kavel kunnen de meeste eindevaluaties ondersteunen. Voor de gekozen langere bewaring moet 41 Lokeren vooraf schriftelijk vaststellen welke concrete herberekeningen of kwaliteitscontroles de afzonderlijke dagcodes vereisen, waarom een eenmalige dagelijkse aggregatie niet volstaat, en wie de evaluatie uitvoert. Zonder die aanvullende onderbouwing blijft het noodzakelijkheidsoordeel negatief en de privacyvrijgave geblokkeerd.
+
 ## 2. Werkelijke gegevensverwerking
 
 Bij GET-verzoeken zonder Do Not Track, voor niet-herkende bots en met een geconfigureerd `analytics_secret`, wordt tijdelijk IP-adres, user-agent en UTC-dag verwerkt tot een HMAC-SHA256 identificator. De tabel bewaart per dag de pseudonieme bezoekercode, paginatype (`home` of `lot`), optioneel de interne kavel-ID en teller `views`. Het ruwe IP-adres en de browserstring worden niet in deze tabel opgeslagen. De HMAC-identificator is **gepseudonimiseerd en kan nog een persoonsgegeven zijn**. De instelling Do Not Track wordt gerespecteerd voor deze module. De adminpagina is afgeschermd met login en biedt handmatig wissen met CSRF-controle, preview en bevestiging.
