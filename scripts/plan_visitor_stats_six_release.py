@@ -25,7 +25,7 @@ MARKERS = {
     "private/bootstrap.php": ("admin/statistieken.php", "function require_auth()"),
     "catalogus-public/index.php": ("private/visitor_stats.php", "track_catalog_view();", "url('privacy.php')"),
     "catalogus-public/kavel.php": ("private/visitor_stats.php", "track_catalog_view((int)$lot['id']);", "url('privacy.php')"),
-    "catalogus-public/privacy.php": ("Privacy en bezoekersstatistieken", "Verantwoordelijke organisatie:</strong> 41 Lokeren", "tot het einde van de veiling in 2027 en daarna verwijderd", "rechtsgrond en de proportionaliteit van de bewaartermijn", "mailto:41clublokeren@gmail.com"),
+    "catalogus-public/privacy.php": ("Privacy en bezoekersstatistieken", "Verantwoordelijke organisatie:</strong> 41 Lokeren", "31 oktober 2027", "ouder dan 30 dagen handmatig", "rechtsgrond en de proportionaliteit van de bewaartermijn", "mailto:41clublokeren@gmail.com"),
 }
 
 def git(*arguments: str) -> bytes:
