@@ -326,6 +326,7 @@ check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),
         PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
     ]);
     $afterCycle = archive_visitor_stats_before($pdo, $cutoff);
-    check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');\n    fwrite(STDOUT, "Cyclic InnoDB deadlock regression passed: victim 1213 and archive recovery\\n");
+    check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');
+    fwrite(STDOUT, "Cyclic InnoDB deadlock regression passed: victim 1213 and archive recovery\\n");
 }
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
