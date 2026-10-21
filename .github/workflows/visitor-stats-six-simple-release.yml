@@ -5,7 +5,10 @@ on:
     paths:
       - '.github/workflows/visitor-stats-six-simple-release.yml'
       - 'scripts/deploy_visitor_stats_six_simple.py'
+      - 'scripts/plan_visitor_stats_six_release.py'
+      - 'scripts/preflight_visitor_stats_six_remote.py'
       - 'tests/visitor_stats_six_simple_release_test.py'
+      - 'tests/visitor_stats_six_remote_preflight_test.py'
   workflow_dispatch:
     inputs:
       mode:
@@ -75,6 +78,7 @@ jobs:
         run: |
           python3 tests/visitor_stats_six_simple_release_test.py
           python3 tests/visitor_stats_six_remote_preflight_test.py
+          python3 tests/public_privacy_notice_test.py
       - name: Validate source files and PHP lint for current commit
         run: python3 scripts/deploy_visitor_stats_six_simple.py --release-sha "$GITHUB_SHA" --mode plan
 
@@ -103,6 +107,8 @@ jobs:
           set -euo pipefail
           [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
           python3 tests/visitor_stats_six_simple_release_test.py
+          python3 tests/visitor_stats_six_remote_preflight_test.py
+          python3 tests/public_privacy_notice_test.py
           python3 scripts/deploy_visitor_stats_six_simple.py --release-sha "$RELEASE_SHA" --mode plan > visitor-stats-six-simple-plan.json
           cat visitor-stats-six-simple-plan.json
       - uses: actions/upload-artifact@v4
@@ -172,6 +178,7 @@ jobs:
           set -euo pipefail
           python3 tests/visitor_stats_six_simple_release_test.py
           python3 tests/visitor_stats_six_remote_preflight_test.py
+          python3 tests/public_privacy_notice_test.py
           python3 scripts/deploy_visitor_stats_six_simple.py --release-sha "$RELEASE_SHA" --mode plan > /dev/null
       - name: Install pinned hostkey-validating SFTP client
         run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
