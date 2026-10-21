@@ -65,8 +65,12 @@ if (is_post()) {
                     $countStmt = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
                     $countStmt->execute([$cutoff]);
                     $count = (int)$countStmt->fetchColumn();
+                    $extra = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date < ?');
+                    $extra->execute([$cutoff]);
+                    $count += (int)$extra->fetchColumn();
                 } else {
                     $count = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+                    $count += (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn();
                 }
                 $token = bin2hex(random_bytes(24));
                 $_SESSION['analytics_delete_pending'] = [
@@ -97,7 +101,9 @@ if (is_post()) {
         } else {
             try {
                 $pdo = db();
-                // No TRUNCATE, no dynamic table name; only statistics rows.
+                // Delete both detailed and aggregated analytics atomically.
+                // No TRUNCATE, no dynamic table names, no changes to lots/accounts.
+                $pdo->beginTransaction();
                 if ($pending['scope'] === 'before') {
                     $cutoff = (string)($pending['cutoff'] ?? '');
                     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
@@ -106,15 +112,24 @@ if (is_post()) {
                         || $cutoff > gmdate('Y-m-d')) {
                         throw new RuntimeException('Ongeldige opgeslagen grensdatum.');
                     }
-                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date < ?');
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_lot_totals WHERE visit_date < ?');
+                    $stmt->execute([$cutoff]);
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date < ?');
                     $stmt->execute([$cutoff]);
                     $deleted = $stmt->rowCount();
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date < ?');
+                    $stmt->execute([$cutoff]);
+                    $deleted += $stmt->rowCount();
                 } else {
-                    $deleted = $pdo->exec('DELETE FROM visitor_stats_daily');
+                    $pdo->exec('DELETE FROM visitor_stats_lot_totals');
+                    $deleted = $pdo->exec('DELETE FROM visitor_stats_day_totals');
+                    $deleted += $pdo->exec('DELETE FROM visitor_stats_daily');
                 }
+                $pdo->commit();
                 flash((string)$deleted . ' statistiekrecords definitief verwijderd.');
                 redirect('admin/statistieken.php');
             } catch (Throwable $exception) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 error_log('Analytics deletion failed (no sensitive details logged).');
                 $deleteError = 'Verwijderen mislukt. Controleer de statistieken en probeer alleen na onderzoek opnieuw.';
             }
@@ -185,7 +200,7 @@ admin_top('Bezoekersstatistieken');
   </section>
   <section class="dashboard-panel" aria-labelledby="analytics-delete-title">
     <h2 id="analytics-delete-title">Statistiekgegevens handmatig verwijderen</h2>
-    <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet.</p>
+    <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet. Ook geaggregeerde statistieken worden verwijderd.</p>
     <?php if ($deleteError !== ''): ?><div class="alert error" role="alert"><?=e($deleteError)?></div><?php endif; ?>
     <?php if ($deletePreview !== null): ?>
       <div class="alert" role="status">
