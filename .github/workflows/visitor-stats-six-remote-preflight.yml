@@ -1,0 +1,105 @@
+name: Visitor stats six-file OVH preflight (read only)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/visitor-stats-six-remote-preflight.yml'
+      - 'scripts/preflight_visitor_stats_six_remote.py'
+      - 'tests/visitor_stats_six_remote_preflight_test.py'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Exact 40-character current main commit SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type READ ONLY SIX VISITOR STATS PREFLIGHT'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  fake-sftp-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run isolated fake SFTP regression tests
+        run: python3 tests/visitor_stats_six_remote_preflight_test.py
+  inspect-only:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Require explicit read only inspection permission
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == 'READ ONLY SIX VISITOR STATS PREFLIGHT' ]] || exit 1
+          [[ "$APPROVED_SHA" =~ ^[a-f0-9]{40}$ && "$APPROVED_SHA" == "$GITHUB_SHA" ]] || exit 1
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            [[ -n "${!key:-}" ]] || { echo 'Missing SFTP variable or secret'; exit 1; }
+          done
+      - name: Checkout approved full history
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP lint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Validate exact source and fake SFTP safety checks before connection
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/preflight_visitor_stats_six_remote.py tests/visitor_stats_six_remote_preflight_test.py
+          python3 tests/visitor_stats_six_simple_release_test.py
+          python3 tests/visitor_stats_six_remote_preflight_test.py
+          python3 scripts/plan_visitor_stats_six_release.py --release-sha "$APPROVED_SHA" > /dev/null
+      - name: Install pinned SFTP library
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: 'Read ONLY: inspect six runtime paths and maintenance markers'
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/preflight_visitor_stats_six_remote.py --release-sha "$APPROVED_SHA" > visitor-stats-six-remote-report.json
+          cat visitor-stats-six-remote-report.json
+          echo 'Read-only inventory only, NOT a verified drift baseline or deploy approval.'
+      - name: Retain nonsecret inventory for 7 days
+        uses: actions/upload-artifact@v4
+        with:
+          name: visitor-stats-six-remote-inventory-${{ github.run_id }}
+          path: visitor-stats-six-remote-report.json
+          retention-days: 7
+          if-no-files-found: error
