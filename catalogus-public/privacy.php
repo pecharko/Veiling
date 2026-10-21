@@ -20,7 +20,7 @@ $contact = trim((string)($s['contact_email'] ?? ''));
   <h1>Privacy en bezoekersstatistieken</h1>
   <p>De veilingwebsite van 41 Lokeren gebruikt eigen, cookievrije bezoekersstatistieken om paginaweergaven en belangstelling voor kavels te meten. Er worden hiervoor geen externe advertentie- of statistiekdiensten gebruikt.</p>
   <p>Bij een bezoek worden het IP-adres en de browserinformatie kort verwerkt om met een geheime sleutel een per UTC-dag wisselende, gepseudonimiseerde bezoekerscode te berekenen. De oorspronkelijke IP-adressen en browserinformatie worden niet in de statistiekentabel opgeslagen. Pseudonieme gegevens kunnen nog persoonsgegevens zijn.</p>
-  <p>De statistiekentabel bevat de bezoekdatum, de gepseudonimiseerde code, het paginatype, eventueel een kavelnummer en het aantal paginaweergaven. Een browser die een Do Not Track-signaal meestuurt, wordt niet door deze statistiekenmodule geregistreerd.</p>
+  <p>De statistiekentabel bevat de bezoekdatum, de gepseudonimiseerde code, het paginatype, eventueel een interne kavel-ID en het aantal paginaweergaven. Een browser die een Do Not Track-signaal meestuurt, wordt niet door deze statistiekenmodule geregistreerd.</p>
   <p>Bezoekersstatistieken worden uitsluitend door bevoegde beheerders bekeken. Beheerders kunnen alle statistieken of alle records vóór een gekozen datum handmatig verwijderen. Er is geen automatische opschoning.</p>
   <p>De organisator dient vóór de activering van deze statistieken de rechtsgrond en concrete maximale bewaartermijn vast te stellen en hierover de informatie aan te vullen. Technische webserverlogs van de hosting vallen buiten deze statistiekenmodule.</p>
   <?php if ($contact !== '' && filter_var($contact, FILTER_VALIDATE_EMAIL)): ?>
