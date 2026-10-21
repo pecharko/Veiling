@@ -41,3 +41,7 @@ A new test in `tests/visitor_stats_mysql_integration.php` inserts 3,000 distinct
 ## Competing historical row lock regression
 
 An added two-session isolated MySQL regression holds an uncommitted `SELECT ... FOR UPDATE` lock on an old visitor row, invokes the actual archive with a 1-second InnoDB lock-wait timeout, verifies fail-closed with no day aggregate and no open archive transaction, releases the lock and verifies successful retry. The test accepts either MySQL lock timeout (1205) or deadlock victim (1213); it does not force a genuine cyclic deadlock. CI must pass on the exact updated head. A separate deterministic two-way deadlock simulation and server resource profiling remain open, and neither production data nor hosting is touched.
+
+## Synthetic cyclic deadlock regression
+
+A separate isolated-MySQL test now forks a second PHP process, creates independent PDO connections, has each hold a row lock on opposite historical UTC dates, and requests the other's lock concurrently. It checks that InnoDB reports a deadlock victim (`1213`), releases both transactions, and verifies that normal archiving works afterward. This is a **synthetic database deadlock**, not a guaranteed archive-versus-archive deadlock. The test is conditional on `pcntl_fork` and `stream_socket_pair` availability; CI must verify these functions are present, otherwise the scenario is skipped and cannot be claimed tested. No production operation is authorized.
