@@ -1,6 +1,11 @@
 name: T-062 Visitor stats OVH SFTP preflight (read only)
 
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/visitor-stats-remote-preflight.yml'
+      - 'scripts/preflight_visitor_stats_remote.py'
+      - 'tests/visitor_stats_remote_preflight_test.py'
   workflow_dispatch:
     inputs:
       release_sha:
@@ -20,8 +25,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  fake-sftp-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run isolated fake SFTP regression tests
+        run: python3 tests/visitor_stats_remote_preflight_test.py
   inspect-only:
-    if: github.ref == 'refs/heads/main'
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 15
