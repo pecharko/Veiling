@@ -17,6 +17,13 @@ class Tests(unittest.TestCase):
     def baseline(self):
         return {x: hashlib.sha256(OLD[x]).hexdigest() for x in d.EXISTING}
 
+    def test_privacy_markers_match_actual_php_source(self):
+        from plan_visitor_stats_six_release import MARKERS
+        source = (Path(__file__).resolve().parents[1] / "catalogus-public/privacy.php").read_bytes()
+        for marker in MARKERS["catalogus-public/privacy.php"]:
+            with self.subTest(marker=marker):
+                self.assertIn(marker.encode(), source)
+
     def test_preflight_matches_known_existing_not_planned_hash(self):
         fake=FakeSFTP()
         with patch.object(d, "OBSERVED", self.baseline()):
