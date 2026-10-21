@@ -363,4 +363,20 @@ check(function_exists('pcntl_fork') && function_exists('stream_socket_pair'),
     check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');
     fwrite(STDOUT, "Cyclic InnoDB deadlock regression passed: victim 1213 and archive recovery\\n");
 }
+// Experimental day-scoped prototype: one committed day per manual call.
+require dirname(__DIR__) . '/private/visitor_stats_archive_one_day_experimental.php';
+$batchFirst = gmdate('Y-m-d', strtotime('-105 days'));
+$batchSecond = gmdate('Y-m-d', strtotime('-104 days'));
+$add->execute([$batchFirst,$a,'home',0,3]);
+$add->execute([$batchSecond,$b,'lot',42,4]);
+$one = archive_visitor_stats_one_day($pdo, $cutoff);
+check($one['days'] === 1 && $one['rows'] === 1 && $one['views'] === 3,
+    'One-day archive failed to commit oldest UTC day');
+$remaining = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$remaining->execute([$batchSecond]);
+check((int)$remaining->fetchColumn() === 1, 'One-day prototype consumed more than one UTC day');
+$two = archive_visitor_stats_one_day($pdo, $cutoff);
+check($two['days'] === 1 && $two['views'] === 4, 'Second one-day archive did not resume');
+check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0, 'One-day archive was not idempotent');
+fwrite(STDOUT, "Experimental one-day archival passed: isolated commits and resume\\n");
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
