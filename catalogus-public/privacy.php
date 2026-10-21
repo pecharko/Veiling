@@ -1,8 +1,6 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
-$s = settings();
-$contact = trim((string)($s['contact_email'] ?? ''));
 ?>
 <!doctype html>
 <html lang="nl">
@@ -24,11 +22,7 @@ $contact = trim((string)($s['contact_email'] ?? ''));
   <p>De statistiekentabel bevat de bezoekdatum, de gepseudonimiseerde code, het paginatype, eventueel een interne kavel-ID en het aantal paginaweergaven. Een browser die een Do Not Track-signaal meestuurt, wordt niet door deze statistiekenmodule geregistreerd.</p>
   <p>Bezoekersstatistieken worden uitsluitend door bevoegde beheerders bekeken. De gegevens worden bewaard tot het einde van de veiling in 2027 en daarna verwijderd.</p>
   <p>41 Lokeren moet vóór activering de rechtsgrond en de proportionaliteit van de bewaartermijn juridisch beoordelen. Technische webserverlogs van de hosting vallen buiten deze statistiekenmodule.</p>
-  <?php if ($contact !== '' && filter_var($contact, FILTER_VALIDATE_EMAIL)): ?>
-    <p>Voor vragen over privacy en je rechten kun je contact opnemen via <a href="mailto:<?=e($contact)?>"><?=e($contact)?></a>.</p>
-  <?php else: ?>
-    <p>Het contactadres van de verantwoordelijke organisatie moet vóór activering van bezoekersstatistieken worden ingevuld.</p>
-  <?php endif; ?>
+  <p>Voor vragen over privacy en je rechten kun je contact opnemen met 41 Lokeren via <a href="mailto:41clublokeren@gmail.com">41clublokeren@gmail.com</a>.</p>
 </main>
 </body>
 </html>
