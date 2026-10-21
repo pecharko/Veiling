@@ -51,4 +51,22 @@ check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_lot_totals')->fetchCo
 $failed=false;
 try { archive_visitor_stats_before($pdo,gmdate('Y-m-d')); } catch (InvalidArgumentException $ex) { $failed=true; }
 check($failed,'Future/active cutoff must be refused');
-echo "MySQL archive integration passed: accuracy, idempotency, rollback, recent-day protection\n";
+// A malformed historic row must not delete valid rows or insert partial aggregates.
+$pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date = ?')->execute([$old2]);
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date = ?')->execute([$old2]);
+$invalidDay = gmdate('Y-m-d', strtotime('-48 days'));
+$validDay = gmdate('Y-m-d', strtotime('-47 days'));
+$add->execute([$validDay, $a, 'home', 0, 3]);
+$add->execute([$invalidDay, $b, 'invalid', 0, 1]);
+$beforeDetails = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+$beforeTotals = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn();
+$failed = false;
+try { archive_visitor_stats_before($pdo, $cutoff); } catch (RuntimeException $ex) { $failed = true; }
+check($failed, 'Invalid page kind must fail closed');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === $beforeDetails, 'Malformed row caused source data loss');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn() === $beforeTotals, 'Malformed row caused partial daily aggregates');
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date = ?')->execute([$invalidDay]);
+$recovered = archive_visitor_stats_before($pdo, $cutoff);
+check($recovered['rows'] === 1 && $recovered['views'] === 3, 'Valid archive after malformed rollback failed');
+check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === 1, 'Recent visit not preserved after recovery');
+echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
