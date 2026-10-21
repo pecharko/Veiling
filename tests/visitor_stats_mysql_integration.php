@@ -31,7 +31,11 @@ $add->execute([$old,$a,'lot',7,3]);
 $add->execute([$old,$b,'lot',7,1]);
 $add->execute([$old,$b,'lot',8,4]);
 $add->execute([$recent,$a,'home',0,1]);
+$pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
 $r = archive_visitor_stats_before($pdo,$cutoff);
+check($pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY) === false,
+    'Archive unexpectedly altered caller PDO buffering configuration');
+$pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
 check($r['rows']===4 && $r['days']===1 && $r['views']===10,'Incorrect archival result');
 $d = $pdo->query('SELECT * FROM visitor_stats_day_totals')->fetch();
 check((int)$d['visitor_days']===2 && (int)$d['views']===10 && (int)$d['lot_views']===8,'Daily totals mismatch');
