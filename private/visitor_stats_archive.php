@@ -25,6 +25,7 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
         $dates = [];
         $previousDay = null;
         $days = $pdo->prepare('SELECT visit_date FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date < ? ORDER BY visit_date FOR UPDATE');
+        $originalBuffering = (bool)$pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
         $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
         try {
             $days->execute([$cutoff]);
@@ -36,7 +37,7 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
             }
         } finally {
             $days->closeCursor();
-            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $originalBuffering);
         }
         $rowCount = 0;
         $sourceViews = 0;
@@ -56,7 +57,8 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
         foreach ($dates as $day) {
             $n = 0;
             $views = 0;
-            // PDO MySQL otherwise buffers the complete result in client memory.
+            // Preserve the caller's PDO buffering preference across the scan.
+            $originalBuffering = (bool)$pdo->getAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY);
             $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, false);
             try {
                 $validate->execute([$day]);
@@ -70,7 +72,7 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
                 }
             } finally {
                 $validate->closeCursor();
-                $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $originalBuffering);
             }
             if ($n === 0) continue;
             // SQL-side aggregation; no visitor ID values materialized in PHP.
