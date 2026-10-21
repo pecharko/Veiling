@@ -1,0 +1,185 @@
+name: Visitor statistics simple release (manual, no rollback)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/visitor-stats-simple-release.yml'
+      - 'scripts/deploy_visitor_stats_simple.py'
+      - 'tests/visitor_stats_simple_release_test.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan is offline only; deploy uploads five PHP files without rollback'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact 40-character current main SHA'
+        required: true
+        type: string
+      plan_run_id:
+        description: 'Completed successful separate plan-mode run ID (deploy only)'
+        required: false
+        type: string
+        default: ''
+      schema_ready:
+        description: 'Type SQL SCHEMA VERIFIED after separate manually approved migration'
+        required: false
+        type: string
+        default: ''
+      analytics_ready:
+        description: 'Type ANALYTICS SECRET CONFIGURED after private config setup'
+        required: false
+        type: string
+        default: ''
+      privacy_ready:
+        description: 'Type PRIVACY REVIEW APPROVED after privacy and retention review'
+        required: false
+        type: string
+        default: ''
+      confirmation:
+        description: 'For deploy type DEPLOY VISITOR STATS NO ROLLBACK'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Verify isolated simple deployment regressions
+        run: |
+          python3 tests/visitor_stats_simple_release_test.py
+          python3 tests/visitor_stats_remote_preflight_test.py
+      - name: Validate source files and PHP lint for current commit
+        run: python3 scripts/deploy_visitor_stats_simple.py --release-sha "$GITHUB_SHA" --mode plan
+
+  plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'plan'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Verify exact SHA and write offline-only release plan
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          python3 tests/visitor_stats_simple_release_test.py
+          python3 scripts/deploy_visitor_stats_simple.py --release-sha "$RELEASE_SHA" --mode plan > visitor-stats-simple-plan.json
+          cat visitor-stats-simple-plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: visitor-stats-simple-plan-${{ github.run_id }}
+          path: visitor-stats-simple-plan.json
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: 'Gate: explicit user acceptance of no rollback and prerequisites'
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          PLAN_RUN: ${{ inputs.plan_run_id }}
+          SCHEMA: ${{ inputs.schema_ready }}
+          ANALYTICS: ${{ inputs.analytics_ready }}
+          PRIVACY: ${{ inputs.privacy_ready }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          [[ "$PLAN_RUN" =~ ^[0-9]+$ && "$PLAN_RUN" != "$GITHUB_RUN_ID" ]] || exit 1
+          [[ "$SCHEMA" == 'SQL SCHEMA VERIFIED' ]] || exit 1
+          [[ "$ANALYTICS" == 'ANALYTICS SECRET CONFIGURED' ]] || exit 1
+          [[ "$PRIVACY" == 'PRIVACY REVIEW APPROVED' ]] || exit 1
+          [[ "$CONFIRMATION" == 'DEPLOY VISITOR STATS NO ROLLBACK' ]] || exit 1
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            [[ -n "${!key:-}" ]] || exit 1
+          done
+          previous="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN")"
+          [[ "$(jq -r '.status' <<<"$previous")" == completed ]] || exit 1
+          [[ "$(jq -r '.conclusion' <<<"$previous")" == success ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<<"$previous")" == "$RELEASE_SHA" ]] || exit 1
+          [[ "$(jq -r '.event' <<<"$previous")" == workflow_dispatch ]] || exit 1
+          [[ "$(jq -r '.path' <<<"$previous")" == '.github/workflows/visitor-stats-simple-release.yml' ]] || exit 1
+          [[ "$(jq -r '.inputs.mode // empty' <<<"$previous")" == plan ]] || exit 1
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Check PHP sources, fake SFTP regressions and release manifest
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 tests/visitor_stats_simple_release_test.py
+          python3 tests/visitor_stats_remote_preflight_test.py
+          python3 scripts/deploy_visitor_stats_simple.py --release-sha "$RELEASE_SHA" --mode plan > /dev/null
+      - name: Install pinned hostkey-validating SFTP client
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: 'Deploy: exactly five PHP files WITHOUT rollback after fresh remote checks'
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_visitor_stats_simple.py --release-sha "$RELEASE_SHA" --mode deploy
+          echo 'Manual production verification remains required. No automatic rollback.'
