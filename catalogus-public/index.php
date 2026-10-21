@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_once dirname(__DIR__) . '/private/visitor_stats.php';
+track_catalog_view();
 $s = settings();
 $published = (int)($s['is_published'] ?? 0) === 1;
 $q = mb_substr(trim((string)(is_string($_GET['q'] ?? null) ? $_GET['q'] : '')), 0, 100);
