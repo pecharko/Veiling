@@ -380,5 +380,32 @@ check((int)$remaining->fetchColumn() === 1, 'One-day prototype consumed more tha
 $two = archive_visitor_stats_one_day($pdo, $cutoff);
 check($two['days'] === 1 && $two['views'] === 4, 'Second one-day archive did not resume');
 check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0, 'One-day archive was not idempotent');
+// Competing writer regression for the actual experimental day-scoped function.
+$batchLocked = gmdate('Y-m-d', strtotime('-106 days'));
+$add->execute([$batchLocked,$a,'lot',57,6]);
+$pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+$other->beginTransaction();
+try {
+    $heldBatch = $other->prepare('SELECT visitor_id FROM visitor_stats_daily WHERE visit_date=? FOR UPDATE');
+    $heldBatch->execute([$batchLocked]);
+    check($heldBatch->fetch(PDO::FETCH_ASSOC) !== false, 'Could not lock one-day source row');
+    $heldBatch->closeCursor();
+    $rejectedBatch = false;
+    try {
+        archive_visitor_stats_one_day($pdo, $cutoff);
+    } catch (PDOException $ex) {
+        $rejectedBatch = in_array((string)($ex->errorInfo[1] ?? ''), ['1205','1213'], true);
+    }
+    check($rejectedBatch && !$pdo->inTransaction(), 'One-day archive must roll back on competing row lock');
+    $batchAggregate = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+    $batchAggregate->execute([$batchLocked]);
+    check((int)$batchAggregate->fetchColumn() === 0, 'One-day archive persisted aggregate despite lock failure');
+} finally {
+    if ($other->inTransaction()) $other->rollBack();
+}
+$recoveredBatch = archive_visitor_stats_one_day($pdo, $cutoff);
+check($recoveredBatch['rows'] === 1 && $recoveredBatch['views'] === 6,
+    'One-day archive did not resume after competing lock released');
+fwrite(STDOUT, "Experimental one-day concurrent row-lock regression passed\\n");
 fwrite(STDOUT, "Experimental one-day archival passed: isolated commits and resume\\n");
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
