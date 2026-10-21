@@ -217,7 +217,7 @@ check($raceArchive['rows'] === 1 && $raceArchive['views'] === 1, 'Retry after co
 // Bounded-client-memory load regression, isolated MySQL only. No wall-clock
 // assertion: shared CI runners have variable scheduling and DB speed.
 $loadDate = gmdate('Y-m-d', strtotime('-91 days'));
-$loadRows = 3000;
+$loadRows = 15000;
 $loadInsert = $pdo->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
 for ($n = 0; $n < $loadRows; $n++) {
     $loadInsert->execute([$loadDate, str_pad(dechex(50000 + $n), 64, '0', STR_PAD_LEFT)]);
