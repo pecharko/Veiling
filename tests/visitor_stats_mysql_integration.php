@@ -232,6 +232,25 @@ $serverCounters = static function (PDO $connection): array {
     return $data;
 };
 $mysqlBefore = $serverCounters($pdo);
+// An oversized manual operation must fail before any destructive SQL.
+for ($n = 0; $n < 5001; $n++) {
+    $loadInsert->execute([$loadDate, str_pad(dechex(70000 + $n), 64, '0', STR_PAD_LEFT)]);
+}
+$rejectedLarge = false;
+try {
+    archive_visitor_stats_before($pdo, $cutoff);
+} catch (RuntimeException $exception) {
+    $rejectedLarge = str_contains($exception->getMessage(), 'safety limit');
+}
+check($rejectedLarge && !$pdo->inTransaction(), 'Oversized archival prefix must fail closed');
+$oversizedCount = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$oversizedCount->execute([$loadDate]);
+check((int)$oversizedCount->fetchColumn() === 20001, 'Oversize guard changed source data');
+$existingTotal = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+$existingTotal->execute([$loadDate]);
+check((int)$existingTotal->fetchColumn() === 0, 'Oversize guard wrote aggregate data');
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=? AND visitor_id >= UNHEX(?)')
+    ->execute([$loadDate, str_pad(dechex(70000), 64, '0', STR_PAD_LEFT)]);
 $memoryBefore = memory_get_peak_usage(true);
 $loadStarted = microtime(true);
 $loadResult = archive_visitor_stats_before($pdo, $cutoff);
