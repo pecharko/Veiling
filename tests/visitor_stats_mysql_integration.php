@@ -162,4 +162,26 @@ try {
 }
 $phantomResult = archive_visitor_stats_before($pdo, $cutoff);
 check($phantomResult['rows'] === 1 && $phantomResult['views'] === 1, 'Archive failed after range-lock release');
+// A previously empty historical date must also be protected by a range lock.
+// Probe the InnoDB index-gap primitive separately; production archive must
+// still prove that it actually holds equivalent locks during date discovery.
+$emptyHistoric = gmdate('Y-m-d', strtotime('-73 days'));
+$pdo->exec('SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+$pdo->beginTransaction();
+try {
+    $emptyRange = $pdo->prepare('SELECT visit_date, visitor_id FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date=? FOR UPDATE');
+    $emptyRange->execute([$emptyHistoric]);
+    check($emptyRange->fetch(PDO::FETCH_ASSOC) === false, 'Expected previously empty historic date');
+    $emptyRange->closeCursor();
+    $other->exec('SET SESSION innodb_lock_wait_timeout=1');
+    $emptyInsert = $other->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
+    $emptyBlocked = false;
+    try { $emptyInsert->execute([$emptyHistoric, str_repeat('dd',32)]); }
+    catch (PDOException $ex) {
+        $emptyBlocked = in_array((string)($ex->errorInfo[1] ?? ''), ['1205','1213'], true);
+    }
+    check($emptyBlocked, 'Empty historic day range did not block phantom insertion');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+}
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
