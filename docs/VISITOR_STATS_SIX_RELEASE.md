@@ -32,3 +32,10 @@ De laatste twee gewijzigde publieke entrypoints worden als laatste geüpload. Al
 - Verifieer of OVH de huidige privacy.php nog niet heeft; stop als enig voorgesteld nieuw bestand al bestaat.
 
 **Status:** uitsluitend releaseworkflow en bijbehorende offline tests voorbereid op reviewbranch. Geen productie-uitrol.
+
+## CI-incident 21 oktober 2026 — planrun 39659208086
+
+- **Symptoom:** offline `plan` en `offline-tests` faalden op `main` commit `0332bdc18e7a7b1069b501050d7c0931ecebaed6` nadat de 24 afzonderlijke tests groen waren. `deploy` werd overgeslagen; OVH bleef ongewijzigd.
+- **Bevestigde oorzaak:** de harde marker `rechtsgrond en concrete maximale bewaartermijn` in `scripts/plan_visitor_stats_six_release.py` kwam niet meer voor in `catalogus-public/privacy.php` na de goedgekeurde tekstaanpassing in PR #72.
+- **Herstel:** actualiseer uitsluitend de privacy-markers naar de huidige vermelding van organisator, eind-veilingbewaartermijn, rechtsgrondbeoordeling en contactmail; alle overige releasegates blijven behouden. Voeg een test toe die alle privacy-markers tegen de actuele PHP-bron controleert.
+- **Preventie:** voer bij elke tekstwijziging ook de volledige offline manifestcontrole uit op de nieuwe commit. Een eerdere groene releaseplanrun is niet herbruikbaar na een nieuwe SHA. Geen deploy vóór groen plan op exacte SHA.
