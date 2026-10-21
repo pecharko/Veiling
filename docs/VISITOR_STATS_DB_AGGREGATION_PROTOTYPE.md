@@ -37,3 +37,7 @@ An end-to-end test now starts an uncommitted INSERT for a previously empty histo
 ## Isolated load regression — 3,000 historical records
 
 A new test in `tests/visitor_stats_mysql_integration.php` inserts 3,000 distinct visitors into an isolated historical UTC day, runs the real archiver, checks aggregate counts and source deletion, measures elapsed time and peak PHP memory, and fails if PHP peak memory reaches 64 MiB. There is deliberately no strict wall-clock threshold on a shared CI runner. This is a small-scale regression, NOT a production-scale benchmark; MySQL server memory, disk, temporary-table use, lock waits, and worst-case campaign sizes remain unproven. No schema, workflow or production actions.
+
+## Competing historical row lock regression
+
+An added two-session isolated MySQL regression holds an uncommitted `SELECT ... FOR UPDATE` lock on an old visitor row, invokes the actual archive with a 1-second InnoDB lock-wait timeout, verifies fail-closed with no day aggregate and no open archive transaction, releases the lock and verifies successful retry. The test accepts either MySQL lock timeout (1205) or deadlock victim (1213); it does not force a genuine cyclic deadlock. CI must pass on the exact updated head. A separate deterministic two-way deadlock simulation and server resource profiling remain open, and neither production data nor hosting is touched.
