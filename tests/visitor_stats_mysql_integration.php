@@ -453,6 +453,39 @@ check((int)$uniqueDay->fetchColumn() === 1, 'Double archive created duplicate da
 $uniqueLot = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_lot_totals WHERE visit_date=? AND lot_id=58');
 $uniqueLot->execute([$doubleDay]);
 check((int)$uniqueLot->fetchColumn() === 1, 'Double archive created duplicate lot aggregates');
+// A concurrent historical insert on the same UTC day must not bypass the
+// archive row lock; after rollback, the insert and archive must both recover.
+$phantomDay = gmdate('Y-m-d', strtotime('-108 days'));
+$add->execute([$phantomDay, $a, 'home', 0, 2]);
+$writer = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+$writer->exec('SET SESSION innodb_lock_wait_timeout=1');
+$pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+$pdo->beginTransaction();
+try {
+    $lockedDay = $pdo->prepare('SELECT page_kind FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date=? FOR UPDATE');
+    $lockedDay->execute([$phantomDay]);
+    check($lockedDay->fetch(PDO::FETCH_ASSOC) !== false, 'Failed to lock historical day');
+    $lockedDay->closeCursor();
+    $blocked = false;
+    try {
+        $insertDuringArchive = $writer->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),?,?,?)');
+        $insertDuringArchive->execute([$phantomDay, $b, 'lot', 77, 5]);
+    } catch (PDOException $ex) {
+        $blocked = in_array((string)($ex->errorInfo[1] ?? ''), ['1205','1213'], true);
+    }
+    check($blocked, 'Historical same-day insert bypassed next-key row lock');
+} finally {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+}
+$insertDuringArchive = $writer->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),?,?,?)');
+$insertDuringArchive->execute([$phantomDay, $b, 'lot', 77, 5]);
+$phantomResult = archive_visitor_stats_one_day($pdo, $cutoff);
+check($phantomResult['days'] === 1 && $phantomResult['rows'] === 2 && $phantomResult['views'] === 7,
+    'Day archive lost newly registered historical visitor after retry');
+fwrite(STDOUT, "One-day concurrent historical insert regression passed: blocked insert and safe retry\\n");
 fwrite(STDOUT, "Two competing manual one-day archive requests passed: lock refusal, retry, unique aggregates\\n");
 fwrite(STDOUT, "Experimental one-day concurrent row-lock regression passed\\n");
 fwrite(STDOUT, "Experimental one-day archival passed: isolated commits and resume\\n");
