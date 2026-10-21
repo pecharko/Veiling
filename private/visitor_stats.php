@@ -15,9 +15,6 @@ function track_catalog_view(?int $lotId = null): void
     $identifier = hash_hmac('sha256', $day . ':' . $ip . ':' . $agent, $secret, true);
     try {
         $pdo = db();
-        // Remove expired dates on EVERY tracked request. This is not a hard
-        // deadline when traffic stops: scheduled cleanup is still required.
-        $pdo->exec('DELETE FROM visitor_stats_daily WHERE visit_date < UTC_DATE() - INTERVAL 29 DAY');
         $stmt = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date, visitor_id, page_kind, lot_id, views) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE views = views + 1');
         $stmt->execute([$day, $identifier, $lotId === null ? 'home' : 'lot', $lotId ?? 0]);
     } catch (PDOException $exception) {
