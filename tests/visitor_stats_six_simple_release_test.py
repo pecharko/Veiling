@@ -11,7 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"scripts"))
 import deploy_visitor_stats_six_simple as d
 from visitor_stats_six_remote_preflight_test import FakeSFTP, ROOT, OLD, manifest
 from visitor_stats_retention_test import RetentionTests  # included in workflow unittest.main()
-from visitor_stats_admin_deletion_test import AnalyticsAdminDeletionTests  # integrated security regressions
+from visitor_stats_admin_deletion_test import AnalyticsAdminDeletionTests
+from visitor_stats_manual_archive_test import ManualArchiveTests  # archival gates included in offline release CI  # integrated security regressions
 
 class Tests(unittest.TestCase):
     def baseline(self):
