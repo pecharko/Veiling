@@ -53,3 +53,18 @@ A separate isolated-MySQL test now forks a second PHP process, creates independe
 - **Blokkerend voor runtimevrijgave:** volledige historische `SELECT ... FOR UPDATE` blijft gedurende alle SQL-aggregaties en deletes vergrendeld. Beoordeel maximumduur, concurrentie met bezoekersregistraties en adminverzoeken, herstel na lock wait/deadlock en databasequota vóór productie.
 - **Blokkerend voor schema/datarelease:** maak een controleerbare statistiek-SQL-back-up, test herstel in isolatie en review migratie/ruimtebeslag. Een groene GitHub-CI is geen productie-autorisatie.
 - **Mergegate:** deze Draft PR bevat database-archivering en gegevensintegriteit en vereist daarom menselijke review en expliciete mergebeslissing; nooit auto-merge. Release en eventueel databasescript krijgen elk afzonderlijke autorisatie. Geen productieacties zijn uitgevoerd.
+
+## Capaciteitsbeoordeling en preproductie-acceptatie (geen OVH-toegang)
+
+Code-inspectie: de eerste `SELECT visit_date ... WHERE visit_date < ? ... FOR UPDATE` neemt locks over **alle** historische records vóór de grensdatum, en houdt die vast tot alle dagaggregaties, kavelaggregaties en deletes zijn gecommit. Daarom begrenst SQL-aggregatie wel de PHP-geheugenopbouw van bezoeker-ID's, maar **niet** de hoeveelheid MySQL-werk, tijdelijke opslag of de duur van de locks. Een archiveringsverzoek met veel historische dagen is één enkele transactie; de grootste risico's zijn langdurige blokkering van gelijktijdige writes, grote undo/redo-activiteit en temp tables voor `COUNT(DISTINCT visitor_id)` en `GROUP BY lot_id`.
+
+Voer vóór runtimevrijgave in een **wegwerpdatabase** met productie-achtige, niet-identificeerbare testdata uit:
+
+1. Vul ten minste kleine, normale en extreme datasets, waaronder veel unieke bezoekers per dag, veel kavels, meerdere historische UTC-dagen en gelijktijdige schrijfacties. Registreer bronrecordaantal, omvang van tabellen/indexen en totale DB-ruimte.
+2. Inspecteer `EXPLAIN` voor historische lockscan en beide `INSERT ... SELECT`-aggregaties; leg gebruikte indexen, scans en eventuele tijdelijke tabellen vast. Gebruik uitvoeringsmetingen zonder privégegevens op te nemen.
+3. Meet doorlooptijd, InnoDB row-lock waits, deadlocks, piek `Created_tmp_disk_tables`, tijdelijke ruimte en undo/redo-groei; controleer of de bestaande 250 MB OVH-databasequota met voldoende marge gerespecteerd kan worden. De PHP-meting van 2 MiB is hier **geen** bewijs voor.
+4. Start tijdens een langlopende archivering concurrerende inserts voor nieuwe/historische dagen en een tweede archivering; bewijs fail-closed of gecontroleerde serialisatie zonder gedeeltelijke aggregaten. Controleer expliciet dat publiek verkeer niet onaanvaardbaar wordt geblokkeerd.
+5. Stel objectieve limieten vast voor maximaal aantal bronrijen/dagen per handmatige batch en maximale lockduur. Indien die niet bewezen kunnen worden, ontwerp eerst een kortere, gecontroleerde batchtransactie met veilige opvolgende hervatting; **niet** simpelweg een timeout instellen zonder te testen of herstel correct blijft.
+6. Voor productie: maak een apart verifieerbaar data-only SQL-back-up- en herstelplan voor de drie statistiektabellen; review schema-impact en privacybewaring. Geen enkele databasehandeling is door deze PR geautoriseerd.
+
+Uitkomst huidige review: **niet vrijgeven voor productieruntime op basis van de 3.000-rijentest alleen**. Geen productiebenchmarks of productiegegevens geraadpleegd.
