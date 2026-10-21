@@ -184,4 +184,30 @@ try {
 } finally {
     if ($pdo->inTransaction()) $pdo->rollBack();
 }
+// End-to-end archive race: a second connection inserts a previously absent
+// historical day but has NOT committed. Archiving must never commit an
+// incomplete history while that insert remains in flight.
+$raceDay = gmdate('Y-m-d', strtotime('-80 days'));
+$pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+$other->beginTransaction();
+try {
+    $pending = $other->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
+    $pending->execute([$raceDay, str_repeat('cc', 32)]);
+    $blocked = false;
+    try {
+        archive_visitor_stats_before($pdo, $cutoff);
+    } catch (PDOException $ex) {
+        $blocked = in_array((string)($ex->errorInfo[1] ?? ''), ['1205', '1213'], true);
+    }
+    check($blocked, 'Archive completed while an uncommitted new historical date existed');
+    check(!$pdo->inTransaction(), 'Archive left open transaction after concurrent INSERT');
+    $existingArchive = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+    $existingArchive->execute([$raceDay]);
+    check((int)$existingArchive->fetchColumn() === 0, 'Archive persisted phantom day aggregate despite rollback');
+    $other->commit();
+} finally {
+    if ($other->inTransaction()) $other->rollBack();
+}
+$raceArchive = archive_visitor_stats_before($pdo, $cutoff);
+check($raceArchive['rows'] === 1 && $raceArchive['views'] === 1, 'Retry after concurrent historical INSERT failed');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
