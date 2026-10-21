@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Security regression tests for visitor-stats no-rollback release."""
 import hashlib
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -36,8 +37,15 @@ class Tests(unittest.TestCase):
 
     def test_no_rollback_apis_or_secrets(self):
         code=Path(d.__file__).read_text()
-        for word in ("rollback(", "restore(", "private/config.php", "sftp.remove(", "sftp.rename(", "sftp.put("):
-            self.assertNotIn(word,code)
+        for name in ("rollback", "restore"):
+            self.assertIsNone(re.search(r"(?<![A-Za-z0-9_])" + name + r"\\s*\\(", code))
+        for forbidden in ("private/config.php", "sftp.remove(", "sftp.rename(", "sftp.put("):
+            self.assertNotIn(forbidden, code)
+
+    def test_rollback_call_detection_does_not_match_upload_no_rollback(self):
+        pattern = r"(?<![A-Za-z0-9_])rollback\\s*\\("
+        self.assertIsNone(re.search(pattern, "upload_no_rollback(sftp, root, manifest, files)"))
+        self.assertIsNotNone(re.search(pattern, "rollback(sftp, root)"))
 
 if __name__=="__main__":
     unittest.main()
