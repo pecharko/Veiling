@@ -12,7 +12,9 @@ class PublicPrivacyTests(unittest.TestCase):
             self.assertIn("url('privacy.php')",src)
     def test_truthful_text_and_contacts(self):
         self.assertIn("gepseudonimiseerde", page)
-        self.assertIn("tot het einde van de veiling in 2027 en daarna verwijderd",page)
+        self.assertIn("31 oktober 2027",page)
+        self.assertIn("ouder dan 30 dagen handmatig", page)
+        self.assertIn("Zonder die handmatige actie blijven de codes langer bewaard", page)
         self.assertNotIn("opschoning",page)
         self.assertIn('href="mailto:41clublokeren@gmail.com"', page)
         self.assertIn("Verantwoordelijke organisatie:</strong> 41 Lokeren",page)

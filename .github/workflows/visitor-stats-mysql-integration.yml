@@ -1,0 +1,52 @@
+name: Visitor stats isolated MySQL integration
+on:
+  pull_request:
+    paths:
+      - "private/visitor_stats_archive.php"
+      - "catalogus-public/privacy.php"
+      - "database/visitor_stats_aggregates.sql"
+      - "tests/visitor_stats_mysql_integration.php"
+      - "tests/public_privacy_notice_test.py"
+      - "scripts/plan_visitor_stats_six_release.py"
+      - ".github/workflows/visitor-stats-mysql-integration.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mysql-integration:
+    name: Isolated MySQL archival tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: local-test-only-root
+          MYSQL_DATABASE: visitor_stats_ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: local-test-only-ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -plocal-test-only-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql
+          coverage: none
+      - name: PHP syntax and isolated database integration
+        env:
+          ANALYTICS_TEST_DSN: "mysql:host=127.0.0.1;port=3306;dbname=visitor_stats_ci;charset=utf8mb4"
+          ANALYTICS_TEST_USER: ci
+          ANALYTICS_TEST_PASSWORD: local-test-only-ci
+        run: |
+          php -l private/visitor_stats_archive.php
+          php -l tests/visitor_stats_mysql_integration.php
+          php -l catalogus-public/privacy.php
+          php tests/visitor_stats_mysql_integration.php
+          python3 tests/public_privacy_notice_test.py
