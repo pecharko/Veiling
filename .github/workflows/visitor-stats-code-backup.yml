@@ -1,0 +1,102 @@
+name: T-064 Visitor stats code backup (read only)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/capture_visitor_stats_code_backup.py'
+      - 'tests/visitor_stats_code_backup_test.py'
+      - '.github/workflows/visitor-stats-code-backup.yml'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: 'Full approved current main SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'Type READ ONLY VISITOR STATS CODE BACKUP'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate fake SFTP and ZIP rollback tests
+        run: python3 tests/visitor_stats_code_backup_test.py
+  read-only-capture:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Require separate human authorization for remote read
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$CONFIRMATION" == 'READ ONLY VISITOR STATS CODE BACKUP' ]] || exit 1
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          for key in OVH_SFTP_HOST OVH_SFTP_USER OVH_SFTP_PASSWORD OVH_SFTP_KNOWN_HOSTS OVH_SFTP_BASE; do
+            [[ -n "${!key:-}" ]] || { echo 'Missing SFTP secret or variable'; exit 1; }
+          done
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Verify local tests and exactly five planned runtime files
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/capture_visitor_stats_code_backup.py
+          python3 tests/visitor_stats_code_backup_test.py
+          python3 scripts/plan_visitor_stats_release.py --release-sha "$RELEASE_SHA" > /dev/null
+      - name: Install pinned SSH client
+        run: python3 -m pip install --disable-pip-version-check --no-cache-dir 'paramiko==3.5.1'
+      - name: 'Read ONLY: create verified rollback ZIP locally on runner'
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -m 700 -p private-rollback
+          python3 scripts/capture_visitor_stats_code_backup.py --release-sha "$RELEASE_SHA" --run-id "$GITHUB_RUN_ID" --output private-rollback/original-code.zip
+      - name: Retain private rollback artifact for seven days
+        uses: actions/upload-artifact@v4
+        with:
+          name: visitor-stats-code-rollback-${{ github.run_id }}
+          path: private-rollback/original-code.zip
+          retention-days: 7
+          if-no-files-found: error
