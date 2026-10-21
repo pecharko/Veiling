@@ -10,6 +10,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/"scripts"))
 import deploy_visitor_stats_simple as d
 from visitor_stats_remote_preflight_test import FakeSFTP, ROOT, OLD, manifest
+from visitor_stats_retention_test import RetentionTests  # included in workflow unittest.main()
 
 class Tests(unittest.TestCase):
     def baseline(self):
