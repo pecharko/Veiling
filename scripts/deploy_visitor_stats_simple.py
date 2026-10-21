@@ -22,7 +22,7 @@ def assert_preflight(sftp, root, manifest):
     report = inspect(sftp, root, manifest)
     if tuple(item["path"] for item in manifest["files"]) != FILES:
         raise PreflightStop("Unexpected five-file release allowlist")
-    expected = {item["path"]: item["sha256"] for item in report["runtime_files"] if item["path"] in EXISTING}
+    expected = {item["path"]: item["remote_sha256"] for item in report["runtime_files"] if item["path"] in EXISTING}
     if expected != OBSERVED:
         raise PreflightStop("Production drift from T-062 read-only evidence")
     if any(item.get("remote_sha256") != OBSERVED[item["path"]]
