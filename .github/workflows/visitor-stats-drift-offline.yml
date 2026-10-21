@@ -1,0 +1,43 @@
+name: T-063 Visitor stats historical drift comparison (offline)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/compare_visitor_stats_drift.py'
+      - 'tests/visitor_stats_drift_test.py'
+      - '.github/workflows/visitor-stats-drift-offline.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout full repository history without credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python for isolated tests
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run offline drift comparison regressions
+        run: python3 tests/visitor_stats_drift_test.py
+      - name: Compare three observed production digests to history
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/compare_visitor_stats_drift.py --head-sha "$GITHUB_SHA" > visitor-stats-drift.json
+          cat visitor-stats-drift.json
+          echo 'Historical source lookup only; no remote access or deploy approval.'
+      - name: Preserve nonsecret drift evidence for manual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: visitor-stats-drift-evidence-${{ github.run_id }}
+          path: visitor-stats-drift.json
+          retention-days: 7
+          if-no-files-found: error
