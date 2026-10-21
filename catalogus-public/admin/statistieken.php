@@ -2,6 +2,94 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
+require_no_index();
+
+// All deletion requires a current authenticated session, a valid CSRF token,
+// a server-generated preview token and explicit confirmation in a second POST.
+$deleteError = '';
+$deletePreview = null;
+if (is_post()) {
+    check_csrf();
+    $action = (string)($_POST['action'] ?? '');
+    if ($action === 'preview_delete') {
+        unset($_SESSION['analytics_delete_pending']);
+        $scope = (string)($_POST['scope'] ?? '');
+        $cutoff = (string)($_POST['cutoff'] ?? '');
+        if (!in_array($scope, ['all', 'before'], true)) {
+            $deleteError = 'Ongeldige verwijderactie.';
+        } elseif ($scope === 'before') {
+            $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
+            if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/D', $cutoff)
+                || !$date || $date->format('Y-m-d') !== $cutoff
+                || $cutoff > gmdate('Y-m-d')) {
+                $deleteError = 'Kies een geldige UTC-datum, uiterlijk vandaag.';
+            }
+        }
+        if ($deleteError === '') {
+            try {
+                $pdo = db();
+                if ($scope === 'before') {
+                    $countStmt = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
+                    $countStmt->execute([$cutoff]);
+                    $count = (int)$countStmt->fetchColumn();
+                } else {
+                    $count = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+                }
+                $token = bin2hex(random_bytes(24));
+                $_SESSION['analytics_delete_pending'] = [
+                    'token' => $token, 'scope' => $scope,
+                    'cutoff' => $scope === 'before' ? $cutoff : '',
+                    'expires' => time() + 300,
+                ];
+                $deletePreview = [
+                    'token' => $token, 'scope' => $scope,
+                    'cutoff' => $scope === 'before' ? $cutoff : '',
+                    'count' => $count,
+                ];
+            } catch (PDOException $exception) {
+                $deleteError = 'Kon de statistiekgegevens niet controleren.';
+            }
+        }
+    } elseif ($action === 'confirm_delete') {
+        $pending = $_SESSION['analytics_delete_pending'] ?? null;
+        unset($_SESSION['analytics_delete_pending']); // One attempt only.
+        $token = (string)($_POST['preview_token'] ?? '');
+        $phrase = (string)($_POST['confirmation'] ?? '');
+        if (!is_array($pending) || !is_string($pending['token'] ?? null)
+            || $token === '' || !hash_equals($pending['token'], $token)
+            || !is_int($pending['expires'] ?? null) || $pending['expires'] < time()
+            || !in_array($pending['scope'] ?? '', ['all', 'before'], true)
+            || $phrase !== 'VERWIJDER') {
+            $deleteError = 'Bevestiging ongeldig of verlopen. Start opnieuw.';
+        } else {
+            try {
+                $pdo = db();
+                // No TRUNCATE, no dynamic table name; only statistics rows.
+                if ($pending['scope'] === 'before') {
+                    $cutoff = (string)($pending['cutoff'] ?? '');
+                    $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
+                    if (!preg_match('/^\\d{4}-\\d{2}-\\d{2}$/D', $cutoff)
+                        || !$date || $date->format('Y-m-d') !== $cutoff
+                        || $cutoff > gmdate('Y-m-d')) {
+                        throw new RuntimeException('Ongeldige opgeslagen grensdatum.');
+                    }
+                    $stmt = $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date < ?');
+                    $stmt->execute([$cutoff]);
+                    $deleted = $stmt->rowCount();
+                } else {
+                    $deleted = $pdo->exec('DELETE FROM visitor_stats_daily');
+                }
+                flash((string)$deleted . ' statistiekrecords definitief verwijderd.');
+                redirect('admin/statistieken.php');
+            } catch (Throwable $exception) {
+                error_log('Analytics deletion failed (no sensitive details logged).');
+                $deleteError = 'Verwijderen mislukt. Controleer de statistieken en probeer alleen na onderzoek opnieuw.';
+            }
+        }
+    } else {
+        $deleteError = 'Onbekende actie.';
+    }
+}
 
 $summary = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 $daily = [];
@@ -40,5 +128,48 @@ admin_top('Bezoekersstatistieken');
       </tbody></table></div>
     </section>
   <?php endif; ?>
+  <section class="dashboard-panel" aria-labelledby="analytics-delete-title">
+    <h2 id="analytics-delete-title">Statistiekgegevens handmatig verwijderen</h2>
+    <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet.</p>
+    <?php if ($deleteError !== ''): ?><div class="alert error" role="alert"><?=e($deleteError)?></div><?php endif; ?>
+    <?php if ($deletePreview !== null): ?>
+      <div class="alert" role="status">
+        <strong>Controle vóór verwijderen</strong>
+        <p><?=e((string)$deletePreview['count'])?> records gevonden voor
+          <?= $deletePreview['scope'] === 'all' ? 'alle bezoekersstatistieken' : 'datums strikt vóór ' . e($deletePreview['cutoff']) . ' (UTC)' ?>.
+          Het aantal kan bij gelijktijdige bezoekers nog veranderen.</p>
+        <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Definitief statistiekrecords verwijderen? Dit kan niet ongedaan worden gemaakt.');">
+          <?=csrf_field()?>
+          <input type="hidden" name="action" value="confirm_delete">
+          <input type="hidden" name="preview_token" value="<?=e($deletePreview['token'])?>">
+          <label for="analytics-confirm">Typ VERWIJDER om definitief te bevestigen</label>
+          <input id="analytics-confirm" name="confirmation" required autocomplete="off" placeholder="VERWIJDER">
+          <button type="submit" class="primary">Definitief verwijderen</button>
+          <a href="<?=e(url('admin/statistieken.php'))?>">Annuleren</a>
+        </form>
+      </div>
+    <?php else: ?>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px">
+        <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+          <?=csrf_field()?>
+          <input type="hidden" name="action" value="preview_delete">
+          <input type="hidden" name="scope" value="before">
+          <h3>Verwijder alles vóór een datum</h3>
+          <p>De gekozen datum zelf blijft behouden. De grens geldt in UTC.</p>
+          <label for="analytics-before">Grensdatum</label>
+          <input id="analytics-before" type="date" name="cutoff" required max="<?=e(gmdate('Y-m-d'))?>">
+          <button type="submit" <?=!$available?'disabled':''?>>Bekijk te verwijderen records</button>
+        </form>
+        <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+          <?=csrf_field()?>
+          <input type="hidden" name="action" value="preview_delete">
+          <input type="hidden" name="scope" value="all">
+          <h3>Verwijder alle statistieken</h3>
+          <p>Wist alle geregistreerde bezoekers- en kavelweergaven, ongeacht datum.</p>
+          <button type="submit" <?=!$available?'disabled':''?>>Bekijk volledige verwijdering</button>
+        </form>
+      </div>
+    <?php endif; ?>
+  </section>
 </div>
 <?php admin_bottom(); ?>
