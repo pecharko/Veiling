@@ -101,4 +101,38 @@ $pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date=?')->execut
 $multiRecovered = archive_visitor_stats_before($pdo, $cutoff);
 check($multiRecovered['rows'] === 2 && $multiRecovered['views'] === 12 && $multiRecovered['days'] === 2, 'Multi-day recovery incorrect');
 check((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn() === 1, 'Recent record removed in multi-day recovery');
+// Two independent connections: an uncommitted historical row update must
+// not allow archival to commit partial totals or remove the locked source.
+$lockDay = gmdate('Y-m-d', strtotime('-62 days'));
+$add->execute([$lockDay, $a, 'home', 0, 2]);
+$other = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+$pdo->exec('SET SESSION innodb_lock_wait_timeout=1');
+$other->beginTransaction();
+try {
+    $lock = $other->prepare('UPDATE visitor_stats_daily SET views=views+1 WHERE visit_date=?');
+    $lock->execute([$lockDay]);
+    check($lock->rowCount() === 1, 'Unable to establish concurrent record lock');
+    $blocked = false;
+    try {
+        archive_visitor_stats_before($pdo, $cutoff);
+    } catch (PDOException $ex) {
+        $blocked = in_array((string)$ex->getCode(), ['HY000', '40001'], true);
+    }
+    check($blocked, 'Archive should fail closed when another connection locks historic rows');
+    check(!$pdo->inTransaction(), 'Archive transaction remained open after lock timeout');
+    $other->rollBack();
+} finally {
+    if ($other->inTransaction()) $other->rollBack();
+}
+$lockCount = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$lockCount->execute([$lockDay]);
+check((int)$lockCount->fetchColumn() === 1, 'Concurrent conflict removed historic source');
+$lockAggregate = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+$lockAggregate->execute([$lockDay]);
+check((int)$lockAggregate->fetchColumn() === 0, 'Concurrent conflict committed archive aggregate');
+$afterLock = archive_visitor_stats_before($pdo, $cutoff);
+check($afterLock['rows'] === 1 && $afterLock['views'] === 2, 'Archive did not recover after lock release');
 echo "MySQL archive integration passed: accuracy, idempotency, rollback, malformed-data protection, recovery, recent-day protection\\n";
