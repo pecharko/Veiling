@@ -1,0 +1,52 @@
+name: Visitor stats offline release plan
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/plan_visitor_stats_release.py'
+      - 'tests/visitor_stats_release_plan_test.py'
+      - '.github/workflows/visitor-stats-release-plan.yml'
+      - 'private/visitor_stats.php'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/admin/statistieken.php'
+      - 'private/bootstrap.php'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout inspected commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP for syntax checks
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Run offline regression tests
+        run: python3 tests/visitor_stats_release_plan_test.py
+      - name: Produce read-only five-file SHA256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/plan_visitor_stats_release.py --release-sha "$GITHUB_SHA" > visitor-stats-plan.json
+          cat visitor-stats-plan.json
+      - name: Retain plan artifact for manual review
+        uses: actions/upload-artifact@v4
+        with:
+          name: visitor-stats-source-plan-${{ github.run_id }}
+          path: visitor-stats-plan.json
+          retention-days: 7
+          if-no-files-found: error
