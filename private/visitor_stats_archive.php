@@ -14,7 +14,9 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
     if (!$parsed || $parsed->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Grensdatum moet ten minste 30 UTC-dagen geleden zijn.');
     }
-    // Repeatable-read next-key locks are required to exclude inserts into an\n    // archived UTC day while its counts and aggregates are being computed.\n    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');\n    $pdo->beginTransaction();
+    // Repeatable-read next-key locks protect historical date ranges.
+    $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+    $pdo->beginTransaction();
     try {
         // Distinct dates are small and bounded by the number of calendar days,
         // rather than by the number of individual visitors.
