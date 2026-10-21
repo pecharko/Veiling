@@ -8,7 +8,7 @@
 - Dagelijkse pseudonieme HMAC van datum, IP en user-agent; de geheime sleutel staat uitsluitend in private config en nooit in Git. Ruwe IP/user-agent worden niet in de statistiektabel bewaard.
 - Een bezoeker wordt slechts binnen dezelfde UTC-dag herkend. **30-dagen unieke bezoekersdagen**, geen werkelijke unieke personen over 30 dagen: terugkerende personen tellen op nieuwe dagen opnieuw mee.
 - De top-10-statistiek telt detailpaginaweergaven van kavels, niet unieke geïnteresseerden.
-- Deze PR verandert opschoning naar **elk geregistreerd bezoek**, vóór het opslaan van de nieuwe gebeurtenis. Hierdoor worden verlopen rijen niet langer steekproefsgewijs verwijderd. **Dit is nog steeds geen gegarandeerde 30-dagenlimiet wanneer het bezoekverkeer stopt.** Vóór activering is een afzonderlijke dagelijks geplande cleanup met geverifieerde uitvoer en afzonderlijke autorisatie nodig; de exacte OVH-voorziening (cron of DB-event) is nog niet bevestigd.
+- **Geen automatische opschoning:** op expliciet verzoek wordt noch bij websitebezoeken noch via een geplande taak verwijderd. Er is momenteel geen gegarandeerde bewaartermijn; het overzicht in de admin toont enkel de laatste 30 UTC-dagen, maar oudere rijen blijven in de database staan totdat een afzonderlijk goedgekeurde handmatige verwijdering plaatsvindt. Dit is een privacyrisico en blijft een **blokkerend open besluit vóór activering**.
 - Gehashte bezoekersinformatie kan nog steeds persoonsgegevens zijn. Juridische/privacyreview en update van privacyverklaring zijn verplicht voor activatie; cookievrij betekent niet automatisch AVG-vrij.
 
 ## Afzonderlijke installatieprocedure
@@ -37,6 +37,12 @@
 - **Rechtsgrond:** nog door verantwoordelijke/privacyadviseur vast te leggen. Zonder afgeronde proportionaliteits- en transparantiebeoordeling wordt de module niet geactiveerd; cookievrij betekent niet automatisch toestemmings- of AVG-vrij.
 - **DNT:** browserheader DNT=1 wordt gerespecteerd; botdetectie is best effort. Dit is geen volledig opt-out- of privacyrechtenproces.
 - **Transparantie:** vóór livegang een duidelijk bereikbare publiek zichtbare privacyverklaring met doel, gegevenscategorieën, bewaartermijn, rechtsgrond, contact/rechten en eventuele ontvangers/hosting. Publicatietekst pas na eigenaarreview.
-- **Bewaartermijn:** per GET opschonen is een vangnet; zelfstandig, dagelijks bewaartermijnbeheer blijft **blokkerend** vóór productie-activering. Zonder bezoeken mag de tabel niet onbeperkt blijven bestaan.
+- **Bewaartermijn:** geen automatische verwijdering, ook niet tijdens paginaweergaven. Voor productie-activering moet een verantwoordelijke een uitvoerbaar en aantoonbaar handmatig wis- en controleproces met concrete bewaartermijn goedkeuren, of opnieuw kiezen voor geautomatiseerde tijdige verwijdering. Een 30-dagenfilter in het dashboard is geen wissen van gegevens.
 - **Back-up en herstel:** `visitor_stats_daily` zit niet in de data-only snapshots. Bewust bevestigen als vluchtige statistiek (bij herstel mogelijk verloren), en apart vastleggen hoe overige logs/back-ups worden behandeld.
-- **Activeringsvoorwaarden:** privacyverklaring + rechtsgrond bevestigd, periodieke cleanup aantoonbaar ingepland en getest, MySQL quota/indices geverifieerd, nieuw offline releaseplan, expliciete release- én finale deployautorisatie. Alleen na deze gates deployen.
+- **Activeringsvoorwaarden:** privacyverklaring + rechtsgrond bevestigd, toelaatbare bewaartermijn en naleefbaar handmatig verwijderproces gedocumenteerd en getest (zonder automatische opschoning), MySQL quota/indices geverifieerd, nieuw offline releaseplan, expliciete release- én finale deployautorisatie. Zonder deze gates niet deployen.
+
+## Beslissing 21 oktober 2026 — geen automatische opschoning
+
+- De eigenaar heeft expliciet gevraagd **geen geplande automatische opschoning** en **geen opschoning bij elk websitebezoek** te configureren.
+- De trackingcode mag uitsluitend tellers opslaan of bijwerken; de trackingcode mag geen analytics-rijen verwijderen.
+- Er is nog geen handmatige verwijderprocedure of controlefrequentie overeengekomen. Bij ontbreken daarvan is retentie onbeperkt en blijft activering geblokkeerd. Geen productiegegevens wissen zonder afzonderlijke uitdrukkelijke toestemming.
