@@ -3,15 +3,48 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
 require_no_index();
+require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
 $deleteError = '';
 $deletePreview = null;
+$archivePreview = null;
 if (is_post()) {
     check_csrf();
     $action = (string)($_POST['action'] ?? '');
-    if ($action === 'preview_delete') {
+    if ($action === 'preview_archive') {
+        unset($_SESSION['analytics_archive_pending']);
+        try {
+            $cutoff = gmdate('Y-m-d', strtotime('-30 days'));
+            $stmt = db()->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
+            $stmt->execute([$cutoff]);
+            $count = (int)$stmt->fetchColumn();
+            $token = bin2hex(random_bytes(24));
+            $_SESSION['analytics_archive_pending'] = ['token' => $token, 'cutoff' => $cutoff, 'expires' => time() + 300];
+            $archivePreview = ['token' => $token, 'cutoff' => $cutoff, 'count' => $count];
+        } catch (Throwable $e) {
+            $deleteError = 'Kon archivering niet voorbereiden. Controleer of de geautoriseerde aggregatietabellen bestaan.';
+        }
+    } elseif ($action === 'confirm_archive') {
+        $pending = $_SESSION['analytics_archive_pending'] ?? null;
+        unset($_SESSION['analytics_archive_pending']);
+        if (!is_array($pending) || !is_string($pending['token'] ?? null)
+            || !hash_equals($pending['token'], (string)($_POST['preview_token'] ?? ''))
+            || (int)($pending['expires'] ?? 0) < time()
+            || (string)($_POST['confirmation'] ?? '') !== 'ARCHIVEER') {
+            $deleteError = 'Archiveringsbevestiging ongeldig of verlopen.';
+        } else {
+            try {
+                $result = archive_visitor_stats_before(db(), (string)$pending['cutoff']);
+                flash((string)$result['rows'] . ' detailrecords veilig samengevat en verwijderd.');
+                redirect('admin/statistieken.php');
+            } catch (Throwable $e) {
+                error_log('Manual analytics archive failed; no details logged.');
+                $deleteError = 'Archivering gestopt. Er zijn geen gedeeltelijke wijzigingen doorgevoerd; controleer het databaseschema.';
+            }
+        }
+    } elseif ($action === 'preview_delete') {
         unset($_SESSION['analytics_delete_pending']);
         $scope = (string)($_POST['scope'] ?? '');
         $cutoff = (string)($_POST['cutoff'] ?? '');
@@ -128,6 +161,28 @@ admin_top('Bezoekersstatistieken');
       </tbody></table></div>
     </section>
   <?php endif; ?>
+  <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
+    <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
+    <p>Alleen na jouw bevestiging worden dag- en kavelstatistieken van afgesloten dagen ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden pas na succesvolle opslag in dezelfde database-transactie verwijderd. Er is geen automatische opschoning.</p>
+    <?php if ($archivePreview !== null): ?>
+      <p><strong><?=e((string)$archivePreview['count'])?></strong> detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in aanmerking.</p>
+      <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Archiveren en detailcodes definitief wissen?');">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="confirm_archive">
+        <input type="hidden" name="preview_token" value="<?=e($archivePreview['token'])?>">
+        <label for="analytics-archive-confirm">Typ ARCHIVEER ter bevestiging</label>
+        <input id="analytics-archive-confirm" name="confirmation" required autocomplete="off">
+        <button type="submit" class="primary">Archiveren en codes wissen</button>
+        <a href="<?=e(url('admin/statistieken.php'))?>">Annuleren</a>
+      </form>
+    <?php else: ?>
+      <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="preview_archive">
+        <button type="submit" <?=!$available?'disabled':''?>>Bekijk te archiveren gegevens</button>
+      </form>
+    <?php endif; ?>
+  </section>
   <section class="dashboard-panel" aria-labelledby="analytics-delete-title">
     <h2 id="analytics-delete-title">Statistiekgegevens handmatig verwijderen</h2>
     <p>Er gebeurt geen automatische opschoning. Verwijderen is definitief en raakt uitsluitend de tabel met bezoekersstatistieken; kavels, accounts en foto's blijven behouden. De data-only snapshots bevatten deze statistieken niet.</p>
