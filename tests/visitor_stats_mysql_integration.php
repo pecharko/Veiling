@@ -316,6 +316,13 @@ if (function_exists('pcntl_fork') && function_exists('stream_socket_pair')) {
         fclose($channels[0]);
         pcntl_waitpid($pid, $status);
     }
+    // Forked child inherited the parent's MySQL socket; closing the inherited
+    // descriptor during child exit can invalidate that PDO connection.
+    // Use a fresh connection for subsequent isolated assertions.
+    $pdo = new PDO($dsn, (string)getenv('ANALYTICS_TEST_USER'), (string)getenv('ANALYTICS_TEST_PASSWORD'), [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
     $afterCycle = archive_visitor_stats_before($pdo, $cutoff);
     check($afterCycle['rows'] === 2, 'Archive did not recover from synthetic deadlock');
 }
