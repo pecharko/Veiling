@@ -13,3 +13,7 @@ SQL-schema, GitHub Actions-workflows, publieke tracking en OVH zijn niet gewijzi
 ## Isolated concurrency check added
 
 Two independent MySQL sessions now test an uncommitted UPDATE lock on a historic source record. The archive must fail closed with lock-wait error, roll back without deleting details or retaining day aggregates, and succeed after the competing transaction is rolled back. This tests an **existing-row lock conflict only**. It does **not** establish protection against a concurrent new INSERT into the archived day (phantom row) or all possible isolation levels. No production authorization until those cases, lock scope and query plans are independently proven safe.
+
+## Phantom INSERT gap-lock isolation regression
+
+Added a two-session isolated MySQL test: a REPEATABLE READ locking date-range read on the composite primary-key prefix `visit_date` should reject a concurrent INSERT into that historical date while the lock is held (lock timeout). This validates the **locking primitive only**. The current archive implementation does not yet explicitly acquire this date-range locking read; therefore this test is **not evidence the archive itself prevents phantom inserts**. Keep this PR in Draft, do not deploy. Determine a bounded-memory way to acquire suitable date-range locks before aggregation, then add a deterministic end-to-end concurrent archive/INSERT test. Verify behavior at OVH's actual isolation level in a disposable environment, never on live data.
