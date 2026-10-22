@@ -524,6 +524,34 @@ check($olderRecovered['days'] === 1 && $olderRecovered['rows'] === 1 && $olderRe
     'Concurrent older historical insert was not archived on next manual call');
 check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0,
     'Concurrent historical insert replay was not idempotent');
+// Two requests from even a single admin may overlap (two tabs/double-submit).
+// Hold the connection-scoped lock on an independent PDO client to verify the
+// second request fails closed without touching the day's source records.
+$doubleSubmitDay = gmdate('Y-m-d', strtotime('-113 days'));
+$add->execute([$doubleSubmitDay, $a, 'home', 0, 11]);
+$namedLock = 'visitor_stats_one_day_archive';
+$claim = $writer->prepare('SELECT GET_LOCK(?, 0)');
+$claim->execute([$namedLock]);
+check((int)$claim->fetchColumn() === 1, 'Could not claim duplicate-request advisory lock');
+$claim->closeCursor();
+$duplicateRefused = false;
+try {
+    archive_visitor_stats_one_day($pdo, $cutoff);
+} catch (RuntimeException $e) {
+    $duplicateRefused = str_contains($e->getMessage(), 'already running');
+} finally {
+    $release = $writer->prepare('SELECT RELEASE_LOCK(?)');
+    $release->execute([$namedLock]);
+    check((int)$release->fetchColumn() === 1, 'Duplicate-request lock was not released');
+    $release->closeCursor();
+}
+check($duplicateRefused, 'Overlapping duplicate archive request was not rejected');
+$stillPresent = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$stillPresent->execute([$doubleSubmitDay]);
+check((int)$stillPresent->fetchColumn() === 1, 'Rejected duplicate request modified source records');
+$singleRun = archive_visitor_stats_one_day($pdo, $cutoff);
+check($singleRun['rows'] === 1 && $singleRun['views'] === 11, 'Archive did not recover after duplicate request');
+fwrite(STDOUT, "Single-admin duplicate-submit safety passed: refused overlapping request and resumed\\n");
 fwrite(STDOUT, "Actual discovery-to-lock interleaving passed: older insert retained and recovered\\n");
 fwrite(STDOUT, "Late older UTC-day registration recovery passed across two manual invocations\\n");
 fwrite(STDOUT, "One-day concurrent historical insert regression passed: blocked insert and safe retry\\n");
