@@ -1,0 +1,82 @@
+name: Photo runtime diagnostic one-file manual release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        description: 'Offline plan, read-only OVH preflight, or separately authorized deploy'
+        required: true
+        default: plan
+        options:
+          - plan
+          - preflight
+          - deploy
+      confirmation:
+        type: string
+        description: 'Exact final production authorization, deploy only'
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  photo-runtime-diagnostic:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable diagnostic release source
+        uses: actions/checkout@v4
+        with:
+          ref: 9a1d3072dae88952926d80dc0adfe197e04d0084
+          persist-credentials: false
+      - name: Checkout reviewed release tool
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: release-tool
+          persist-credentials: false
+      - name: PHP lint, isolated contract test and offline plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-tool/scripts/deploy_photo_runtime_diagnostic.py scripts/
+          php -l catalogus-public/admin/foto-capaciteit.php
+          php tests/photo_capacity_diagnostic_test.php
+          python3 -m py_compile scripts/deploy_photo_runtime_diagnostic.py
+          python3 scripts/deploy_photo_runtime_diagnostic.py plan
+      - name: Verify final confirmation before any writes
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = 'DEPLOY PHOTO CAPACITY DIAGNOSTIC ONLY'
+      - name: Install pinned SFTP package
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Read-only check of target absence and remote root
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_photo_runtime_diagnostic.py preflight
+      - name: Create only approved diagnostic file and verify SHA
+        if: inputs.mode == 'deploy'
+        env:
+          DIAGNOSTIC_FINAL_AUTH: ${{ inputs.confirmation }}
+        run: python3 scripts/deploy_photo_runtime_diagnostic.py deploy
+      - name: Read-only unauthenticated smoke test
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/foto-capaciteit.php)
+          test "$code" = '303' || test "$code" = '302'
+          home=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)
+          test "$home" = '200'
