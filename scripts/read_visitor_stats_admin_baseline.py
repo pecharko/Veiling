@@ -32,7 +32,28 @@ def inspect(sftp, root):
         if len(data) > MAX_FILE_SIZE or marker not in data:
             raise RuntimeError("Unrecognized OVH application markers")
     location = posixpath.join(root, TARGET)
-    info = stat_expected_file(sftp, root, TARGET)
+    try:
+        info = sftp.lstat(location)
+    except FileNotFoundError:
+        # Only inspect the verified admin directory, never crawl the SFTP account.
+        parent = posixpath.join(root, "catalogus-public/admin")
+        entries = sftp.listdir_attr(parent)
+        candidates = sorted(
+            item.filename for item in entries
+            if item.filename not in (".", "..")
+            and item.filename.endswith(".php")
+            and ("statist" in item.filename.lower() or "analytic" in item.filename.lower())
+            and "/" not in item.filename and "\\\" not in item.filename
+            and stat.S_ISREG(item.st_mode)
+        )
+        return {
+            "expected_file": TARGET, "expected_status": "absent",
+            "candidate_admin_files": candidates, "observed": "directory_names_only",
+            "installation_classification": "new_file_at_expected_path",
+            "baseline_sha256": None, "baseline_approved": False,
+            "read_only": True, "release_authorized": False,
+            "warning": "Do not treat absence as permission to upload; inspect candidate files and dependencies first"
+        }
     if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= MAX_FILE_SIZE:
         raise RuntimeError("Statistics admin missing, invalid or symbolic link")
     with sftp.open(location, "rb") as fh:
