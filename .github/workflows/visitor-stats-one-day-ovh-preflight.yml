@@ -28,7 +28,7 @@ jobs:
           source = Path('scripts/preflight_visitor_stats_one_day_ovh.py').read_text()
           forbidden = ('sftp.put(', 'sftp.remove(', 'sftp.rename(', 'sftp.mkdir(', 'sftp.rmdir(', 'sftp.chmod(', 'sftp.chown(', 'sftp.symlink(', 'sftp.open(path, "wb")', 'sftp.open(path, "w")')
           assert not any(item in source for item in forbidden), 'Remote mutation pattern found'
-          assert 'sftp.lstat(' in source and 'OVH_STATS_ADMIN_BASELINE_SHA256' in source
+          assert 'sftp.lstat(' in source and 'absent_as_expected' in source and 'upload_allowed' in source
           print('Offline read-only safety checks passed')
           PY
 
@@ -46,7 +46,6 @@ jobs:
       OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
       OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
       OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
-      OVH_STATS_ADMIN_BASELINE_SHA256: ${{ vars.OVH_STATS_ADMIN_BASELINE_SHA256 }}
     steps:
       - name: Checkout read-only tooling
         uses: actions/checkout@v4
