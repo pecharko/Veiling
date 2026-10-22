@@ -572,6 +572,9 @@ check((int)$sourceSurvived->fetchColumn() === 9, 'Late source row lost on failed
 $unchangedAggregate = $pdo->prepare('SELECT views FROM visitor_stats_day_totals WHERE visit_date=?');
 $unchangedAggregate->execute([$lateArchivedDay]);
 check((int)$unchangedAggregate->fetchColumn() === 2, 'Existing aggregate altered by failed re-archive');
+// Isolate the following empty-state test: the previous collision regression
+// intentionally leaves an unarchivable late source row behind.
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$lateArchivedDay]);
 // The admin path now uses the one-day function: test its PER-DAY 20,000 cap.
 // The all-days legacy cap is already tested independently above.
 $capDay = gmdate('Y-m-d', strtotime('-120 days'));
