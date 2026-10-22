@@ -20,3 +20,6 @@ Offline contract asserts there are exactly two DDL statements and no daily-table
 5. Never run the obsolete three-table SQL from previous git revisions against OVH.
 
 No deployment/merge/production SQL was executed by this PR.
+
+## CI incident: 2026-10-22, PR #90
+First isolated MySQL workflow run `39783588122` failed in the Python static contract test, **before any disposable MySQL DDL ran**. Root causes confirmed from job log: an incorrectly escaped regex produced `re.error: missing ), unterminated subpattern`, and a substring count for `views BIGINT UNSIGNED` wrongly also matched `lot_views`. Correction commit `80016068983facf38995aed668cb139ff98830ad` replaces fragile regex with line-token parsing and checks column declarations at line start. Preserve original DDL; keep the isolated MySQL integration run as required. Prevention: test parsing logic locally or in CI and distinguish column names with anchored declarations. Production impact: none.
