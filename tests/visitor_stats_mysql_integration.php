@@ -551,6 +551,28 @@ $stillPresent->execute([$doubleSubmitDay]);
 check((int)$stillPresent->fetchColumn() === 1, 'Rejected duplicate request modified source records');
 $singleRun = archive_visitor_stats_one_day($pdo, $cutoff);
 check($singleRun['rows'] === 1 && $singleRun['views'] === 11, 'Archive did not recover after duplicate request');
+// A late row on an ALREADY archived date must never be silently deleted.
+// The current experimental implementation is expected to reject this case
+// with a unique-key conflict and roll back; this is a documented blocker.
+$lateArchivedDay = gmdate('Y-m-d', strtotime('-114 days'));
+$add->execute([$lateArchivedDay, $a, 'home', 0, 2]);
+$firstArchive = archive_visitor_stats_one_day($pdo, $cutoff);
+check($firstArchive['rows'] === 1 && $firstArchive['views'] === 2, 'Precondition archive failed');
+$add->execute([$lateArchivedDay, $b, 'home', 0, 9]);
+$lateCollisionRefused = false;
+try {
+    archive_visitor_stats_one_day($pdo, $cutoff);
+} catch (PDOException $e) {
+    $lateCollisionRefused = (string)($e->errorInfo[1] ?? '') === '1062';
+}
+check($lateCollisionRefused, 'Late insert on archived date was not rejected safely');
+$sourceSurvived = $pdo->prepare('SELECT views FROM visitor_stats_daily WHERE visit_date=?');
+$sourceSurvived->execute([$lateArchivedDay]);
+check((int)$sourceSurvived->fetchColumn() === 9, 'Late source row lost on failed re-archive');
+$unchangedAggregate = $pdo->prepare('SELECT views FROM visitor_stats_day_totals WHERE visit_date=?');
+$unchangedAggregate->execute([$lateArchivedDay]);
+check((int)$unchangedAggregate->fetchColumn() === 2, 'Existing aggregate altered by failed re-archive');
+fwrite(STDOUT, "Late insert on archived day safely rejected without data loss; unresolved progress blocker\\n");
 fwrite(STDOUT, "Single-admin duplicate-submit safety passed: refused overlapping request and resumed\\n");
 fwrite(STDOUT, "Actual discovery-to-lock interleaving passed: older insert retained and recovered\\n");
 fwrite(STDOUT, "Late older UTC-day registration recovery passed across two manual invocations\\n");
