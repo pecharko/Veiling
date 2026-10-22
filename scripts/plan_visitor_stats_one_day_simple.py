@@ -8,6 +8,8 @@ import subprocess
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+# Immutable GitHub merge of approved PR #81: only these runtime bytes may be released.
+APPROVED_SOURCE_SHA = "a3237de3fde31b1cdf2141ccd596964f362263dd"
 FILES = (
     "private/visitor_stats_archive_one_day_experimental.php",
     "catalogus-public/admin/statistieken.php",
@@ -37,14 +39,17 @@ def main():
         if not data or len(data) > 1024 * 1024:
             raise SystemExit("STOP: invalid file size")
         if checked(["git", "show", args.release_sha + ":" + path]) != data:
-            raise SystemExit("STOP: source mismatch: " + path)
+            raise SystemExit("STOP: inspected checkout mismatch: " + path)
+        if checked(["git", "show", APPROVED_SOURCE_SHA + ":" + path]) != data:
+            raise SystemExit("STOP: runtime bytes differ from approved PR #81 merge: " + path)
         if not all(m.encode() in data for m in MARKERS[path]):
             raise SystemExit("STOP: missing required marker: " + path)
         subprocess.run(["php", "-l", str(f)], cwd=ROOT, check=True, capture_output=True)
         result.append({"path": path, "bytes": len(data), "sha256": hashlib.sha256(data).hexdigest(), "php_lint": "pass"})
     print(json.dumps({
         "format": "41lokeren-one-day-archive-simple-offline-v1",
-        "release_sha": args.release_sha,
+        "inspection_sha": args.release_sha,
+        "release_sha": APPROVED_SOURCE_SHA,
         "profile": "simple_without_rollback_provisional",
         "files": result,
         "allowlist_count": len(result),
