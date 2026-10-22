@@ -86,3 +86,15 @@ De archiveringsfunctie weigert een handmatige opdracht zodra de historische pref
 ## Geïsoleerd eendagsprototype
 
 `private/visitor_stats_archive_one_day_experimental.php` bevat een afzonderlijke, **niet aangesloten** functie die per expliciete aanroep precies de oudste historische UTC-dag binnen één transactie probeert te archiveren. De bestaande admin-archivering blijft onveranderd. De test controleert twee achtereenvolgende handmatige aanroepen, één dag per commit, hervatten en idempotentie. Maximaal 20.000 bronrecords per dag; overschrijding moet vóór aggregatie en verwijdering stoppen. De initiële `MIN(visit_date)` is een niet-lockende ontdekking; een gelijktijdige oudere insert kan bij een volgende aanroep worden verwerkt. Er is nog geen bewezen oplossing voor alle parallelle archiveringsverzoeken en phantom-insertgevallen. Deze prototypefunctie **niet koppelen aan de admin, mergen of deployen** zonder een aanvullende locking/concurrency-review en groene CI op de exacte commit.
+
+## Statistiekdata: back-up- en herstelacceptatie (geen productiehandeling)
+
+**Voor een eventuele database-release**, los van de bestaande code-snapshot- en herstelmodule:
+
+1. Leg de exacte MySQL-versie, tabeldefinities, indexen en beschikbare schijfruimte vast. Maak een consistente **data-only** export van `visitor_stats_daily`, `visitor_stats_day_totals` en `visitor_stats_lot_totals`; neem alle drie tabellen tegelijk op en houd de export buiten de publieke webroot. Verwerk daarin geen secrets of persoonlijk identificeerbare bezoekerswaarden in logs of GitHub-artifacts.
+2. Controleer of de export kan worden ingelezen op een **afzonderlijke geïsoleerde MySQL-testdatabase** met de identieke schema-/indexversie. Verifieer vóór en na herstel per tabel de rijaantallen en totalen per UTC-dag en per kavel. Controleer op unieke sleutels, ongeldige bronwaarden en referentiële consistentie.
+3. Simuleer archiveringsonderbreking en herstel vanuit deze export in die testdatabase. Verifieer dat bestaande aggregaten niet stilzwijgend worden overschreven, brongegevens niet verloren gaan en een latere handmatige actie idempotent blijft.
+4. Documenteer afzonderlijk de verwachte schrijfpauze of consistente-snapshotstrategie, restore-tijd en quota-impact bij OVH. De eerdere data-only ZIP-snapshots van de website zijn **geen bewijs** dat deze drie MySQL-statistiektabellen consistent samen teruggezet kunnen worden.
+5. Vraag voor een echte OVH-export, wijziging, restore of deployment **afzonderlijke expliciete toestemming**. De huidige test- en documentatiefase benadert geen productiegegevens.
+
+**Niet voldaan / blokkades:** deze export-restoreacceptatie is nog niet in CI uitgevoerd met een volledig testdatabestand; quota/lockdruk op OVH is niet geverifieerd; dagen met meer dan 20.000 records hebben nog geen productiewaardige afhandelingsprocedure. PR blijft Draft, zonder merge- of deployvrijgave.
