@@ -503,6 +503,28 @@ check((int)$lateTotals->fetchColumn() === 2, 'Late older day or earlier day was 
 $lateLot = $pdo->prepare('SELECT views FROM visitor_stats_lot_totals WHERE visit_date=? AND lot_id=81');
 $lateLot->execute([$lateOlderDay]);
 check((int)$lateLot->fetchColumn() === 5, 'Late older lot aggregate incorrect');
+// Deterministic interleaving at the real one-day discovery-to-lock boundary.
+// A separate connection inserts an older UTC day after MIN(date) has returned.
+$selectedDay = gmdate('Y-m-d', strtotime('-111 days'));
+$insertedOlderDay = gmdate('Y-m-d', strtotime('-112 days'));
+$add->execute([$selectedDay, $a, 'home', 0, 3]);
+$injected = false;
+$selectedRun = archive_visitor_stats_one_day($pdo, $cutoff, function () use ($writer, $insertedOlderDay, $b, &$injected): void {
+    $insert = $writer->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),?,?,?)');
+    $insert->execute([$insertedOlderDay, $b, 'lot', 82, 7]);
+    $injected = true;
+});
+check($injected && $selectedRun['days'] === 1 && $selectedRun['views'] === 3,
+    'Discovery-to-lock concurrent older insert interrupted chosen-day transaction');
+$olderExists = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$olderExists->execute([$insertedOlderDay]);
+check((int)$olderExists->fetchColumn() === 1, 'Concurrent older insert was lost');
+$olderRecovered = archive_visitor_stats_one_day($pdo, $cutoff);
+check($olderRecovered['days'] === 1 && $olderRecovered['rows'] === 1 && $olderRecovered['views'] === 7,
+    'Concurrent older historical insert was not archived on next manual call');
+check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0,
+    'Concurrent historical insert replay was not idempotent');
+fwrite(STDOUT, "Actual discovery-to-lock interleaving passed: older insert retained and recovered\\n");
 fwrite(STDOUT, "Late older UTC-day registration recovery passed across two manual invocations\\n");
 fwrite(STDOUT, "One-day concurrent historical insert regression passed: blocked insert and safe retry\\n");
 fwrite(STDOUT, "Two competing manual one-day archive requests passed: lock refusal, retry, unique aggregates\\n");
