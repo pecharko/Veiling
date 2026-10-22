@@ -13,6 +13,16 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $after
     if (!$date || $date->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Invalid historical UTC cutoff');
     }
+    // Connection-scoped lock covers date discovery and the entire day transaction.
+    // A second manual HTTP request fails closed instead of running in parallel.
+    $lockName = 'visitor_stats_one_day_archive';
+    $lockStmt = $pdo->prepare('SELECT GET_LOCK(?, 0)');
+    $lockStmt->execute([$lockName]);
+    if ((int)$lockStmt->fetchColumn() !== 1) {
+        throw new RuntimeException('Another visitor-statistics archive is already running');
+    }
+    $lockStmt->closeCursor();
+    try {
     // Advisory discovery only: the chosen exact day is re-read under a lock.
     $first = $pdo->prepare('SELECT MIN(visit_date) FROM visitor_stats_daily WHERE visit_date < ?');
     $first->execute([$cutoff]);
@@ -69,5 +79,10 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $after
     } catch (Throwable $error) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $error;
+    }    } finally {
+        // GET_LOCK is not transactional. Explicitly release it even on errors.
+        $release = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $release->execute([$lockName]);
+        $release->closeCursor();
     }
 }
