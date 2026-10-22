@@ -23,3 +23,6 @@ The new GitHub Actions workflow runs static checks and installs the proposed sch
 5. After separate confirmation, re-run live SFTP preflight for the two PHP installation targets, then use independent release/deploy authorization. Do not bundle this Draft PR into any production upload.
 
 This PR must remain Draft, unmerged, and not executed on OVH.
+
+## CI incident 2026-10-22
+Original isolated MySQL workflow run 39766265069 failed **before connecting to disposable MySQL** in the static Python test: a malformed regex escaped an opening parenthesis incorrectly (`re.error: missing ), unterminated subpattern`) and its forbidden-keyword check wrongly included SQL comments containing the literal `IF NOT EXISTS`. Corrected only the Python test on the same Draft PR branch; the DDL was not altered. Prevent recurrence by running the offline test first, stripping SQL `--` comment lines for statement/keyword checks, and verifying the regex compiles before declaring MySQL compatibility. Production impact: none. Await fresh CI on the exact updated SHA.
