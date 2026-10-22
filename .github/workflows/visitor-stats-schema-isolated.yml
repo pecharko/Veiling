@@ -1,0 +1,48 @@
+name: Visitor stats MySQL schema isolated tests
+
+on:
+  pull_request:
+    paths:
+      - 'database/visitor_stats_install_proposed.sql'
+      - 'scripts/test_visitor_stats_schema_contract.py'
+      - '.github/workflows/visitor-stats-schema-isolated.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mysql-isolated:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: integration-only-password
+          MYSQL_DATABASE: stats_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pintegration-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run static DDL tests
+        run: python3 scripts/test_visitor_stats_schema_contract.py
+      - name: Install schema in disposable MySQL only
+        env:
+          MYSQL_PWD: integration-only-password
+        run: |
+          set -euo pipefail
+          mysql -h127.0.0.1 -uroot stats_test < database/visitor_stats_install_proposed.sql
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME IN ('visitor_stats_daily','visitor_stats_day_totals','visitor_stats_lot_totals')" | grep -qx 3
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME='visitor_stats_daily' AND INDEX_NAME='PRIMARY'" | grep -qx 4
+          if mysql -h127.0.0.1 -uroot stats_test < database/visitor_stats_install_proposed.sql; then
+            echo "Unexpected success when target tables already exist" >&2
+            exit 1
+          fi
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME IN ('visitor_stats_daily','visitor_stats_day_totals','visitor_stats_lot_totals')" | grep -qx 3
