@@ -112,3 +112,9 @@ Voor daadwerkelijke aansluiting van de experimentele eendagsfunctie op de admin 
 **Aandachtspunt bij toekomstige adminintegratie:** er is nog geen enkelvoudige-operationele lock of server-side serialisering rond datumselectie én archivering. Daarnaast kan een nieuwe bronrij verschijnen op een reeds gearchiveerde UTC-dag. De bestaande `INSERT`-aggregatie voor diezelfde datum kan vervolgens botsen met de primaire sleutel in `visitor_stats_day_totals`; de transactie rolt dan terug en blokkeert de verdere chronologische voortgang. De gedocumenteerde hersteloptie 'Alles verwijderen' is een bewust destructieve noodmaatregel, geen vervanging voor correcte runtimeconcurrency.
 
 **Voorwaarde voor vrijgave:** test daadwerkelijk overlappende archive-aanroepen met onafhankelijke MySQL-connecties, beoordeel een expliciet single-run-mechanisme of robuuste idempotente datumstrategie en valideer de late-insert-op-reeds-gearchiveerde-dag-case. Geen automatische retry, geen automatische datawissing, geen adminkoppeling en geen merge voor deze review is afgerond.
+
+## Operationele keuze: één beheerder
+
+De veilingcatalogus wordt operationeel door **één beheerder** bediend. Gelijktijdige handelingen door twee verschillende beheerders zijn daarom geen vereist gebruiksscenario. Deze organisatorische afspraak verandert geen gebruikersaccounts of rechten op de productieserver.
+
+**Restgevaar:** dezelfde beheerder kan wel twee gelijktijdige HTTP-verzoeken veroorzaken (dubbelklikken, twee tabbladen, browserherhaling). Eén beheeraccount is dus geen technische garantie voor exclusieve archivering. De toekomstige adminintegratie moet ten minste dubbele gelijktijdige handmatige acties veilig weigeren of serialiseren. Geen automatische retry of wissen. De experimentele functie blijft losgekoppeld en PR blijft Draft tot die beperkte bescherming is getest en beoordeeld.
