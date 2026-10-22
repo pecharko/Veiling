@@ -6,49 +6,73 @@ require_once __DIR__ . '/bootstrap.php';
 function store_image(string $inputFile, string $origName): string {
   if (!is_file($inputFile)) throw new RuntimeException('Het fotobestand ontbreekt.');
   $size = filesize($inputFile);
-  if (!$size || $size > 8 * 1024 * 1024) throw new RuntimeException('Foto groter dan 8 MB of leeg.');
+  if (!$size || $size > 16 * 1024 * 1024) throw new RuntimeException('Foto groter dan 16 MB of leeg.');
   $info = @getimagesize($inputFile);
-  if (!$info || $info[0] < 20 || $info[1] < 20 || $info[0] * $info[1] > 12000000) {
-    throw new RuntimeException('Ongeldige foto of foto met te veel pixels (maximaal 12 MP).');
+  if (!$info || $info[0] < 20 || $info[1] < 20 || (float)$info[0] * $info[1] > 48000000) {
+    throw new RuntimeException('Ongeldige foto of te hoge resolutie (maximaal 48 MP).');
   }
   $mime = (new finfo(FILEINFO_MIME_TYPE))->file($inputFile);
-  $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-  if (!isset($allowed[$mime]) || $info['mime'] !== $mime) throw new RuntimeException('Alleen JPG, PNG en WebP zijn toegestaan.');
-  $relativeDir = 'uploads/' . date('Y/m');
-  $absoluteDir = dirname(__DIR__) . '/catalogus-public/' . $relativeDir;
-  if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true) && !is_dir($absoluteDir)) {
-    throw new RuntimeException('Kan de fotomap niet maken.');
+  if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) || $info['mime'] !== $mime) {
+    throw new RuntimeException('Alleen JPG, PNG en WebP zijn toegestaan.');
   }
-  $filename = bin2hex(random_bytes(16));
-  $maxEdge = 1800;
-  $scale = min(1, $maxEdge / max($info[0], $info[1]));
+  $functions = ['imagewebp', 'imagecreatetruecolor', 'imagecopyresampled',
+    'imagecreatefromjpeg', 'imagecreatefrompng', 'imagecreatefromwebp'];
+  foreach ($functions as $function) {
+    if (!function_exists($function)) {
+      throw new RuntimeException('Automatische foto-optimalisatie is niet beschikbaar op de server.');
+    }
+  }
+  // GD decodes the full original into memory before resizing. Fail before decode
+  // when the configured limit cannot safely accommodate both decoded images.
+  $limitText = trim((string)ini_get('memory_limit'));
+  $unit = strtolower(substr($limitText, -1));
+  $limit = (float)$limitText;
+  if ($unit === 'g') $limit *= 1024 * 1024 * 1024;
+  elseif ($unit === 'm') $limit *= 1024 * 1024;
+  elseif ($unit === 'k') $limit *= 1024;
+  // Estimate conservatively: decoded source plus working/intermediate allocations.
+  $required = (float)$info[0] * $info[1] * 6 + 64 * 1024 * 1024;
+  if ($limitText !== '-1' && ($limit <= 0 || memory_get_usage(true) + $required > $limit)) {
+    throw new RuntimeException('Deze foto vraagt te veel servergeheugen. Verklein ze vooraf of kies een kleiner bestand.');
+  }
+  $scale = min(1, 1800 / max($info[0], $info[1]));
   $width = max(1, (int)round($info[0] * $scale));
   $height = max(1, (int)round($info[1] * $scale));
-  $canConvert = function_exists('imagewebp') && function_exists('imagecreatetruecolor') && function_exists('imagecreatefromjpeg') && function_exists('imagecreatefrompng') && function_exists('imagecreatefromwebp');
-  if ($canConvert) {
-    $source = match ($mime) {
-      'image/jpeg' => @imagecreatefromjpeg($inputFile),
-      'image/png' => @imagecreatefrompng($inputFile),
-      'image/webp' => @imagecreatefromwebp($inputFile),
-    };
-    if ($source !== false) {
-      $output = imagecreatetruecolor($width, $height);
+  $source = match ($mime) {
+    'image/jpeg' => @imagecreatefromjpeg($inputFile),
+    'image/png' => @imagecreatefrompng($inputFile),
+    'image/webp' => @imagecreatefromwebp($inputFile),
+  };
+  if ($source === false) throw new RuntimeException('De foto kan niet worden gelezen. Probeer een ander JPG-, PNG- of WebP-bestand.');
+  try {
+    $output = imagecreatetruecolor($width, $height);
+    if ($output === false) throw new RuntimeException('De foto kan niet worden verwerkt.');
+    try {
       imagealphablending($output, false);
       imagesavealpha($output, true);
       $transparent = imagecolorallocatealpha($output, 0, 0, 0, 127);
       imagefill($output, 0, 0, $transparent);
-      imagecopyresampled($output, $source, 0, 0, 0, 0, $width, $height, $info[0], $info[1]);
+      if (!imagecopyresampled($output, $source, 0, 0, 0, 0, $width, $height, $info[0], $info[1])) {
+        throw new RuntimeException('De foto kan niet worden verkleind.');
+      }
+      $relativeDir = 'uploads/' . date('Y/m');
+      $absoluteDir = dirname(__DIR__) . '/catalogus-public/' . $relativeDir;
+      if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true) && !is_dir($absoluteDir)) {
+        throw new RuntimeException('Kan de fotomap niet maken.');
+      }
+      $filename = bin2hex(random_bytes(16));
       $dest = $absoluteDir . '/' . $filename . '.webp';
-      $written = imagewebp($output, $dest, 83);
-      imagedestroy($source);
+      if (!imagewebp($output, $dest, 83) || !is_file($dest) || filesize($dest) === 0) {
+        @unlink($dest);
+        throw new RuntimeException('Foto-optimalisatie mislukt; het originele bestand is niet opgeslagen.');
+      }
+      return $relativeDir . '/' . $filename . '.webp';
+    } finally {
       imagedestroy($output);
-      if ($written) return $relativeDir . '/' . $filename . '.webp';
     }
+  } finally {
+    imagedestroy($source);
   }
-  // Fallback wanneer PHP-GD niet is geïnstalleerd: behoud het geverifieerde origineel.
-  $dest = $absoluteDir . '/' . $filename . '.' . $allowed[$mime];
-  if (!copy($inputFile, $dest)) throw new RuntimeException('Kon foto niet bewaren.');
-  return $relativeDir . '/' . basename($dest);
 }
 function add_lot_image(int $lotId, string $source, string $origName, int $order = 99, ?string $sourceName = null): void {
   $pdo = db();
