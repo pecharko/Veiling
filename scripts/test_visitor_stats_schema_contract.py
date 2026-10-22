@@ -9,7 +9,7 @@ DDL = "\n".join(line for line in SQL.splitlines() if not line.lstrip().startswit
 
 class StatisticsSchemaContract(unittest.TestCase):
     def test_exactly_two_aggregates_and_no_daily_modification(self):
-        names = re.findall(r"^CREATE TABLE ([a-z_]+) \\(", DDL, re.M)
+        names = [line.split()[2] for line in DDL.splitlines() if line.startswith("CREATE TABLE ")]
         self.assertEqual(names, ["visitor_stats_day_totals", "visitor_stats_lot_totals"])
         self.assertNotIn("visitor_stats_daily", DDL)
     def test_fail_closed_non_destructive(self):
@@ -22,7 +22,7 @@ class StatisticsSchemaContract(unittest.TestCase):
         self.assertIn("PRIMARY KEY (visit_date)", DDL)
         self.assertIn("PRIMARY KEY (visit_date, lot_id)", DDL)
         for col in ("visitor_days BIGINT UNSIGNED", "views BIGINT UNSIGNED"):
-            self.assertEqual(DDL.count(col), 2)
+            self.assertEqual(sum(line.strip().startswith(col) for line in DDL.splitlines()), 2)
         self.assertIn("lot_views BIGINT UNSIGNED NOT NULL", DDL)
         self.assertIn("lot_id BIGINT UNSIGNED NOT NULL", DDL)
 
