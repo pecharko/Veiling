@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
 require_no_index();
-require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive.php';
+require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive_one_day_experimental.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
@@ -36,12 +36,12 @@ if (is_post()) {
             $deleteError = 'Archiveringsbevestiging ongeldig of verlopen.';
         } else {
             try {
-                $result = archive_visitor_stats_before(db(), (string)$pending['cutoff']);
-                flash((string)$result['rows'] . ' detailrecords veilig samengevat en verwijderd.');
+                $result = archive_visitor_stats_one_day(db(), (string)$pending['cutoff']);
+                flash($result['days'] === 0 ? 'Geen afgesloten dag om te archiveren.' : ((string)$result['rows'] . ' detailrecords van één UTC-dag veilig samengevat en verwijderd. Start opnieuw om de volgende dag te verwerken.'));
                 redirect('admin/statistieken.php');
             } catch (Throwable $e) {
                 error_log('Manual analytics archive failed; no details logged.');
-                $deleteError = 'Archivering gestopt. Er zijn geen gedeeltelijke wijzigingen doorgevoerd; controleer het databaseschema.';
+                $deleteError = 'Archivering gestopt zonder gedeeltelijke wijziging van de lopende dag. Mogelijke oorzaken: een tweede verzoek, te veel records op één dag of een databasefout.';
             }
         }
     } elseif ($action === 'preview_delete') {
@@ -192,9 +192,9 @@ admin_top('Bezoekersstatistieken');
   <?php endif; ?>
   <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
     <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
-    <p>Alleen na jouw bevestiging worden dag- en kavelstatistieken van afgesloten dagen ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden pas na succesvolle opslag in dezelfde database-transactie verwijderd. Er is geen automatische opschoning.</p>
+    <p>Na jouw bevestiging wordt maximaal één afgesloten UTC-dag ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden alleen na succesvolle opslag van die dag verwijderd. Start deze actie opnieuw voor de volgende dag. Er is geen automatische opschoning.</p>
     <?php if ($archivePreview !== null): ?>
-      <p><strong><?=e((string)$archivePreview['count'])?></strong> detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in aanmerking.</p>
+      <p><strong><?=e((string)$archivePreview['count'])?></strong> historische detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in totaal in aanmerking. Per bevestiging wordt slechts de oudste dag verwerkt (maximaal 20.000 records op die dag).</p>
       <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Archiveren en detailcodes definitief wissen?');">
         <?=csrf_field()?>
         <input type="hidden" name="action" value="confirm_archive">
