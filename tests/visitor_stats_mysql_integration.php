@@ -572,6 +572,29 @@ check((int)$sourceSurvived->fetchColumn() === 9, 'Late source row lost on failed
 $unchangedAggregate = $pdo->prepare('SELECT views FROM visitor_stats_day_totals WHERE visit_date=?');
 $unchangedAggregate->execute([$lateArchivedDay]);
 check((int)$unchangedAggregate->fetchColumn() === 2, 'Existing aggregate altered by failed re-archive');
+// The admin path now uses the one-day function: test its PER-DAY 20,000 cap.
+// The all-days legacy cap is already tested independently above.
+$capDay = gmdate('Y-m-d', strtotime('-120 days'));
+$capInsert = $pdo->prepare("INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (?,UNHEX(?),'home',0,1)");
+for ($n = 0; $n < 20001; $n++) {
+    $capInsert->execute([$capDay, str_pad(dechex(900000 + $n), 64, '0', STR_PAD_LEFT)]);
+}
+$dayTooLarge = false;
+try {
+    archive_visitor_stats_one_day($pdo, $cutoff);
+} catch (RuntimeException $e) {
+    $dayTooLarge = str_contains($e->getMessage(), 'safety limit');
+}
+check($dayTooLarge && !$pdo->inTransaction(), 'One-day admin archive must reject 20001 records');
+$capCheck = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date=?');
+$capCheck->execute([$capDay]);
+check((int)$capCheck->fetchColumn() === 20001, 'Oversized one-day archive destroyed source rows');
+$capTotal = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date=?');
+$capTotal->execute([$capDay]);
+check((int)$capTotal->fetchColumn() === 0, 'Oversized one-day archive wrote daily aggregates');
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$capDay]);
+check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0, 'Empty admin archive should be a no-op');
+fwrite(STDOUT, "One-day 20001-row fail-closed and empty archive integration passed\\n");
 fwrite(STDOUT, "Late insert on archived day safely rejected without data loss; unresolved progress blocker\\n");
 fwrite(STDOUT, "Single-admin duplicate-submit safety passed: refused overlapping request and resumed\\n");
 fwrite(STDOUT, "Actual discovery-to-lock interleaving passed: older insert retained and recovered\\n");
