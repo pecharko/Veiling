@@ -2,7 +2,8 @@
 declare(strict_types=1);
 
 /**
- * EXPERIMENTAL: one UTC-day per explicit manual call. Not connected to admin UI.
+ * One UTC-day per explicit manual call, connected to the admin confirmation flow.
+ * The optional callback is a test-only interleaving seam; admin never passes it.
  * Prior successfully committed days are not rolled back by a later invocation.
  * No scheduler, retry loop or automatic cleanup.
  */
