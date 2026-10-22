@@ -43,7 +43,6 @@ def inspect(sftp, root):
             if item.filename not in (".", "..")
             and item.filename.endswith(".php")
             and ("statist" in item.filename.lower() or "analytic" in item.filename.lower())
-            and "/" not in item.filename and "\\\" not in item.filename
             and stat.S_ISREG(item.st_mode)
         )
         return {
