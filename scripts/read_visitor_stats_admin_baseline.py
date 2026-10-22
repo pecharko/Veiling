@@ -14,9 +14,17 @@ ANCHORS = (
     ("catalogus-public/admin/index.php", b"Kaveloverzicht"),
 )
 
+def stat_expected_file(sftp, root, name):
+    """Only disclose repository-relative allowlisted path, never OVH account root."""
+    try:
+        return sftp.lstat(posixpath.join(root, name))
+    except FileNotFoundError as exc:
+        raise RuntimeError("Required remote path missing: " + name) from exc
+
+
 def inspect(sftp, root):
     for name, marker in ANCHORS:
-        info = sftp.lstat(posixpath.join(root, name))
+        info = stat_expected_file(sftp, root, name)
         if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= MAX_FILE_SIZE:
             raise RuntimeError("Unrecognized OVH application structure")
         with sftp.open(posixpath.join(root, name), "rb") as fh:
@@ -24,7 +32,7 @@ def inspect(sftp, root):
         if len(data) > MAX_FILE_SIZE or marker not in data:
             raise RuntimeError("Unrecognized OVH application markers")
     location = posixpath.join(root, TARGET)
-    info = sftp.lstat(location)
+    info = stat_expected_file(sftp, root, TARGET)
     if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= MAX_FILE_SIZE:
         raise RuntimeError("Statistics admin missing, invalid or symbolic link")
     with sftp.open(location, "rb") as fh:
