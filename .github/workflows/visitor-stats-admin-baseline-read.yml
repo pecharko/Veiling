@@ -1,0 +1,69 @@
+name: Read OVH stats admin SHA256 (manual only)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/read_visitor_stats_admin_baseline.py'
+      - '.github/workflows/visitor-stats-admin-baseline-read.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  offline-validation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check Python syntax and remote read-only invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/read_visitor_stats_admin_baseline.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          p = Path("scripts/read_visitor_stats_admin_baseline.py")
+          tree = ast.parse(p.read_text())
+          code = p.read_text()
+          forbidden = ["put", "remove", "rename", "mkdir", "rmdir", "chmod", "chown", "symlink", "truncate", "write"]
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in forbidden:
+                  raise AssertionError("Forbidden mutation call: " + node.func.attr)
+          assert 'sftp.lstat(' in code
+          assert 'connect()' in code and 'remote_root()' in code
+          assert '"rb"' in code and '"wb"' not in code and "'wb'" not in code
+          print("Offline-only read checks passed")
+          PY
+  production-read:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: offline-validation
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout source without stored credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install pinned SSH client
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Print only verified admin SHA256 and size
+        run: python3 scripts/read_visitor_stats_admin_baseline.py
