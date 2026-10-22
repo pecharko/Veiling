@@ -1,0 +1,95 @@
+name: Bootstrap stats menu one-file guarded release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Offline plan or separately authorized deploy'
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - deploy
+      confirmation:
+        description: 'Exact production deployment approval phrase, deploy only'
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  bootstrap-menu:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable approved bootstrap reference
+        uses: actions/checkout@v4
+        with:
+          ref: 02660c2063bcac1df8149828acf31b8edfa63239
+          persist-credentials: false
+      - name: Checkout reviewed deploy tool
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: reviewed-tooling
+          persist-credentials: false
+      - name: Lint and offline menu-only baseline verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp reviewed-tooling/scripts/deploy_bootstrap_stats_menu_only.py scripts/
+          python3 -m py_compile scripts/deploy_bootstrap_stats_menu_only.py
+          php -l private/bootstrap.php
+          python3 scripts/deploy_bootstrap_stats_menu_only.py plan
+      - name: Verify distinct deploy confirmation
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        shell: bash
+        run: |
+          test "$CONFIRMATION" = 'DEPLOY BOOTSTRAP STATISTIEKEN MENU ONLY'
+      - name: Install pinned SSH client
+        if: inputs.mode == 'deploy'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Recheck production drift and prepare same-run rollback backup
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_bootstrap_stats_menu_only.py backup
+      - name: Preserve backup artifact for seven days
+        if: inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootstrap-stats-menu-original
+          path: bootstrap-remote-backup.bin
+          retention-days: 7
+          if-no-files-found: error
+      - name: Deploy only approved bootstrap after fresh SHA check
+        if: inputs.mode == 'deploy'
+        env:
+          BOOTSTRAP_MENU_CONFIRMATION: ${{ inputs.confirmation }}
+        run: python3 scripts/deploy_bootstrap_stats_menu_only.py deploy
+      - name: Read-only HTTP smoke tests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            got=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "$1")
+            test "$got" = "$2" || { echo "Unexpected HTTP $got for $1"; exit 1; }
+          }
+          check https://41lokeren.be/ 200
+          check https://41lokeren.be/admin/login.php 200
+          check https://41lokeren.be/admin/statistieken.php 303
+          check https://41lokeren.be/admin/import.php 404
+          got=$(curl --silent --show-error --max-time 20 -X POST --data '' -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+          test "$got" = 404
