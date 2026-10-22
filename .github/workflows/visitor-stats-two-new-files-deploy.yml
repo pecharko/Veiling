@@ -1,0 +1,110 @@
+name: Deploy visitor stats two new PHP files (manual only)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Offline plan or authorized deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Full pinned approved source SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'For deploy type DEPLOY VISITOR STATS TWO NEW FILES'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  two-files:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: 9af7316fee95dab005fd8ca565f1f399f5c14918
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable approved release
+        uses: actions/checkout@v4
+        with:
+          ref: 9af7316fee95dab005fd8ca565f1f399f5c14918
+          persist-credentials: false
+      - name: Require exact approved source SHA and separate confirmation
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+          RELEASE_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$APPROVED_SHA" = "$SOURCE_SHA"
+          if [ "$RELEASE_MODE" = 'deploy' ]; then
+            test "$CONFIRMATION" = 'DEPLOY VISITOR STATS TWO NEW FILES'
+          else
+            test "$RELEASE_MODE" = 'plan'
+          fi
+      - name: Checkout reviewed deployment tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: release-tooling
+          persist-credentials: false
+      - name: Compile and offline-plan exact two-file release
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-tooling/scripts/deploy_visitor_stats_two_files.py scripts/deploy_visitor_stats_two_files.py
+          python3 -m py_compile scripts/deploy_visitor_stats_two_files.py
+          python3 scripts/deploy_visitor_stats_two_files.py plan
+      - name: Set up PHP lint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Lint both PHP release files
+        run: |
+          php -l private/visitor_stats_archive_one_day_experimental.php
+          php -l catalogus-public/admin/statistieken.php
+      - name: Install pinned SFTP library
+        if: inputs.mode == 'deploy'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Exclusive-create two absent targets and verify remote SHA256
+        if: inputs.mode == 'deploy'
+        env:
+          VISITOR_RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: python3 scripts/deploy_visitor_stats_two_files.py deploy
+      - name: Read-only production HTTP smoke tests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            status=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "$1")
+            test "$status" = "$2" || { echo "HTTP $status unexpected: $1"; exit 1; }
+          }
+          check https://41lokeren.be/ 200
+          check https://41lokeren.be/admin/login.php 200
+          check https://41lokeren.be/admin/statistieken.php 303
+          check https://41lokeren.be/admin/import.php 404
+          status=$(curl --silent --show-error --max-time 20 -X POST --data '' -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+          test "$status" = 404
