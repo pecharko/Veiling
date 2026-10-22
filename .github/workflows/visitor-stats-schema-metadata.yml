@@ -1,0 +1,67 @@
+name: Visitor stats schema metadata validation (offline)
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/validate_visitor_stats_schema_metadata.py'
+      - 'docs/visitor_stats_schema_readonly.sql'
+      - '.github/workflows/visitor-stats-schema-metadata.yml'
+  workflow_dispatch:
+    inputs:
+      schema_columns_json:
+        description: 'Paste metadata-only JSON rows obtained with approved read-only SQL on OVH'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile validator and exercise fail-closed cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/validate_visitor_stats_schema_metadata.py
+          python3 - <<'PY'
+          import importlib.util
+          spec = importlib.util.spec_from_file_location("schema", "scripts/validate_visitor_stats_schema_metadata.py")
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+          rows = []
+          for table, columns in mod.REQUIRED.items():
+              for column in columns:
+                  dtype = "date" if column == "visit_date" else ("varchar" if column in ("page_kind", "visitor_id") else "int")
+                  rows.append({"table_name": table, "column_name": column, "data_type": dtype,
+                               "column_key": "PRI" if table == "visitor_stats_daily" and column == "visit_date" else ""})
+          mod.check(rows)
+          for broken in ([], rows[:-1]):
+              try:
+                  mod.check(broken)
+              except ValueError:
+                  pass
+              else:
+                  raise AssertionError("Missing schema passed validation")
+          PY
+  validate-supplied-metadata:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: offline-tests
+    runs-on: ubuntu-latest
+    env:
+      SCHEMA_COLUMNS_JSON: ${{ inputs.schema_columns_json }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate pasted metadata without connecting to OVH
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf '%s' "$SCHEMA_COLUMNS_JSON" | python3 scripts/validate_visitor_stats_schema_metadata.py
