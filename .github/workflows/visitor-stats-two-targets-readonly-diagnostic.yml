@@ -1,0 +1,66 @@
+name: Diagnose visitor stats two OVH targets read only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  inspect-two-targets:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 12
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable release reference
+        uses: actions/checkout@v4
+        with:
+          ref: 9af7316fee95dab005fd8ca565f1f399f5c14918
+          persist-credentials: false
+      - name: Verify immutable reference and both source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "9af7316fee95dab005fd8ca565f1f399f5c14918"
+          test -f private/visitor_stats_archive_one_day_experimental.php
+          test -f catalogus-public/admin/statistieken.php
+      - name: Checkout reviewed read-only diagnostic tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: read-only-tooling
+          persist-credentials: false
+      - name: Compile and statically check read-only inspection
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp read-only-tooling/scripts/inspect_visitor_stats_two_targets_readonly.py scripts/
+          python3 -m py_compile scripts/inspect_visitor_stats_two_targets_readonly.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          tree=ast.parse(Path('scripts/inspect_visitor_stats_two_targets_readonly.py').read_text())
+          forbidden={'put','remove','rename','posix_rename','mkdir','rmdir','chmod','chown','symlink','truncate','write'}
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in forbidden:
+                  raise SystemExit('Forbidden method in read-only inspector: '+node.func.attr)
+              if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == 'open':
+                  if len(node.args) >= 2 and isinstance(node.args[1], ast.Constant) and node.args[1].value != 'rb':
+                      raise SystemExit('Unexpected SFTP open mode')
+          print('Static read-only check passed')
+          PY
+      - name: Install pinned Paramiko
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Read-only inspect both remote targets and log hashes
+        run: python3 scripts/inspect_visitor_stats_two_targets_readonly.py
