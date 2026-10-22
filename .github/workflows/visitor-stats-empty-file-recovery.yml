@@ -1,0 +1,121 @@
+name: Recover zero-byte visitor stats file and deploy (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Offline plan or separately authorized recovery'
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - recover
+      release_sha:
+        description: 'Approved immutable release commit'
+        required: true
+        type: string
+      confirmation:
+        description: 'For recovery enter exact recovery phrase'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+
+jobs:
+  recover-two:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      SOURCE_SHA: 9af7316fee95dab005fd8ca565f1f399f5c14918
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable PHP release
+        uses: actions/checkout@v4
+        with:
+          ref: 9af7316fee95dab005fd8ca565f1f399f5c14918
+          persist-credentials: false
+      - name: Verify approved SHA and explicit recovery confirmation
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          MODE: ${{ inputs.mode }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+          test "$APPROVED_SHA" = "$SOURCE_SHA"
+          if [ "$MODE" = 'recover' ]; then
+            test "$CONFIRMATION" = 'RECOVER EMPTY VISITOR STATS AND DEPLOY TWO FILES'
+          else
+            test "$MODE" = 'plan'
+          fi
+      - name: Checkout reviewed recovery tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: reviewed-recovery
+          persist-credentials: false
+      - name: Compile and inspect scoped tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp reviewed-recovery/scripts/recover_visitor_stats_empty_target.py scripts/
+          cp reviewed-recovery/scripts/deploy_visitor_stats_two_files.py scripts/
+          python3 -m py_compile scripts/recover_visitor_stats_empty_target.py scripts/deploy_visitor_stats_two_files.py
+          python3 scripts/deploy_visitor_stats_two_files.py plan
+          python3 - <<'PY'
+          from pathlib import Path
+          recovery=Path('scripts/recover_visitor_stats_empty_target.py').read_text()
+          installer=Path('scripts/deploy_visitor_stats_two_files.py').read_text()
+          assert recovery.count('sftp.remove(first)') == 1
+          assert 'sftp.remove(' not in installer
+          assert "sftp.open(target, 'wx')" in installer
+          assert "sftp.open(target, 'x')" not in installer
+          print('Recovery allowlist and writable-exclusive mode verified')
+          PY
+      - name: Set up PHP and lint the two source files
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Lint PHP release source
+        run: |
+          php -l private/visitor_stats_archive_one_day_experimental.php
+          php -l catalogus-public/admin/statistieken.php
+      - name: Install pinned SFTP client
+        if: inputs.mode == 'recover'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Recheck empty file then recover and SHA256 verify both uploads
+        if: inputs.mode == 'recover'
+        env:
+          VISITOR_RECOVERY_CONFIRMATION: ${{ inputs.confirmation }}
+        run: python3 scripts/recover_visitor_stats_empty_target.py
+      - name: Read-only HTTPS smoke tests
+        if: inputs.mode == 'recover'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            got=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "$1")
+            test "$got" = "$2" || { echo "Unexpected HTTP $got for $1"; exit 1; }
+          }
+          check https://41lokeren.be/ 200
+          check https://41lokeren.be/admin/login.php 200
+          check https://41lokeren.be/admin/statistieken.php 303
+          check https://41lokeren.be/admin/import.php 404
+          got=$(curl --silent --show-error --max-time 20 -X POST --data '' -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+          test "$got" = 404
