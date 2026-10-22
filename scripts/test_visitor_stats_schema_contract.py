@@ -5,17 +5,18 @@ import re
 import unittest
 
 SQL = Path("database/visitor_stats_install_proposed.sql").read_text()
+DDL = "\n".join(line for line in SQL.splitlines() if not line.lstrip().startswith("--"))
 
 class StatisticsSchemaContract(unittest.TestCase):
     def test_exact_tables(self):
-        names = re.findall(r"^CREATE TABLE ([a-z_]+) \\(", SQL, re.M)
+        names = re.findall(r"^CREATE TABLE ([a-z_]+) \(", DDL, re.M)
         self.assertEqual(names, ["visitor_stats_daily", "visitor_stats_day_totals", "visitor_stats_lot_totals"])
     def test_no_destructive_or_silent_migration(self):
-        statements = [s.strip() for s in SQL.split(";") if s.strip()]
+        statements = [s.strip() for s in DDL.split(";") if s.strip()]
         self.assertEqual(len(statements), 3)
         for forbidden in ["IF NOT EXISTS", "DROP TABLE", "ALTER TABLE", "DELETE FROM",
                           "TRUNCATE", "UPDATE ", "INSERT INTO", "CREATE USER"]:
-            self.assertNotIn(forbidden, SQL.upper())
+            self.assertNotIn(forbidden, DDL.upper())
         self.assertEqual(SQL.count("ENGINE=InnoDB"), 3)
     def test_source_primary_index_and_ids(self):
         self.assertIn("PRIMARY KEY (visit_date, visitor_id, page_kind, lot_id)", SQL)
