@@ -33,16 +33,31 @@ jobs:
           persist-credentials: false
       - name: Run static DDL tests
         run: python3 scripts/test_visitor_stats_schema_contract.py
-      - name: Install schema in disposable MySQL only
+      - name: Recreate observed daily schema in disposable MySQL and install ONLY aggregates
         env:
           MYSQL_PWD: integration-only-password
         run: |
           set -euo pipefail
+          mysql -h127.0.0.1 -uroot stats_test <<'SQL'
+          CREATE TABLE visitor_stats_daily (
+            visit_date DATE NOT NULL,
+            visitor_id BINARY(32) NOT NULL,
+            page_kind VARCHAR(8) NOT NULL,
+            lot_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            views INT UNSIGNED NOT NULL DEFAULT 1,
+            PRIMARY KEY (visit_date, visitor_id, page_kind, lot_id),
+            KEY idx_lot_top (visit_date, page_kind, lot_id)
+          ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+          INSERT INTO visitor_stats_daily
+            (visit_date, visitor_id, page_kind, lot_id, views)
+            VALUES ('2026-10-01', UNHEX(REPEAT('ab',32)), 'home', 0, 7);
+          SQL
           mysql -h127.0.0.1 -uroot stats_test < database/visitor_stats_install_proposed.sql
           mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME IN ('visitor_stats_daily','visitor_stats_day_totals','visitor_stats_lot_totals')" | grep -qx 3
-          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.STATISTICS WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME='visitor_stats_daily' AND INDEX_NAME='PRIMARY'" | grep -qx 4
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT views FROM visitor_stats_daily WHERE visit_date='2026-10-01'" | grep -qx 7
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME='visitor_stats_daily' AND COLUMN_NAME='views'" | grep -qx int
           if mysql -h127.0.0.1 -uroot stats_test < database/visitor_stats_install_proposed.sql; then
-            echo "Unexpected success when target tables already exist" >&2
+            echo "STOP: repeated installation unexpectedly succeeded" >&2
             exit 1
           fi
-          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='stats_test' AND TABLE_NAME IN ('visitor_stats_daily','visitor_stats_day_totals','visitor_stats_lot_totals')" | grep -qx 3
+          mysql -h127.0.0.1 -uroot -N stats_test -e "SELECT views FROM visitor_stats_daily WHERE visit_date='2026-10-01'" | grep -qx 7
