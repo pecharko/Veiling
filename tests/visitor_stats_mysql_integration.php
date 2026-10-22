@@ -485,6 +485,25 @@ $insertDuringArchive->execute([$phantomDay, $b, 'lot', 77, 5]);
 $phantomResult = archive_visitor_stats_one_day($pdo, $cutoff);
 check($phantomResult['days'] === 1 && $phantomResult['rows'] === 2 && $phantomResult['views'] === 7,
     'Day archive lost newly registered historical visitor after retry');
+// A late historic insert may be older than a day already archived.
+// Verify that a subsequent manual invocation recovers the older date rather
+// than silently skipping it; this is NOT a simultaneous insert interleaving.
+$lateLaterDay = gmdate('Y-m-d', strtotime('-109 days'));
+$lateOlderDay = gmdate('Y-m-d', strtotime('-110 days'));
+$add->execute([$lateLaterDay, $a, 'home', 0, 4]);
+$laterResult = archive_visitor_stats_one_day($pdo, $cutoff);
+check($laterResult['days'] === 1 && $laterResult['views'] === 4, 'Initial later-day archive failed');
+$add->execute([$lateOlderDay, $b, 'lot', 81, 5]);
+$olderResult = archive_visitor_stats_one_day($pdo, $cutoff);
+check($olderResult['days'] === 1 && $olderResult['rows'] === 1 && $olderResult['views'] === 5,
+    'Late older historical day was not found on next manual invocation');
+$lateTotals = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE visit_date IN (?,?)');
+$lateTotals->execute([$lateOlderDay, $lateLaterDay]);
+check((int)$lateTotals->fetchColumn() === 2, 'Late older day or earlier day was not aggregated exactly once');
+$lateLot = $pdo->prepare('SELECT views FROM visitor_stats_lot_totals WHERE visit_date=? AND lot_id=81');
+$lateLot->execute([$lateOlderDay]);
+check((int)$lateLot->fetchColumn() === 5, 'Late older lot aggregate incorrect');
+fwrite(STDOUT, "Late older UTC-day registration recovery passed across two manual invocations\\n");
 fwrite(STDOUT, "One-day concurrent historical insert regression passed: blocked insert and safe retry\\n");
 fwrite(STDOUT, "Two competing manual one-day archive requests passed: lock refusal, retry, unique aggregates\\n");
 fwrite(STDOUT, "Experimental one-day concurrent row-lock regression passed\\n");
