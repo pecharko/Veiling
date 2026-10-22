@@ -1,0 +1,45 @@
+name: Visitor stats one-day simple offline plan
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/plan_visitor_stats_one_day_simple.py'
+      - '.github/workflows/visitor-stats-one-day-simple-plan.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout inspected commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up PHP for lint
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Verify strict offline source manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/plan_visitor_stats_one_day_simple.py --release-sha "$GITHUB_SHA" > one-day-simple-plan.json
+          cat one-day-simple-plan.json
+      - name: Retain manual review artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: one-day-simple-source-plan-${{ github.run_id }}
+          path: one-day-simple-plan.json
+          retention-days: 7
+          if-no-files-found: error
