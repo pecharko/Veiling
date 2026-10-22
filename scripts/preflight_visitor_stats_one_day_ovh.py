@@ -26,28 +26,30 @@ def check(sftp, root):
         with sftp.open(p, "rb") as f:
             if marker not in f.read(MAX_FILE_SIZE + 1):
                 raise RuntimeError("Unexpected remote application root")
-    expected = os.environ.get("OVH_STATS_ADMIN_BASELINE_SHA256", "").strip().lower()
-    if len(expected) != 64 or any(c not in "0123456789abcdef" for c in expected):
-        raise RuntimeError("STOP: independently approved admin production baseline SHA256 missing")
-    path = posixpath.join(root, EXISTING)
-    info = sftp.lstat(path)
-    if not stat.S_ISREG(info.st_mode) or not 0 < info.st_size <= MAX_FILE_SIZE:
-        raise RuntimeError("STOP: existing admin PHP invalid or symlink")
-    with sftp.open(path, "rb") as f:
-        data = f.read(MAX_FILE_SIZE + 1)
-    if ADMIN_MARKER not in data:
-        raise RuntimeError("STOP: unexpected existing stats admin")
-    actual = hashlib.sha256(data).hexdigest()
-    if actual != expected:
-        raise RuntimeError("STOP: remote stats admin drift; independent review required")
-    new_path = posixpath.join(root, NEW)
-    try:
-        info = sftp.lstat(new_path)
-    except FileNotFoundError:
-        new_status = "absent_as_expected"
-    else:
-        raise RuntimeError("STOP: proposed new private source path already exists")
-    return {"approved_baseline_sha256": actual, "new_private_path": new_status, "remote_root_validated": True, "drift_checked": True}
+    # New installation: both destinations must be absent. Never overwrite an
+    # unexpected regular file, symlink or any other SFTP object.
+    targets = (
+        "private/visitor_stats_archive_one_day_experimental.php",
+        "catalogus-public/admin/statistieken.php",
+    )
+    statuses = {}
+    for name in targets:
+        path = posixpath.join(root, name)
+        try:
+            sftp.lstat(path)
+        except FileNotFoundError:
+            statuses[name] = "absent_as_expected"
+        else:
+            raise RuntimeError("STOP: installation target unexpectedly exists: " + name)
+    return {
+        "installation": "new_files_only",
+        "target_statuses": statuses,
+        "remote_root_validated": True,
+        "hostkey_pinned": True,
+        "database_schema_verified": False,
+        "release_authorized": False,
+        "upload_allowed": False,
+    }
 
 def main():
     root = remote_root()
