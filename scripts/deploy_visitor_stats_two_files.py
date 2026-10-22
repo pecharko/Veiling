@@ -63,9 +63,9 @@ def main(mode):
             check_remote(sftp, root)
             for name, content in data.items():
                 target = posixpath.join(root, name)
-                # SFTP exclusive-create mode ('x'): fails if target exists, including a symlink.
+                # SFTP exclusive-create and writable mode ('wx'): fails if target exists, including a symlink.
                 # Errors STOP, without any attempt to delete or overwrite partial uploads.
-                with sftp.open(target, 'x') as remote:
+                with sftp.open(target, 'wx') as remote:
                     remote.write(content)
                     remote.flush()
                 info = sftp.lstat(target)
