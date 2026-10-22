@@ -6,7 +6,7 @@ declare(strict_types=1);
  * Prior successfully committed days are not rolled back by a later invocation.
  * No scheduler, retry loop or automatic cleanup.
  */
-function archive_visitor_stats_one_day(PDO $pdo, string $cutoff): array
+function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
 {
     $limit = gmdate('Y-m-d', strtotime('-30 days'));
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
@@ -18,6 +18,8 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff): array
     $first->execute([$cutoff]);
     $day = $first->fetchColumn();
     $first->closeCursor();
+    // Test-only seam to prove an insertion between discovery and the day lock.
+    if ($afterDiscoveryForTest !== null) $afterDiscoveryForTest();
     if ($day === false || $day === null) {
         return ['rows'=>0, 'days'=>0, 'views'=>0];
     }
