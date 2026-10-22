@@ -50,6 +50,7 @@ jobs:
         run: |
           set -euo pipefail
           cp release-tool/scripts/deploy_photo_runtime_diagnostic.py scripts/
+          cp release-tool/tests/photo_capacity_diagnostic_test.php tests/
           php -l catalogus-public/admin/foto-capaciteit.php
           php tests/photo_capacity_diagnostic_test.php
           python3 -m py_compile scripts/deploy_photo_runtime_diagnostic.py
