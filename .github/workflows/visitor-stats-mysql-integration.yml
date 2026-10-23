@@ -6,6 +6,7 @@ on:
       - "catalogus-public/privacy.php"
       - "database/visitor_stats_aggregates.sql"
       - "tests/visitor_stats_mysql_integration.php"
+      - "tests/visitor_stats_tracking_mysql_integration.php"
       - "tests/public_privacy_notice_test.py"
       - "scripts/plan_visitor_stats_six_release.py"
       - ".github/workflows/visitor-stats-mysql-integration.yml"
@@ -50,3 +51,6 @@ jobs:
           php -l catalogus-public/privacy.php
           php tests/visitor_stats_mysql_integration.php
           python3 tests/public_privacy_notice_test.py
+          php -l private/visitor_stats.php
+          php -l tests/visitor_stats_tracking_mysql_integration.php
+          php tests/visitor_stats_tracking_mysql_integration.php
