@@ -1,0 +1,44 @@
+name: Diagnose OVH visitor tracking read only
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate read only diagnostic
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/diagnose_visitor_tracking_readonly.py
+          python3 - <<'PY'
+          import ast
+          from pathlib import Path
+          tree = ast.parse(Path("scripts/diagnose_visitor_tracking_readonly.py").read_text())
+          forbidden = {"put", "write", "remove", "rename", "mkdir", "rmdir", "chmod", "chown", "truncate"}
+          for node in ast.walk(tree):
+              if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr in forbidden:
+                  raise RuntimeError("Forbidden SFTP mutation")
+          print("Read-only static inspection passed")
+          PY
+      - name: Install pinned SFTP library
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: 'Read only: compare tracking sources and check analytics key presence'
+        run: python3 scripts/diagnose_visitor_tracking_readonly.py
