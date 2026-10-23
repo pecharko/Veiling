@@ -1,0 +1,86 @@
+name: High resolution photo two-file simple release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Select offline plan, read-only preflight or separately authorized deploy'
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - preflight
+          - deploy
+      confirmation:
+        description: 'Only used after separate final production authorization'
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  photo-release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout immutable approved photo source
+        uses: actions/checkout@v4
+        with:
+          ref: ac75eecfaec9a3cc66bc76872982358d28b6b4ad
+          persist-credentials: false
+      - name: Checkout reviewed release tooling
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: release-tool
+          persist-credentials: false
+      - name: Validate exact source and photo tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-tool/scripts/twofile_photo_release.py scripts/
+          php -l private/images.php
+          php -l catalogus-public/admin/kavel.php
+          python3 tests/test_high_resolution_image_safety.py
+          php -d memory_limit=512M tests/photo_48mp_boundary.php
+          python3 -m py_compile scripts/twofile_photo_release.py
+          python3 scripts/twofile_photo_release.py plan
+      - name: Verify explicit final confirmation
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: test "$CONFIRMATION" = 'DEPLOY HIGHRES PHOTO TWO FILES NO ROLLBACK'
+      - name: Install pinned SFTP library
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Check OVH drift and pinned host read-only
+        if: inputs.mode != 'plan'
+        run: python3 scripts/twofile_photo_release.py preflight
+      - name: Deploy only after distinct final authorization
+        if: inputs.mode == 'deploy'
+        env:
+          PHOTO_TWOFILE_FINAL_AUTH: ${{ inputs.confirmation }}
+        run: python3 scripts/twofile_photo_release.py deploy
+      - name: Read-only HTTP smoke checks
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = '200'
+          admin=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/kavel.php)
+          test "$admin" = '302' || test "$admin" = '303'
+          for method in GET POST; do
+            code=$(curl --silent --show-error --max-time 20 -X "$method" -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+            test "$code" = '404'
+          done
