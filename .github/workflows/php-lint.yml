@@ -42,6 +42,9 @@ jobs:
       - name: Test JPEG PNG WebP processing in isolation
         run: php -d memory_limit=512M tests/photo_gd_isolated.php
 
+      - name: Test 48 MP JPEG PNG WebP conversion at 512 MB
+        run: php -d memory_limit=512M tests/photo_48mp_boundary.php
+
       - name: Verify CSV import is disabled in source
         run: php tests/csv_import_disabled_test.php
 
