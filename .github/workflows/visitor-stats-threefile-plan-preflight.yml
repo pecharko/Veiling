@@ -1,0 +1,48 @@
+name: Visitor stats three-file plan and read-only preflight
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Offline plan or read-only remote preflight; never deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+        default: plan
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 12
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify exact three-file offline candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l private/visitor_stats.php
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          python3 tests/visitor_stats_three_file_plan_test.py
+          python3 scripts/plan_visitor_stats_three_file.py
+      - name: Install read-only SFTP dependency
+        if: inputs.mode == 'preflight'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: 'Read only: verify live tracking files and analytics key presence'
+        if: inputs.mode == 'preflight'
+        run: python3 scripts/diagnose_visitor_tracking_readonly.py
