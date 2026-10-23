@@ -8,6 +8,7 @@ from deploy_ovh_sftp import connect, remote_root
 SOURCE_COMMIT = "9a1d3072dae88952926d80dc0adfe197e04d0084"
 TARGET = "catalogus-public/admin/foto-capaciteit.php"
 APPROVAL = "DEPLOY PHOTO CAPACITY DIAGNOSTIC ONLY"
+EXPECTED_SHA256 = "fc273cb10013baf71df9dd5364c404ff5f361a1109cdef9277093efe8027c6cf"
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -19,6 +20,8 @@ def payload() -> bytes:
     data = path.read_bytes()
     if not 200 < len(data) < 20000 or b"require_auth();" not in data or b"memory_limit" not in data:
         raise RuntimeError("Unexpected diagnostic payload")
+    if sha256(data) != EXPECTED_SHA256:
+        raise RuntimeError("STOP: diagnostic source SHA-256 differs from approved source")
     return data
 
 def inspect(sftp, root):
