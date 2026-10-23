@@ -10,6 +10,9 @@ if ($source === false) throw new RuntimeException('Missing image code');
 $needle = "require_once __DIR__ . '/bootstrap.php';";
 if (substr_count($source, $needle) !== 1) throw new RuntimeException('Bootstrap structure changed');
 $source = str_replace($needle, '', $source);
+// eval() cannot accept a strict_types declaration after its opening tag.
+$source = preg_replace('/^<\\?php\\s*declare\\(strict_types=1\\);/', '<?php', $source, 1);
+if ($source === null) throw new RuntimeException('Could not prepare isolated code');
 eval('?>' . $source);
 $tmp = sys_get_temp_dir() . '/veiling-gd-' . bin2hex(random_bytes(6));
 if (!mkdir($tmp)) throw new RuntimeException('Failed to create temporary directory');
