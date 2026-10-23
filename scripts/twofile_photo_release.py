@@ -6,7 +6,7 @@ import posixpath
 import stat
 import sys
 from pathlib import Path
-from scripts.deploy_ovh_sftp import connect, remote_root
+from deploy_ovh_sftp import connect, remote_root
 
 FILES = (
     "private/images.php",
