@@ -22,8 +22,34 @@ concurrency:
   group: ovh-production-deploy
   cancel-in-progress: false
 jobs:
+  offline-plan:
+    if: inputs.mode == 'plan' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout pinned PHP diagnostic
+        uses: actions/checkout@v4
+        with:
+          ref: 9a1d3072dae88952926d80dc0adfe197e04d0084
+          persist-credentials: false
+      - name: Checkout reviewed deployment tooling and updated test
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: release-tool
+          persist-credentials: false
+      - name: Validate diagnostic and offline plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp release-tool/scripts/deploy_photo_runtime_diagnostic.py scripts/
+          cp release-tool/tests/photo_capacity_diagnostic_test.php tests/
+          php -l catalogus-public/admin/foto-capaciteit.php
+          php tests/photo_capacity_diagnostic_test.php
+          python3 -m py_compile scripts/deploy_photo_runtime_diagnostic.py
+          python3 scripts/deploy_photo_runtime_diagnostic.py plan
   photo-runtime-diagnostic:
-    if: github.ref == 'refs/heads/main'
+    if: inputs.mode != 'plan' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 10
