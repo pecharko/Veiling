@@ -40,7 +40,7 @@ def inspect(sftp, root):
     config = read(sftp, root, "private/config.php")
     # Boolean-only result; never print secret, config bytes, a hash of config or a matching substring.
     # Require a literal key and do not evaluate PHP.
-    matches = re.findall(rb"['\\\"]analytics_secret['\\\"]\\s*=>\\s*['\\\"]([a-fA-F0-9]{64})['\\\"]", config)
+    matches = re.findall(rb"""['"]analytics_secret['"]\s*=>\s*['"]([a-fA-F0-9]{64})['"]""", config)
     print("ANALYTICS_SECRET", "valid_literal_64hex=" + str(len(matches) == 1).lower(), flush=True)
     print("ADMIN_PAGES", "excluded_from_diagnostic_targets=true")
     print("DATABASE", "not_connected; schema and counts unverified")
