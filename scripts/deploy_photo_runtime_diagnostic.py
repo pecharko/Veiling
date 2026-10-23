@@ -8,6 +8,7 @@ from deploy_ovh_sftp import connect, remote_root
 SOURCE_COMMIT = "9a1d3072dae88952926d80dc0adfe197e04d0084"
 TARGET = "catalogus-public/admin/foto-capaciteit.php"
 APPROVAL = "DEPLOY PHOTO CAPACITY DIAGNOSTIC ONLY"
+EXPECTED_SHA256 = "fc273cb10013baf71df9dd5364c404ff5f361a1109cdef9277093efe8027c6cf"
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -19,6 +20,8 @@ def payload() -> bytes:
     data = path.read_bytes()
     if not 200 < len(data) < 20000 or b"require_auth();" not in data or b"memory_limit" not in data:
         raise RuntimeError("Unexpected diagnostic payload")
+    if sha256(data) != EXPECTED_SHA256:
+        raise RuntimeError("STOP: diagnostic source SHA-256 differs from approved source")
     return data
 
 def inspect(sftp, root):
@@ -57,35 +60,19 @@ def main():
                 return
             if os.environ.get("DIAGNOSTIC_FINAL_AUTH") != APPROVAL:
                 raise RuntimeError("STOP: distinct final production authorization missing")
-            # Exclusive creation prevents clobbering an existing production file.
-            created = False
-            try:
-                with sftp.open(target, "wx") as remote:
-                    created = True
-                    remote.write(data)
-                    remote.flush()
-                info = sftp.lstat(target)
-                if not stat.S_ISREG(info.st_mode) or info.st_size != len(data):
-                    raise RuntimeError("Remote size/type mismatch")
-                with sftp.open(target, "rb") as remote:
-                    actual = remote.read(len(data) + 1)
-                if actual != data:
-                    raise RuntimeError("SHA-256 mismatch after deployment")
-                print("VERIFIED uploaded SHA256:", sha256(actual))
-            except Exception:
-                # A newly created file can be removed only if still exactly ours.
-                if created:
-                    try:
-                        with sftp.open(target, "rb") as remote:
-                            current = remote.read(len(data) + 1)
-                        if current == data:
-                            sftp.remove(target)
-                            print("Verified newly created diagnostic removed after failure", file=sys.stderr)
-                        else:
-                            print("STOP: diagnostic has changed; no automatic deletion", file=sys.stderr)
-                    except Exception as e:
-                        print("WARNING: manual recovery may be required:", type(e).__name__, file=sys.stderr)
-                raise
+            # Exclusive creation prevents overwriting an existing production file.
+            # Simple release: never attempt rollback or deletion on failure.
+            with sftp.open(target, "wx") as remote:
+                remote.write(data)
+                remote.flush()
+            info = sftp.lstat(target)
+            if not stat.S_ISREG(info.st_mode) or info.st_size != len(data):
+                raise RuntimeError("Remote size/type mismatch; manual recovery may be required")
+            with sftp.open(target, "rb") as remote:
+                actual = remote.read(len(data) + 1)
+            if actual != data:
+                raise RuntimeError("SHA-256 mismatch after deployment; manual recovery may be required")
+            print("VERIFIED uploaded SHA256:", sha256(actual))
     finally:
         client.close()
 
