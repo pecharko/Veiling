@@ -1,0 +1,101 @@
+name: Visitor tracking three-file guarded release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan, read-only preflight, or separately authorized deploy'
+        required: true
+        type: choice
+        default: plan
+        options:
+          - plan
+          - preflight
+          - deploy
+      release_sha:
+        description: 'Exact 40-character current main commit'
+        required: true
+        type: string
+      schema_ready:
+        description: 'Only after verified OVH metadata: SQL SCHEMA VERIFIED'
+        required: false
+        type: string
+        default: ''
+      privacy_ready:
+        description: 'Only after reviewed privacy and retention: PRIVACY REVIEW APPROVED'
+        required: false
+        type: string
+        default: ''
+      confirmation:
+        description: 'Only after separate final authorization for simple no-rollback profile'
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  three-file:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact release commit and PHP sources
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          php -l private/visitor_stats.php
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          python3 -m py_compile scripts/deploy_visitor_stats_threefile_guarded.py
+          python3 tests/visitor_stats_three_file_plan_test.py
+          python3 scripts/deploy_visitor_stats_threefile_guarded.py plan
+      - name: Check separate final production gates
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          SCHEMA: ${{ inputs.schema_ready }}
+          PRIVACY: ${{ inputs.privacy_ready }}
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          [[ "$SCHEMA" == 'SQL SCHEMA VERIFIED' ]] || exit 1
+          [[ "$PRIVACY" == 'PRIVACY REVIEW APPROVED' ]] || exit 1
+          [[ "$CONFIRMATION" == 'DEPLOY THREE VISITOR TRACKING NO ROLLBACK' ]] || exit 1
+      - name: Install pinned SFTP library
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: 'Read only: check host identity and all three remote paths'
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_visitor_stats_threefile_guarded.py preflight
+      - name: Upload exactly three files after distinct final authorization
+        if: inputs.mode == 'deploy'
+        env:
+          THREEFILE_FINAL_AUTH: ${{ inputs.confirmation }}
+        run: python3 scripts/deploy_visitor_stats_threefile_guarded.py deploy
+      - name: Read-only HTTP smoke checks
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = '200'
+          admin=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/kavel.php)
+          test "$admin" = '302' || test "$admin" = '303'
+          for method in GET POST; do
+            code=$(curl --silent --show-error --max-time 20 -X "$method" -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+            test "$code" = '404'
+          done
