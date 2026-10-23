@@ -27,7 +27,11 @@ def inspect(sftp, root):
     if b"function admin_top(" not in bootstrap:
         raise RuntimeError("STOP unexpected SFTP application root")
     for name in FILES:
-        remote = read(sftp, root, name)
+        try:
+            remote = read(sftp, root, name)
+        except FileNotFoundError:
+            print("PATH", name, "present=false", "reason=missing", flush=True)
+            continue
         local = Path(name).read_bytes()
         print("PATH", name, "present=true", "same_as_main=" + str(remote == local).lower(),
               "remote_sha256=" + hashlib.sha256(remote).hexdigest(), flush=True)
@@ -37,7 +41,13 @@ def inspect(sftp, root):
                   "dnt_filter=" + str(b"HTTP_DNT" in remote).lower(), flush=True)
         else:
             print("PAGE_TRACKING_CALL", name, str(b"track_catalog_view(" in remote).lower(), flush=True)
-    config = read(sftp, root, "private/config.php")
+    try:
+        config = read(sftp, root, "private/config.php")
+    except FileNotFoundError:
+        print("ANALYTICS_SECRET", "config_present=false", flush=True)
+        print("DATABASE", "not_connected; schema and counts unverified")
+        print("RESULT", "read_only_no_writes=true")
+        return
     # Boolean-only result; never print secret, config bytes, a hash of config or a matching substring.
     # Require a literal key and do not evaluate PHP.
     matches = re.findall(rb"""['"]analytics_secret['"]\s*=>\s*['"]([a-fA-F0-9]{64})['"]""", config)
