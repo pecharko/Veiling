@@ -1,0 +1,78 @@
+name: Read only OVH photo source diff
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  inspect:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate source and install SFTP dependency
+        run: |
+          php -l private/images.php
+          php -l catalogus-public/admin/kavel.php
+          python3 -m pip install 'paramiko==3.5.1'
+      - name: 'Read only: inspect bounded source diffs'
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import difflib
+          import hashlib
+          import posixpath
+          import stat
+          from pathlib import Path
+          from scripts.deploy_ovh_sftp import connect, remote_root
+
+          allowed = ('private/images.php', 'catalogus-public/admin/kavel.php')
+          root = remote_root()
+          client = connect()
+          try:
+              with client.open_sftp() as sftp:
+                  for name in allowed:
+                      remote_path = posixpath.join(root, name)
+                      before = sftp.lstat(remote_path)
+                      if not stat.S_ISREG(before.st_mode) or not 1 <= before.st_size <= 1048576:
+                          raise RuntimeError('STOP: unexpected file type or size: ' + name)
+                      with sftp.open(remote_path, 'rb') as handle:
+                          remote = handle.read(1048577)
+                      after = sftp.lstat(remote_path)
+                      if len(remote) != before.st_size or after.st_size != before.st_size or after.st_mtime != before.st_mtime:
+                          raise RuntimeError('STOP: remote file changed while reading: ' + name)
+                      local = Path(name).read_bytes()
+                      print('FILE:', name, flush=True)
+                      print('OVH SHA256:', hashlib.sha256(remote).hexdigest(), flush=True)
+                      print('MAIN SHA256:', hashlib.sha256(local).hexdigest(), flush=True)
+                      if remote == local:
+                          print('IDENTICAL', flush=True)
+                          continue
+                      # No remote files are saved to the runner, artifacts or GitHub repository.
+                      # Only two allowlisted PHP source files are printed; code review required.
+                      before_lines = remote.decode('utf-8', errors='replace').splitlines()
+                      after_lines = local.decode('utf-8', errors='replace').splitlines()
+                      diff = list(difflib.unified_diff(before_lines, after_lines,
+                          fromfile='OVH/' + name, tofile='main/' + name, lineterm='', n=2))
+                      print('DIFF lines:', len(diff), flush=True)
+                      for line in diff[:180]:
+                          print(line, flush=True)
+                      if len(diff) > 180:
+                          print('DIFF TRUNCATED: remaining lines require a separate restricted review.', flush=True)
+          finally:
+              client.close()
+          print('Read only complete. No SFTP writes, uploads, PHP changes or database operations.')
+          PY
