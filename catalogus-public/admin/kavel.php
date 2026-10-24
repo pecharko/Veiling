@@ -76,7 +76,13 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
-          if($ex->getCode()==='23000')$error='Dit lotnummer of veilingsnummer bestaat al. Controleer de invoer.';
+          if($ex->getCode()==='23000'){
+            $driverCode=(int)($ex->errorInfo[1] ?? 0);
+            $detail=(string)($ex->errorInfo[2] ?? '');
+            if($driverCode===1062 && str_contains($detail,'uq_lots_auction_number'))$error='Dit veilingsnummer bestaat al. Het kavel is niet opgeslagen.';
+            elseif($driverCode===1062 && (str_contains($detail,'lot_number') || str_contains($detail,'PRIMARY')===false))$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+            else $error='Een unieke waarde bestaat al. Het kavel is niet opgeslagen.';
+          }
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
         }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
       }
