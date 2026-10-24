@@ -238,3 +238,10 @@ Nu de actuele OVHcloud-broncode naar GitHub is geïmporteerd en statisch beoorde
 
 ## FR-031 — Modern kaveloverzicht (gepland voor productie)
 Het beheer toont vier statistiekkaarten, een responsieve kaveltabel met statusbadges en een bewerkactie. De dubbele actiebalk verdwijnt omdat de hoofdnavigatie deze acties al aanbiedt. Zoekterm, categorie en publicatiestatus kunnen gecombineerd worden; paginering bewaart de filters. De backend blijft read-only op het overzicht en gebruikt gebonden SQL-parameters.
+
+
+## PR119 — Gebruikersrollen (gerealiseerd en geaccepteerd, 2026-10-24)
+- Rol `administrator`: volledige adminconsole, inclusief gebruikersbeheer.
+- Rol `assistant`: kavelfuncties; andere beheerroutes afgeschermd.
+- Minstens één Administrator behouden; beheerder bevestigde geslaagde productieacceptatie van alle vier de rolcontroles.
+- Release SHA: `e74b3ef3ce3fb7408aa00f4054ffbcabe82c49ce`.

@@ -194,3 +194,10 @@ Dit logboek volgt de wijzigingen in de GitHub-repository. Historische applicatie
 - Eerdere versies: initiële veilingcatalogus, admin, CSV- en fotobeheer.
 
 Bewaar daadwerkelijke deploymentdata en commit-SHA's vanaf de eerste geïmporteerde productiebaseline.
+
+
+## 2026-10-24 — PR119 gebruikersrollen productie-release afgesloten
+- `administrator` en `assistant` rollen voor de adminconsole; gebruikersbeheer met accountselectie en afzonderlijke creatie.
+- Databasekolom `admins.role` manueel gemigreerd en door beheerder bevestigd.
+- Vier PHP-bestanden uitgerold vanaf `e74b3ef3ce3fb7408aa00f4054ffbcabe82c49ce`; SHA-256-verificatie en HTTPS-smoketests geslaagd in [deploy-run 40086089816](https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004).
+- Vier handmatige acceptatiecontroles geslaagd volgens beheerder; formeel afgesloten. Code-only release zonder rollback, expliciet aanvaard.
