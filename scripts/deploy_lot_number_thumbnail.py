@@ -121,8 +121,27 @@ def preflight() -> None:
     try:
         with client.open_sftp() as sftp:
             current = fetch_remote(sftp, root)
-            for name, data in current.items():
-                print("REMOTE", name, digest(data))
+            hashes = {name: digest(data) for name, data in current.items()}
+            for name, sha256 in hashes.items():
+                print("REMOTE", name, sha256)
+            manifest_path = os.environ.get("PREFLIGHT_MANIFEST_PATH", "").strip()
+            if manifest_path:
+                run_id = os.environ.get("GITHUB_RUN_ID", "").strip()
+                head_sha = os.environ.get("GITHUB_SHA", "").strip()
+                if not run_id.isdigit() or not head_sha or len(head_sha) != 40 or any(c not in "0123456789abcdef" for c in head_sha):
+                    raise RuntimeError("Missing or invalid CI run identity; no preflight manifest created")
+                from datetime import datetime, timezone
+                manifest = {
+                    "schema": 1,
+                    "run_id": int(run_id),
+                    "head_sha": head_sha,
+                    "captured_at": datetime.now(timezone.utc).isoformat(),
+                    "sha256": hashes,
+                }
+                output = Path(manifest_path)
+                if output.exists() or output.is_symlink():
+                    raise RuntimeError("Preflight manifest must not overwrite an existing file")
+                output.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
             print("READ ONLY")
     finally:
         client.close()
