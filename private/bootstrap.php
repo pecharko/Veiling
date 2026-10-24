@@ -80,6 +80,19 @@ function require_auth(): void {
     session_regenerate_id(true);
     redirect('admin/login.php');
   }
+  // Enforce permissions on direct requests, not only in the visual menu.
+  $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+  if (str_contains($script, '/admin/')) {
+    $role = db()->prepare('SELECT role FROM admins WHERE id=?');
+    $role->execute([$_SESSION['admin_id']]);
+    if ($role->fetchColumn() !== 'administrator') {
+      $page = basename($script);
+      if (!in_array($page, ['index.php', 'kavel.php', 'logout.php'], true)) {
+        http_response_code(403);
+        exit('Geen toegang tot dit beheeronderdeel.');
+      }
+    }
+  }
 }
 function require_administrator(): void {
   require_auth();
