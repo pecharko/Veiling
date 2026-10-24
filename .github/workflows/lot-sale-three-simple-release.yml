@@ -130,15 +130,26 @@ jobs:
           [[ "$(jq -r '.conclusion' <<<"$prior")" == success ]] || exit 1
           [[ "$(jq -r '.status' <<<"$prior")" == completed ]] || exit 1
           [[ "$(jq -r '.head_sha' <<<"$prior")" == "$RELEASE_SHA" ]] || exit 1
-          [[ "$(jq -r '.event' <<<"$prior")" == workflow_dispatch ]] || exit 1
           [[ "$(jq -r '.head_branch' <<<"$prior")" == main ]] || exit 1
-          [[ "$(jq -r '.path' <<<"$prior")" == '.github/workflows/lot-sale-three-simple-release.yml' ]] || exit 1
-          # GitHub's run REST response may omit workflow_dispatch inputs.
-          # Verify the actual successful plan job and its named evidence artifact instead.
-          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/jobs"")"
-          [[ "$(jq '[.jobs[] | select(.name == "plan" and .conclusion == "success")] | length' <<<"$jobs")" == 1 ]] || exit 1
-          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/artifacts"")"
-          [[ "$(jq --arg name "lot-sale-three-preflight-$PLAN_RUN" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<<"$artifacts")" == 1 ]] || exit 1
+          # Accept only the two specifically trusted read-only plan workflows.
+          event="$(jq -r '.event' <<<"$prior")"
+          path="$(jq -r '.path' <<<"$prior")"
+          if [[ "$event" == workflow_dispatch && "$path" == '.github/workflows/lot-sale-three-simple-release.yml' ]]; then
+            job_name=plan
+            artifact_name="lot-sale-three-preflight-$PLAN_RUN"
+          elif [[ "$event" == workflow_run && "$path" == '.github/workflows/lot-sale-auto-readonly-preflight.yml' ]]; then
+            job_name=readonly
+            artifact_name="lot-sale-auto-readonly-$PLAN_RUN"
+            # Must have been triggered by a successful push CI on this exact main SHA.
+            [[ "$(jq -r '.triggering_actor.login // empty' <<<"$prior")" != '' ]] || exit 1
+          else
+            exit 1
+          fi
+          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/jobs")"
+          [[ "$(jq --arg name "$job_name" '[.jobs[] | select(.name == $name and .conclusion == "success")] | length' <<<"$jobs")" == 1 ]] || exit 1
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/artifacts")"
+          [[ "$(jq --arg name "$artifact_name" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<<"$artifacts")" == 1 ]] || exit 1
+          echo "PLAN_ARTIFACT=$artifact_name" >> "$GITHUB_ENV"
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
@@ -150,7 +161,7 @@ jobs:
           tools: none
       - name: 'Get immutable approved preflight hashes'
         shell: bash
-        run: gh run download "$PLAN_RUN" --repo "$GITHUB_REPOSITORY" -n "lot-sale-three-preflight-$PLAN_RUN"
+        run: gh run download "$PLAN_RUN" --repo "$GITHUB_REPOSITORY" -n "$PLAN_ARTIFACT"
       - name: 'Validate sources and fresh production drift before upload'
         shell: bash
         run: |
