@@ -80,7 +80,7 @@ $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? O
 $suggestedNumber = '';
 if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
-  $suggestedNumber = first_available_lot_number($existingNumbers === null ? [] : [$existingNumbers]) ?? '';
+  $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
 $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
