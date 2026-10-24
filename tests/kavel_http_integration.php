@@ -7,6 +7,13 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
 require dirname(__DIR__) . '/private/catalog_mutex.php';
 
+// Apply role extension only to the disposable CI database used by this test.
+if (getenv('GITHUB_ACTIONS') === 'true' && db()->query('SELECT DATABASE()')->fetchColumn() === 'auction_test') {
+  $column = db()->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch();
+  if (!$column) db()->exec("ALTER TABLE admins ADD COLUMN role ENUM('administrator','assistant') NOT NULL DEFAULT 'administrator'");
+}
+
+
 $base = 'http://localhost:8090';
 $jar = tempnam(sys_get_temp_dir(), 'catalog-ci-cookie');
 $fixtures = sys_get_temp_dir() . '/catalog-ci-' . bin2hex(random_bytes(6));
