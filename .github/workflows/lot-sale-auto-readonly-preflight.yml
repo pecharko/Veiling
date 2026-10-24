@@ -45,43 +45,7 @@ jobs:
           git fetch --no-tags --depth=1 origin main
           test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA" || { echo "Stale CI SHA; stop"; exit 1; }
           if git rev-parse HEAD^ >/dev/null 2>&1; then
-            if git diff --name-only HEAD^ HEAD | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml); then
-              echo "relevant=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "No relevant release changes; skip remote preflight."
-              echo "relevant=false" >> "$GITHUB_OUTPUT"
-            fi
-          else
-            echo "No parent revision; skip remote preflight."
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: shivammathur/setup-php@v2
-        if: steps.scope.outputs.relevant == 'true'
-        with:
-          php-version: '8.2'
-          coverage: none
-          tools: none
-      - name: 'Offline lint, tests and exact three-file plan'
-        if: steps.scope.outputs.relevant == 'true'
-        run: |
-          set -euo pipefail
-          python3 -m py_compile scripts/deploy_lot_sale_three_simple.py
-          python3 scripts/deploy_lot_sale_three_simple.py plan --release-sha "$RELEASE_SHA"
-      - name: 'Read-only pinned OVH SFTP hash preflight'
-        if: steps.scope.outputs.relevant == 'true'
-        run: |
-          set -euo pipefail
-          python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
-          python3 scripts/deploy_lot_sale_three_simple.py preflight --release-sha "$RELEASE_SHA"
-      - name: 'Archive read-only evidence'
-        if: steps.scope.outputs.relevant == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: lot-sale-auto-readonly-${{ github.run_id }}
-          path: lot-sale-three-preflight.json
-          retention-days: 7
-          if-no-files-found: error
-; then
+            if git diff --name-only HEAD^ HEAD | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml)$'; then
               echo "relevant=true" >> "$GITHUB_OUTPUT"
             else
               echo "No relevant release changes; skip remote preflight."
