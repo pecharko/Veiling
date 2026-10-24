@@ -26,6 +26,7 @@ if (is_post()) {
     if ($admin && password_verify($password, $admin['password_hash'])) {
       session_regenerate_id(true);
       $_SESSION['admin_id'] = (int)$admin['id'];
+      $_SESSION['admin_credential_hash'] = hash('sha256', (string)$admin['password_hash']);
       $pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')->execute([$ip]);
       redirect('admin/index.php');
     }
