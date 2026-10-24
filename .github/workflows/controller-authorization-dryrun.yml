@@ -1,0 +1,27 @@
+name: Controller authorization dry-run only
+on:
+  workflow_dispatch:
+    inputs:
+      preflight_run_id:
+        description: 'Existing successful preflight with checksum artifact'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate synthetic approval and real artifact without dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TEST_PREFLIGHT_RUN_ID: ${{ inputs.preflight_run_id }}
+        run: python3 scripts/controller_authorization_dryrun.py
