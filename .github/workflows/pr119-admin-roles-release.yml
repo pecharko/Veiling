@@ -1,0 +1,126 @@
+name: PR119 admin roles manual release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan, read-only preflight or separately authorized deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved main SHA for deploy'
+        type: string
+        required: false
+        default: ''
+      confirmation:
+        description: 'Final manual deploy authorization'
+        type: string
+        required: false
+        default: ''
+      db_ready:
+        description: 'Independent DB migration verification attestation'
+        type: string
+        required: false
+        default: ''
+      expected_login:
+        description: 'Remote login.php SHA-256 from approved preflight'
+        type: string
+        required: false
+        default: ''
+      expected_snapshots:
+        description: 'Remote snapshots.php SHA-256 from approved preflight'
+        type: string
+        required: false
+        default: ''
+      expected_bootstrap:
+        description: 'Remote bootstrap.php SHA-256 from approved preflight'
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PR119_CONFIRMATION: ${{ inputs.confirmation }}
+      PR119_DB_READY: ${{ inputs.db_ready }}
+      PR119_EXPECT_LOGIN: ${{ inputs.expected_login }}
+      PR119_EXPECT_SNAPSHOTS: ${{ inputs.expected_snapshots }}
+      PR119_EXPECT_BOOTSTRAP: ${{ inputs.expected_bootstrap }}
+    steps:
+      - name: Checkout exact main commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Check source and offline plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deploy_pr119_admin_roles.py
+          php -l catalogus-public/admin/gebruikers.php
+          php -l catalogus-public/admin/login.php
+          php -l private/snapshots.php
+          php -l private/bootstrap.php
+          php tests/admin_users_security_contract_test.php
+          python3 scripts/deploy_pr119_admin_roles.py plan
+      - name: Require exact deploy SHA and authorization
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$EXPECTED_SHA"
+          test "$EXPECTED_SHA" = "$GITHUB_SHA"
+          test "$PR119_CONFIRMATION" = 'DEPLOY PR119 ADMIN ROLES WITHOUT ROLLBACK'
+          test "$PR119_DB_READY" = 'ROLE_MIGRATION_VERIFIED'
+          for value in "$PR119_EXPECT_LOGIN" "$PR119_EXPECT_SNAPSHOTS" "$PR119_EXPECT_BOOTSTRAP"; do
+            [[ "$value" =~ ^[a-f0-9]{64}$ ]] || exit 1
+          done
+      - name: Install pinned SFTP client
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Read-only production preflight
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_pr119_admin_roles.py preflight
+      - name: Upload exactly four approved PHP files
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_pr119_admin_roles.py deploy
+      - name: Read-only HTTPS smoke tests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          check() {
+            actual=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "$2")
+            test "$actual" = "$1"
+          }
+          check 200 https://41lokeren.be/
+          check 200 https://41lokeren.be/admin/login.php
+          check 303 https://41lokeren.be/admin/gebruikers.php
+          check 303 https://41lokeren.be/admin/index.php
+          check 303 https://41lokeren.be/admin/kavel.php
+          check 404 https://41lokeren.be/admin/import.php
+          check 404 https://41lokeren.be/admin/fotos-bulk.php
