@@ -5,7 +5,32 @@ import os
 import re
 import sys
 from datetime import datetime, timezone
-from verified_deploy_controller import PREFLIGHT, PATHS, download_artifact, gh
+import subprocess
+import tempfile
+
+PREFLIGHT = ".github/workflows/kavel-release-readonly-preflight.yml"
+PATHS = (
+    "catalogus-public/admin/kavel.php",
+    "private/lot_form.php",
+    "catalogus-public/admin/admin.css",
+    "catalogus-public/admin/index.php",
+)
+
+def gh(endpoint):
+    result = subprocess.run(("gh", "api", endpoint), check=True, capture_output=True, text=True)
+    return json.loads(result.stdout)
+
+def download_artifact(repo, artifact_id):
+    metadata = gh(f"repos/{repo}/actions/artifacts/{artifact_id}")
+    with tempfile.TemporaryDirectory() as folder:
+        subprocess.run(("gh", "run", "download", str(metadata["workflow_run"]["id"]),
+                        "--repo", repo, "--name", metadata["name"], "--dir", folder),
+                       check=True, capture_output=True)
+        from pathlib import Path
+        raw = (Path(folder) / "preflight-sha256.json").read_bytes()
+        if len(raw) > 1024 * 1024:
+            raise ValueError("Artifact too large")
+        return raw
 
 def main():
     repo = os.environ["REPOSITORY"]
