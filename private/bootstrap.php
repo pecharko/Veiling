@@ -70,6 +70,16 @@ function redirect(string $path, array $params = []): never {
 function require_auth(): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
+  // Refuse removed accounts and revoke sessions after password changes.
+  $st = db()->prepare('SELECT password_hash FROM admins WHERE id=?');
+  $st->execute([$_SESSION['admin_id']]);
+  $hash = $st->fetchColumn();
+  $proof = (string)($_SESSION['admin_credential_hash'] ?? '');
+  if (!is_string($hash) || $proof === '' || !hash_equals(hash('sha256', $hash), $proof)) {
+    $_SESSION = [];
+    session_regenerate_id(true);
+    redirect('admin/login.php');
+  }
 }
 function admin_session(): void {
   if (session_status() !== PHP_SESSION_NONE) return;
@@ -127,6 +137,7 @@ function admin_top(string $title): void {
   $backup = e(url('admin/backup.php'));
   $stats = e(url('admin/statistieken.php'));
   $logout = e(url('admin/logout.php'));
+  $users = e(url('admin/gebruikers.php'));
   echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a><form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
