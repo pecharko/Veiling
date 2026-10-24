@@ -160,3 +160,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }
+
+/* Primary lot photo in the admin overview; fixed square prevents layout shift. */
+.dashboard-cover-cell{width:76px}.dashboard-cover,.dashboard-cover-empty{display:block;width:52px;height:52px;border-radius:9px}.dashboard-cover{object-fit:cover;background:#f4f0ec}.dashboard-cover-empty{display:grid;place-items:center;background:#f8efe9;color:#a18e85;font-size:21px}
+@media(max-width:650px){.dashboard-cover-cell{width:62px}.dashboard-cover,.dashboard-cover-empty{width:44px;height:44px}}
