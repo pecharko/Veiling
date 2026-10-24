@@ -35,7 +35,7 @@ blocked("duplicate field", text=approval + "\nextra=x")
 source = (root / "scripts/verified_deploy_controller.py").read_text(encoding="utf-8")
 assert '"gh", "run", "download"' in source
 assert 'if fresh["state"] != "open":' in source
-assert source.index('state=closed') < source.index('subprocess.run(command, check=True)')
+assert source.index('state=closed') < source.index('dispatch_approved(command)')
 assert 'github.rest.actions.createWorkflowDispatch' not in source
 from unittest.mock import patch
 from subprocess import CompletedProcess
@@ -47,6 +47,17 @@ assert '"--paginate", "--jq", ".[].event"' in source
 assert 'CONTROLLER_DRY_RUN' in source
 assert source.index('CONTROLLER_DRY_RUN') < source.index('state=closed')
 assert 'except subprocess.CalledProcessError as exc' in source
+from unittest.mock import patch as mock_patch
+import subprocess
+with mock_patch.object(module.subprocess, "run", side_effect=subprocess.CalledProcessError(1, ["gh", "workflow", "run"])):
+    try:
+        module.dispatch_approved(("gh", "workflow", "run"))
+    except RuntimeError as exc:
+        assert "Do not reopen issue" in str(exc)
+    else:
+        raise AssertionError("Failed dispatch did not stop")
+with mock_patch.object(module.subprocess, "run", return_value=subprocess.CompletedProcess([], 0)):
+    module.dispatch_approved(("gh", "workflow", "run"))
 assert 'Do not reopen issue' in source
 workflow = (root / ".github/workflows/verified-deploy-controller.yml").read_text(encoding="utf-8")
 assert "issues: write" in workflow and "actions: write" in workflow
