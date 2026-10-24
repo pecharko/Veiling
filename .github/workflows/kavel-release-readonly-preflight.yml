@@ -1,0 +1,54 @@
+name: Kavel release automatische read-only preflight
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'catalogus-public/admin/kavel.php'
+      - 'private/lot_form.php'
+      - 'catalogus-public/admin/index.php'
+      - 'catalogus-public/admin/admin.css'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - name: Checkout exact merged commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Validate four-file release offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deploy_lot_number_thumbnail.py
+          php -l catalogus-public/admin/kavel.php
+          php -l private/lot_form.php
+          php -l catalogus-public/admin/index.php
+          php tests/first_available_lot_number_test.php
+          php tests/admin_lot_cover_contract_test.php
+          php tests/duplicate_lot_number_suggestion_contract_test.php
+          python3 scripts/deploy_lot_number_thumbnail.py plan
+      - name: Install pinned read-only SFTP library
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Inspect production hashes without writing
+        run: python3 scripts/deploy_lot_number_thumbnail.py preflight
