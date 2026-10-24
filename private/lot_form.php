@@ -32,12 +32,28 @@ function first_available_lot_number(iterable $existingNumbers): ?int {
 
 /**
  * Assign the next auction number while the catalog advisory lock is held.
- * Auction numbers are immutable for a lot, including when moved back to market.
- * The DB unique index prevents accidental duplicate assignments.
+ * Auction numbers belong only to auction lots. A market transfer clears the number;
+ * compact_auction_numbers() then closes gaps under the same catalog mutex.
+ * The DB unique index prevents accidental duplicates.
  */
 function next_auction_number(PDO $pdo): int {
   $highest = $pdo->query('SELECT MAX(auction_number) FROM lots')->fetchColumn();
   $next = max(0, (int)$highest) + 1;
   if ($next > 999999) throw new RuntimeException('Geen veilingsnummers meer beschikbaar.');
   return $next;
+}
+
+/**
+ * Compact all active auction numbers to 1..N after removing an auction lot.
+ * Caller must hold catalog_lock_for_request() and a DB transaction.
+ * Updating in ascending order frees each next target under the UNIQUE index.
+ */
+function compact_auction_numbers(PDO $pdo): void {
+  if (!$pdo->inTransaction()) throw new LogicException('Transaction required for auction renumbering.');
+  $rows = $pdo->query("SELECT id, auction_number FROM lots WHERE sale_location='veiling' ORDER BY auction_number, id")->fetchAll(PDO::FETCH_ASSOC);
+  $update = $pdo->prepare('UPDATE lots SET auction_number=? WHERE id=?');
+  foreach ($rows as $index => $row) {
+    $expected = $index + 1;
+    if ((int)$row['auction_number'] !== $expected) $update->execute([$expected, (int)$row['id']]);
+  }
 }
