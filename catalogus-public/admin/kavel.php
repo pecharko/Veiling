@@ -77,7 +77,12 @@ if(is_post()){
 }
 if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$lot=$st->fetch();}
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
-$defaults=['lot_number'=>'','title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
+$suggestedNumber = '';
+if (!$lot && !is_post()) {
+  $existingNumbers = $pdo->query('SELECT lot_number FROM lots WHERE lot_number BETWEEN 1 AND 999999 ORDER BY lot_number ASC')->fetchAll(PDO::FETCH_COLUMN);
+  $suggestedNumber = first_available_lot_number($existingNumbers) ?? '';
+}
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
