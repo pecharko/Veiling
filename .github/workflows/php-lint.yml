@@ -39,6 +39,12 @@ jobs:
             php -l "$file"
           done
 
+      - name: Test deployment controller security guards offline
+        run: |
+          python3 -m py_compile scripts/verified_deploy_controller.py
+          python3 tests/verified_deploy_controller_test.py
+          python3 -m py_compile scripts/controller_readonly_integration.py
+
       - name: Test JPEG PNG WebP processing in isolation
         run: php -d memory_limit=512M tests/photo_gd_isolated.php
 
