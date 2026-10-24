@@ -133,7 +133,12 @@ jobs:
           [[ "$(jq -r '.event' <<<"$prior")" == workflow_dispatch ]] || exit 1
           [[ "$(jq -r '.head_branch' <<<"$prior")" == main ]] || exit 1
           [[ "$(jq -r '.path' <<<"$prior")" == '.github/workflows/lot-sale-three-simple-release.yml' ]] || exit 1
-          [[ "$(jq -r '.inputs.mode // empty' <<<"$prior")" == plan ]] || exit 1
+          # GitHub's run REST response may omit workflow_dispatch inputs.
+          # Verify the actual successful plan job and its named evidence artifact instead.
+          jobs="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/jobs"")"
+          [[ "$(jq '[.jobs[] | select(.name == "plan" and .conclusion == "success")] | length' <<<"$jobs")" == 1 ]] || exit 1
+          artifacts="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN/artifacts"")"
+          [[ "$(jq --arg name "lot-sale-three-preflight-$PLAN_RUN" '[.artifacts[] | select(.name == $name and .expired == false)] | length' <<<"$artifacts")" == 1 ]] || exit 1
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
