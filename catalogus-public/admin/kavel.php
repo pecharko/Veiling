@@ -79,8 +79,8 @@ if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
 $suggestedNumber = '';
 if (!$lot && !is_post()) {
-  $existingNumbers = $pdo->query('SELECT lot_number FROM lots WHERE lot_number BETWEEN 1 AND 999999 ORDER BY lot_number ASC')->fetchAll(PDO::FETCH_COLUMN);
-  $suggestedNumber = first_available_lot_number($existingNumbers) ?? '';
+  $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+  $suggestedNumber = first_available_lot_number($existingNumbers === null ? [] : [$existingNumbers]) ?? '';
 }
 $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
