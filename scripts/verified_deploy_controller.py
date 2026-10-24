@@ -29,16 +29,19 @@ def gh(*args, binary=False):
 
 
 def download_artifact(repo, artifact_id):
-    """GitHub archive endpoint redirects; gh api --output preserves ZIP bytes."""
+    """Download a named workflow artifact using the GitHub CLI binary-safe path."""
     import tempfile
     with tempfile.TemporaryDirectory() as directory:
-        target = os.path.join(directory, "preflight.zip")
-        subprocess.run(("gh", "api", f"repos/{repo}/actions/artifacts/{artifact_id}/zip",
-                        "--output", target), check=True, capture_output=True)
-        archive = open(target, "rb").read()
-        if len(archive) > 1024 * 1024:
+        metadata = gh(f"repos/{repo}/actions/artifacts/{artifact_id}")
+        run_id = metadata["workflow_run"]["id"]
+        subprocess.run(("gh", "run", "download", str(run_id), "--repo", repo,
+                        "--name", metadata["name"], "--dir", directory),
+                       check=True, capture_output=True)
+        manifest_file = os.path.join(directory, "preflight-sha256.json")
+        raw = open(manifest_file, "rb").read(1024 * 1024 + 1)
+        if len(raw) > 1024 * 1024:
             raise ValueError("Artifact exceeds 1 MiB")
-        return archive
+        return raw
 
 
 def validate(text, manifest, run, main_sha):
@@ -104,11 +107,7 @@ def main():
     matches = [a for a in artifacts if a["name"] == f"kavel-preflight-sha256-{rid}" and not a["expired"]]
     if len(matches) != 1:
         raise ValueError("Expected a single unexpired manifest artifact")
-    archive = download_artifact(repo, matches[0]["id"])
-    with zipfile.ZipFile(io.BytesIO(archive)) as zf:
-        if zf.namelist() != ["preflight-sha256.json"]:
-            raise ValueError("Unexpected artifact archive contents")
-        manifest = json.loads(zf.read("preflight-sha256.json"))
+    manifest = json.loads(download_artifact(repo, matches[0]["id"]))
     data = validate(text, manifest, run, main_sha)
     # Serial controller concurrency + closing the issue before dispatch prevents replay.
     # Fail closed on a stale or already-consumed approval before dispatch.
