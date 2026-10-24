@@ -1,0 +1,28 @@
+name: Controller write and harmless dispatch probe
+on:
+  workflow_dispatch:
+    inputs:
+      test_nonce:
+        description: 'Unique test identifier (8-40 letters, digits, dash or underscore)'
+        required: true
+        type: string
+permissions:
+  contents: read
+  issues: write
+  actions: write
+jobs:
+  permissions-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Probe isolated issue writes and harmless dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TEST_NONCE: ${{ inputs.test_nonce }}
+        run: python3 scripts/controller_permissions_probe.py
