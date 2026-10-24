@@ -59,6 +59,7 @@ jobs:
         if: steps.scope.outputs.relevant == 'true'
         run: |
           set -euo pipefail
+          python3 tests/lot_sale_auto_preflight_history_test.py
           python3 -m py_compile scripts/deploy_lot_sale_three_simple.py
           python3 scripts/deploy_lot_sale_three_simple.py plan --release-sha "$RELEASE_SHA"
       - name: 'Read-only pinned OVH SFTP hash preflight'
