@@ -1,0 +1,164 @@
+name: Lot sale three PHP simple release (manual no rollback)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/lot-sale-three-simple-release.yml'
+      - 'scripts/deploy_lot_sale_three_simple.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'plan = offline and read-only SFTP; deploy = upload three files'
+        required: true
+        type: choice
+        options:
+          - plan
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved 40-character main commit SHA'
+        required: true
+        type: string
+      plan_run_id:
+        description: 'Successful earlier plan run ID (deploy only)'
+        required: false
+        type: string
+        default: ''
+      schema_ready:
+        description: 'Type SCHEMA VERIFIED after read-only database validation'
+        required: false
+        type: string
+        default: ''
+      confirmation:
+        description: 'For deploy type DEPLOY LOT SALE THREE NO ROLLBACK'
+        required: false
+        type: string
+        default: ''
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Verify PHP and sale-location regression tests'
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -l private/snapshots.php
+          php -l private/lot_form.php
+          php -l catalogus-public/admin/kavel.php
+          php tests/lot_sale_location_test.php
+          php tests/lot_form_test.php
+          python3 -m py_compile scripts/deploy_lot_sale_three_simple.py
+  plan:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'plan'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Gate: exact main SHA'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+      - name: 'Offline release plan and regression tests'
+        run: python3 scripts/deploy_lot_sale_three_simple.py plan --release-sha "$RELEASE_SHA"
+      - name: 'Pinned read-only OVH SFTP verification'
+        run: |
+          python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+          python3 scripts/deploy_lot_sale_three_simple.py preflight --release-sha "$RELEASE_SHA"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lot-sale-three-preflight-${{ github.run_id }}
+          path: lot-sale-three-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.mode == 'deploy'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    env:
+      GH_TOKEN: ${{ github.token }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      PLAN_RUN: ${{ inputs.plan_run_id }}
+      SCHEMA_READY: ${{ inputs.schema_ready }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+    steps:
+      - name: 'Gate: explicit no-rollback authorization and verified earlier plan'
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          [[ "$PLAN_RUN" =~ ^[0-9]+$ && "$PLAN_RUN" != "$GITHUB_RUN_ID" ]] || exit 1
+          [[ "$SCHEMA_READY" == 'SCHEMA VERIFIED' ]] || exit 1
+          [[ "$CONFIRMATION" == 'DEPLOY LOT SALE THREE NO ROLLBACK' ]] || exit 1
+          prior="$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$PLAN_RUN")"
+          [[ "$(jq -r '.conclusion' <<<"$prior")" == success ]] || exit 1
+          [[ "$(jq -r '.status' <<<"$prior")" == completed ]] || exit 1
+          [[ "$(jq -r '.head_sha' <<<"$prior")" == "$RELEASE_SHA" ]] || exit 1
+          [[ "$(jq -r '.event' <<<"$prior")" == workflow_dispatch ]] || exit 1
+          [[ "$(jq -r '.head_branch' <<<"$prior")" == main ]] || exit 1
+          [[ "$(jq -r '.path' <<<"$prior")" == '.github/workflows/lot-sale-three-simple-release.yml' ]] || exit 1
+          [[ "$(jq -r '.inputs.mode // empty' <<<"$prior")" == plan ]] || exit 1
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Get immutable approved preflight hashes'
+        shell: bash
+        run: gh run download "$PLAN_RUN" --repo "$GITHUB_REPOSITORY" -n "lot-sale-three-preflight-$PLAN_RUN"
+      - name: 'Validate sources and fresh production drift before upload'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/deploy_lot_sale_three_simple.py plan --release-sha "$RELEASE_SHA"
+          python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+          python3 scripts/deploy_lot_sale_three_simple.py deploy --release-sha "$RELEASE_SHA"
+      - name: 'Read-only HTTPS smoke tests'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" == 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/kavel.php)" == 303
+          for method in GET POST; do
+            test "$(curl -sS --max-time 20 -X "$method" -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)" == 404
+          done
