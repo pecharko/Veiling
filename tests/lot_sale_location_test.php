@@ -11,8 +11,8 @@ check(lot_form_values($defaults,null,['sale_location'=>'markt'])['sale_location'
 $editor=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/kavel.php');
 check(str_contains($editor,'name="sale_location"'),'sale location editor field present');
 check(str_contains($editor,'next_auction_number($pdo)'),'auction number assigned');
-check(str_contains($editor,"str_contains($detail,'uq_lots_auction_number')"),'auction duplicate is diagnosed separately');
-check(str_contains($editor,"$error='Dit lotnummer bestaat al. Kies een uniek nummer.'"),'lot duplicate retains original error and suggestion');
+check(str_contains($editor,'str_contains($detail,\'uq_lots_auction_number\')'),'auction duplicate is diagnosed separately');
+check(str_contains($editor,'$error=\'Dit lotnummer bestaat al. Kies een uniek nummer.\''),'lot duplicate retains original error and suggestion');
 check(str_contains($editor,'$lot[\'auction_number\'] ?? null'),'existing number preserved');
 $migration=file_get_contents(dirname(__DIR__).'/database/lot_sale_location_migration.sql');
 check(str_contains($migration,'UNIQUE KEY uq_lots_auction_number'),'unique index present');
