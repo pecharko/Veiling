@@ -11,6 +11,10 @@ require dirname(__DIR__) . '/private/catalog_mutex.php';
 if (getenv('GITHUB_ACTIONS') === 'true' && db()->query('SELECT DATABASE()')->fetchColumn() === 'auction_test') {
   $column = db()->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch();
   if (!$column) db()->exec("ALTER TABLE admins ADD COLUMN role ENUM('administrator','assistant') NOT NULL DEFAULT 'administrator'");
+  if (!db()->query("SHOW COLUMNS FROM lots LIKE 'sale_location'")->fetch()) {
+    db()->exec("ALTER TABLE lots ADD COLUMN sale_location ENUM('markt','veiling') NOT NULL DEFAULT 'markt', ADD COLUMN auction_number INT UNSIGNED NULL DEFAULT NULL, ADD UNIQUE KEY uq_lots_auction_number (auction_number), ADD CONSTRAINT chk_lots_auction_number_positive CHECK (auction_number IS NULL OR auction_number >= 1)");
+  }
+
 }
 
 
