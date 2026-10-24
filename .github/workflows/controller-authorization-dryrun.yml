@@ -1,0 +1,33 @@
+name: Controller authorization dry-run only
+on:
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Existing approval issue number'
+        required: true
+        type: string
+      comment_id:
+        description: 'Existing owner approval comment ID'
+        required: true
+        type: string
+permissions:
+  contents: read
+  issues: read
+  actions: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Validate owner approval and artifact without dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TEST_ISSUE_NUMBER: ${{ inputs.issue_number }}
+          TEST_COMMENT_ID: ${{ inputs.comment_id }}
+        run: python3 scripts/controller_authorization_dryrun.py
