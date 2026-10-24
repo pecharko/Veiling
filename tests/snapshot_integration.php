@@ -126,6 +126,9 @@ snap_restore($pdo, $name);
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
+$restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
+       'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');
 verify($pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn() === $originalAdmin,
