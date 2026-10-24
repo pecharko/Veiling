@@ -102,7 +102,7 @@ function snap_verified(string $name): array {
    if($size>350*1024*1024)throw new RuntimeException('Snapshot te groot.');
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])||array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='admins' && array_diff(SNAP_INSERT[$t],array_keys($row))===['role']))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])||array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='admins' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['role']))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -150,7 +150,9 @@ function snap_restore(PDO $pdo,string $name): void {
    $pdo->beginTransaction();
    foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
    foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
-    $columns=SNAP_INSERT[$table];$cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
+    $columns=SNAP_INSERT[$table];
+    if($table==='admins' && !$pdo->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='role'));
+    $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
     foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : null),$columns));
    }
