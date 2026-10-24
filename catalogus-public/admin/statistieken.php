@@ -3,17 +3,35 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
 require_no_index();
+require_once dirname(__DIR__, 2) . '/private/analytics_control.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive_one_day_experimental.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
 $deleteError = '';
+$toggleError = '';
 $deletePreview = null;
 $archivePreview = null;
 if (is_post()) {
     check_csrf();
     $action = (string)($_POST['action'] ?? '');
-    if ($action === 'preview_archive') {
+    if ($action === 'toggle_collection') {
+        $enabled = (string)($_POST['enabled'] ?? '');
+        if (!in_array($enabled, ['0', '1'], true)) {
+            $toggleError = 'Ongeldige keuze voor bezoekersregistratie.';
+        } else {
+            try {
+                set_analytics_collection_enabled($enabled === '1');
+                flash($enabled === '1'
+                    ? 'Bezoekersregistratie ingeschakeld. Nieuwe bezoeken worden weer geteld.'
+                    : 'Bezoekersregistratie uitgeschakeld. Bestaande statistieken blijven bewaard.');
+                redirect('admin/statistieken.php');
+            } catch (Throwable $exception) {
+                error_log('Analytics toggle failed (no visitor data logged).');
+                $toggleError = 'Wijzigen mislukt. Controleer de schrijfrechten van de private map.';
+            }
+        }
+    } elseif ($action === 'preview_archive') {
         unset($_SESSION['analytics_archive_pending']);
         try {
             $cutoff = gmdate('Y-m-d', strtotime('-30 days'));
@@ -161,9 +179,25 @@ try {
 } catch (PDOException $exception) {
     $available = false;
 }
+$collectionEnabled = analytics_collection_enabled();
 admin_top('Bezoekersstatistieken');
 ?>
 <div class="dashboard-modern">
+  <section class="dashboard-panel" aria-labelledby="analytics-switch-title">
+    <h2 id="analytics-switch-title">Bezoekersregistratie</h2>
+    <p><strong>Huidige status: <?= $collectionEnabled ? 'Aan' : 'Uit' ?></strong></p>
+    <p><?= $collectionEnabled
+      ? 'Nieuwe bezoekers- en kavelweergaven worden geregistreerd.'
+      : 'Nieuwe bezoekers- en kavelweergaven worden niet geregistreerd. De bestaande statistieken blijven beschikbaar.' ?></p>
+    <?php if ($toggleError !== ''): ?><div class="alert error" role="alert"><?=e($toggleError)?></div><?php endif; ?>
+    <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+      <?=csrf_field()?>
+      <input type="hidden" name="action" value="toggle_collection">
+      <input type="hidden" name="enabled" value="<?= $collectionEnabled ? '0' : '1' ?>">
+      <button type="submit" class="<?= $collectionEnabled ? '' : 'primary' ?>"><?= $collectionEnabled ? 'Registratie uitschakelen' : 'Registratie inschakelen' ?></button>
+    </form>
+    <p><small>Dit wist geen bestaande gegevens. Handmatige archivering en verwijdering blijven afzonderlijke acties.</small></p>
+  </section>
   <p class="dashboard-subtitle">Overzicht van de afgelopen 30 UTC-dagen. Unieke bezoekers zijn daggebonden schattingen: wie op meerdere dagen terugkomt telt opnieuw mee.</p>
   <?php if (!$available): ?>
     <div class="alert error">Statistieken zijn nog niet beschikbaar. Controleer de database-installatie.</div>
