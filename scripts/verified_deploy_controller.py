@@ -94,6 +94,11 @@ def main():
             not issue["title"].startswith("DEPLOY-AUTH:") or
             "approved-deploy-request" not in {label["name"] for label in issue["labels"]}):
         raise ValueError("Not a specially authorized owner-created approval issue")
+    # GitHub issue events are append-only. A previously closed issue may be
+    # reopened, but must never authorize a second deployment.
+    events = gh(f"repos/{repo}/issues/{issue_number}/events", "--paginate")
+    if not isinstance(events, list) or any(event.get("event") == "closed" for event in events):
+        raise ValueError("Approval issue has already been consumed or history is unavailable")
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
     fields = text.replace("\r", "").strip().split("\n")
@@ -112,6 +117,9 @@ def main():
     # Serial controller concurrency + closing the issue before dispatch prevents replay.
     # Fail closed on a stale or already-consumed approval before dispatch.
     fresh = gh(f"repos/{repo}/issues/{issue_number}")
+    events_now = gh(f"repos/{repo}/issues/{issue_number}/events", "--paginate")
+    if not isinstance(events_now, list) or any(event.get("event") == "closed" for event in events_now):
+        raise ValueError("Approval already consumed in immutable issue history")
     if fresh["state"] != "open":
         raise ValueError("Approval already consumed")
     gh(f"repos/{repo}/issues/{issue_number}", "-X", "PATCH",
