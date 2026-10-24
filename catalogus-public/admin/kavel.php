@@ -26,10 +26,10 @@ if(is_post()){
     redirect('admin/kavel.php',['id'=>$id]);
   }
   if($action==='delete-lot' && $lot){
-    // Never free an allocated auction number: MAX()+1 must not reuse it.
-    // Preserve the entire lot (and its images) until a durable number ledger exists.
+    // Keep the existing deletion protection for numbered lots; moving to Markt
+    // first clears the auction number and closes gaps transactionally.
     if ($lot['auction_number'] !== null) {
-      flash('Dit kavel heeft een definitief veilingsnummer en kan niet worden verwijderd. Zet de verkoopplaats op markt of de status op concept.', 'warning');
+      flash('Verplaats dit kavel eerst naar Markt (hierbij wordt het veilingsnummer vrijgegeven en de veiling hernummerd) voordat je het verwijdert.', 'warning');
       redirect('admin/kavel.php', ['id' => $id]);
     }
     $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
@@ -63,9 +63,11 @@ if(is_post()){
       }
       if(!$error){
         try{
-          // The request-wide catalog mutex serializes auction number allocation.
-          // Existing numbers are reserved even if an item returns to the market.
-          $auctionNumber = $lot['auction_number'] ?? null;
+          // The catalog mutex serializes allocation and gap-free resequencing.
+          // All lot changes and shifts must succeed together.
+          $pdo->beginTransaction();
+          $wasAuction = ($lot['auction_number'] ?? null) !== null;
+          $auctionNumber = $saleLocation === 'markt' ? null : ($lot['auction_number'] ?? null);
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
@@ -74,6 +76,8 @@ if(is_post()){
           else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
+          if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
+          $pdo->commit();
           $failed=[];
           foreach($photos as $i=>$photo){
             try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
@@ -82,6 +86,7 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
+          if ($pdo->inTransaction()) $pdo->rollBack();
           if($ex->getCode()==='23000'){
             $driverCode=(int)($ex->errorInfo[1] ?? 0);
             $detail=(string)($ex->errorInfo[2] ?? '');
@@ -90,7 +95,7 @@ if(is_post()){
             else $error='Een unieke waarde bestaat al. Het kavel is niet opgeslagen.';
           }
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
-        }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
+        }catch(Throwable $ex){if ($pdo->inTransaction()) $pdo->rollBack();$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
       }
     }
   }
