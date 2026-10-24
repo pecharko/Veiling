@@ -14,6 +14,13 @@ if (db()->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test') {
     throw new RuntimeException('Unexpected test database.');
 }
 
+// Apply role extension only to the disposable CI database used by this test.
+if (getenv('GITHUB_ACTIONS') === 'true' && db()->query('SELECT DATABASE()')->fetchColumn() === 'auction_test') {
+  $column = db()->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch();
+  if (!$column) db()->exec("ALTER TABLE admins ADD COLUMN role ENUM('administrator','assistant') NOT NULL DEFAULT 'administrator'");
+}
+
+
 $base = 'http://localhost:8090';
 $jar = tempnam(sys_get_temp_dir(), 'snap-test-cookie');
 $count = 0;
