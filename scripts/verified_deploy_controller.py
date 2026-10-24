@@ -27,6 +27,20 @@ def gh(*args, binary=False):
     return result.stdout if binary else json.loads(result.stdout)
 
 
+
+def download_artifact(repo, artifact_id):
+    """GitHub archive endpoint redirects; gh api --output preserves ZIP bytes."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as directory:
+        target = os.path.join(directory, "preflight.zip")
+        subprocess.run(("gh", "api", f"repos/{repo}/actions/artifacts/{artifact_id}/zip",
+                        "--output", target), check=True, capture_output=True)
+        archive = open(target, "rb").read()
+        if len(archive) > 1024 * 1024:
+            raise ValueError("Artifact exceeds 1 MiB")
+        return archive
+
+
 def validate(text, manifest, run, main_sha):
     lines = text.replace("\r", "").strip().split("\n")
     if len(lines) != 7 or lines[0] != PREFIX:
@@ -90,13 +104,17 @@ def main():
     matches = [a for a in artifacts if a["name"] == f"kavel-preflight-sha256-{rid}" and not a["expired"]]
     if len(matches) != 1:
         raise ValueError("Expected a single unexpired manifest artifact")
-    archive = gh(f"repos/{repo}/actions/artifacts/{matches[0]['id']}/zip", binary=True)
+    archive = download_artifact(repo, matches[0]["id"])
     with zipfile.ZipFile(io.BytesIO(archive)) as zf:
         if zf.namelist() != ["preflight-sha256.json"]:
             raise ValueError("Unexpected artifact archive contents")
         manifest = json.loads(zf.read("preflight-sha256.json"))
     data = validate(text, manifest, run, main_sha)
     # Serial controller concurrency + closing the issue before dispatch prevents replay.
+    # Fail closed on a stale or already-consumed approval before dispatch.
+    fresh = gh(f"repos/{repo}/issues/{issue_number}")
+    if fresh["state"] != "open":
+        raise ValueError("Approval already consumed")
     gh(f"repos/{repo}/issues/{issue_number}", "-X", "PATCH",
        "-f", "state=closed", "-f", "state_reason=completed")
     command = ("gh", "workflow", "run", WORKFLOW, "--repo", repo, "--ref", "main",
