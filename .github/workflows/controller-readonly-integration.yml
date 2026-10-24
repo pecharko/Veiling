@@ -1,0 +1,30 @@
+name: Controller read-only artifact integration
+on:
+  workflow_dispatch:
+    inputs:
+      preflight_run_id:
+        description: 'Existing successful read-only preflight run ID'
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+  issues: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted review code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify real preflight artifact and permissions without dispatch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PREFLIGHT_RUN_ID: ${{ inputs.preflight_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/controller_readonly_integration.py
