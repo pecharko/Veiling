@@ -1,13 +1,10 @@
 name: Kavel release automatische read-only preflight
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'catalogus-public/admin/kavel.php'
-      - 'private/lot_form.php'
-      - 'catalogus-public/admin/index.php'
-      - 'catalogus-public/admin/admin.css'
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+    types:
+      - completed
   workflow_dispatch:
 permissions:
   contents: read
@@ -16,10 +13,17 @@ concurrency:
   cancel-in-progress: false
 jobs:
   readonly:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
     env:
+      RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
       OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
       OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
@@ -30,6 +34,15 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+      - name: Require exact current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA" || exit 1
       - name: Install PHP
         uses: shivammathur/setup-php@v2
         with:
