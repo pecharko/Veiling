@@ -201,15 +201,17 @@ try {
     'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
     'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'markt'
   ]);
-  claim($status===303 && (int)by_number(301)['auction_number']===1 &&
-    by_number(301)['sale_location']==='markt','Market reassignment reserves auction number');
+  claim($status===303 && by_number(301)['auction_number']===null &&
+    by_number(301)['sale_location']==='markt' &&
+    (int)by_number(302)['auction_number']===1,
+    'Market reassignment clears auction number and closes the gap');
   [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
   [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
     'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
     'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'veiling'
   ]);
-  claim($status===303 && (int)by_number(301)['auction_number']===1,
-    'Moving back to auction keeps original number');
+  claim($status===303 && (int)by_number(301)['auction_number']===2,
+    'Returning to auction gets next available number');
   try {
     db()->exec("UPDATE lots SET auction_number=1 WHERE lot_number=302");
     claim(false,'Database unique constraint must reject duplicate auction number');
