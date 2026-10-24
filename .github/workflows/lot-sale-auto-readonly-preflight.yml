@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ env.RELEASE_SHA }}
-          fetch-depth: 2
+          fetch-depth: 0
           persist-credentials: false
       - name: 'Require current main commit and relevant release diff'
         id: scope
@@ -42,17 +42,16 @@ jobs:
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          git fetch --no-tags --depth=1 origin main
+          git fetch --no-tags origin main
           test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA" || { echo "Stale CI SHA; stop"; exit 1; }
-          if git rev-parse HEAD^ >/dev/null 2>&1; then
-            if git diff --name-only HEAD^ HEAD | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml)$'; then
-              echo "relevant=true" >> "$GITHUB_OUTPUT"
-            else
-              echo "No relevant release changes; skip remote preflight."
-              echo "relevant=false" >> "$GITHUB_OUTPUT"
-            fi
+          # Fail closed: missing history must never produce a successful skipped preflight.
+          git cat-file -e 'HEAD^' || { echo "STOP: parent commit unavailable"; exit 1; }
+          changed="$(git diff --name-only HEAD^ HEAD)"
+          printf '%s\n' "$changed"
+          if printf '%s\n' "$changed" | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml)$'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No parent revision; skip remote preflight."
+            echo "No relevant release changes; skip remote preflight."
             echo "relevant=false" >> "$GITHUB_OUTPUT"
           fi
       - uses: shivammathur/setup-php@v2
@@ -65,6 +64,7 @@ jobs:
         if: steps.scope.outputs.relevant == 'true'
         run: |
           set -euo pipefail
+          python3 tests/lot_sale_auto_preflight_history_test.py
           python3 -m py_compile scripts/deploy_lot_sale_three_simple.py
           python3 scripts/deploy_lot_sale_three_simple.py plan --release-sha "$RELEASE_SHA"
       - name: 'Read-only pinned OVH SFTP hash preflight'
