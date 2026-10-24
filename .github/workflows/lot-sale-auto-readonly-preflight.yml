@@ -48,7 +48,7 @@ jobs:
           git cat-file -e 'HEAD^' || { echo "STOP: parent commit unavailable"; exit 1; }
           changed="$(git diff --name-only HEAD^ HEAD)"
           printf '%s\n' "$changed"
-          if printf '%s\n' "$changed" | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml)$'; then
+          if printf '%s\n' "$changed" | grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|[.]github/workflows/lot-sale-auto-readonly-preflight[.]yml|[.]github/workflows/lot-sale-three-simple-release[.]yml)$'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "No relevant release changes; skip remote preflight."
