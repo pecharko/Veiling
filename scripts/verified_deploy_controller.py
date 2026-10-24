@@ -102,7 +102,7 @@ def main():
     command = ("gh", "workflow", "run", WORKFLOW, "--repo", repo, "--ref", "main",
                "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
                "-f", f"confirmation={PREFIX}")
-    command += tuple(f"-f{key}={data[key]}" for key in FIELDS[2:])
+    command += tuple(item for key in FIELDS[2:] for item in ("-f", f"{key}={data[key]}"))
     subprocess.run(command, check=True)
     print("Approved rollback-enabled deployment dispatched; approval issue closed.")
 
