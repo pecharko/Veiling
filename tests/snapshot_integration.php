@@ -37,8 +37,8 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
-$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (?,?,?,?,?)")
-    ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published']);
+$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?)")
+    ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
@@ -72,6 +72,8 @@ verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['si
 [$snapshot, $hashes, $photoBytes] = snap_verified($name);
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
+verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
+       'Snapshot contains sale location and auction number');
 verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original),
        'Snapshot includes the exact original photo');
 $zip = new ZipArchive();
