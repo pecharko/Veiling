@@ -32,4 +32,9 @@ blocked("wrong path", result={**run, "path": "other.yml"})
 blocked("wrong status", result={**run, "conclusion": "failure"})
 blocked("unexpected manifest field", evidence={**manifest, "extra": True})
 blocked("duplicate field", text=approval + "\nextra=x")
-print("PASS verified deploy controller offline validation")
+source = (root / "scripts/verified_deploy_controller.py").read_text(encoding="utf-8")
+assert '"gh", "run", "download"' in source
+assert 'if fresh["state"] != "open":' in source
+assert source.index('state=closed') < source.index('subprocess.run(command, check=True)')
+assert 'github.rest.actions.createWorkflowDispatch' not in source
+print("PASS verified deploy controller offline validation and one-time dispatch contracts")
