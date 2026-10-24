@@ -91,6 +91,17 @@ def validate(text, manifest, run, main_sha):
     return data
 
 
+def dispatch_approved(command):
+    """Never retry a dispatch after consuming its authorization."""
+    try:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as exc:
+        raise RuntimeError(
+            "Dispatch failed after approval was consumed. Do not reopen issue; "
+            "check GitHub Actions runs before creating a fresh approval."
+        ) from exc
+
+
 def main():
     repo = os.environ["REPOSITORY"]
     issue_number = os.environ["ISSUE_NUMBER"]
@@ -134,7 +145,7 @@ def main():
                "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
                "-f", f"confirmation={PREFIX}")
     command += tuple(item for key in FIELDS[2:] for item in ("-f", f"{key}={data[key]}"))
-    subprocess.run(command, check=True)
+    dispatch_approved(command)
     print("Approved rollback-enabled deployment dispatched; approval issue closed.")
 
 
