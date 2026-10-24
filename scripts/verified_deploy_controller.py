@@ -132,7 +132,11 @@ def main():
         raise ValueError("Expected a single unexpired manifest artifact")
     manifest = json.loads(download_artifact(repo, matches[0]["id"]))
     data = validate(text, manifest, run, main_sha)
-    # Dry run checks the complete authorization evidence but never consumes approval.\n    if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":\n        print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")\n        return\n    # Serial controller concurrency + closing the issue before dispatch prevents replay.
+    # Dry run checks the complete authorization evidence but never consumes approval.
+    if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
+        print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")
+        return
+    # Serial controller concurrency + closing the issue before dispatch prevents replay.
     # Fail closed on a stale or already-consumed approval before dispatch.
     fresh = gh(f"repos/{repo}/issues/{issue_number}")
     if has_closed_event(repo, issue_number):
