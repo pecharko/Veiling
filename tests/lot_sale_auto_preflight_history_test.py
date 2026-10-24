@@ -5,7 +5,9 @@ import re
 
 workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/lot-sale-auto-readonly-preflight.yml").read_text()
 assert "fetch-depth: 0" in workflow, "Complete git ancestry required"
-assert "git cat-file -e 'HEAD^{commit}'" in workflow, "Missing parent must fail closed"
+assert "git cat-file -e 'HEAD^'" in workflow, "Missing parent must fail closed"
+assert "git fetch --no-tags origin main" in workflow, "Main ref must be freshly checked without truncating history"
+assert "--depth=1 origin main" not in workflow, "Shallow fetch would discard parent history"
 assert "git diff --name-only HEAD^ HEAD" in workflow, "Compare first parent of merge"
 assert 'echo "No parent revision; skip remote preflight."' not in workflow
 assert "grep -Eq '^(private/lot_form[.]php|private/snapshots[.]php|catalogus-public/admin/kavel[.]php|" in workflow
