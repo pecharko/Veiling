@@ -85,6 +85,12 @@ if (is_post()) {
     }
 }
 $users = $pdo->query('SELECT id,email FROM admins ORDER BY email')->fetchAll();
+$selectedId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$selectedUser = null;
+foreach ($users as $candidate) {
+    if ((int)$candidate['id'] === $selectedId) { $selectedUser = $candidate; break; }
+}
+
 admin_top('Gebruikersbeheer');
 ?>
 <div class="dashboard-modern">
@@ -103,29 +109,44 @@ admin_top('Gebruikersbeheer');
   </section>
   <section class="dashboard-panel">
     <h2>Bestaande beheerders</h2>
-    <?php foreach ($users as $user): ?>
-      <div style="border-top:1px solid #ddd;padding:18px 0">
-        <h3><?=e($user['email'])?> <?= (int)$user['id'] === $currentId ? '(jij)' : '' ?></h3>
+    <div class="dashboard-table-scroll">
+      <table class="dashboard-table">
+        <thead><tr><th scope="col">E-mailadres</th><th scope="col">Account</th><th scope="col">Actie</th></tr></thead>
+        <tbody>
+        <?php foreach ($users as $user): ?>
+          <tr>
+            <td><strong><?=e($user['email'])?></strong></td>
+            <td><?= (int)$user['id'] === $currentId ? 'Jouw account' : 'Beheerder' ?></td>
+            <td><a class="dashboard-edit" href="<?=e(url('admin/gebruikers.php', ['id' => (int)$user['id']]))?>#beheerder-bewerken" <?= $selectedId === (int)$user['id'] ? 'aria-current="true"' : '' ?>>Selecteren →</a></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php if ($selectedUser !== null): ?>
+      <div id="beheerder-bewerken" style="border-top:1px solid #ddd;margin-top:24px;padding-top:24px">
+        <h3>Beheerder aanpassen: <?=e($selectedUser['email'])?></h3>
         <form method="post" autocomplete="off">
           <?=csrf_field()?>
           <input type="hidden" name="action" value="update">
-          <input type="hidden" name="user_id" value="<?=e((string)$user['id'])?>">
-          <label>E-mailadres <input type="email" name="email" maxlength="190" required value="<?=e($user['email'])?>"></label>
+          <input type="hidden" name="user_id" value="<?=e((string)$selectedUser['id'])?>">
+          <label>E-mailadres <input type="email" name="email" maxlength="190" required value="<?=e($selectedUser['email'])?>"></label>
           <label>Nieuw wachtwoord (leeg laten = ongewijzigd) <input type="password" name="new_password" minlength="12" autocomplete="new-password"></label>
           <label>Jouw huidige wachtwoord <input type="password" name="current_password" required autocomplete="current-password"></label>
           <button type="submit">Wijzigingen opslaan</button>
+          <a style="margin-left:12px" href="<?=e(url('admin/gebruikers.php'))?>">Annuleren</a>
         </form>
-        <?php if ((int)$user['id'] !== $currentId): ?>
+        <?php if ((int)$selectedUser['id'] !== $currentId): ?>
           <form method="post" onsubmit="return confirm('Deze beheerder definitief verwijderen?');">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="user_id" value="<?=e((string)$user['id'])?>">
+            <input type="hidden" name="user_id" value="<?=e((string)$selectedUser['id'])?>">
             <label>Jouw huidige wachtwoord ter bevestiging <input type="password" name="current_password" required autocomplete="current-password"></label>
             <button type="submit">Beheerder verwijderen</button>
           </form>
         <?php endif; ?>
       </div>
-    <?php endforeach; ?>
+    <?php endif; ?>
   </section>
 </div>
 <?php admin_bottom(); ?>
