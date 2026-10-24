@@ -141,7 +141,7 @@ def preflight() -> None:
                 output = Path(manifest_path)
                 if output.exists() or output.is_symlink():
                     raise RuntimeError("Preflight manifest must not overwrite an existing file")
-                output.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\\n", encoding="utf-8")
+                output.write_text(json.dumps(manifest, sort_keys=True, indent=2) + "\n", encoding="utf-8")
             print("READ ONLY")
     finally:
         client.close()
