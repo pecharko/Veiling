@@ -68,3 +68,33 @@ assert "issues: write" in workflow and "actions: write" in workflow
 assert 'CONTROLLER_DRY_RUN: "false"' in workflow
 assert "persist-credentials: false" in workflow
 print("PASS verified deploy controller offline validation and one-time dispatch contracts")
+
+# Runtime regression: a valid dry-run must return before any issue write or dispatch.
+import os
+from unittest.mock import patch as secure_patch
+issue = {"state": "open", "user": {"login": "pecharko"},
+         "title": "DEPLOY-AUTH: test",
+         "labels": [{"name": "approved-deploy-request"}]}
+artifact = {"id": 456, "name": "kavel-preflight-sha256-123", "expired": False}
+def fake_gh(endpoint, *args, **kwargs):
+    if args or endpoint.endswith("/issues/77") and kwargs:
+        raise AssertionError("Unexpected GitHub mutation")
+    if endpoint.endswith("/issues/77"):
+        return issue
+    if endpoint.endswith("/branches/main"):
+        return {"commit": {"sha": sha}}
+    if endpoint.endswith("/actions/runs/123"):
+        return run
+    if endpoint.endswith("/actions/runs/123/artifacts"):
+        return {"artifacts": [artifact]}
+    raise AssertionError("Unexpected GitHub API request: " + endpoint)
+with secure_patch.dict(os.environ, {
+    "REPOSITORY": "pecharko/Veiling", "ISSUE_NUMBER": "77",
+    "ACTOR": "pecharko", "APPROVAL_TEXT": approval,
+    "CONTROLLER_DRY_RUN": "true"
+}), secure_patch.object(module, "gh", side_effect=fake_gh), \
+     secure_patch.object(module, "has_closed_event", return_value=False), \
+     secure_patch.object(module, "download_artifact", return_value=__import__("json").dumps(manifest).encode()), \
+     secure_patch.object(module, "dispatch_approved", side_effect=AssertionError("Dispatched during dry-run")):
+    module.main()
+print("PASS valid dry-run returns without issue write or deployment dispatch")
