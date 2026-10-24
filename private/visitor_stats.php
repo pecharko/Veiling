@@ -1,8 +1,11 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/analytics_control.php';
+
 function track_catalog_view(?int $lotId = null): void
 {
+    if (!analytics_collection_enabled()) return;
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
     if (($_SERVER['HTTP_DNT'] ?? '') === '1') return;
     $agent = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
