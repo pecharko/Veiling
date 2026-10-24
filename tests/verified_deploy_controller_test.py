@@ -35,7 +35,11 @@ blocked("duplicate field", text=approval + "\nextra=x")
 source = (root / "scripts/verified_deploy_controller.py").read_text(encoding="utf-8")
 assert '"gh", "run", "download"' in source
 assert 'if fresh["state"] != "open":' in source
-assert source.index('state=closed') < source.index('dispatch_approved(command)')
+# Inspect the call inside main(), not the earlier function definition.
+main_body = source.split("def main():", 1)[1].split('if __name__ == "__main__":', 1)[0]
+assert main_body.count("dispatch_approved(command)") == 1
+assert main_body.index('state=closed') < main_body.index('dispatch_approved(command)')
+assert main_body.index('if fresh["state"] != "open":') < main_body.index('state=closed')
 assert 'github.rest.actions.createWorkflowDispatch' not in source
 from unittest.mock import patch
 from subprocess import CompletedProcess
