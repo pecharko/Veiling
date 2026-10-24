@@ -26,6 +26,12 @@ if(is_post()){
     redirect('admin/kavel.php',['id'=>$id]);
   }
   if($action==='delete-lot' && $lot){
+    // Never free an allocated auction number: MAX()+1 must not reuse it.
+    // Preserve the entire lot (and its images) until a durable number ledger exists.
+    if ($lot['auction_number'] !== null) {
+      flash('Dit kavel heeft een definitief veilingsnummer en kan niet worden verwijderd. Zet de verkoopplaats op markt of de status op concept.', 'warning');
+      redirect('admin/kavel.php', ['id' => $id]);
+    }
     $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
     $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
     foreach($paths as $path)if(preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~',$path))@unlink(dirname(__DIR__).'/'.$path);
