@@ -1,0 +1,89 @@
+name: Analytics toggle guarded three-file release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Offline plan, read-only preflight, or separately authorized deploy'
+        required: true
+        default: plan
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+      release_sha:
+        description: 'Exact current main commit SHA'
+        required: true
+        type: string
+      confirmation:
+        description: 'Separate final deploy authorization required'
+        required: false
+        default: ''
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  analytics-toggle:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify source commit, syntax, isolated tests and offline plan
+        shell: bash
+        env:
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ && "$RELEASE_SHA" == "$GITHUB_SHA" ]] || exit 1
+          php -l private/analytics_control.php
+          php -l private/visitor_stats.php
+          php -l catalogus-public/admin/statistieken.php
+          php -l tests/analytics_toggle_isolated_test.php
+          php tests/analytics_toggle_isolated_test.php
+          python3 -m py_compile scripts/deploy_analytics_toggle_threefile_guarded.py
+          python3 scripts/deploy_analytics_toggle_threefile_guarded.py plan
+      - name: Require separate final deploy authorization
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = 'DEPLOY ANALYTICS TOGGLE THREE FILES NO ROLLBACK'
+      - name: Install pinned SFTP dependency
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: 'Read only: validate host identity, root and three remote paths'
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_analytics_toggle_threefile_guarded.py preflight
+      - name: Upload exactly three authorized PHP files
+        if: inputs.mode == 'deploy'
+        env:
+          ANALYTICS_TOGGLE_FINAL_AUTH: ${{ inputs.confirmation }}
+        run: python3 scripts/deploy_analytics_toggle_threefile_guarded.py deploy
+      - name: Read-only production smoke tests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = '200'
+          code=$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/statistieken.php)
+          test "$code" = '302' || test "$code" = '303'
+          for method in GET POST; do
+            code=$(curl --silent --show-error --max-time 20 -X "$method" -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)
+            test "$code" = '404'
+          done
