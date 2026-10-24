@@ -78,6 +78,16 @@ if(is_post()){
 if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$lot=$st->fetch();}
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
 $suggestedNumber = '';
+if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
+  $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+  $nextNumber = first_available_lot_number(($highestNumber === null || $highestNumber === false) ? [] : [$highestNumber]);
+  if ($nextNumber !== null) {
+    $suggestedNumber = $nextNumber;
+    $error = 'Dit lotnummer bestaat al. Voorgesteld nieuw lotnummer: ' . $nextNumber . '. Je kunt dit aanpassen.';
+  } else {
+    $error = 'Dit lotnummer bestaat al. Er is geen volgend lotnummer beschikbaar binnen de toegestane reeks.';
+  }
+}
 if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
@@ -85,6 +95,7 @@ if (!$lot && !is_post()) {
 $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
+if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
 ?>
