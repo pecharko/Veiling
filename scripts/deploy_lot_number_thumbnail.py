@@ -97,7 +97,7 @@ def fetch_remote(sftp, root: str) -> dict[str, bytes]:
     existing = {}
     for name in FILES:
         target = remote_path(root, name)
-        info = sftp.stat(target)
+        info = sftp.lstat(target)
         if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_FILE_SIZE:
             raise RuntimeError(f"Remote bestand ontbreekt/is te groot: {name}")
         with sftp.open(target, "rb") as remote:
