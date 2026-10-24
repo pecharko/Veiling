@@ -44,4 +44,12 @@ with patch.object(module.subprocess, "run", return_value=CompletedProcess([], 0,
 with patch.object(module.subprocess, "run", return_value=CompletedProcess([], 0, "opened\nlabeled\n", "")):
     assert not module.has_closed_event("example/repo", 123)
 assert '"--paginate", "--jq", ".[].event"' in source
+assert 'CONTROLLER_DRY_RUN' in source
+assert source.index('CONTROLLER_DRY_RUN') < source.index('state=closed')
+assert 'except subprocess.CalledProcessError as exc' in source
+assert 'Do not reopen issue' in source
+workflow = (root / ".github/workflows/verified-deploy-controller.yml").read_text(encoding="utf-8")
+assert "issues: write" in workflow and "actions: write" in workflow
+assert 'CONTROLLER_DRY_RUN: "false"' in workflow
+assert "persist-credentials: false" in workflow
 print("PASS verified deploy controller offline validation and one-time dispatch contracts")
