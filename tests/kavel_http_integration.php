@@ -213,7 +213,7 @@ try {
   claim($status===303 && (int)by_number(301)['auction_number']===2,
     'Returning to auction gets next available number');
   try {
-    db()->exec("UPDATE lots SET auction_number=1 WHERE lot_number=302");
+    db()->exec("UPDATE lots SET auction_number=2 WHERE lot_number=302");
     claim(false,'Database unique constraint must reject duplicate auction number');
   } catch (PDOException $e) {
     claim($e->getCode()==='23000','Database rejects duplicate auction number');
