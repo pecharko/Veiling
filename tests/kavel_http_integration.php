@@ -179,6 +179,44 @@ try {
   ]);
   claim($status === 403 && !by_number(40), 'CSRF rejection and no write');
 
+  // Auction numbers are unique and monotonically assigned in the isolated MySQL fixture.
+  [$status, $form] = request_page('/admin/kavel.php');
+  claim($status === 200 && str_contains($form, 'name="sale_location"'), 'Sale location selector visible');
+  [$status] = request_page('/admin/kavel.php', [
+    'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'301',
+    'title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1,
+    'First auction assignment starts at 1');
+  [$status, $form] = request_page('/admin/kavel.php');
+  [$status] = request_page('/admin/kavel.php', [
+    'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'302',
+    'title'=>'Auction two', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(302)['auction_number']===2,
+    'Second auction number increments');
+  $auctionId=(int)by_number(301)['id'];
+  [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
+    'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'markt'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1 &&
+    by_number(301)['sale_location']==='markt','Market reassignment reserves auction number');
+  [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
+    'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1,
+    'Moving back to auction keeps original number');
+  try {
+    db()->exec("UPDATE lots SET auction_number=1 WHERE lot_number=302");
+    claim(false,'Database unique constraint must reject duplicate auction number');
+  } catch (PDOException $e) {
+    claim($e->getCode()==='23000','Database rejects duplicate auction number');
+  }
+
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
   claim($status === 405, 'Authenticated GET logout is rejected without destroying session');
