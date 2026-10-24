@@ -1,0 +1,20 @@
+name: Harmless controller dispatch target
+on:
+  workflow_dispatch:
+    inputs:
+      test_nonce:
+        description: Random test identifier
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify harmless test invocation
+        env:
+          NONCE: ${{ inputs.test_nonce }}
+        run: |
+          test -n "$NONCE"
+          printf 'HARMLESS CONTROLLER TEST PASS: no deploy, no writes, no secrets used\\n'
