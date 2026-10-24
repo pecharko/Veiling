@@ -6,7 +6,7 @@ require_once __DIR__ . '/restore_journal.php';
 const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','updated_at'],
- 'admins'=>['id','email','password_hash','created_at'],
+ 'admins'=>['id','email','password_hash','created_at','role'],
  'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','status','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'login_attempts'=>['id','ip_hash','attempted_at'],
@@ -102,7 +102,7 @@ function snap_verified(string $name): array {
    if($size>350*1024*1024)throw new RuntimeException('Snapshot te groot.');
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])||array_diff(SNAP_INSERT[$t],array_keys($row)))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])||array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='admins' && array_diff(SNAP_INSERT[$t],array_keys($row))===['role']))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -152,7 +152,7 @@ function snap_restore(PDO $pdo,string $name): void {
    foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
     $columns=SNAP_INSERT[$table];$cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
-    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col],$columns));
+    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : null),$columns));
    }
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
