@@ -12,12 +12,14 @@ $category = mb_substr(trim((string)($_GET['category'] ?? '')),0,100);
 $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
 if (!in_array($category,$categories,true)) $category='';
 $status = in_array($_GET['status'] ?? '', ['draft','published'], true) ? (string)$_GET['status'] : '';
+$saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
 $perPage = 50;
 $where = []; $p = [];
 if ($q!=='') { $where[] = '(CAST(lot_number AS CHAR) LIKE ? OR title LIKE ? OR category LIKE ?)'; $p=array_fill(0,3,'%'.$q.'%'); }
 if ($category!=='') { $where[]='category=?'; $p[]=$category; }
 if ($status!=='') { $where[]='status=?'; $p[]=$status; }
+if ($saleLocation!=='') { $where[]='sale_location=?'; $p[]=$saleLocation; }
 $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
 $count=$pdo->prepare('SELECT COUNT(*) FROM lots '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
@@ -42,19 +44,21 @@ admin_top('Kaveloverzicht');
       <label class="dashboard-search"><span class="sr-only">Zoek kavel of titel</span><input type="search" name="q" placeholder="Zoek kavel of titel…" value="<?=e($q)?>"></label>
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
       <label><span class="sr-only">Status</span><select name="status"><option value="">Alle statussen</option><option value="draft" <?=$status==='draft'?'selected':''?>>Concept</option><option value="published" <?=$status==='published'?'selected':''?>>Gepubliceerd</option></select></label>
+      <label><span class="sr-only">Verkoopplaats</span><select name="sale_location"><option value="">Alle verkoopplaatsen</option><option value="markt" <?=$saleLocation==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$saleLocation==='veiling'?'selected':''?>>Veiling</option></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Foto's</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoopplaats</th><th scope="col">Foto's</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr>
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
       <td class="dashboard-title"><a href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=e($row['title'])?></a></td>
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
+      <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
       <td><?=e((string)$row['photo_count'])?></td>
       <td><span class="dashboard-badge <?=$row['status']==='published'?'is-live':'is-draft'?>"><?=$row['status']==='published'?'● Gepubliceerd':'● Concept'?></span></td>
       <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a></td>
     </tr><?php endforeach; ?>
-    <?php if(!$rows): ?><tr><td colspan="7">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+    <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
     <?php if($pages>1): ?><nav class="dashboard-pagination" aria-label="Paginering"><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
   </section>
