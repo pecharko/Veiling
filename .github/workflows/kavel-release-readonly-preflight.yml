@@ -51,4 +51,13 @@ jobs:
       - name: Install pinned read-only SFTP library
         run: python3 -m pip install 'paramiko==3.5.1'
       - name: Inspect production hashes without writing
+        env:
+          PREFLIGHT_MANIFEST_PATH: preflight-sha256.json
         run: python3 scripts/deploy_lot_number_thumbnail.py preflight
+      - name: Store immutable preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: kavel-preflight-sha256-${{ github.run_id }}
+          path: preflight-sha256.json
+          if-no-files-found: error
+          retention-days: 1
