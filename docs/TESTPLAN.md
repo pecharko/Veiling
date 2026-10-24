@@ -116,3 +116,9 @@ Actiehouder en eventuele follow-up:
 - Controleer dat bewerken het juiste kavel opent en dat er geen databasewijziging plaatsvindt bij filteren.
 - Controleer na deployment anonieme toegangsbeveiliging en bestaande CSV-404.
 **Status:** nog niet uitgevoerd; geen productieacceptatie claimen.
+
+
+## PR119 — Productieacceptatie gebruikersrollen (2026-10-24)
+- Alle vier handmatige functionele controles door beheerder geslaagd: Administrator opent Gebruikersbeheer; gebruikerslijst en accountselectie; Assistent ziet alleen kavelfuncties; Assistent krijgt geen toegang tot Gebruikersbeheer.
+- GitHub Actions deploy-run: https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004 — upload en HTTPS-smoketests geslaagd.
+- **Status:** functioneel geaccepteerd; release formeel afgesloten op 2026-10-24.
