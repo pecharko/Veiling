@@ -1,0 +1,119 @@
+name: Kavelnummer en thumbnails handmatige OVH release
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Plan, read-only preflight, or approved deployment'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved main commit SHA'
+        required: false
+        type: string
+      confirmation:
+        description: 'Final separately approved deployment text'
+        required: false
+        type: string
+      expected_kavel:
+        description: 'Preflight SHA-256 of remote admin/kavel.php'
+        required: false
+        type: string
+      expected_lot_form:
+        description: 'Preflight SHA-256 of remote private/lot_form.php'
+        required: false
+        type: string
+      expected_css:
+        description: 'Preflight SHA-256 of remote admin/admin.css'
+        required: false
+        type: string
+      expected_index:
+        description: 'Preflight SHA-256 of remote admin/index.php'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      RELEASE_EXPECTED_HASHES: ${{ format('{0},{1},{2},{3}', inputs.expected_kavel, inputs.expected_lot_form, inputs.expected_css, inputs.expected_index) }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+          coverage: none
+      - name: Verify offline release plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deploy_lot_number_thumbnail.py
+          php -l catalogus-public/admin/kavel.php
+          php -l private/lot_form.php
+          php -l catalogus-public/admin/index.php
+          php tests/first_available_lot_number_test.php
+          php tests/admin_lot_cover_contract_test.php
+          python3 scripts/deploy_lot_number_thumbnail.py plan
+      - name: Require separate exact deployment approval
+        if: inputs.mode == 'deploy'
+        shell: bash
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          APPROVED_TEXT: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+          test "$APPROVED_TEXT" = 'DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK'
+      - name: Install pinned SFTP library
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install 'paramiko==3.5.1'
+      - name: Read-only OVH preflight
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_lot_number_thumbnail.py preflight
+      - name: Create verified code backups
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_lot_number_thumbnail.py backup
+      - name: Verify drift and upload exactly four files
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_lot_number_thumbnail.py upload
+      - name: Read-only HTTP smoketests
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /admin/login.php; do
+            test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "https://41lokeren.be$path")" = 200
+          done
+          for path in /admin/index.php /admin/kavel.php; do
+            test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' "https://41lokeren.be$path")" = 303
+          done
+          test "$(curl --silent --show-error --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/import.php)" = 404
+      - name: Store private rollback artifact for seven days
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kavelnummer-thumbnails-rollback
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: error
