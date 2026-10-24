@@ -41,7 +41,9 @@ if(is_post()){
     $min=trim((string)($_POST['estimate_min']??''));
     $max=trim((string)($_POST['estimate_max']??''));
     $status=($_POST['status']??'draft')==='published'?'published':'draft';
+    $saleLocation=(string)($_POST['sale_location']??'markt');
     if($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
+    elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($title==='')$error='Een titel is verplicht.';
     elseif($min!=='' && (!is_numeric($min)|| (float)$min<0))$error='Ongeldige minimumschatting.';
     elseif($max!=='' && (!is_numeric($max)|| (float)$max<0))$error='Ongeldige maximumschatting.';
@@ -55,9 +57,15 @@ if(is_post()){
       }
       if(!$error){
         try{
-          $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=? WHERE id=?');}
-          else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status) VALUES (?,?,?,?,?,?,?,?,?)');}
+          // The request-wide catalog mutex serializes auction number allocation.
+          // Existing numbers are reserved even if an item returns to the market.
+          $auctionNumber = $lot['auction_number'] ?? null;
+          if ($saleLocation === 'veiling' && $auctionNumber === null) {
+            $auctionNumber = next_auction_number($pdo);
+          }
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status,$saleLocation,$auctionNumber];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
+          else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
           $failed=[];
@@ -68,7 +76,7 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
-          if($ex->getCode()==='23000')$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+          if($ex->getCode()==='23000')$error='Dit lotnummer of veilingsnummer bestaat al. Controleer de invoer.';
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
         }catch(Throwable $ex){$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
       }
@@ -92,7 +100,7 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft'];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft','sale_location'=>'markt','auction_number'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
@@ -114,6 +122,7 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>
           <div class="lot-editor-fields lot-editor-two">
             <label>Lotnummer <span class="lot-required">*</span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
+            <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
             <label>Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
             <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
@@ -134,7 +143,7 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
           <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · 16 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
           <p class="lot-editor-help">Foto's worden toegevoegd wanneer je het kavel opslaat.</p>
         </section>
-        <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Huidige status</dt><dd><?=($d['status']==='published'?'Gepubliceerd':'Concept')?></dd></dl></section><?php endif; ?>
+        <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Huidige status</dt><dd><?=($d['status']==='published'?'Gepubliceerd':'Concept')?></dd></dl></section><?php endif; ?>
       </aside>
     </div>
     <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><button class="primary" type="submit">Wijzigingen opslaan →</button></div>
