@@ -11,6 +11,10 @@ require dirname(__DIR__) . '/private/catalog_mutex.php';
 if (getenv('GITHUB_ACTIONS') === 'true' && db()->query('SELECT DATABASE()')->fetchColumn() === 'auction_test') {
   $column = db()->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch();
   if (!$column) db()->exec("ALTER TABLE admins ADD COLUMN role ENUM('administrator','assistant') NOT NULL DEFAULT 'administrator'");
+  if (!db()->query("SHOW COLUMNS FROM lots LIKE 'sale_location'")->fetch()) {
+    db()->exec("ALTER TABLE lots ADD COLUMN sale_location ENUM('markt','veiling') NOT NULL DEFAULT 'markt', ADD COLUMN auction_number INT UNSIGNED NULL DEFAULT NULL, ADD UNIQUE KEY uq_lots_auction_number (auction_number), ADD CONSTRAINT chk_lots_auction_number_positive CHECK (auction_number IS NULL OR auction_number >= 1)");
+  }
+
 }
 
 
@@ -174,6 +178,44 @@ try {
     'action'=>'save', 'lot_number'=>'40', 'title'=>'No csrf'
   ]);
   claim($status === 403 && !by_number(40), 'CSRF rejection and no write');
+
+  // Auction numbers are unique and monotonically assigned in the isolated MySQL fixture.
+  [$status, $form] = request_page('/admin/kavel.php');
+  claim($status === 200 && str_contains($form, 'name="sale_location"'), 'Sale location selector visible');
+  [$status] = request_page('/admin/kavel.php', [
+    'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'301',
+    'title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1,
+    'First auction assignment starts at 1');
+  [$status, $form] = request_page('/admin/kavel.php');
+  [$status] = request_page('/admin/kavel.php', [
+    'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'302',
+    'title'=>'Auction two', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(302)['auction_number']===2,
+    'Second auction number increments');
+  $auctionId=(int)by_number(301)['id'];
+  [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
+    'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'markt'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1 &&
+    by_number(301)['sale_location']==='markt','Market reassignment reserves auction number');
+  [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($form), 'action'=>'save','id'=>(string)$auctionId,
+    'lot_number'=>'301','title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
+  claim($status===303 && (int)by_number(301)['auction_number']===1,
+    'Moving back to auction keeps original number');
+  try {
+    db()->exec("UPDATE lots SET auction_number=1 WHERE lot_number=302");
+    claim(false,'Database unique constraint must reject duplicate auction number');
+  } catch (PDOException $e) {
+    claim($e->getCode()==='23000','Database rejects duplicate auction number');
+  }
 
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');

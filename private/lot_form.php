@@ -16,6 +16,7 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
       }
     }
   }
+  $values['sale_location'] = ($values['sale_location'] ?? 'markt') === 'veiling' ? 'veiling' : 'markt';
   $values['status'] = ($values['status'] ?? 'draft') === 'published' ? 'published' : 'draft';
   return $values;
 }
@@ -27,4 +28,16 @@ function first_available_lot_number(iterable $existingNumbers): ?int {
     $maximum = max($maximum, (int)$number);
   }
   return $maximum >= 999999 ? null : $maximum + 1;
+}
+
+/**
+ * Assign the next auction number while the catalog advisory lock is held.
+ * Auction numbers are immutable for a lot, including when moved back to market.
+ * The DB unique index prevents accidental duplicate assignments.
+ */
+function next_auction_number(PDO $pdo): int {
+  $highest = $pdo->query('SELECT MAX(auction_number) FROM lots')->fetchColumn();
+  $next = max(0, (int)$highest) + 1;
+  if ($next > 999999) throw new RuntimeException('Geen veilingsnummers meer beschikbaar.');
+  return $next;
 }

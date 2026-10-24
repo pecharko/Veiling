@@ -43,6 +43,10 @@ $ddl = [
     estimate_min DECIMAL(12,2) DEFAULT NULL,
     estimate_max DECIMAL(12,2) DEFAULT NULL,
     status ENUM('draft','published') NOT NULL DEFAULT 'draft',
+    sale_location ENUM('markt','veiling') NOT NULL DEFAULT 'markt',
+    auction_number INT UNSIGNED NULL DEFAULT NULL,
+    UNIQUE KEY uq_lots_auction_number (auction_number),
+    CONSTRAINT chk_lots_auction_number_positive CHECK (auction_number IS NULL OR auction_number >= 1),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     KEY idx_public (status,lot_number)
