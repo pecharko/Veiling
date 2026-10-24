@@ -82,7 +82,7 @@ def run(mode):
                 if name==FILES[0]:
                     if read(sftp,root,name,optional=True) is not None:
                         raise RuntimeError("STOP unexpected helper target")
-                    mode_sftp="x"
+                    mode_sftp="wxb"
                 else:
                     if digest(read(sftp,root,name))!=KNOWN_REMOTE[name]:
                         raise RuntimeError("STOP target drift immediately before upload")
