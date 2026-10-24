@@ -1,0 +1,75 @@
+name: Approved release controller
+on:
+  issue_comment:
+    types: [created]
+permissions:
+  contents: read
+  issues: read
+  actions: write
+concurrency:
+  group: approved-controller-${{ github.event.comment.id }}
+  cancel-in-progress: false
+jobs:
+  dispatch:
+    if: >-
+      github.event.issue.pull_request == null &&
+      github.event.issue.title == 'Beveiligde productie-deployautorisaties' &&
+      github.event.comment.author_association == 'OWNER' &&
+      github.event.comment.user.login == github.repository_owner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate exact owner command and dispatch approved workflow
+        uses: actions/github-script@v7
+        env:
+          APPROVAL: ${{ github.event.comment.body }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const body = process.env.APPROVAL.replace(/\r/g, '').trim();
+            const lines = body.split('\n');
+            if (lines.length !== 7 || lines[0] !== 'DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK') {
+              core.setFailed('Invalid or incomplete deploy approval');
+              return;
+            }
+            const names = ['release_sha','expected_kavel','expected_lot_form','expected_css','expected_index','confirmation'];
+            const params = {};
+            for (let i = 0; i < names.length; i++) {
+              const prefix = names[i] + '=';
+              if (!lines[i + 1].startsWith(prefix)) {
+                core.setFailed('Invalid field ' + names[i]);
+                return;
+              }
+              params[names[i]] = lines[i + 1].slice(prefix.length).trim();
+            }
+            if (!/^[a-f0-9]{40}$/.test(params.release_sha) ||
+                !['expected_kavel','expected_lot_form','expected_css','expected_index'].every(k => /^[a-f0-9]{64}$/.test(params[k])) ||
+                params.confirmation !== 'DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK') {
+              core.setFailed('Invalid SHA or confirmation');
+              return;
+            }
+            const { owner, repo } = context.repo;
+            const main = await github.rest.repos.getBranch({owner, repo, branch: 'main'});
+            if (main.data.commit.sha !== params.release_sha) {
+              core.setFailed('Approval commit does not match current main HEAD');
+              return;
+            }
+            const runs = await github.paginate(github.rest.actions.listWorkflowRunsForRepo, {
+              owner, repo, event: 'workflow_dispatch', per_page: 100
+            }, r => r.data);
+            const preflight = runs.find(r =>
+              r.path === '.github/workflows/kavel-release-readonly-preflight.yml' &&
+              r.head_sha === params.release_sha &&
+              r.conclusion === 'success' &&
+              Date.now() - new Date(r.created_at).getTime() < 24 * 60 * 60 * 1000
+            );
+            if (!preflight) {
+              core.setFailed('No recent successful read-only preflight on approved commit');
+              return;
+            }
+            await github.rest.actions.createWorkflowDispatch({
+              owner, repo, workflow_id: 'kavelnummer-thumbnails-release.yml',
+              ref: 'main',
+              inputs: { mode: 'deploy', ...params }
+            });
+            core.info('Approved deployment dispatched. Preflight run ' + preflight.id);
