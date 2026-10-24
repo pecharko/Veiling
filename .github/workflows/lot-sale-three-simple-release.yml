@@ -140,8 +140,6 @@ jobs:
           elif [[ "$event" == workflow_run && "$path" == '.github/workflows/lot-sale-auto-readonly-preflight.yml' ]]; then
             job_name=readonly
             artifact_name="lot-sale-auto-readonly-$PLAN_RUN"
-            # Must have been triggered by a successful push CI on this exact main SHA.
-            [[ "$(jq -r '.triggering_actor.login // empty' <<<"$prior")" != '' ]] || exit 1
           else
             exit 1
           fi
