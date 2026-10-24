@@ -2,17 +2,12 @@ name: Controller authorization dry-run only
 on:
   workflow_dispatch:
     inputs:
-      issue_number:
-        description: 'Existing approval issue number'
-        required: true
-        type: string
-      comment_id:
-        description: 'Existing owner approval comment ID'
+      preflight_run_id:
+        description: 'Existing successful preflight with checksum artifact'
         required: true
         type: string
 permissions:
   contents: read
-  issues: read
   actions: read
 jobs:
   verify:
@@ -24,10 +19,9 @@ jobs:
         with:
           ref: main
           persist-credentials: false
-      - name: Validate owner approval and artifact without dispatch
+      - name: Validate synthetic approval and real artifact without dispatch
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-          TEST_ISSUE_NUMBER: ${{ inputs.issue_number }}
-          TEST_COMMENT_ID: ${{ inputs.comment_id }}
+          TEST_PREFLIGHT_RUN_ID: ${{ inputs.preflight_run_id }}
         run: python3 scripts/controller_authorization_dryrun.py
