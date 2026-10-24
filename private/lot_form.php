@@ -20,15 +20,11 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
   return $values;
 }
 
-/** Find the smallest unused positive lot number (1..999999). */
+/** Suggest the next lot number after the highest existing one (1..999999). */
 function first_available_lot_number(iterable $existingNumbers): ?int {
-  $candidate = 1;
+  $maximum = 0;
   foreach ($existingNumbers as $number) {
-    $number = (int)$number;
-    if ($number < $candidate) continue;
-    if ($number > $candidate) break;
-    ++$candidate;
-    if ($candidate > 999999) return null;
+    $maximum = max($maximum, (int)$number);
   }
-  return $candidate;
+  return $maximum >= 999999 ? null : $maximum + 1;
 }
