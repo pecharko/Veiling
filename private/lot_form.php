@@ -19,3 +19,12 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
   $values['status'] = ($values['status'] ?? 'draft') === 'published' ? 'published' : 'draft';
   return $values;
 }
+
+/** Suggest the next lot number after the highest existing one (1..999999). */
+function first_available_lot_number(iterable $existingNumbers): ?int {
+  $maximum = 0;
+  foreach ($existingNumbers as $number) {
+    $maximum = max($maximum, (int)$number);
+  }
+  return $maximum >= 999999 ? null : $maximum + 1;
+}
