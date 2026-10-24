@@ -31,4 +31,5 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ACTOR: ${{ github.event.comment.user.login }}
           REPOSITORY: ${{ github.repository }}
+          CONTROLLER_DRY_RUN: "false"
         run: python3 scripts/verified_deploy_controller.py
