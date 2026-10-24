@@ -249,3 +249,14 @@ Runtime-allowlist: uitsluitend `catalogus-public/admin/index.php` en `catalogus-
 
 ### Dashboardrelease — specifieke workflow
 Gebruik `.github/workflows/dashboard-deploy.yml` met `scripts/deploy_modern_dashboard.py` (alleen `catalogus-public/admin/admin.css` gevolgd door `catalogus-public/admin/index.php`). Eerst `mode=plan`, daarna na afzonderlijke goedkeuring `mode=deploy` met bevestiging `DEPLOY DASHBOARD`. De workflow maakt een privé rollbackartifact (7 dagen), vergelijkt de remote bestanden met de back-up vóór schrijven en controleert SHA-256 na iedere upload. Na de uitrol: read-only controle van anonieme admin-loginredirect en CSV 404; aangemelde visuele acceptatie T-046 blijft verplicht. Geen data-, foto- of snapshotwijzigingen. Workflow pas na groene CI en merge beschikbaar op `main`.
+
+
+## PR119 — Afgesloten productie-release (2026-10-24)
+- Doel: `https://41lokeren.be`, commit `e74b3ef3ce3fb7408aa00f4054ffbcabe82c49ce`.
+- Workflow: `.github/workflows/pr119-admin-roles-release.yml`, handmatige `workflow_dispatch`, modus `deploy`.
+- Toegelaten vier bestanden: `catalogus-public/admin/login.php`, `private/snapshots.php`, `catalogus-public/admin/gebruikers.php`, `private/bootstrap.php` (laatste).
+- Read-only preflight run: https://github.com/pecharko/Veiling/actions/runs/40085881964/job/120848601976.
+- Deployment run: https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004. Alle vier remote SHA-256-checks geslaagd, upload voltooid, HTTPS-smoketests groen.
+- `admins.role` vooraf manueel toegevoegd; minstens één `administrator` door beheerder bevestigd. Alle vier handmatige functionele acceptatiecontroles geslaagd volgens beheerder.
+- Releaseprofiel: eenvoudig, zonder code-rollback, expliciet goedgekeurd. Status: formeel afgesloten. Geen extra productiedeployment voor deze documentatie.
+
