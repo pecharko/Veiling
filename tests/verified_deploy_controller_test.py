@@ -37,4 +37,11 @@ assert '"gh", "run", "download"' in source
 assert 'if fresh["state"] != "open":' in source
 assert source.index('state=closed') < source.index('subprocess.run(command, check=True)')
 assert 'github.rest.actions.createWorkflowDispatch' not in source
+from unittest.mock import patch
+from subprocess import CompletedProcess
+with patch.object(module.subprocess, "run", return_value=CompletedProcess([], 0, "opened\\nclosed\\nreopened\\n", "")):
+    assert module.has_closed_event("example/repo", 123)
+with patch.object(module.subprocess, "run", return_value=CompletedProcess([], 0, "opened\\nlabeled\\n", "")):
+    assert not module.has_closed_event("example/repo", 123)
+assert '"--paginate", "--jq", ".[].event"' in source
 print("PASS verified deploy controller offline validation and one-time dispatch contracts")
