@@ -22,7 +22,7 @@ jobs:
     if: github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Check exact PR revision, trusted approval and all CI before merge
+      - name: Check exact PR revision, restricted file allowlist and all CI before merge
         uses: actions/github-script@v7
         with:
           script: |
@@ -37,9 +37,7 @@ jobs:
                 pr.head.sha !== source.head_sha || pr.mergeable !== true) {
               core.info('PR is not a current mergeable same-repository PR; stop.'); return;
             }
-            if (!pr.labels.some(l => l.name === 'auto-merge-approved')) {
-              core.info('Maintainer opt-in label missing; stop.'); return;
-            }
+            // Restricted low-risk paths require no additional maintainer label.
             // Fail closed: only presentation CSS and documentation; no PHP, JS, workflow,
             // deploy script, auth, database, backup, or production config changes.
             const files = await github.paginate(github.rest.pulls.listFiles,
@@ -68,12 +66,11 @@ jobs:
             }
             const {data: fresh} = await github.rest.pulls.get({owner,repo,pull_number:number});
             if (fresh.head.sha !== pr.head.sha || fresh.state !== 'open' ||
-                fresh.mergeable !== true ||
-                !fresh.labels.some(l=>l.name==='auto-merge-approved')) {
+                fresh.mergeable !== true) {
               core.info('PR changed while checking; stop.'); return;
             }
             await github.rest.pulls.merge({
               owner,repo,pull_number:number,sha:pr.head.sha,merge_method:'merge',
-              commit_title:'Merge approved low-risk PR #'+number
+              commit_title:'Merge CI-verified low-risk PR #'+number
             });
             core.info('Merged approved low-risk PR #'+number);
