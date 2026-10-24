@@ -14,6 +14,8 @@ check(str_contains($editor,'next_auction_number($pdo)'),'auction number assigned
 check(str_contains($editor,'str_contains($detail,\'uq_lots_auction_number\')'),'auction duplicate is diagnosed separately');
 check(str_contains($editor,'$error=\'Dit lotnummer bestaat al. Kies een uniek nummer.\''),'lot duplicate retains original error and suggestion');
 check(str_contains($editor,'$lot[\'auction_number\'] ?? null'),'existing number preserved');
+check(str_contains($editor, "if ($lot['auction_number'] !== null)"),'numbered lots cannot be deleted');
+check(str_contains($editor, 'Dit kavel heeft een definitief veilingsnummer'),'deletion guard provides user feedback');
 $migration=file_get_contents(dirname(__DIR__).'/database/lot_sale_location_migration.sql');
 check(str_contains($migration,'UNIQUE KEY uq_lots_auction_number'),'unique index present');
 check(str_contains($migration,"DEFAULT 'markt'"),'db default market');
