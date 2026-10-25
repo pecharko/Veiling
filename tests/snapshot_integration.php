@@ -168,4 +168,6 @@ $pdo->exec('UPDATE settings SET is_site_online=1');
 snap_restore($pdo, $newSchemaSnapshot);
 verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 0,
        'New schema restore recovers the offline state');
+// Keep the original one-snapshot fixture expected by the following HTTP integration test.
+if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
