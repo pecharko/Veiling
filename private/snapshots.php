@@ -151,6 +151,7 @@ function snap_restore(PDO $pdo,string $name): void {
    foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
    foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
     $columns=SNAP_INSERT[$table];
+    if($table==='settings' && !$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='is_site_online'));
     if($table==='admins' && !$pdo->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='role'));
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
