@@ -79,6 +79,20 @@
       "allow_absent": [
         "catalogus-public/admin/rollen.php"
       ]
+    },
+    "lot-visibility-twofile-release.yml": {
+      "preflight": ".github/workflows/registered-release-auto-readonly.yml",
+      "artifact_prefix": "lot-visibility-preflight",
+      "confirmation": "DEPLOY LOT VISIBILITY TWOFILE WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/index.php",
+        "catalogus-public/admin/instellingen.php"
+      ],
+      "hash_inputs": [
+        "expected_public",
+        "expected_settings"
+      ],
+      "manifest_file": "lot-visibility-preflight.json"
     }
   }
 }
