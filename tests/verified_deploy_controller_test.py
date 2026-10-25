@@ -98,3 +98,22 @@ with secure_patch.dict(os.environ, {
      secure_patch.object(module, "dispatch_approved", side_effect=AssertionError("Dispatched during dry-run")):
     module.main()
 print("PASS valid dry-run returns without issue write or deployment dispatch")
+
+# Registered-format tests: exact workflow, SHA, hashes and artifact remain mandatory.
+import json
+with secure_patch.object(module, "REGISTRY_PATH", str(root / "scripts/verified_deploy_registry.json")):
+    registered_text = "DEPLOY VERIFIED RELEASE\\nworkflow=kavelnummer-thumbnails-release.yml\\nrelease_sha=" + sha + "\\npreflight_run_id=123\\n" + "\\n".join(k + "=" + "b" * 64 for k in ["expected_kavel", "expected_lot_form", "expected_css", "expected_index"])
+    registered_text = registered_text.replace("\\\\n", "\\n")
+    name, config = module.registered_release(registered_text)
+    assert name == "kavelnummer-thumbnails-release.yml"
+    assert module.validate_registered(registered_text, manifest, run, sha, name, config)["release_sha"] == sha
+    for broken in [registered_text.replace("expected_css=", "expected_unknown="),
+                   registered_text.replace("workflow=kavelnummer-thumbnails-release.yml", "workflow=evil.yml")]:
+        try:
+            name2, cfg2 = module.registered_release(broken)
+            module.validate_registered(broken, manifest, run, sha, name2, cfg2)
+        except (ValueError, KeyError):
+            pass
+        else:
+            raise AssertionError("Unsafe generic release accepted")
+print("PASS registered workflow validation")
