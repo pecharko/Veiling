@@ -23,9 +23,9 @@ if ($q!=='') { $where[] = '(CAST(lot_number AS CHAR) LIKE ? OR title LIKE ? OR c
 if ($category!=='') { $where[]='category=?'; $p[]=$category; }
 if ($status!=='') { $where[]='status=?'; $p[]=$status; }
 if ($saleLocation!=='') { $where[]='sale_location=?'; $p[]=$saleLocation; }
-if ($photoFilter==='none') { $where[]='NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=lots.id)'; }
+if ($photoFilter==='none') { $where[]='NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)'; }
 $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
-$count=$pdo->prepare('SELECT COUNT(*) FROM lots '.$w);$count->execute($p);
+$count=$pdo->prepare('SELECT COUNT(*) FROM lots l '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
 $pages=max(1,(int)ceil($filtered/$perPage));$page=min($page,$pages);
 $st=$pdo->prepare('SELECT l.*, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
