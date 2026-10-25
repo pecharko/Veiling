@@ -53,7 +53,7 @@ def registered_release(text):
     config = registry["releases"].get(workflow)
     if not isinstance(config, dict):
         raise ValueError("Workflow not approved in release registry")
-    if set(config) != {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs"}:
+    if not {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs"}.issubset(config) or set(config) - {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs", "manifest_file", "allow_absent"}:
         raise ValueError("Invalid registry entry")
     paths, inputs = config["paths"], config["hash_inputs"]
     if (not isinstance(paths, list) or not isinstance(inputs, list) or
@@ -69,6 +69,11 @@ def registered_release(text):
             not isinstance(config["confirmation"], str) or
             not re.fullmatch(r"DEPLOY [A-Z0-9 _-]{3,100}", config["confirmation"])):
         raise ValueError("Invalid registered release metadata")
+    absent = config.get("allow_absent", [])
+    if not isinstance(absent, list) or len(absent) != len(set(absent)) or any(p not in paths for p in absent):
+        raise ValueError("Invalid allow_absent")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+\\.json", config.get("manifest_file", "preflight-sha256.json")):
+        raise ValueError("Invalid manifest filename")
     return workflow, config
 
 
@@ -93,9 +98,11 @@ def validate_registered(text, manifest, run, main_sha, workflow, config):
         raise ValueError("Invalid SHA")
     if not re.fullmatch(r"[1-9][0-9]*", data["preflight_run_id"]):
         raise ValueError("Invalid preflight ID")
-    if any(not re.fullmatch(r"[0-9a-f]{64}", data[key]) for key in config["hash_inputs"]):
-        raise ValueError("Invalid remote hash")
     expected = dict(zip(config["paths"], (data[key] for key in config["hash_inputs"])))
+    absent = set(config.get("allow_absent", []))
+    if any(not (value == "ABSENT" and path in absent or
+                re.fullmatch(r"[0-9a-f]{64}", value)) for path, value in expected.items()):
+        raise ValueError("Invalid remote hash")
     if (data["release_sha"] != main_sha or run["head_sha"] != main_sha or
             run["id"] != int(data["preflight_run_id"]) or
             run["path"] != config["preflight"] or
@@ -115,13 +122,28 @@ def validate_registered(text, manifest, run, main_sha, workflow, config):
 
 
 
+def normalize_registered_manifest(manifest, run, workflow, config):
+    """Accept only exact registered newer-format read-only proof."""
+    if "manifest_file" not in config:
+        return manifest
+    if (set(manifest) != {"sha", "run_id", "remote"} or
+            manifest["sha"] != run["head_sha"] or
+            str(manifest["run_id"]) != str(run["id"]) or
+            set(manifest["remote"]) != set(config["paths"])):
+        raise ValueError("Invalid registered preflight evidence")
+    # validate_registered expects a timestamp; use GitHub's trustworthy run creation time.
+    return {"schema": 1, "run_id": run["id"],
+            "head_sha": manifest["sha"], "captured_at": run["created_at"],
+            "sha256": manifest["remote"]}
+
+
 def gh(*args, binary=False):
     result = subprocess.run(("gh", "api", *args), check=True, capture_output=True)
     return result.stdout if binary else json.loads(result.stdout)
 
 
 
-def download_artifact(repo, artifact_id):
+def download_artifact(repo, artifact_id, manifest_file="preflight-sha256.json"):
     """Download a named workflow artifact using the GitHub CLI binary-safe path."""
     import tempfile
     with tempfile.TemporaryDirectory() as directory:
@@ -130,7 +152,7 @@ def download_artifact(repo, artifact_id):
         subprocess.run(("gh", "run", "download", str(run_id), "--repo", repo,
                         "--name", metadata["name"], "--dir", directory),
                        check=True, capture_output=True)
-        manifest_file = os.path.join(directory, "preflight-sha256.json")
+        manifest_file = os.path.join(directory, manifest_file)
         raw = open(manifest_file, "rb").read(1024 * 1024 + 1)
         if len(raw) > 1024 * 1024:
             raise ValueError("Artifact exceeds 1 MiB")
@@ -271,8 +293,8 @@ def main():
         matches = [a for a in artifacts if a["name"] == artifact_name and not a["expired"]]
         if len(matches) != 1:
             raise ValueError("Expected a single unexpired manifest artifact")
-        manifest = json.loads(download_artifact(repo, matches[0]["id"]))
-        data = (validate_registered(text, manifest, run, main_sha, workflow, config)
+        manifest = json.loads(download_artifact(repo, matches[0]["id"], config.get("manifest_file", "preflight-sha256.json") if registration is not None else "preflight-sha256.json"))
+        data = (validate_registered(text, normalize_registered_manifest(manifest, run, workflow, config), run, main_sha, workflow, config)
                 if registration is not None else validate(text, manifest, run, main_sha))
     # Dry run checks the complete authorization evidence but never consumes approval.
     if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
