@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/private/auction_organisation.php';
 require_auth();
 $pdo = db();
 $error = '';
-$select = "SELECT id,lot_number,title,auction_number,status FROM lots WHERE sale_location='veiling' ORDER BY auction_number,id";
+$select = "SELECT l.id,l.lot_number,l.title,l.auction_number,l.status,(SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order,li.id LIMIT 1) AS cover FROM lots l WHERE l.sale_location='veiling' ORDER BY l.auction_number,l.id";
 if (is_post()) {
   check_csrf();
   catalog_lock_for_request($pdo);
@@ -44,12 +44,13 @@ admin_top('Veiling organisatie');
   <?php if (!$rows): ?><p>Er zijn nog geen kavels in de veiling. Wijzig eerst de verkoopplaats van een kavel naar Veiling.</p><?php endif; ?>
   <div class="dashboard-table-scroll">
     <table class="dashboard-table" id="auction-order-table">
-      <thead><tr><th>Positie</th><th>Lotnummer</th><th>Kavel</th><th>Status</th><th>Verplaatsen</th></tr></thead>
+      <thead><tr><th>Positie</th><th>Lotnummer</th><th>Foto</th><th>Kavel</th><th>Status</th><th>Verplaatsen</th></tr></thead>
       <tbody>
       <?php foreach ($rows as $index => $row): ?>
         <tr draggable="true" data-id="<?=(int)$row['id']?>" data-position="<?=$index+1?>">
           <td><strong><?=e((string)$row['auction_number'])?></strong> <span aria-hidden="true" title="Versleep">↕</span></td>
           <td><?=e((string)$row['lot_number'])?></td>
+          <td><?php if (!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
           <td><a href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=e($row['title'])?></a></td>
           <td><?=e($row['status']==='published'?'Gepubliceerd':'Concept')?></td>
           <td>
