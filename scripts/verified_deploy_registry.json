@@ -60,6 +60,25 @@
       "allow_absent": [
         "catalogus-public/admin/rol-wissel.php"
       ]
+    },
+    "role-menu-release.yml": {
+      "preflight": ".github/workflows/registered-release-auto-readonly.yml",
+      "artifact_prefix": "role-menu-preflight",
+      "confirmation": "DEPLOY ROLE MENU WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/rollen.php",
+        "catalogus-public/admin/admin.css",
+        "private/bootstrap.php"
+      ],
+      "hash_inputs": [
+        "expected_help",
+        "expected_css",
+        "expected_bootstrap"
+      ],
+      "manifest_file": "role-menu-preflight.json",
+      "allow_absent": [
+        "catalogus-public/admin/rollen.php"
+      ]
     }
   }
 }
