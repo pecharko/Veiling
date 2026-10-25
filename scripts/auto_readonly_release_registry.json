@@ -48,6 +48,14 @@
       "test": "tests/public_lot_visibility_contract_test.php",
       "manifest": "lot-visibility-preflight.json",
       "artifact_prefix": "lot-visibility-preflight"
+    },
+    {
+      "id": "site-online-sixfile",
+      "workflow": "site-online-sixfile-release.yml",
+      "script": "scripts/deploy_site_online_sixfile.py",
+      "test": "tests/site_online_switch_contract_test.php",
+      "manifest": "site-online-preflight.json",
+      "artifact_prefix": "site-online-preflight"
     }
   ]
 }

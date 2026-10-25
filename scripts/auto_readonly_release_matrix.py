@@ -9,6 +9,7 @@ ALLOWED = {
     "veiling-organisatie": ("auction-organisation-release.yml", "scripts/deploy_auction_organisation.py", "tests/auction_organisation_test.php", "auction-organisation-preflight.json", "auction-organisation-preflight"),
     "session-roles": ("session-roles-release.yml", "scripts/deploy_session_roles.py", "tests/admin_session_role_contract_test.php", "session-roles-preflight.json", "session-roles-preflight"),
     "role-menu": ("role-menu-release.yml", "scripts/deploy_role_menu.py", "tests/admin_role_menu_contract_test.php", "role-menu-preflight.json", "role-menu-preflight"),
+    "site-online-sixfile": ("site-online-sixfile-release.yml", "scripts/deploy_site_online_sixfile.py", "tests/site_online_switch_contract_test.php", "site-online-preflight.json", "site-online-preflight"),
     "lot-visibility-twofile": ("lot-visibility-twofile-release.yml", "scripts/deploy_lot_visibility_twofile.py", "tests/public_lot_visibility_contract_test.php", "lot-visibility-preflight.json", "lot-visibility-preflight"),
     "roles-page-onefile": ("roles-page-onefile-release.yml", "scripts/deploy_roles_page_onefile.py", "tests/admin_role_menu_contract_test.php", "roles-page-preflight.json", "roles-page-preflight"),
 }
