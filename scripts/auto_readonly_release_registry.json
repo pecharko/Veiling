@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "profiles": [
+    {
+      "id": "kavelnummer-thumbnails",
+      "workflow": "kavelnummer-thumbnails-release.yml",
+      "script": "scripts/deploy_lot_number_thumbnail.py",
+      "test": "tests/admin_lot_cover_contract_test.php",
+      "manifest": "preflight-sha256.json",
+      "artifact_prefix": "kavel-preflight-sha256"
+    },
+    {
+      "id": "veiling-organisatie",
+      "workflow": "auction-organisation-release.yml",
+      "script": "scripts/deploy_auction_organisation.py",
+      "test": "tests/auction_organisation_test.php",
+      "manifest": "auction-organisation-preflight.json",
+      "artifact_prefix": "auction-organisation-preflight"
+    }
+  ]
+}
