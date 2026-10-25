@@ -22,7 +22,7 @@ verify_order(str_contains($screen,'$pdo->beginTransaction()'),'transaction requi
 verify_order(str_contains($screen,'$pdo->rollBack()'),'rollback on failure required');
 verify_order(str_contains($screen,'order_version'),'stale form guard required');
 verify_order(str_contains($screen,'auction_apply_order($pdo, $ordered)'),'transactional renumber');
-verify_order(str_contains($screen,'draggable="true"'),'drag and drop present');
+verify_order(str_contains($screen,'draggable="<?= $canEdit') && str_contains($screen,'<?php if ($canEdit): ?>'),'drag and drop available only to editors of auction order');
 verify_order(str_contains($bootstrap,'Veiling organisatie'),'menu entry exists');
 verify_order(str_contains($bootstrap,"'veiling-organisatie.php'"),'limited role has access');
 echo "PASS auction organisation permutation and page security contracts\n";
