@@ -46,6 +46,22 @@ function settings(): array {
   $s = db()->query('SELECT * FROM settings WHERE id=1')->fetch();
   return $s ?: [];
 }
+/**
+ * Public entry-point guard. An installation without the new column remains online
+ * until the separately approved database migration is performed.
+ */
+function require_public_site_online(): void {
+  $s = settings();
+  if ((int)($s['is_site_online'] ?? 1) === 1) return;
+  http_response_code(503);
+  header('Cache-Control: no-store, max-age=0');
+  header('X-Robots-Tag: noindex, nofollow');
+  header('Retry-After: 3600');
+  header('Content-Type: text/html; charset=utf-8');
+  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Binnenkort online · 41 Lokeren</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,-apple-system,sans-serif;color:#29473e;background:#fff9f5;text-align:center}main{max-width:620px;padding:32px}h1{font-size:clamp(2rem,6vw,3.5rem);color:#850015}p{line-height:1.7}</style></head><body><main><p><strong>41 LOKEREN</strong></p><h1>Binnenkort online</h1><p>We bereiden onze veilingwebsite voor. Kom binnenkort opnieuw kijken.</p></main></body></html>';
+  exit;
+}
+
 function money(mixed $amount): string {
   return '€ ' . number_format((float)$amount, 0, ',', '.');
 }

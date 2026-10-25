@@ -24,6 +24,7 @@ if (is_post()) {
     'contact_email' => mb_substr(trim((string)($_POST['contact_email'] ?? '')), 0, 190),
     'practical_info' => mb_substr(trim((string)($_POST['practical_info'] ?? '')), 0, 5000),
     'is_published' => isset($_POST['is_published']) ? 1 : 0,
+    'is_site_online' => isset($_POST['is_site_online']) ? 1 : 0,
   ];
 
   if ($fields['title'] === '') {
@@ -45,7 +46,8 @@ if (is_post()) {
       address = :address,
       contact_email = :contact_email,
       practical_info = :practical_info,
-      is_published = :is_published
+      is_published = :is_published,
+      is_site_online = :is_site_online
       WHERE id = 1');
     $st->execute($fields);
 
@@ -69,7 +71,8 @@ $checkFields = [
 $completedCount = count(array_filter($checkFields));
 $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelden ingevuld';
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
-$publicStateText = $publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar';
+$siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
+$publicStateText = !$siteOnline ? 'Website offline — bezoekers zien Binnenkort online' : ($publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar');
 $dateStateText = !empty($s['event_date']) ? date_nl((string)$s['event_date']) : 'Datum nog niet vastgelegd';
 $contactStateText = !empty($s['contact_email']) ? (string)$s['contact_email'] : 'Nog geen contactadres';
 
@@ -280,6 +283,17 @@ if ($error) {
                 <p>Bepaal of bezoekers de kavels kunnen zien. De overige website-informatie blijft altijd zichtbaar.</p>
               </div>
             </div>
+
+            <label class="auction-settings-toggle" style="margin-bottom:14px;">
+              <input type="checkbox" name="is_site_online" value="1" <?= $siteOnline ? 'checked' : '' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy">
+                  <strong>Website online</strong>
+                  <span>Uit: bezoekers zien enkel ‘Binnenkort online’. De admin blijft bereikbaar. Aan: de publieke website is zichtbaar; de afzonderlijke kavelschakelaar blijft gelden.</span>
+                </span>
+              </span>
+            </label>
 
             <label class="auction-settings-toggle">
               <input type="checkbox" name="is_published" value="1" <?= $publicationEnabled ? 'checked' : '' ?>>

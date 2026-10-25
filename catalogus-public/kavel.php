@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_public_site_online();
 $s = settings();
 $lotNum = filter_input(INPUT_GET, 'nr', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
 if ((int)($s['is_published'] ?? 0) !== 1 || !$lotNum) { http_response_code(404); exit('Kavel niet gevonden.'); }

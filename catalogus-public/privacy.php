@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_public_site_online();
 ?>
 <!doctype html>
 <html lang="nl">
