@@ -8,6 +8,7 @@ ALLOWED = {
     "kavelnummer-thumbnails": ("kavelnummer-thumbnails-release.yml", "scripts/deploy_lot_number_thumbnail.py", "tests/admin_lot_cover_contract_test.php", "preflight-sha256.json", "kavel-preflight-sha256"),
     "veiling-organisatie": ("auction-organisation-release.yml", "scripts/deploy_auction_organisation.py", "tests/auction_organisation_test.php", "auction-organisation-preflight.json", "auction-organisation-preflight"),
     "session-roles": ("session-roles-release.yml", "scripts/deploy_session_roles.py", "tests/admin_session_role_contract_test.php", "session-roles-preflight.json", "session-roles-preflight"),
+    "role-menu": ("role-menu-release.yml", "scripts/deploy_role_menu.py", "tests/admin_role_menu_contract_test.php", "role-menu-preflight.json", "role-menu-preflight"),
 }
 
 def profiles():
