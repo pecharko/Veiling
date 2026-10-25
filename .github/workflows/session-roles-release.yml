@@ -85,7 +85,6 @@ jobs:
           php -l catalogus-public/admin/login.php
           php -l catalogus-public/admin/rol-wissel.php
           php -l catalogus-public/admin/veiling-organisatie.php
-          php -l catalogus-public/admin/veiling-organisatie.php
           php -l private/bootstrap.php
           php tests/admin_session_role_contract_test.php
           python3 -m py_compile scripts/deploy_session_roles.py
