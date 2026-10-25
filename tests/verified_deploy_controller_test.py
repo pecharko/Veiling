@@ -133,3 +133,54 @@ with secure_patch.object(module, "REGISTRY_PATH", str(root / "scripts/verified_d
         else:
             raise AssertionError("Unsafe registered approval accepted: " + label)
 print("PASS registered workflow validation")
+
+
+# Independent synthetic second release demonstrates the registry is genuinely generic.
+# Never dispatch; all evidence is local and mocked.
+from tempfile import TemporaryDirectory
+from pathlib import Path as TestPath
+with TemporaryDirectory() as folder:
+    second = {
+        "preflight": ".github/workflows/example-second-readonly-preflight.yml",
+        "artifact_prefix": "example-second-proof",
+        "confirmation": "DEPLOY EXAMPLE SECOND",
+        "paths": ["catalogus-public/admin/example.php", "private/example_helper.php"],
+        "hash_inputs": ["expected_example", "expected_helper"],
+    }
+    second_name = "example-second-release.yml"
+    registry = {"schema": 1, "releases": {second_name: second}}
+    registry_path = TestPath(folder) / "registry.json"
+    registry_path.write_text(json.dumps(registry))
+    second_approval = "\n".join([
+        "DEPLOY VERIFIED RELEASE",
+        "workflow=" + second_name,
+        "release_sha=" + sha,
+        "preflight_run_id=789",
+        "expected_example=" + "1" * 64,
+        "expected_helper=" + "2" * 64,
+    ])
+    second_run = {"id": 789, "head_sha": sha, "path": second["preflight"],
+                  "conclusion": "success", "status": "completed", "created_at": now}
+    second_manifest = {"schema": 1, "run_id": 789, "head_sha": sha,
+                       "captured_at": now, "sha256": dict(zip(second["paths"], ["1" * 64, "2" * 64]))}
+    with secure_patch.object(module, "REGISTRY_PATH", str(registry_path)):
+        got_name, got = module.registered_release(second_approval)
+        assert got_name == second_name and got == second
+        assert module.validate_registered(second_approval, second_manifest, second_run, sha,
+                                          got_name, got)["preflight_run_id"] == "789"
+        for bad_text, bad_manifest, bad_run, bad_head in [
+            (second_approval.replace("workflow=" + second_name, "workflow=not-registered.yml"), second_manifest, second_run, sha),
+            (second_approval.replace("expected_helper=" + "2" * 64, "expected_helper=" + "3" * 64), second_manifest, second_run, sha),
+            (second_approval, {**second_manifest, "sha256": {}}, second_run, sha),
+            (second_approval, second_manifest, {**second_run, "path": "other.yml"}, sha),
+            (second_approval, second_manifest, second_run, "f" * 40),
+        ]:
+            try:
+                bad_name, bad_config = module.registered_release(bad_text)
+                module.validate_registered(bad_text, bad_manifest, bad_run, bad_head,
+                                           bad_name, bad_config)
+            except (ValueError, KeyError):
+                pass
+            else:
+                raise AssertionError("Second release accepted unsafe evidence")
+print("PASS independent second workflow with negative safety cases; no dispatch")
