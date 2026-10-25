@@ -7,7 +7,7 @@ spec = importlib.util.spec_from_file_location("matrix", root / "scripts/auto_rea
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 profiles = module.profiles()
-assert {p["id"] for p in profiles} == {"kavelnummer-thumbnails", "veiling-organisatie", "session-roles", "role-menu", "roles-page-onefile", "lot-visibility-twofile"}
+assert {p["id"] for p in profiles} == {"kavelnummer-thumbnails", "veiling-organisatie", "session-roles", "role-menu", "roles-page-onefile", "lot-visibility-twofile", "site-online-sixfile"}
 yaml = (root / ".github/workflows/registered-release-auto-readonly.yml").read_text()
 assert "workflow_run:" in yaml and "conclusion == 'success'" in yaml
 assert "git rev-parse FETCH_HEAD" in yaml
