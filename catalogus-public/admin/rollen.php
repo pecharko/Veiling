@@ -19,8 +19,5 @@ admin_top('Rollen & rechten');
       </tbody>
     </table>
   </div>
-  <h2>Actieve rol en rolwissel</h2>
-  <p>Een administrator kan voor de huidige sessie een andere rol kiezen via <strong>Rol wisselen</strong>. Dit menu blijft dan zichtbaar voor het oorspronkelijke administratoraccount, ook wanneer de actieve rol Assistent of Veilingmeester is.</p>
-  <p>Bij uitloggen en opnieuw inloggen krijgt het administratoraccount automatisch de rol Administrator terug. Voor gewone assistent- en veilingmeesteraccounts is tijdelijk wisselen niet beschikbaar.</p>
 </section>
 <?php admin_bottom(); ?>
