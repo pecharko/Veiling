@@ -25,6 +25,7 @@ if (is_post()) {
     $u->execute([$email]); $admin = $u->fetch();
     if ($admin && password_verify($password, $admin['password_hash'])) {
       session_regenerate_id(true);
+      unset($_SESSION['admin_view_role']);
       $_SESSION['admin_id'] = (int)$admin['id'];
       $_SESSION['admin_credential_hash'] = hash('sha256', (string)$admin['password_hash']);
       $pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')->execute([$ip]);
