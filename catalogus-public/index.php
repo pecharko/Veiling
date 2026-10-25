@@ -74,7 +74,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="Bekijk de kavels, foto's en beschrijvingen van <?=e($title)?>. Bieden gebeurt uitsluitend op locatie."><title><?=e($title)?> | Online catalogus</title><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=186"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=186"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <header class="site-header front-header" id="top">
     <div class="shell header-inner front-header-inner">
@@ -84,12 +84,12 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
         <a class="front-nav-home" href="<?=e(url('index.php'))?>">Home</a>
-        <a href="#catalogus">Bekijk kavels</a>
+        <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
         <a href="#informatie">Veilinginfo</a>
         <a href="#goede-doel">Het goede doel</a>
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
-        <a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a>
-        <a class="front-header-cta" href="#catalogus">Bekijk kavels ↗</a>
+        <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a>
+        <a class="front-header-cta" href="#catalogus">Bekijk kavels ↗</a><?php endif; ?>
       </nav>
     </div>
   </header>
@@ -106,7 +106,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <p class="front-hero-subline"><?=e($title)?></p>
           <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
           <div class="front-hero-actions">
-            <a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a>
+            <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a><?php endif; ?>
             <a class="front-btn front-btn-outline" href="#goede-doel">Meer over het goede doel <span aria-hidden="true">→</span></a>
           </div>
         </div>
@@ -128,7 +128,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         </div>
         <div class="front-fact">
           <span class="front-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M20.8 5.6a5.5 5.5 0 00-7.8 0l-1 1-1-1a5.5 5.5 0 00-7.8 7.8L12 22l8.8-8.6a5.5 5.5 0 000-7.8Z"/></svg></span>
-          <span><strong>Kunst, lifestyle en vintage</strong><small>Unieke kavels voor een goed doel</small></span>
+          <span><strong>Kunst, lifestyle en vintage</strong><small>Bijzondere stukken voor een goed doel</small></span>
         </div>
         <div class="front-fact front-fact-last">
           <span class="front-fact-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2 20v-2a7 7 0 0114 0v2"/><circle cx="18" cy="9" r="2"/><path d="M17.5 15.5A5 5 0 0122 20"/></svg></span>
@@ -147,6 +147,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </div>
       <div class="front-impact-media"><img src="<?=e(url('assets/veiling-kunstselectie.webp'))?>" alt="Illustratie van een kunstselectie met schilderij, vaas en beeldhouwwerk" width="736" height="342" loading="lazy"></div>
     </section>
+  <?php if ($published): ?>
   <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2>Ontdek de kavels<span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
   <?php if (!$published): ?>
     <div class="empty-state"><span class="empty-art">◌</span><h3>De catalogus wordt voorbereid</h3><p>De kavels verschijnen hier zodra de organisatie de veiling publiceert.</p></div>
@@ -166,6 +167,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
   <?php endif; ?></section>
-  <section class="info-section" id="informatie"><div class="shell info-layout"><div><p class="eyebrow info-eyebrow">GOED OM TE WETEN</p><h2>Een bijzonder moment<br>om <em>bij te zijn.</em></h2><p>Alle kavels zijn online te bekijken. De veiling zelf vindt fysiek plaats. Online bieden is niet mogelijk.</p></div><div class="info-card"><h3>Praktische informatie</h3><dl><div><dt>Datum</dt><dd><?=e($date)?></dd></div><div><dt>Uur</dt><dd><?=e($s['event_time'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Locatie</dt><dd><?=e($s['location'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Adres</dt><dd><?=e($s['address'] ?: 'Wordt aangekondigd')?></dd></div></dl><p><?=nl2br(e($s['practical_info'] ?: 'Bieden gebeurt uitsluitend ter plaatse.'))?></p><?php if(!empty($s['contact_email'])): ?><a class="contact-link" href="mailto:<?=e($s['contact_email'])?>">Contacteer de organisatie ↗</a><?php endif; ?></div></div></section>
-  </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="#catalogus">Naar boven ↑</a></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
+  <?php endif; ?>
+  <section class="info-section" id="informatie"><div class="shell info-layout"><div><p class="eyebrow info-eyebrow">GOED OM TE WETEN</p><h2>Een bijzonder moment<br>om <em>bij te zijn.</em></h2><p><?= $published ? "Alle kavels zijn online te bekijken. De veiling zelf vindt fysiek plaats. Online bieden is niet mogelijk." : "De veiling vindt fysiek plaats. Online bieden is niet mogelijk." ?></p></div><div class="info-card"><h3>Praktische informatie</h3><dl><div><dt>Datum</dt><dd><?=e($date)?></dd></div><div><dt>Uur</dt><dd><?=e($s['event_time'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Locatie</dt><dd><?=e($s['location'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Adres</dt><dd><?=e($s['address'] ?: 'Wordt aangekondigd')?></dd></div></dl><p><?=nl2br(e($s['practical_info'] ?: 'Bieden gebeurt uitsluitend ter plaatse.'))?></p><?php if(!empty($s['contact_email'])): ?><a class="contact-link" href="mailto:<?=e($s['contact_email'])?>">Contacteer de organisatie ↗</a><?php endif; ?></div></div></section>
+  </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="#top">Naar boven ↑</a></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
 </body></html>
