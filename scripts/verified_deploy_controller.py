@@ -72,7 +72,7 @@ def registered_release(text):
     absent = config.get("allow_absent", [])
     if not isinstance(absent, list) or len(absent) != len(set(absent)) or any(p not in paths for p in absent):
         raise ValueError("Invalid allow_absent")
-    if not re.fullmatch(r"[a-zA-Z0-9_-]+\\.json", config.get("manifest_file", "preflight-sha256.json")):
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+\.json", config.get("manifest_file", "preflight-sha256.json")):
         raise ValueError("Invalid manifest filename")
     return workflow, config
 
