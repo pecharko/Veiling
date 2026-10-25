@@ -102,7 +102,11 @@ print("PASS valid dry-run returns without issue write or deployment dispatch")
 # Registered-format tests: exact workflow, SHA, hashes and artifact remain mandatory.
 import json
 with secure_patch.object(module, "REGISTRY_PATH", str(root / "scripts/verified_deploy_registry.json")):
-    registered_text = "DEPLOY VERIFIED RELEASE\\nworkflow=kavelnummer-thumbnails-release.yml\\nrelease_sha=" + sha + "\\npreflight_run_id=123\\n" + "\\n".join(k + "=" + "b" * 64 for k in ["expected_kavel", "expected_lot_form", "expected_css", "expected_index"])
+    registered_text = ("DEPLOY VERIFIED RELEASE\\n"
+                       "workflow=kavelnummer-thumbnails-release.yml\\n"
+                       "release_sha=" + sha + "\\npreflight_run_id=123\\n" +
+                       "\\n".join(k + "=" + "b" * 64 for k in
+                                  ["expected_kavel", "expected_lot_form", "expected_css", "expected_index"]))
     registered_text = registered_text.replace("\\\\n", "\\n")
     name, config = module.registered_release(registered_text)
     assert name == "kavelnummer-thumbnails-release.yml"
@@ -116,4 +120,17 @@ with secure_patch.object(module, "REGISTRY_PATH", str(root / "scripts/verified_d
             pass
         else:
             raise AssertionError("Unsafe generic release accepted")
+    for label, payload, evidence, result, head in [
+        ("wrong SHA", registered_text, manifest, run, "c" * 40),
+        ("wrong digest", registered_text.replace("expected_css=" + "b" * 64, "expected_css=" + "c" * 64), manifest, run, sha),
+        ("wrong preflight path", registered_text, manifest, {**run, "path": "other.yml"}, sha),
+        ("wrong manifest hash", registered_text, {**manifest, "sha256": {}}, run, sha),
+        ("expired preflight", registered_text, manifest, {**run, "created_at": "2020-01-01T00:00:00Z"}, sha),
+    ]:
+        try:
+            module.validate_registered(payload, evidence, result, head, name, config)
+        except (ValueError, KeyError):
+            pass
+        else:
+            raise AssertionError("Unsafe registered approval accepted: " + label)
 print("PASS registered workflow validation")
