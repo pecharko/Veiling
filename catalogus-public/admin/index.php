@@ -54,14 +54,14 @@ admin_top('Kaveloverzicht');
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoopplaats</th><th scope="col">Foto's</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoopplaats</th><th scope="col">Veilingsnummer</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr>
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
       <td class="dashboard-title"><a href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=e($row['title'])?></a></td>
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
-      <td><?=e((string)$row['photo_count'])?></td>
+      <td><?=($row['sale_location'] === 'veiling' && $row['auction_number'] !== null) ? e((string)$row['auction_number']) : ''?></td>
       <td><span class="dashboard-badge <?=$row['status']==='published'?'is-live':'is-draft'?>"><?=$row['status']==='published'?'● Gepubliceerd':'● Concept'?></span></td>
       <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a></td>
     </tr><?php endforeach; ?>
