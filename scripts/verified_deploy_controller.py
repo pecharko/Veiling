@@ -245,7 +245,7 @@ def main():
         raise ValueError("Approval issue has already been consumed or history is unavailable")
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
-    is_lot_sale = text.replace("\\r", "").strip().split("\\n")[0] == LOT_SALE_PREFIX
+    is_lot_sale = text.replace("\r", "").strip().split("\n")[0] == LOT_SALE_PREFIX
     if is_lot_sale:
         data = lot_sale_authorization(repo, text, main_sha)
         registration = None
