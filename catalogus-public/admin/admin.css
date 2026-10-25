@@ -164,3 +164,10 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 /* Primary lot photo in the admin overview; fixed square prevents layout shift. */
 .dashboard-cover-cell{width:76px}.dashboard-cover,.dashboard-cover-empty{display:block;width:52px;height:52px;border-radius:9px}.dashboard-cover{object-fit:cover;background:#f4f0ec}.dashboard-cover-empty{display:grid;place-items:center;background:#f8efe9;color:#a18e85;font-size:21px}
 @media(max-width:650px){.dashboard-cover-cell{width:62px}.dashboard-cover,.dashboard-cover-empty{width:44px;height:44px}}
+
+/* Dashboard metric cards navigate directly to the matching list filter. */
+.dashboard-stats .dashboard-stat{color:inherit;text-decoration:none;cursor:pointer;transition:border-color .15s ease,box-shadow .15s ease,transform .15s ease}
+.dashboard-stats .dashboard-stat:hover{border-color:#ad8090;box-shadow:0 10px 30px rgba(78,32,35,.11);transform:translateY(-2px)}
+.dashboard-stats .dashboard-stat:focus-visible{outline:3px solid #850015;outline-offset:3px}
+.dashboard-stats .dashboard-stat-extra{grid-column:1 / -1;min-height:96px}
+@media(prefers-reduced-motion:reduce){.dashboard-stats .dashboard-stat{transition:none}.dashboard-stats .dashboard-stat:hover{transform:none}}
