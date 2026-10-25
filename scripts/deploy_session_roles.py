@@ -120,8 +120,6 @@ def deploy():
     if len(expected) != len(FILES) or any(h != "ABSENT" and
             (len(h) != 64 or any(c not in "0123456789abcdef" for c in h)) for h in expected):
         raise RuntimeError("All five preflight hashes required")
-    if any(expected[i] == "ABSENT" for i in (0, 1, 2, 4)):
-        raise RuntimeError("Bootstrap must already exist")
     if any(expected[i] == "ABSENT" for i in (0, 1, 2, 4)) or expected[3] != "ABSENT":
         raise RuntimeError("Unexpected existing/absent file baselines")
     payload = source()
