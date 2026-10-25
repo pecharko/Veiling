@@ -7,7 +7,9 @@ require_auth();
 $pdo = db();
 $error = '';
 $select = "SELECT l.id,l.lot_number,l.title,l.auction_number,l.status,(SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order,li.id LIMIT 1) AS cover FROM lots l WHERE l.sale_location='veiling' ORDER BY l.auction_number,l.id";
+$canEdit = can_edit_auction();
 if (is_post()) {
+  if (!$canEdit) { http_response_code(403); exit('Alleen de veilingmeester of administrator mag de volgorde wijzigen.'); }
   check_csrf();
   catalog_lock_for_request($pdo);
   try {
@@ -37,23 +39,23 @@ admin_top('Veiling organisatie');
 ?>
 <section class="dashboard-panel">
   <div class="dashboard-panel-heading">
-    <div><h2>Volgorde van de veiling</h2><p>Sleep een kavel naar een andere positie of geef het een nieuw veilingsnummer. Alle overige kavels schuiven automatisch door.</p></div>
+    <div><h2>Volgorde van de veiling</h2><p><?= $canEdit ? "Sleep een kavel naar een andere positie of geef het een nieuw veilingsnummer." : "Je kunt de veilingvolgorde bekijken, maar niet wijzigen." ?></p></div>
   </div>
   <?php if ($error !== ''): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <p><?=count($rows)?> kavels met verkoopplaats <strong>Veiling</strong>. Lotnummers blijven behouden; alleen veilingsnummers wijzigen.</p>
   <?php if (!$rows): ?><p>Er zijn nog geen kavels in de veiling. Wijzig eerst de verkoopplaats van een kavel naar Veiling.</p><?php endif; ?>
   <div class="dashboard-table-scroll">
     <table class="dashboard-table" id="auction-order-table">
-      <thead><tr><th>Positie</th><th>Lotnummer</th><th>Foto</th><th>Kavel</th><th>Status</th><th>Verplaatsen</th></tr></thead>
+      <thead><tr><th>Positie</th><th>Lotnummer</th><th>Foto</th><th>Kavel</th><th>Status</th><?php if ($canEdit): ?><th>Verplaatsen</th><?php endif; ?></tr></thead>
       <tbody>
       <?php foreach ($rows as $index => $row): ?>
-        <tr draggable="true" data-id="<?=(int)$row['id']?>" data-position="<?=$index+1?>">
+        <tr draggable="<?= $canEdit ? 'true' : 'false' ?>" data-id="<?=(int)$row['id']?>" data-position="<?=$index+1?>">
           <td><strong><?=e((string)$row['auction_number'])?></strong> <span aria-hidden="true" title="Versleep">↕</span></td>
           <td><?=e((string)$row['lot_number'])?></td>
           <td><?php if (!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
           <td><a href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=e($row['title'])?></a></td>
           <td><?=e($row['status']==='published'?'Gepubliceerd':'Concept')?></td>
-          <td>
+          <?php if ($canEdit): ?><td>
             <form method="post" class="auction-move-form">
               <?=csrf_field()?>
               <input type="hidden" name="order_version" value="<?=e($orderVersion)?>">
@@ -61,12 +63,13 @@ admin_top('Veiling organisatie');
               <label>Nieuw nr. <input type="number" name="position" min="1" max="<?=count($rows)?>" required value="<?=$index+1?>" style="width:6rem"></label>
               <button type="submit" class="secondary">Verplaats</button>
             </form>
-          </td>
+          </td><?php endif; ?>
         </tr>
       <?php endforeach; ?>
       </tbody>
     </table>
   </div>
+  <?php if ($canEdit): ?>
   <form method="post" id="auction-drop-form" hidden>
     <?=csrf_field()?>
     <input type="hidden" name="order_version" value="<?=e($orderVersion)?>">
@@ -101,4 +104,5 @@ admin_top('Veiling organisatie');
   table.addEventListener('dragend', function () { dragging = null; });
 })();
 </script>
+<?php endif; ?>
 <?php admin_bottom(); ?>

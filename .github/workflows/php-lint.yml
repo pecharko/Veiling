@@ -49,6 +49,7 @@ jobs:
           python3 tests/lot_sale_controller_adapter_test.py
           python3 tests/lot_sale_controller_end_to_end_test.py
           php tests/auction_organisation_test.php
+          php tests/admin_session_role_contract_test.php
           python3 -m py_compile scripts/controller_readonly_integration.py
 
       - name: Test JPEG PNG WebP processing in isolation

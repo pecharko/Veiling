@@ -67,10 +67,24 @@ function is_post(): bool { return $_SERVER['REQUEST_METHOD'] === 'POST'; }
 function redirect(string $path, array $params = []): never {
   header('Location: ' . url($path, $params), true, 303); exit;
 }
+function stored_admin_role(): string {
+  $st = db()->prepare('SELECT role FROM admins WHERE id=?');
+  $st->execute([$_SESSION['admin_id']]);
+  return (string)$st->fetchColumn();
+}
+function effective_admin_role(): string {
+  $stored = stored_admin_role();
+  if ($stored !== 'administrator') return $stored;
+  $override = $_SESSION['admin_view_role'] ?? 'administrator';
+  return in_array($override, ['administrator', 'assistant', 'veilingmeester'], true)
+    ? $override : 'administrator';
+}
+function can_edit_auction(): bool {
+  return in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true);
+}
 function require_auth(): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
-  // Refuse removed accounts and revoke sessions after password changes.
   $st = db()->prepare('SELECT password_hash FROM admins WHERE id=?');
   $st->execute([$_SESSION['admin_id']]);
   $hash = $st->fetchColumn();
@@ -80,25 +94,26 @@ function require_auth(): void {
     session_regenerate_id(true);
     redirect('admin/login.php');
   }
-  // Enforce permissions on direct requests, not only in the visual menu.
+  $role = effective_admin_role();
+  if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) {
+    http_response_code(403);
+    exit('Onbekende beheerdersrol.');
+  }
   $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
-  if (str_contains($script, '/admin/')) {
-    $role = db()->prepare('SELECT role FROM admins WHERE id=?');
-    $role->execute([$_SESSION['admin_id']]);
-    if ($role->fetchColumn() !== 'administrator') {
-      $page = basename($script);
-      if (!in_array($page, ['index.php', 'kavel.php', 'veiling-organisatie.php', 'logout.php'], true)) {
-        http_response_code(403);
-        exit('Geen toegang tot dit beheeronderdeel.');
-      }
+  if (str_contains($script, '/admin/') && $role !== 'administrator') {
+    $page = basename($script);
+    $allowed = ['index.php', 'kavel.php', 'veiling-organisatie.php', 'logout.php'];
+    // Only a real administrator can switch roles, regardless of simulated role.
+    if (stored_admin_role() === 'administrator') $allowed[] = 'rol-wissel.php';
+    if (!in_array($page, $allowed, true)) {
+      http_response_code(403);
+      exit('Geen toegang tot dit beheeronderdeel.');
     }
   }
 }
 function require_administrator(): void {
   require_auth();
-  $stmt = db()->prepare('SELECT role FROM admins WHERE id=?');
-  $stmt->execute([$_SESSION['admin_id']]);
-  if ($stmt->fetchColumn() !== 'administrator') {
+  if (effective_admin_role() !== 'administrator') {
     http_response_code(403);
     exit('Geen toegang tot dit beheeronderdeel.');
   }
@@ -161,10 +176,11 @@ function admin_top(string $title): void {
   $stats = e(url('admin/statistieken.php'));
   $logout = e(url('admin/logout.php'));
   $users = e(url('admin/gebruikers.php'));
-  $roleQuery = db()->prepare('SELECT role FROM admins WHERE id=?');
-  $roleQuery->execute([$_SESSION['admin_id']]);
-  $isAdministrator = $roleQuery->fetchColumn() === 'administrator';
-  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
+  $isAdministrator = effective_admin_role() === 'administrator';
+  $isOriginalAdministrator = stored_admin_role() === 'administrator';
+  $roleSwitch = e(url('admin/rol-wissel.php'));
+  $roleSwitchNav = $isOriginalAdministrator ? '<a href="' . $roleSwitch . '">Rol wisselen (' . e(effective_admin_role()) . ')</a>' : '';
+  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
