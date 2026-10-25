@@ -171,3 +171,6 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .dashboard-stats .dashboard-stat:focus-visible{outline:3px solid #850015;outline-offset:3px}
 .dashboard-stats .dashboard-stat-extra{grid-column:1 / -1;min-height:96px}
 @media(prefers-reduced-motion:reduce){.dashboard-stats .dashboard-stat{transition:none}.dashboard-stats .dashboard-stat:hover{transform:none}}
+
+/* Active session role is displayed consistently for every admin role. */
+.admin-active-role{display:inline-flex;align-items:center;white-space:nowrap;padding:5px 11px;border:1px solid rgba(255,255,255,.65);border-radius:999px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;background:rgba(255,255,255,.14)}
