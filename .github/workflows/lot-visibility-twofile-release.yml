@@ -1,0 +1,123 @@
+name: Publieke kavelzichtbaarheid tweebestandenrelease met rollback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/lot-visibility-twofile-release.yml'
+      - 'scripts/deploy_roles_page_onefile.py'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/admin/instellingen.php'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only plan, remote preflight, or separately authorized deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved main commit SHA'
+        required: false
+        type: string
+      confirmation:
+        description: 'Explicit final production authorization'
+        required: false
+        type: string
+      expected_public:
+        description: 'Approved remote SHA256 of public homepage'
+        required: false
+        type: string
+      expected_settings:
+        description: 'Approved remote SHA256 of admin settings'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      EXPECTED_REMOTE_HASHES: ${{ inputs.expected_public }},${{ inputs.expected_settings }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Require exact SHA for any remote operation'
+        if: inputs.mode != 'plan'
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+      - name: 'Install PHP'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Offline PHP and auction organisation checks'
+        run: |
+          set -euo pipefail
+          php -l catalogus-public/index.php
+          php -l catalogus-public/admin/instellingen.php
+          php -l private/bootstrap.php
+          php tests/public_lot_visibility_contract_test.php
+          python3 -m py_compile scripts/deploy_roles_page_onefile.py
+          python3 scripts/deploy_roles_page_onefile.py plan
+      - name: 'Gate final authorization'
+        if: inputs.mode == 'deploy'
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          APPROVED_TEXT: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+          test "$APPROVED_TEXT" = 'DEPLOY LOT VISIBILITY TWOFILE WITH ROLLBACK'
+      - name: 'Pinned OVH SFTP'
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Read-only production hashes'
+        if: inputs.mode != 'plan'
+        env:
+          PREFLIGHT_MANIFEST_PATH: lot-visibility-preflight.json
+        run: python3 scripts/deploy_roles_page_onefile.py preflight
+      - name: 'Save preflight evidence'
+        if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: lot-visibility-preflight-${{ github.run_id }}
+          path: lot-visibility-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: 'Backup and deploy exactly one file with drift gate'
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_roles_page_onefile.py deploy
+      - name: 'Read-only HTTPS smoke tests'
+        if: inputs.mode == 'deploy'
+        run: |
+          set -euo pipefail
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/veiling-organisatie.php)" = 303
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/instellingen.php)" = 303
+      - name: 'Private rollback evidence for seven days'
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lot-visibility-code-rollback
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
