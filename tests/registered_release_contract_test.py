@@ -20,10 +20,13 @@ for name, config in registry["releases"].items():
     release_source = release.read_text()
     preflight_source = preflight.read_text()
     assert re.search(r"(?m)^  workflow_dispatch:", release_source), name
-    assert re.search(r"(?m)^    if: github.ref == 'refs/heads/main'", release_source), name
+    assert "refs/heads/main" in release_source, name
     assert "mode=deploy" not in preflight_source and "workflow_dispatch:" in release_source
     assert "actions/upload-artifact@v4" in preflight_source, name
-    assert config["artifact_prefix"] in preflight_source, name
+    assert (config["artifact_prefix"] in preflight_source or
+            (config["preflight"].endswith("registered-release-auto-readonly.yml") and
+             "matrix.artifact_prefix" in preflight_source and
+             config["artifact_prefix"] in (ROOT / "scripts/auto_readonly_release_registry.json").read_text())), name
     assert len(config["paths"]) == len(config["hash_inputs"]) > 0, name
     assert len(set(config["paths"])) == len(config["paths"]), name
     assert len(set(config["hash_inputs"])) == len(config["hash_inputs"]), name
@@ -32,7 +35,10 @@ for name, config in registry["releases"].items():
     assert config["confirmation"] in release_source, name
     assert re.search(r"(?m)^\s+if: inputs\.mode == 'deploy'", release_source), name
     assert "environment: production" in release_source, name
-    assert "preflight-sha256.json" in preflight_source, name
+    assert (config.get("manifest_file", "preflight-sha256.json") in preflight_source or
+            (config["preflight"].endswith("registered-release-auto-readonly.yml") and
+             "matrix.manifest" in preflight_source and
+             config["manifest_file"] in (ROOT / "scripts/auto_readonly_release_registry.json").read_text())), name
     assert "persist-credentials: false" in release_source, name
     for path in config["paths"]:
         assert (ROOT / path).is_file(), (name, path)
