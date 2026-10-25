@@ -29,13 +29,13 @@ REGISTRY_PATH = "scripts/verified_deploy_registry.json"
 
 def registered_release(text):
     """Return a strict registry entry, or None for the legacy approval format."""
-    lines = text.replace("\\r", "").strip().split("\\n")
+    lines = text.replace("\r", "").strip().split("\n")
     if not lines or lines[0] != "DEPLOY VERIFIED RELEASE":
         return None
     if len(lines) < 5 or not lines[1].startswith("workflow="):
         raise ValueError("Invalid registered approval")
     workflow = lines[1].partition("=")[2]
-    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*\\.yml", workflow):
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*\.yml", workflow):
         raise ValueError("Invalid workflow filename")
     with open(REGISTRY_PATH, encoding="utf-8") as file:
         registry = json.load(file)
@@ -56,7 +56,7 @@ def registered_release(text):
                 for x in paths)):
         raise ValueError("Invalid registry paths or inputs")
     if (not re.fullmatch(r"[a-zA-Z0-9_-]+", config["artifact_prefix"]) or
-            not re.fullmatch(r"\\.github/workflows/[a-zA-Z0-9_-]+\\.yml", config["preflight"]) or
+            not re.fullmatch(r"\.github/workflows/[a-zA-Z0-9_-]+\.yml", config["preflight"]) or
             not isinstance(config["confirmation"], str) or
             not re.fullmatch(r"DEPLOY [A-Z0-9 _-]{3,100}", config["confirmation"])):
         raise ValueError("Invalid registered release metadata")
@@ -64,7 +64,7 @@ def registered_release(text):
 
 
 def parse_registered_approval(text, workflow, config):
-    lines = text.replace("\\r", "").strip().split("\\n")
+    lines = text.replace("\r", "").strip().split("\n")
     keys = ["workflow", "release_sha", "preflight_run_id", *config["hash_inputs"]]
     if len(lines) != len(keys) + 1 or lines[0] != "DEPLOY VERIFIED RELEASE":
         raise ValueError("Invalid approval field count")
