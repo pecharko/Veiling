@@ -1,0 +1,100 @@
+name: Generic registered releases automatic read-only preflight
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+    types:
+      - completed
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  registry:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.registry.outputs.matrix }}
+      release_sha: ${{ steps.identity.outputs.sha }}
+    steps:
+      - name: 'Resolve exact successful main SHA'
+        id: identity
+        env:
+          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ steps.identity.outputs.sha }}
+      - name: 'Fail closed if main moved'
+        env:
+          SHA: ${{ steps.identity.outputs.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$SHA"
+      - name: 'Generate strictly registered matrix'
+        id: registry
+        run: |
+          set -euo pipefail
+          python3 scripts/auto_readonly_release_matrix.py > matrix.json
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+  readonly:
+    needs: registry
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.registry.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    environment: production
+    env:
+      RELEASE_SHA: ${{ needs.registry.outputs.release_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: ${{ matrix.manifest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ env.RELEASE_SHA }}
+      - name: 'Recheck exact main SHA'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+          coverage: none
+      - name: 'Offline tests and read-only plan'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile "${{ matrix.script }}"
+          php "${{ matrix.test }}"
+          python3 "${{ matrix.script }}" plan
+      - name: 'Install pinned SFTP client'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Inspect OVH hashes without any remote write'
+        run: python3 "${{ matrix.script }}" preflight
+      - name: 'Archive immutable preflight evidence'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_prefix }}-${{ github.run_id }}
+          path: ${{ matrix.manifest }}
+          retention-days: 7
+          if-no-files-found: error

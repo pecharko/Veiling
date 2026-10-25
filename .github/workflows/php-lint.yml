@@ -44,6 +44,7 @@ jobs:
           python3 -m py_compile scripts/verified_deploy_controller.py
           python3 tests/verified_deploy_controller_test.py
           python3 tests/registered_release_contract_test.py
+          python3 tests/generic_auto_readonly_contract_test.py
           python3 tests/lot_sale_controller_adapter_test.py
           python3 tests/lot_sale_controller_end_to_end_test.py
           php tests/auction_organisation_test.php
