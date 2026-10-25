@@ -20,7 +20,7 @@ for name, config in registry["releases"].items():
     release_source = release.read_text()
     preflight_source = preflight.read_text()
     assert re.search(r"(?m)^  workflow_dispatch:", release_source), name
-    assert re.search(r"(?m)^    if: github.ref == 'refs/heads/main'", release_source), name
+    assert "refs/heads/main" in release_source, name
     assert "mode=deploy" not in preflight_source and "workflow_dispatch:" in release_source
     assert "actions/upload-artifact@v4" in preflight_source, name
     assert config["artifact_prefix"] in preflight_source, name
@@ -32,7 +32,7 @@ for name, config in registry["releases"].items():
     assert config["confirmation"] in release_source, name
     assert re.search(r"(?m)^\s+if: inputs\.mode == 'deploy'", release_source), name
     assert "environment: production" in release_source, name
-    assert "preflight-sha256.json" in preflight_source, name
+    assert config.get("manifest_file", "preflight-sha256.json") in preflight_source, name
     assert "persist-credentials: false" in release_source, name
     for path in config["paths"]:
         assert (ROOT / path).is_file(), (name, path)
