@@ -9,6 +9,8 @@ import sys
 import zipfile
 from pathlib import Path
 
+# Also support importlib-based isolated regression runs from tests/.
+sys.path.insert(0, os.path.dirname(__file__))
 from lot_sale_controller_adapter import (
     PREFIX as LOT_SALE_PREFIX, WORKFLOW as LOT_SALE_WORKFLOW,
     CONFIRMATION as LOT_SALE_CONFIRMATION, parse_approval as parse_lot_sale,
