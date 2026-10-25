@@ -1,0 +1,29 @@
+name: Second release controller GitHub dry-run
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/second-release-controller-dryrun.yml'
+      - 'tests/verified_deploy_controller_test.py'
+      - 'scripts/verified_deploy_controller.py'
+      - 'scripts/verified_deploy_registry.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  second-release-dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout tested commit
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify independent registered release without dispatch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/verified_deploy_controller.py tests/verified_deploy_controller_test.py
+          python3 tests/verified_deploy_controller_test.py
+          echo 'Second release controller: offline dry-run passed; no GitHub writes, SFTP or deploy'
