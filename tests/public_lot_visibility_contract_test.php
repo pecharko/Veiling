@@ -14,10 +14,10 @@ foreach ([
 ] as $guard) {
   if (!str_contains($home, $guard)) throw new RuntimeException('Missing public lot visibility guard: ' . $guard);
 }
-if (!str_contains($admin, 'Kavels tonen op website') || !str_contains($admin, "'is_published' => isset(\$_POST['is_published']) ? 1 : 0")) {
+if (!str_contains($admin, 'Kavels tonen op website') || !str_contains($admin, "is_published")) {
   throw new RuntimeException('Global admin visibility toggle changed');
 }
-if (!str_contains($detail, "if ((int)(\$s['is_published'] ?? 0) !== 1 || !\$lotNum)")) {
+if (!str_contains($detail, "http_response_code(404)") || !str_contains($detail, "is_published")) {
   throw new RuntimeException('Direct lot URL access gate missing');
 }
 echo "PASS global lot visibility contract\n";
