@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot, fail-closed GitHub issue approval for the existing rollback release."""
+"""One-shot, fail-closed GitHub issue approvals for registered release workflows."""
 import io
 import json
 import os
@@ -20,6 +20,90 @@ FIELDS = ("release_sha", "preflight_run_id", "expected_kavel",
           "expected_lot_form", "expected_css", "expected_index")
 WORKFLOW = "kavelnummer-thumbnails-release.yml"
 PREFLIGHT = ".github/workflows/kavel-release-readonly-preflight.yml"
+
+
+# Every supported release requires an explicitly reviewed registry entry. New
+# workflows are NEVER implicitly trusted because their name contains "release".
+REGISTRY_PATH = "scripts/verified_deploy_registry.json"
+
+
+def registered_release(text):
+    """Return a strict registry entry, or None for the legacy approval format."""
+    lines = text.replace("\\r", "").strip().split("\\n")
+    if not lines or lines[0] != "DEPLOY VERIFIED RELEASE":
+        return None
+    if len(lines) < 5 or not lines[1].startswith("workflow="):
+        raise ValueError("Invalid registered approval")
+    workflow = lines[1].partition("=")[2]
+    if not re.fullmatch(r"[a-zA-Z0-9][a-zA-Z0-9_-]*\\.yml", workflow):
+        raise ValueError("Invalid workflow filename")
+    with open(REGISTRY_PATH, encoding="utf-8") as file:
+        registry = json.load(file)
+    if set(registry) != {"schema", "releases"} or registry["schema"] != 1:
+        raise ValueError("Invalid release registry")
+    config = registry["releases"].get(workflow)
+    if not isinstance(config, dict):
+        raise ValueError("Workflow not approved in release registry")
+    if set(config) != {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs"}:
+        raise ValueError("Invalid registry entry")
+    paths, inputs = config["paths"], config["hash_inputs"]
+    if (not isinstance(paths, list) or not isinstance(inputs, list) or
+            not paths or len(paths) != len(inputs) or
+            len(paths) != len(set(paths)) or len(inputs) != len(set(inputs)) or
+            any(not re.fullmatch(r"[a-zA-Z0-9_]+", x) for x in inputs) or
+            any(not isinstance(x, str) or not re.fullmatch(
+                r"(catalogus-public|private)/[a-zA-Z0-9_./-]+", x) or ".." in x.split("/")
+                for x in paths)):
+        raise ValueError("Invalid registry paths or inputs")
+    if (not re.fullmatch(r"[a-zA-Z0-9_-]+", config["artifact_prefix"]) or
+            not re.fullmatch(r"\\.github/workflows/[a-zA-Z0-9_-]+\\.yml", config["preflight"]) or
+            not isinstance(config["confirmation"], str) or
+            not re.fullmatch(r"DEPLOY [A-Z0-9 _-]{3,100}", config["confirmation"])):
+        raise ValueError("Invalid registered release metadata")
+    return workflow, config
+
+
+def parse_registered_approval(text, workflow, config):
+    lines = text.replace("\\r", "").strip().split("\\n")
+    keys = ["workflow", "release_sha", "preflight_run_id", *config["hash_inputs"]]
+    if len(lines) != len(keys) + 1 or lines[0] != "DEPLOY VERIFIED RELEASE":
+        raise ValueError("Invalid approval field count")
+    data = {}
+    for key, line in zip(keys, lines[1:]):
+        if not line.startswith(key + "="):
+            raise ValueError("Invalid field order: " + key)
+        data[key] = line[len(key) + 1:]
+    if data["workflow"] != workflow:
+        raise ValueError("Workflow mismatch")
+    return data
+
+
+def validate_registered(text, manifest, run, main_sha, workflow, config):
+    data = parse_registered_approval(text, workflow, config)
+    if not re.fullmatch(r"[0-9a-f]{40}", data["release_sha"]):
+        raise ValueError("Invalid SHA")
+    if not re.fullmatch(r"[1-9][0-9]*", data["preflight_run_id"]):
+        raise ValueError("Invalid preflight ID")
+    if any(not re.fullmatch(r"[0-9a-f]{64}", data[key]) for key in config["hash_inputs"]):
+        raise ValueError("Invalid remote hash")
+    expected = dict(zip(config["paths"], (data[key] for key in config["hash_inputs"])))
+    if (data["release_sha"] != main_sha or run["head_sha"] != main_sha or
+            run["id"] != int(data["preflight_run_id"]) or
+            run["path"] != config["preflight"] or
+            run["conclusion"] != "success" or run["status"] != "completed"):
+        raise ValueError("Release SHA or preflight mismatch")
+    created = datetime.fromisoformat(run["created_at"].replace("Z", "+00:00"))
+    if not 0 <= (datetime.now(timezone.utc) - created).total_seconds() <= 86400:
+        raise ValueError("Preflight expired")
+    if (set(manifest) != {"schema", "run_id", "head_sha", "captured_at", "sha256"} or
+            manifest["schema"] != 1 or manifest["run_id"] != run["id"] or
+            manifest["head_sha"] != main_sha or manifest["sha256"] != expected):
+        raise ValueError("Artifact mismatch")
+    captured = datetime.fromisoformat(manifest["captured_at"].replace("Z", "+00:00"))
+    if abs((captured - created).total_seconds()) > 900:
+        raise ValueError("Artifact timestamp mismatch")
+    return data
+
 
 
 def gh(*args, binary=False):
@@ -120,18 +204,26 @@ def main():
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
     fields = text.replace("\r", "").strip().split("\n")
-    if len(fields) != 7 or not fields[2].startswith("preflight_run_id="):
+    if registration is not None:
+        workflow, config = registration
+        parsed = parse_registered_approval(text, workflow, config)
+        rid = parsed["preflight_run_id"]
+    else:
+        if len(fields) != 7 or not fields[2].startswith("preflight_run_id="):
+            raise ValueError("Invalid approval")
+        rid = fields[2].partition("=")[2]
+    if False:
         raise ValueError("Invalid approval")
-    rid = fields[2].partition("=")[2]
     if not re.fullmatch(r"[1-9][0-9]*", rid):
         raise ValueError("Invalid run ID")
     run = gh(f"repos/{repo}/actions/runs/{rid}")
     artifacts = gh(f"repos/{repo}/actions/runs/{rid}/artifacts")["artifacts"]
-    matches = [a for a in artifacts if a["name"] == f"kavel-preflight-sha256-{rid}" and not a["expired"]]
+    matches = [a for a in artifacts if a["name"] == f"{config[\"artifact_prefix\"]}-{rid}" if registration is not None else a["name"] == f"kavel-preflight-sha256-{rid}" and not a["expired"]]
     if len(matches) != 1:
         raise ValueError("Expected a single unexpired manifest artifact")
     manifest = json.loads(download_artifact(repo, matches[0]["id"]))
-    data = validate(text, manifest, run, main_sha)
+    data = (validate_registered(text, manifest, run, main_sha, workflow, config)
+            if registration is not None else validate(text, manifest, run, main_sha))
     # Dry run checks the complete authorization evidence but never consumes approval.
     if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
         print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")
@@ -145,12 +237,15 @@ def main():
         raise ValueError("Approval already consumed")
     gh(f"repos/{repo}/issues/{issue_number}", "-X", "PATCH",
        "-f", "state=closed", "-f", "state_reason=completed")
-    command = ("gh", "workflow", "run", WORKFLOW, "--repo", repo, "--ref", "main",
+    target_workflow = workflow if registration is not None else WORKFLOW
+    confirmation = config["confirmation"] if registration is not None else PREFIX
+    hash_keys = config["hash_inputs"] if registration is not None else FIELDS[2:]
+    command = ("gh", "workflow", "run", target_workflow, "--repo", repo, "--ref", "main",
                "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
-               "-f", f"confirmation={PREFIX}")
-    command += tuple(item for key in FIELDS[2:] for item in ("-f", f"{key}={data[key]}"))
+               "-f", f"confirmation={confirmation}")
+    command += tuple(item for key in hash_keys for item in ("-f", f"{key}={data[key]}"))
     dispatch_approved(command)
-    print("Approved rollback-enabled deployment dispatched; approval issue closed.")
+    print("Approved registered deployment dispatched once; approval issue closed.")
 
 
 if __name__ == "__main__":
