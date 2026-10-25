@@ -16,6 +16,14 @@
       "test": "tests/auction_organisation_test.php",
       "manifest": "auction-organisation-preflight.json",
       "artifact_prefix": "auction-organisation-preflight"
+    },
+    {
+      "id": "session-roles",
+      "workflow": "session-roles-release.yml",
+      "script": "scripts/deploy_session_roles.py",
+      "test": "tests/admin_session_role_contract_test.php",
+      "manifest": "session-roles-preflight.json",
+      "artifact_prefix": "session-roles-preflight"
     }
   ]
 }
