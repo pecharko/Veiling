@@ -9,7 +9,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ovh-production-deploy
+  group: ovh-registered-readonly-${{ github.event.workflow_run.head_sha || github.sha }}
   cancel-in-progress: false
 jobs:
   registry:
