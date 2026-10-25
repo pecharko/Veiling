@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_public_site_online();
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
 $s = settings();
