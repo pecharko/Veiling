@@ -102,7 +102,7 @@ function require_auth(): void {
   $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
   if (str_contains($script, '/admin/') && $role !== 'administrator') {
     $page = basename($script);
-    $allowed = ['index.php', 'kavel.php', 'veiling-organisatie.php', 'logout.php'];
+    $allowed = ['index.php', 'kavel.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
     // Only a real administrator can switch roles, regardless of simulated role.
     if (stored_admin_role() === 'administrator') $allowed[] = 'rol-wissel.php';
     if (!in_array($page, $allowed, true)) {
@@ -179,8 +179,13 @@ function admin_top(string $title): void {
   $isAdministrator = effective_admin_role() === 'administrator';
   $isOriginalAdministrator = stored_admin_role() === 'administrator';
   $roleSwitch = e(url('admin/rol-wissel.php'));
+  $rolesHelp = e(url('admin/rollen.php'));
+  $activeRole = effective_admin_role();
+  $roleLabels = ['administrator' => 'Administrator', 'assistant' => 'Assistent', 'veilingmeester' => 'Veilingmeester'];
+  $activeRoleLabel = e($roleLabels[$activeRole] ?? $activeRole);
+  $roleIndicator = '<span class="admin-active-role" aria-label="Actieve rol: ' . $activeRoleLabel . '">Rol: ' . $activeRoleLabel . '</span>';
   $roleSwitchNav = $isOriginalAdministrator ? '<a href="' . $roleSwitch . '">Rol wisselen (' . e(effective_admin_role()) . ')</a>' : '';
-  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
+  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . '<a href="' . $rolesHelp . '">Rollen &amp; rechten</a>' . $roleSwitchNav . $roleIndicator . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
