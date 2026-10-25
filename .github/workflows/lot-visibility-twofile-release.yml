@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/workflows/lot-visibility-twofile-release.yml'
-      - 'scripts/deploy_roles_page_onefile.py'
+      - 'scripts/deploy_lot_visibility_twofile.py'
       - 'catalogus-public/index.php'
       - 'catalogus-public/admin/instellingen.php'
   workflow_dispatch:
@@ -75,8 +75,8 @@ jobs:
           php -l catalogus-public/admin/instellingen.php
           php -l private/bootstrap.php
           php tests/public_lot_visibility_contract_test.php
-          python3 -m py_compile scripts/deploy_roles_page_onefile.py
-          python3 scripts/deploy_roles_page_onefile.py plan
+          python3 -m py_compile scripts/deploy_lot_visibility_twofile.py
+          python3 scripts/deploy_lot_visibility_twofile.py plan
       - name: 'Gate final authorization'
         if: inputs.mode == 'deploy'
         env:
@@ -93,7 +93,7 @@ jobs:
         if: inputs.mode != 'plan'
         env:
           PREFLIGHT_MANIFEST_PATH: lot-visibility-preflight.json
-        run: python3 scripts/deploy_roles_page_onefile.py preflight
+        run: python3 scripts/deploy_lot_visibility_twofile.py preflight
       - name: 'Save preflight evidence'
         if: inputs.mode == 'preflight'
         uses: actions/upload-artifact@v4
@@ -102,9 +102,9 @@ jobs:
           path: lot-visibility-preflight.json
           retention-days: 7
           if-no-files-found: error
-      - name: 'Backup and deploy exactly one file with drift gate'
+      - name: 'Backup and deploy exactly two files with drift gate'
         if: inputs.mode == 'deploy'
-        run: python3 scripts/deploy_roles_page_onefile.py deploy
+        run: python3 scripts/deploy_lot_visibility_twofile.py deploy
       - name: 'Read-only HTTPS smoke tests'
         if: inputs.mode == 'deploy'
         run: |
