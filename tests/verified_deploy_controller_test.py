@@ -102,12 +102,11 @@ print("PASS valid dry-run returns without issue write or deployment dispatch")
 # Registered-format tests: exact workflow, SHA, hashes and artifact remain mandatory.
 import json
 with secure_patch.object(module, "REGISTRY_PATH", str(root / "scripts/verified_deploy_registry.json")):
-    registered_text = ("DEPLOY VERIFIED RELEASE\\n"
-                       "workflow=kavelnummer-thumbnails-release.yml\\n"
-                       "release_sha=" + sha + "\\npreflight_run_id=123\\n" +
-                       "\\n".join(k + "=" + "b" * 64 for k in
+    registered_text = ("DEPLOY VERIFIED RELEASE\n"
+                       "workflow=kavelnummer-thumbnails-release.yml\n"
+                       "release_sha=" + sha + "\npreflight_run_id=123\n" +
+                       "\n".join(k + "=" + "b" * 64 for k in
                                   ["expected_kavel", "expected_lot_form", "expected_css", "expected_index"]))
-    registered_text = registered_text.replace("\\\\n", "\\n")
     name, config = module.registered_release(registered_text)
     assert name == "kavelnummer-thumbnails-release.yml"
     assert module.validate_registered(registered_text, manifest, run, sha, name, config)["release_sha"] == sha
