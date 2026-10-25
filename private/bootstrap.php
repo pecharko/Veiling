@@ -87,7 +87,7 @@ function require_auth(): void {
     $role->execute([$_SESSION['admin_id']]);
     if ($role->fetchColumn() !== 'administrator') {
       $page = basename($script);
-      if (!in_array($page, ['index.php', 'kavel.php', 'logout.php'], true)) {
+      if (!in_array($page, ['index.php', 'kavel.php', 'veiling-organisatie.php', 'logout.php'], true)) {
         http_response_code(403);
         exit('Geen toegang tot dit beheeronderdeel.');
       }
@@ -154,6 +154,7 @@ function admin_top(string $title): void {
   $home = e(url('admin/index.php'));
   $public = e(url('index.php'));
   $edit = e(url('admin/kavel.php'));
+  $auctionOrganise = e(url('admin/veiling-organisatie.php'));
   $settings = e(url('admin/instellingen.php'));
   $check = e(url('admin/systeemcheck.php'));
   $backup = e(url('admin/backup.php'));
