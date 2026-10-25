@@ -68,7 +68,9 @@ def remote_read(sftp, path, allow_absent=False):
     except OSError as exc:
         if allow_absent and getattr(exc, "errno", None) == 2:
             return None
-        raise
+        if getattr(exc, "errno", None) == 2:
+            raise RuntimeError("Required remote file missing: " + path) from exc
+        raise RuntimeError("Remote lstat failed for " + path + ": " + str(exc)) from exc
     if not stat.S_ISREG(info.st_mode) or info.st_size > LIMIT:
         raise RuntimeError("Remote is not a safe regular file: " + path)
     with sftp.open(path, "rb") as f:
