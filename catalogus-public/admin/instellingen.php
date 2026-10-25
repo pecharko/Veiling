@@ -52,7 +52,7 @@ if (is_post()) {
     flash(
       $fields['is_published']
         ? 'Veilinginformatie opgeslagen. Gepubliceerde kavels zijn nu zichtbaar.'
-        : 'Veilinginformatie opgeslagen. De publieke catalogus blijft verborgen.'
+        : 'Veilinginformatie opgeslagen. Alle kavels en kavelverwijzingen zijn verborgen; de rest van de website blijft zichtbaar.'
     );
     redirect('admin/instellingen.php');
   }
@@ -69,7 +69,7 @@ $checkFields = [
 $completedCount = count(array_filter($checkFields));
 $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelden ingevuld';
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
-$publicStateText = $publicationEnabled ? 'Website is zichtbaar' : 'Website blijft verborgen';
+$publicStateText = $publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar';
 $dateStateText = !empty($s['event_date']) ? date_nl((string)$s['event_date']) : 'Datum nog niet vastgelegd';
 $contactStateText = !empty($s['contact_email']) ? (string)$s['contact_email'] : 'Nog geen contactadres';
 
@@ -164,16 +164,16 @@ if ($error) {
         <span class="auction-settings-kicker">Veilinginformatie · state of the art</span>
         <h2>Zet je veiling helder, aantrekkelijk en publicatieklaar neer.</h2>
         <p>
-          Beheer hier alle informatie die bezoekers op de publieke catalogus zien: de titel, situering,
+          Beheer hier alle informatie die bezoekers op de website zien: de titel, situering,
           praktische details en de publicatiestatus. Zo houd je je veiling professioneel en klaar voor lancering.
         </p>
       </div>
       <div class="auction-settings-status-grid">
         <div class="auction-settings-status-card">
           <span class="auction-settings-status-label">Publicatie</span>
-          <span class="auction-settings-status-value"><?= e($publicationEnabled ? 'Online' : 'Verborgen') ?></span>
+          <span class="auction-settings-status-value"><?= e($publicationEnabled ? 'Kavels zichtbaar' : 'Kavels verborgen') ?></span>
           <span class="auction-settings-status-meta"><?= e($publicStateText) ?></span>
-          <span class="auction-settings-status-pill <?= $publicationEnabled ? 'ok' : 'warn' ?>"><?= e($publicationEnabled ? 'Publiek zichtbaar' : 'Nog niet publiek') ?></span>
+          <span class="auction-settings-status-pill <?= $publicationEnabled ? 'ok' : 'warn' ?>"><?= e($publicationEnabled ? 'Kavels publiek' : 'Geen publieke kavels') ?></span>
         </div>
         <div class="auction-settings-status-card">
           <span class="auction-settings-status-label">Basis compleet</span>
@@ -184,7 +184,7 @@ if ($error) {
         <div class="auction-settings-status-card full">
           <span class="auction-settings-status-label">Gepubliceerde kavels</span>
           <span class="auction-settings-status-value"><?= e((string)$publishedLots) ?> / <?= e((string)$totalLots) ?></span>
-          <span class="auction-settings-status-meta">Alleen kavels met status <strong>Gepubliceerd</strong> worden zichtbaar zodra je de publieke catalogus activeert.</span>
+          <span class="auction-settings-status-meta">Alleen kavels met status <strong>Gepubliceerd</strong> worden zichtbaar als 'Kavels tonen op website' aanstaat.</span>
         </div>
       </div>
     </section>
@@ -277,7 +277,7 @@ if ($error) {
               <div class="auction-settings-step">04</div>
               <div>
                 <h3>Publicatie & controle</h3>
-                <p>Activeer de publieke website pas wanneer je klaar bent om bezoekers toe te laten.</p>
+                <p>Bepaal of bezoekers de kavels kunnen zien. De overige website-informatie blijft altijd zichtbaar.</p>
               </div>
             </div>
 
@@ -286,14 +286,14 @@ if ($error) {
               <span class="auction-settings-toggle-row">
                 <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
                 <span class="auction-settings-toggle-copy">
-                  <strong>Publieke catalogus zichtbaar maken</strong>
-                  <span>Bij inschakelen worden enkel kavels met status <em>Gepubliceerd</em> getoond aan bezoekers.</span>
+                  <strong>Kavels tonen op website</strong>
+                  <span>Uit: geen kavels, kavelknoppen of favorieten op de website; directe kavellinks geven 404. Aan: uitsluitend gepubliceerde kavels zichtbaar. De rest van de website blijft altijd zichtbaar.</span>
                 </span>
               </span>
             </label>
 
             <div class="auction-settings-note">
-              <strong>Tip:</strong> Maak de website pas publiek nadat datum, locatie, contactgegevens en de belangrijkste kavels gecontroleerd zijn.
+              <strong>Tip:</strong> Toon de kavels pas nadat de belangrijkste gegevens en foto's gecontroleerd zijn. De homepage blijft onafhankelijk hiervan zichtbaar.
             </div>
 
             <div class="auction-settings-card" style="margin-top:18px; padding:18px; background:#fffdfb;">
