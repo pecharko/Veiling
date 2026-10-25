@@ -37,6 +37,29 @@
         "private/auction_organisation.php",
         "catalogus-public/admin/veiling-organisatie.php"
       ]
+    },
+    "session-roles-release.yml": {
+      "preflight": ".github/workflows/registered-release-auto-readonly.yml",
+      "artifact_prefix": "session-roles-preflight",
+      "confirmation": "DEPLOY SESSION ROLES WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/gebruikers.php",
+        "catalogus-public/admin/login.php",
+        "catalogus-public/admin/veiling-organisatie.php",
+        "catalogus-public/admin/rol-wissel.php",
+        "private/bootstrap.php"
+      ],
+      "hash_inputs": [
+        "expected_users",
+        "expected_login",
+        "expected_auction",
+        "expected_switch",
+        "expected_bootstrap"
+      ],
+      "manifest_file": "session-roles-preflight.json",
+      "allow_absent": [
+        "catalogus-public/admin/rol-wissel.php"
+      ]
     }
   }
 }
