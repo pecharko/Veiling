@@ -26,8 +26,8 @@ if (!str_contains($bootstrap, "function require_public_site_online(): void")
 }
 $snap = file_get_contents($root . '/private/snapshots.php');
 if (!str_contains($snap, "'is_published','is_site_online','updated_at'")
- || !str_contains($snap, "$table==='settings' && $col==='is_site_online' ? 1")
- || !str_contains($snap, "$t==='settings' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['is_site_online']")) {
+ || !str_contains($snap, "\$table==='settings' && \$col==='is_site_online' ? 1")
+ || !str_contains($snap, "\$t==='settings' && array_values(array_diff(SNAP_INSERT[\$t],array_keys(\$row)))===['is_site_online']")) {
   throw new RuntimeException('Snapshot creation and backward-compatible restore must preserve website online state');
 }
 echo "PASS Website online global switch contract\n";
