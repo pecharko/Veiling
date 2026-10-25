@@ -73,6 +73,9 @@ jobs:
       - name: Test lot editor form persistence
         run: php tests/lot_form_test.php
 
+      - name: Test independent public website availability switch
+        run: php tests/site_online_switch_contract_test.php
+
       - name: Test sale location and auction number contracts
         run: php tests/lot_sale_location_test.php
 
