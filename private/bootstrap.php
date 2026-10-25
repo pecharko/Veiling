@@ -87,7 +87,7 @@ function require_auth(): void {
     $role->execute([$_SESSION['admin_id']]);
     if ($role->fetchColumn() !== 'administrator') {
       $page = basename($script);
-      if (!in_array($page, ['index.php', 'kavel.php', 'logout.php'], true)) {
+      if (!in_array($page, ['index.php', 'kavel.php', 'veiling-organisatie.php', 'logout.php'], true)) {
         http_response_code(403);
         exit('Geen toegang tot dit beheeronderdeel.');
       }
@@ -154,6 +154,7 @@ function admin_top(string $title): void {
   $home = e(url('admin/index.php'));
   $public = e(url('index.php'));
   $edit = e(url('admin/kavel.php'));
+  $auctionOrganise = e(url('admin/veiling-organisatie.php'));
   $settings = e(url('admin/instellingen.php'));
   $check = e(url('admin/systeemcheck.php'));
   $backup = e(url('admin/backup.php'));
@@ -163,7 +164,7 @@ function admin_top(string $title): void {
   $roleQuery = db()->prepare('SELECT role FROM admins WHERE id=?');
   $roleQuery->execute([$_SESSION['admin_id']]);
   $isAdministrator = $roleQuery->fetchColumn() === 'administrator';
-  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
+  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><a href="' . $home . '" class="admin-logo">V<span>•</span> CATALOGUS <small>BEHEER</small></a><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . ($isAdministrator ? '<a href="' . $public . '" target="_blank" rel="noopener">Bekijk website ↗</a>' : '') . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
