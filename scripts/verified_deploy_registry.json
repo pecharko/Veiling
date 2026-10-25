@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "releases": {
+    "kavelnummer-thumbnails-release.yml": {
+      "preflight": ".github/workflows/kavel-release-readonly-preflight.yml",
+      "artifact_prefix": "kavel-preflight-sha256",
+      "confirmation": "DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/kavel.php",
+        "private/lot_form.php",
+        "catalogus-public/admin/admin.css",
+        "catalogus-public/admin/index.php"
+      ],
+      "hash_inputs": [
+        "expected_kavel",
+        "expected_lot_form",
+        "expected_css",
+        "expected_index"
+      ]
+    }
+  }
+}
