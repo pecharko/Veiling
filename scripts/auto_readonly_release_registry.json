@@ -32,6 +32,14 @@
       "test": "tests/admin_role_menu_contract_test.php",
       "manifest": "role-menu-preflight.json",
       "artifact_prefix": "role-menu-preflight"
+    },
+    {
+      "id": "roles-page-onefile",
+      "workflow": "roles-page-onefile-release.yml",
+      "script": "scripts/deploy_roles_page_onefile.py",
+      "test": "tests/admin_role_menu_contract_test.php",
+      "manifest": "roles-page-preflight.json",
+      "artifact_prefix": "roles-page-preflight"
     }
   ]
 }
