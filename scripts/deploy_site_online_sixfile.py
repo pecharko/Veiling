@@ -18,7 +18,7 @@ FILES = (
     "private/bootstrap.php",
     "private/snapshots.php",
 )
-NEW_FILES = set()
+NEW_FILES = {"catalogus-public/privacy.php"}
 BACKUP = ROOT / "deployment-backups"
 LIMIT = 2 * 1024 * 1024
 
@@ -123,8 +123,8 @@ def deploy():
     if len(expected) != len(FILES) or any(h != "ABSENT" and
             (len(h) != 64 or any(c not in "0123456789abcdef" for c in h)) for h in expected):
         raise RuntimeError("Exactly six preflight hashes required")
-    if "ABSENT" in expected:
-        raise RuntimeError("All six release files must already exist on production")
+    if any(digest == "ABSENT" and name not in NEW_FILES for name, digest in zip(FILES, expected)):
+        raise RuntimeError("Only privacy.php may be absent on production")
     payload = source()
     client, base = connect()
     try:
