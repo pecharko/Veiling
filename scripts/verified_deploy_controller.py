@@ -203,6 +203,7 @@ def main():
         raise ValueError("Approval issue has already been consumed or history is unavailable")
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
+    registration = registered_release(text)
     fields = text.replace("\r", "").strip().split("\n")
     if registration is not None:
         workflow, config = registration
@@ -212,13 +213,13 @@ def main():
         if len(fields) != 7 or not fields[2].startswith("preflight_run_id="):
             raise ValueError("Invalid approval")
         rid = fields[2].partition("=")[2]
-    if False:
-        raise ValueError("Invalid approval")
     if not re.fullmatch(r"[1-9][0-9]*", rid):
         raise ValueError("Invalid run ID")
     run = gh(f"repos/{repo}/actions/runs/{rid}")
     artifacts = gh(f"repos/{repo}/actions/runs/{rid}/artifacts")["artifacts"]
-    matches = [a for a in artifacts if a["name"] == f"{config[\"artifact_prefix\"]}-{rid}" if registration is not None else a["name"] == f"kavel-preflight-sha256-{rid}" and not a["expired"]]
+    artifact_name = (f"{config['artifact_prefix']}-{rid}" if registration is not None
+                     else f"kavel-preflight-sha256-{rid}")
+    matches = [a for a in artifacts if a["name"] == artifact_name and not a["expired"]]
     if len(matches) != 1:
         raise ValueError("Expected a single unexpired manifest artifact")
     manifest = json.loads(download_artifact(repo, matches[0]["id"]))
