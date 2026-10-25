@@ -7,6 +7,15 @@ import re
 import subprocess
 import sys
 import zipfile
+from pathlib import Path
+
+# Also support importlib-based isolated regression runs from tests/.
+sys.path.insert(0, os.path.dirname(__file__))
+from lot_sale_controller_adapter import (
+    PREFIX as LOT_SALE_PREFIX, WORKFLOW as LOT_SALE_WORKFLOW,
+    CONFIRMATION as LOT_SALE_CONFIRMATION, parse_approval as parse_lot_sale,
+    verify_plan as verify_lot_sale_plan,
+)
 from datetime import datetime, timezone
 
 PREFIX = "DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK"
@@ -128,6 +137,41 @@ def download_artifact(repo, artifact_id):
         return raw
 
 
+
+def download_lot_sale_artifact(repo, run_id, name, file_name):
+    """Use GitHub CLI to download only the explicitly verified plan artifact."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as directory:
+        subprocess.run(("gh", "run", "download", str(run_id), "--repo", repo,
+                        "--name", name, "--dir", directory),
+                       check=True, capture_output=True)
+        path = Path(directory) / file_name
+        raw = path.read_bytes()
+        if not raw or len(raw) > 1024 * 1024:
+            raise ValueError("Invalid plan artifact size")
+        return json.loads(raw)
+
+
+def lot_sale_authorization(repo, text, main_sha):
+    """Read-only check of actual prior plan, before any issue consumption."""
+    data = parse_lot_sale(text)
+    rid = int(data["plan_run_id"])
+    run = gh(f"repos/{repo}/actions/runs/{rid}")
+    jobs = gh(f"repos/{repo}/actions/runs/{rid}/jobs").get("jobs", [])
+    good_jobs = [j["name"] for j in jobs if j.get("conclusion") == "success"
+                 and j.get("name") in ("plan", "readonly")]
+    artifacts = gh(f"repos/{repo}/actions/runs/{rid}/artifacts").get("artifacts", [])
+    candidates = [a for a in artifacts if not a.get("expired") and a.get("name") in
+                  (f"lot-sale-three-preflight-{rid}", f"lot-sale-auto-readonly-{rid}")]
+    if len(candidates) != 1:
+        raise ValueError("Expected one unexpired exact read-only plan artifact")
+    name = candidates[0]["name"]
+    manifest = download_lot_sale_artifact(repo, rid, name, "lot-sale-three-preflight.json")
+    verify_lot_sale_plan(data, run, manifest, main_sha,
+                         job_names=good_jobs, artifact_name=name)
+    return data
+
+
 def has_closed_event(repo, issue_number):
     """An issue that has EVER been closed cannot authorize another deploy."""
     result = subprocess.run(("gh", "api", f"repos/{repo}/issues/{issue_number}/events",
@@ -203,28 +247,33 @@ def main():
         raise ValueError("Approval issue has already been consumed or history is unavailable")
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
-    registration = registered_release(text)
-    fields = text.replace("\r", "").strip().split("\n")
-    if registration is not None:
-        workflow, config = registration
-        parsed = parse_registered_approval(text, workflow, config)
-        rid = parsed["preflight_run_id"]
+    is_lot_sale = text.replace("\r", "").strip().split("\n")[0] == LOT_SALE_PREFIX
+    if is_lot_sale:
+        data = lot_sale_authorization(repo, text, main_sha)
+        registration = None
     else:
-        if len(fields) != 7 or not fields[2].startswith("preflight_run_id="):
-            raise ValueError("Invalid approval")
-        rid = fields[2].partition("=")[2]
-    if not re.fullmatch(r"[1-9][0-9]*", rid):
-        raise ValueError("Invalid run ID")
-    run = gh(f"repos/{repo}/actions/runs/{rid}")
-    artifacts = gh(f"repos/{repo}/actions/runs/{rid}/artifacts")["artifacts"]
-    artifact_name = (f"{config['artifact_prefix']}-{rid}" if registration is not None
-                     else f"kavel-preflight-sha256-{rid}")
-    matches = [a for a in artifacts if a["name"] == artifact_name and not a["expired"]]
-    if len(matches) != 1:
-        raise ValueError("Expected a single unexpired manifest artifact")
-    manifest = json.loads(download_artifact(repo, matches[0]["id"]))
-    data = (validate_registered(text, manifest, run, main_sha, workflow, config)
-            if registration is not None else validate(text, manifest, run, main_sha))
+        registration = registered_release(text)
+        fields = text.replace("\r", "").strip().split("\n")
+        if registration is not None:
+            workflow, config = registration
+            parsed = parse_registered_approval(text, workflow, config)
+            rid = parsed["preflight_run_id"]
+        else:
+            if len(fields) != 7 or not fields[2].startswith("preflight_run_id="):
+                raise ValueError("Invalid approval")
+            rid = fields[2].partition("=")[2]
+        if not re.fullmatch(r"[1-9][0-9]*", rid):
+            raise ValueError("Invalid run ID")
+        run = gh(f"repos/{repo}/actions/runs/{rid}")
+        artifacts = gh(f"repos/{repo}/actions/runs/{rid}/artifacts")["artifacts"]
+        artifact_name = (f"{config['artifact_prefix']}-{rid}" if registration is not None
+                         else f"kavel-preflight-sha256-{rid}")
+        matches = [a for a in artifacts if a["name"] == artifact_name and not a["expired"]]
+        if len(matches) != 1:
+            raise ValueError("Expected a single unexpired manifest artifact")
+        manifest = json.loads(download_artifact(repo, matches[0]["id"]))
+        data = (validate_registered(text, manifest, run, main_sha, workflow, config)
+                if registration is not None else validate(text, manifest, run, main_sha))
     # Dry run checks the complete authorization evidence but never consumes approval.
     if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
         print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")
@@ -238,13 +287,19 @@ def main():
         raise ValueError("Approval already consumed")
     gh(f"repos/{repo}/issues/{issue_number}", "-X", "PATCH",
        "-f", "state=closed", "-f", "state_reason=completed")
-    target_workflow = workflow if registration is not None else WORKFLOW
-    confirmation = config["confirmation"] if registration is not None else PREFIX
-    hash_keys = config["hash_inputs"] if registration is not None else FIELDS[2:]
+    target_workflow = (LOT_SALE_WORKFLOW if is_lot_sale else
+                       workflow if registration is not None else WORKFLOW)
+    confirmation = (LOT_SALE_CONFIRMATION if is_lot_sale else
+                    config["confirmation"] if registration is not None else PREFIX)
+    hash_keys = (() if is_lot_sale else
+                 config["hash_inputs"] if registration is not None else FIELDS[2:])
     command = ("gh", "workflow", "run", target_workflow, "--repo", repo, "--ref", "main",
                "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
                "-f", f"confirmation={confirmation}")
     command += tuple(item for key in hash_keys for item in ("-f", f"{key}={data[key]}"))
+    if is_lot_sale:
+        command += ("-f", f"plan_run_id={data['plan_run_id']}",
+                    "-f", f"schema_ready={data['schema_ready']}")
     dispatch_approved(command)
     print("Approved registered deployment dispatched once; approval issue closed.")
 

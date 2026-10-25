@@ -44,6 +44,7 @@ jobs:
           python3 -m py_compile scripts/verified_deploy_controller.py
           python3 tests/verified_deploy_controller_test.py
           python3 tests/registered_release_contract_test.py
+          python3 tests/lot_sale_controller_adapter_test.py
           python3 -m py_compile scripts/controller_readonly_integration.py
 
       - name: Test JPEG PNG WebP processing in isolation
