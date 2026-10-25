@@ -40,6 +40,14 @@
       "test": "tests/admin_role_menu_contract_test.php",
       "manifest": "roles-page-preflight.json",
       "artifact_prefix": "roles-page-preflight"
+    },
+    {
+      "id": "lot-visibility-twofile",
+      "workflow": "lot-visibility-twofile-release.yml",
+      "script": "scripts/deploy_lot_visibility_twofile.py",
+      "test": "tests/public_lot_visibility_contract_test.php",
+      "manifest": "lot-visibility-preflight.json",
+      "artifact_prefix": "lot-visibility-preflight"
     }
   ]
 }
