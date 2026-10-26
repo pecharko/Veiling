@@ -28,11 +28,11 @@ if ($q !== '') {
 }
 if ($category !== '') { $where[] = 'l.category = ?'; $params[] = $category; }
 $priceRules = [
-  '0-250' => 'COALESCE(l.estimate_min,l.estimate_max) <= 250',
-  '250-500' => 'COALESCE(l.estimate_min,l.estimate_max) > 250 AND COALESCE(l.estimate_min,l.estimate_max) <= 500',
-  '500-1000' => 'COALESCE(l.estimate_min,l.estimate_max) > 500 AND COALESCE(l.estimate_min,l.estimate_max) <= 1000',
-  '1000+' => 'COALESCE(l.estimate_min,l.estimate_max) > 1000',
-  'unknown' => 'l.estimate_min IS NULL AND l.estimate_max IS NULL'
+  '0-250' => 'l.market_price <= 250',
+  '250-500' => 'l.market_price > 250 AND l.market_price <= 500',
+  '500-1000' => 'l.market_price > 500 AND l.market_price <= 1000',
+  '1000+' => 'l.market_price > 1000',
+  'unknown' => 'l.market_price IS NULL'
 ];
 if (isset($priceRules[$price])) $where[] = '(' . $priceRules[$price] . ')';
 if ($onlyFavorites) {
@@ -43,7 +43,7 @@ $orders = [
   'number' => 'l.lot_number ASC',
   'number-desc' => 'l.lot_number DESC',
   'title' => 'l.title ASC, l.lot_number ASC',
-  'estimate' => '(COALESCE(l.estimate_min,l.estimate_max) IS NULL), COALESCE(l.estimate_min,l.estimate_max) ASC, l.lot_number ASC'
+  'estimate' => '(l.market_price IS NULL), l.market_price ASC, l.lot_number ASC'
 ];
 $order = $orders[$sort] ?? $orders['number'];
 $rows = []; $categories = []; $total = 0; $totalPublic = 0;
@@ -156,14 +156,14 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <form class="toolbar" action="<?=e(url('index.php'))?>#catalogus" method="get">
       <label class="search-field"><span class="field-name">ZOEKEN</span><span class="search-inline"><span aria-hidden="true">⌕</span><input name="q" type="search" value="<?=e($q)?>" placeholder="Lotnummer of trefwoord…" aria-label="Zoeken in kavels"></span></label>
       <label class="filter-field"><span class="field-name">CATEGORIE</span><select name="categorie" aria-label="Categorie"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category === $cat ? 'selected' : ''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
-      <label class="filter-field"><span class="field-name">SCHATTING</span><select name="prijs"><option value="">Alle schattingen</option><?php foreach(['0-250'=>'Tot € 250','250-500'=>'€ 250 – 500','500-1000'=>'€ 500 – 1.000','1000+'=>'Vanaf € 1.000','unknown'=>'Zonder schatting'] as $key=>$label): ?><option value="<?=e($key)?>" <?=$price === $key ? 'selected' : ''?>><?=e($label)?></option><?php endforeach; ?></select></label>
-      <label class="filter-field"><span class="field-name">SORTEREN</span><select name="sort"><option value="number" <?=$sort==='number'?'selected':''?>>Lotnummer oplopend</option><option value="number-desc" <?=$sort==='number-desc'?'selected':''?>>Lotnummer aflopend</option><option value="title" <?=$sort==='title'?'selected':''?>>Titel A–Z</option><option value="estimate" <?=$sort==='estimate'?'selected':''?>>Laagste schatting</option></select></label>
+      <label class="filter-field"><span class="field-name">MARKTPRIJS</span><select name="prijs"><option value="">Alle marktprijzen</option><?php foreach(['0-250'=>'Tot € 250','250-500'=>'€ 250 – 500','500-1000'=>'€ 500 – 1.000','1000+'=>'Vanaf € 1.000','unknown'=>'Zonder marktprijs'] as $key=>$label): ?><option value="<?=e($key)?>" <?=$price === $key ? 'selected' : ''?>><?=e($label)?></option><?php endforeach; ?></select></label>
+      <label class="filter-field"><span class="field-name">SORTEREN</span><select name="sort"><option value="number" <?=$sort==='number'?'selected':''?>>Lotnummer oplopend</option><option value="number-desc" <?=$sort==='number-desc'?'selected':''?>>Lotnummer aflopend</option><option value="title" <?=$sort==='title'?'selected':''?>>Titel A–Z</option><option value="estimate" <?=$sort==='estimate'?'selected':''?>>Laagste marktprijs</option></select></label>
       <button class="filter-submit" type="submit">Filter toepassen →</button>
     </form>
     <div class="catalog-status"><div><span class="result-count"><?=e((string)$total)?> kavels</span> <span class="status-separator">/</span><span class="status-caption">Pagina <?=e((string)$page)?> van <?=e((string)($pages ?? 1))?></span></div><div class="status-actions"><a class="chip <?=$onlyFavorites?'selected':''?>" id="favoritesOnly" href="<?=e(url('index.php',['favorieten'=>1]))?>">♡ Mijn favorieten</a><a class="text-button" href="<?=e(url('index.php'))?>#catalogus">Wis filters ↺</a></div></div>
     <?php if (!$rows): ?><div class="empty-state"><span class="empty-art">◌</span><h3>Geen kavels gevonden</h3><p>Pas je zoekterm of filters aan, of bekijk alle kavels.</p><a class="btn btn-dark" href="<?=e(url('index.php'))?>#catalogus">Toon alle kavels</a></div>
     <?php else: ?><div class="catalog-grid"><?php foreach($rows as $lot): ?>
-    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><div class="lot-estimate"><small>RICHTWAARDE</small><strong><?=e(estimate($lot))?></strong></div><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
+    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><div class="lot-estimate"><small>MARKTPRIJS</small><strong><?=e(estimate($lot))?></strong></div><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
     <?php endforeach; ?></div>
     <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
