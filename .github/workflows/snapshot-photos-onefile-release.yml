@@ -1,0 +1,179 @@
+name: Snapshot photo restore one-file release with rollback
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+    types:
+      - completed
+  pull_request:
+    paths:
+      - '.github/workflows/snapshot-photos-onefile-release.yml'
+      - 'scripts/deploy_snapshot_photos_onefile.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only plan, read-only remote preflight, or separately approved deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved main commit SHA'
+        required: false
+        type: string
+      expected_snapshots:
+        description: 'Approved remote SHA-256 baseline'
+        required: false
+        type: string
+      confirmation:
+        description: 'Exact separate production authorization'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  workflow-validation:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Validate workflow with actionlint'
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/snapshot-photos-onefile-release.yml
+      - name: 'Validate exact source and offline plan'
+        run: |
+          python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 scripts/deploy_snapshot_photos_onefile.py plan
+  automatic-readonly:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      GITHUB_SHA: ${{ github.event.workflow_run.head_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: snapshot-photos-onefile-preflight.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: 'Require exact unchanged CI-approved main'
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - name: 'Offline one-file checks'
+        run: |
+          python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 scripts/deploy_snapshot_photos_onefile.py plan
+      - name: 'Pinned SFTP client'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Read-only OVH SHA-256 baseline'
+        run: python3 scripts/deploy_snapshot_photos_onefile.py preflight
+      - name: 'Preserve preflight evidence'
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-photos-preflight-${{ github.run_id }}
+          path: snapshot-photos-onefile-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      EXPECTED_REMOTE_HASHES: ${{ inputs.expected_snapshots }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: snapshot-photos-onefile-preflight.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: 'Require immutable approved main SHA'
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: 'Install PHP and validate source'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Offline validation'
+        run: |
+          set -euo pipefail
+          php -l private/snapshots.php
+          python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 scripts/deploy_snapshot_photos_onefile.py plan
+      - name: 'Explicit deployment-only authorization gate'
+        if: inputs.mode == 'deploy'
+        env:
+          APPROVED_TEXT: ${{ inputs.confirmation }}
+        run: test "$APPROVED_TEXT" = 'DEPLOY SNAPSHOT PHOTO FIX WITH ROLLBACK'
+      - name: 'Pinned SFTP client'
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Read-only remote hash'
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_snapshot_photos_onefile.py preflight
+      - name: 'Archive preflight artifact'
+        if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-photos-preflight-${{ github.run_id }}
+          path: snapshot-photos-onefile-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: 'Preupload HTTPS availability'
+        if: inputs.mode == 'deploy'
+        run: |
+          set -euo pipefail
+          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
+          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+      - name: 'Backup exact file, enforce drift and deploy'
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_snapshot_photos_onefile.py deploy
+      - name: 'Read-only HTTPS checks after deploy'
+        if: inputs.mode == 'deploy'
+        run: |
+          set -euo pipefail
+          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
+          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+      - name: 'Retain private rollback evidence seven days'
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-photos-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
