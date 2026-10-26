@@ -1,5 +1,9 @@
 name: Issue 185 release preparation (offline only)
 on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+    types: [completed]
   pull_request:
     paths:
       - '.github/workflows/issue-185-release-plan.yml'
@@ -13,17 +17,36 @@ permissions:
   contents: read
 jobs:
   offline-plan:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
       - uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
           coverage: none
           tools: none
+      - name: Require successful main SHA to remain current
+        if: github.event_name != 'pull_request'
+        env:
+          EXPECTED_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$EXPECTED_SHA"
       - name: Verify exact SHA when manually dispatched
         env:
           EXPECTED: ${{ inputs.expected_main_sha }}
