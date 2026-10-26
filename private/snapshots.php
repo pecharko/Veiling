@@ -132,6 +132,14 @@ function snap_restore(PDO $pdo,string $name): void {
     $ctx=hash_init('sha256');while(!feof($src)){$part=fread($src,1024*1024);if($part===false)throw new RuntimeException('Leesfout in ZIP.');hash_update($ctx,$part);if(fwrite($out,$part)!==strlen($part))throw new RuntimeException('Schrijffout bij foto.');}fclose($out);fclose($src);
     if(!hash_equals($hash,hash_final($ctx)))throw new RuntimeException('Foto checksum ongeldig.');
    }}finally{$zip->close();}
+  // Keep staging private until verification, then make the directory
+  // hierarchy traversable for the HTTP server before activation.
+  $directories=[$stage];
+  $walk=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($stage,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::SELF_FIRST);
+  foreach($walk as $item)if($item->isDir()&&!$item->isLink())$directories[]=$item->getPathname();
+  foreach($directories as $directory){
+   if(!chmod($directory,0755))throw new RuntimeException('Kan leesrechten voor herstelde fotomap niet instellen.');
+  }
   $uploads=snap_uploads();$hadUploads=is_dir($uploads);
   if(is_link($uploads))throw new RuntimeException('De actieve fotomap mag geen symlink zijn.');
   $old=dirname($uploads).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
