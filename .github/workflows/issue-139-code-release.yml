@@ -40,34 +40,6 @@ on:
         required: false
         type: string
 permissions:
-        description: 'Approved SHA-256 or ABSENT for expected_permissions'
-        required: false
-        type: string
-      expected_snapshots:
-        description: 'Approved SHA-256 or ABSENT for expected_snapshots'
-        required: false
-        type: string
-      expected_roles:
-        description: 'Approved SHA-256 or ABSENT for expected_roles'
-        required: false
-        type: string
-      expected_admin_lot:
-        description: 'Approved SHA-256 or ABSENT for expected_admin_lot'
-        required: false
-        type: string
-      expected_public_lot:
-        description: 'Approved SHA-256 or ABSENT for expected_public_lot'
-        required: false
-        type: string
-      expected_home:
-        description: 'Approved SHA-256 or ABSENT for expected_home'
-        required: false
-        type: string
-      expected_bootstrap:
-        description: 'Approved SHA-256 or ABSENT for expected_bootstrap'
-        required: false
-        type: string
-permissions:
   contents: read
 concurrency:
   group: ovh-production-deploy
