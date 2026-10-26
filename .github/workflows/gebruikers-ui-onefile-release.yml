@@ -1,0 +1,167 @@
+name: Gebruikersbeheer UI one-file release with rollback
+on:
+  workflow_run:
+    workflows: [PHP syntax and repository checks]
+    types: [completed]
+  pull_request:
+    paths:
+      - '.github/workflows/gebruikers-ui-onefile-release.yml'
+      - 'scripts/deploy_gebruikers_ui.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only plan/preflight or explicitly authorized deploy
+        required: true
+        type: choice
+        options: [plan, preflight, deploy]
+        default: plan
+      release_sha:
+        description: Exact approved main commit SHA
+        required: false
+        type: string
+      expected_users:
+        description: Remote SHA-256 for gebruikers.php
+        required: false
+        type: string
+      confirmation:
+        description: Exact final production authorization
+        required: false
+        type: string
+      manual_https_precheck:
+        description: Verified manually in browser for exact SHA
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/gebruikers-ui-onefile-release.yml
+      - run: |
+          python3 -m py_compile scripts/deploy_gebruikers_ui.py
+          python3 scripts/deploy_gebruikers_ui.py plan
+  automatic-readonly:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    concurrency:
+      group: gebruikers-ui-readonly-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: gebruikers-ui-preflight.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact green main SHA
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - run: python3 scripts/deploy_gebruikers_ui.py plan
+      - run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - run: python3 scripts/deploy_gebruikers_ui.py preflight
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gebruikers-ui-preflight-${{ github.run_id }}
+          path: gebruikers-ui-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: ovh-production-deploy
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      EXPECTED_REMOTE_HASHES: ${{ inputs.expected_users }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: gebruikers-ui-preflight.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact immutable main SHA
+        run: |
+          set -euo pipefail
+          test "$RELEASE_SHA" = "$GITHUB_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+          coverage: none
+      - name: Validate code and offline plan
+        run: |
+          set -euo pipefail
+          for f in catalogus-public/admin/gebruikers.php; do php -l "$f"; done
+          php tests/user_disable_contract_test.php
+          python3 -m py_compile scripts/deploy_gebruikers_ui.py
+          python3 scripts/deploy_gebruikers_ui.py plan
+      - name: Final security and migration approvals
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          MANUAL_HTTPS: ${{ inputs.manual_https_precheck }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "DEPLOY GEBRUIKERS UI ONEFILE WITH ROLLBACK"
+          test "$MANUAL_HTTPS" = "VERIFIED-$GITHUB_SHA"
+      - name: Pinned SFTP client
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Read-only remote baseline
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_gebruikers_ui.py preflight
+      - name: Save read-only artifact
+        if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: gebruikers-ui-preflight-${{ github.run_id }}
+          path: gebruikers-ui-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Backup code and upload with drift and rollback
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_gebruikers_ui.py deploy
+      - name: Require manual post-deploy browser acceptance
+        if: inputs.mode == 'deploy'
+        run: |
+          echo 'DEPLOYED; MANUAL HTTPS AND AUTH ACCEPTANCE PENDING'
+          echo 'Browser-confirm homepage, admin login, account toggle, session revocation.'
+      - name: Retain rollback artifact
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gebruikers-ui-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
