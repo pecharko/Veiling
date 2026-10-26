@@ -143,14 +143,14 @@ if ($lot && !empty($lot['created_by_admin_id'])) {
   $creatorLabel = (string)($creatorSt->fetchColumn() ?: 'Account niet meer aanwezig');
 }
 $suggestedNumber = '';
-if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
+if (str_starts_with($error, 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.')) {
   $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $nextNumber = first_available_lot_number(($highestNumber === null || $highestNumber === false) ? [] : [$highestNumber]);
   if ($nextNumber !== null) {
     $suggestedNumber = $nextNumber;
-    $error = 'Dit lotnummer bestaat al. Voorgesteld nieuw lotnummer: ' . $nextNumber . '. Je kunt dit aanpassen.';
+    $error = 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt. Voorgesteld nieuw lotnummer: ' . $nextNumber . '. Je kunt dit aanpassen.';
   } else {
-    $error = 'Dit lotnummer bestaat al. Er is geen volgend lotnummer beschikbaar binnen de toegestane reeks.';
+    $error = 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt. Er is geen volgend lotnummer beschikbaar binnen de toegestane reeks.';
   }
 }
 if (!$lot && !is_post()) {
