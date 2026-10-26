@@ -5,6 +5,7 @@ import os
 import sys
 import urllib.request
 import urllib.error
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 
 ENDPOINT = "https://api.uptimerobot.com/v3/monitors"
@@ -13,18 +14,32 @@ EXPECTED = {
     "https://41lokeren.be/admin/login.php": "admin",
 }
 
+def canonical(url):
+    if not isinstance(url, str):
+        return None
+    parts = urlsplit(url)
+    if parts.scheme not in ("http", "https") or parts.hostname != "41lokeren.be" or parts.username or parts.password or parts.port or parts.query or parts.fragment:
+        return None
+    path = parts.path or "/"
+    if path not in ("/", "/admin/login.php"):
+        return None
+    return "https://41lokeren.be" + path
+
 def verify(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
         raise ValueError("API data must be an array")
     if payload.get("nextLink"):
         raise ValueError("Pagination detected; refusing incomplete monitor list")
     found = {}
+    observed_paths = []
     for m in payload["data"]:
         if not isinstance(m, dict):
             raise ValueError("Malformed monitor")
-        url = m.get("url")
-        if url not in EXPECTED:
+        url = canonical(m.get("url"))
+        if url is None:
+            observed_paths.append("other")
             continue
+        observed_paths.append(EXPECTED[url])
         if url in found:
             raise ValueError("Duplicate monitor for " + EXPECTED[url])
         monitor_id = m.get("id")
@@ -35,7 +50,7 @@ def verify(payload):
             raise ValueError("Monitor " + EXPECTED[url] + " is not UP: " + str(status))
         found[url] = {"id": str(monitor_id), "status": status, "role": EXPECTED[url]}
     if set(found) != set(EXPECTED):
-        raise ValueError("Missing required monitor(s)")
+        raise ValueError("Missing required monitor(s); matched roles: " + ",".join(sorted(set(observed_paths))))
     return {"checked_at_utc": datetime.now(timezone.utc).isoformat(),
             "source": "UptimeRobot v3 snapshot",
             "fresh_measurement_proven": False,
