@@ -3,6 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__,2).'/private/bootstrap.php';
 require_auth();
 require dirname(__DIR__,2).'/private/snapshots.php';
+require_once dirname(__DIR__,2).'/private/catalog_reset.php';
 require_no_index();
 $error='';$info='';
 if(($_GET['download']??'')!==''){
@@ -32,6 +33,23 @@ if(is_post()){
    admin_session();$_SESSION=[];session_regenerate_id(true);
    flash('Snapshot hersteld. Meld opnieuw aan. Voor de herstelactie is een veiligheidskopie gemaakt: '.$safety);
    redirect('admin/login.php');
+  }
+  elseif($action==='reset-lots'){
+   require_administrator();
+   if(($_POST['confirm']??'')!=='WIS ALLE KAVELS EN HERSTART OP 1') throw new RuntimeException('Typ de volledige bevestigingszin om alle kavels te verwijderen.');
+   // No snapshot is created automatically: this reset deliberately removes the
+   // issued-number registry. Existing snapshot ZIP archives remain untouched.
+   $pdo=db(); catalog_data_lock($pdo);
+   try{$result=reset_catalog_lots($pdo);}
+   finally{catalog_data_unlock($pdo);}
+   $failed=0;
+   foreach($result['paths'] as $path) {
+     if(is_string($path) && preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(webp|jpg|png)$~',$path)) {
+       if(is_file(dirname(__DIR__).'/'.$path) && !@unlink(dirname(__DIR__).'/'.$path))$failed++;
+     }
+   }
+   flash($result['deleted'].' kavels verwijderd. Volgend kavelnummer is 1.'.($failed?' Waarschuwing: '.$failed.' fotobestanden konden niet worden verwijderd.':''),$failed?'warning':'success');
+   redirect('admin/backup.php');
   }
   elseif($action==='delete'){
    $name=(string)($_POST['snapshot']??'');if(($_POST['confirm']??'')!=='VERWIJDER')throw new RuntimeException('Typ VERWIJDER om te bevestigen.');
@@ -73,4 +91,16 @@ admin_top('Back-up & herstel');
 <form method="post" onsubmit="return confirm('Deze snapshot definitief van de server verwijderen?');"><?=csrf_field()?><input type="hidden" name="action" value="delete"><label for="delete-snapshot">Snapshot verwijderen</label><select required class="backup-select" name="snapshot" id="delete-snapshot"><option value="">Selecteer snapshot</option><?php foreach($available as $item):?><option value="<?=e($item['name'])?>"><?=e($item['name'])?></option><?php endforeach;?></select><label for="delete-confirm">Typ VERWIJDER</label><input class="backup-confirm" name="confirm" id="delete-confirm" required autocomplete="off" placeholder="VERWIJDER"><div><button type="submit" class="secondary" <?=!$available?'disabled':''?>>Snapshot van server wissen</button></div></form>
 <hr class="backup-sep"><p class="backup-subtle">Een gedownloade ZIP kun je later via RemoteDrive/SFTP uploaden naar <code>private/backups/</code>. Daarna verschijnt die in de lijst en kun je hem herstellen. Bewaar ZIP-bestanden zorgvuldig: ze bevatten ook beheerdersgegevens.</p></section>
 </div></div>
+<?php if(effective_admin_role()==='administrator'):?>
+<section class="backup-card" aria-label="Volledige kavelreset">
+<h2>Alle kavels verwijderen en nummering herstarten</h2>
+<div class="backup-warning"><strong>Onomkeerbare beheeractie.</strong> Verwijdert alle kavels en hun fotoreferenties en wist alle uitgegeven gewone kavelnummers, zodat het volgende nieuwe kavel nummer 1 krijgt. Veilingsnummers beginnen eveneens opnieuw bij 1. Bestaande snapshot-ZIP's en beheerdersaccounts blijven bestaan. Herstel van een oude snapshot kan kavels terugbrengen; voer geen reset uit tijdens andere catalogusbewerkingen.</div>
+<form method="post" onsubmit="return confirm('ALLE kavels en alle nummerreservaties definitief wissen? Dit kan niet ongedaan worden gemaakt zonder afzonderlijk herstel.');">
+<?=csrf_field()?><input type="hidden" name="action" value="reset-lots">
+<label for="reset-lots-confirm">Typ WIS ALLE KAVELS EN HERSTART OP 1</label>
+<input class="backup-confirm" name="confirm" id="reset-lots-confirm" required autocomplete="off" placeholder="WIS ALLE KAVELS EN HERSTART OP 1">
+<button type="submit" class="backup-danger">Alle kavels verwijderen en herstarten</button>
+</form>
+</section>
+<?php endif;?>
 <?php admin_bottom(); ?>
