@@ -150,6 +150,28 @@
       ],
       "manifest_file": "gebruikers-ui-preflight.json",
       "manual_https_gate": true
+    },
+    "issue-224-archive-code-release.yml": {
+      "preflight": ".github/workflows/issue-224-archive-code-release.yml",
+      "artifact_prefix": "issue224-archive-preflight",
+      "confirmation": "DEPLOY ISSUE 224 ARCHIVE CODE WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/statistieken.php",
+        "catalogus-public/privacy.php",
+        "private/visitor_stats_archive_one_day_experimental.php",
+        "private/visitor_stats_daily_cron.php"
+      ],
+      "hash_inputs": [
+        "expected_stats",
+        "expected_privacy",
+        "expected_archive",
+        "expected_cron"
+      ],
+      "manifest_file": "issue224-archive-preflight.json",
+      "allow_absent": [
+        "private/visitor_stats_daily_cron.php"
+      ],
+      "manual_https_gate": true
     }
   }
 }
