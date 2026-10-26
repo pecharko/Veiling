@@ -57,6 +57,24 @@ concurrency:
   group: ovh-production-deploy
   cancel-in-progress: false
 jobs:
+  validate-workflow:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Validate workflow with actionlint'
+        run: |
+          set -euo pipefail
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -color .github/workflows/issue-185-code-release.yml
+      - name: 'Validate code-only release plan'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deploy_issue185_code.py
+          python3 scripts/deploy_issue185_code.py plan
   release:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
