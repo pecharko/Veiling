@@ -98,3 +98,51 @@ jobs:
           path: ${{ matrix.manifest }}
           retention-days: 7
           if-no-files-found: error
+
+  offline-registered:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      - name: Stop on branch drift
+        env:
+          SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$SHA"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: none
+          coverage: none
+      - name: Generate registered generic offline evidence
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/generic_release_offline_check.py
+          python3 scripts/generic_release_offline_check.py
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('generic-offline-release-evidence.json').read_text())
+          assert data['schema']==1 and data['releases']
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: generic-offline-evidence-${{ github.run_id }}
+          path: generic-offline-release-evidence.json
+          retention-days: 7
+          if-no-files-found: error

@@ -39,6 +39,11 @@ jobs:
             php -l "$file"
           done
 
+      - name: Validate generic registered offline release checks
+        run: |
+          python3 -m py_compile scripts/generic_release_offline_check.py
+          python3 scripts/generic_release_offline_check.py
+
       - name: Test deployment controller security guards offline
         run: |
           python3 -m py_compile scripts/verified_deploy_controller.py
