@@ -10,8 +10,8 @@ from datetime import datetime, timezone
 
 ENDPOINT = "https://api.uptimerobot.com/v3/monitors"
 EXPECTED = {
-    "https://41lokeren.be/": "website",
-    "https://41lokeren.be/admin/login.php": "admin",
+    "804429448": ("website", "https://41lokeren.be/"),
+    "804429483": ("admin", "https://41lokeren.be/admin/login.php"),
 }
 
 def canonical(url):
@@ -44,28 +44,25 @@ def verify(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
         raise ValueError("API data must be an array")
     if payload.get("nextLink"):
-        raise ValueError("Pagination detected; refusing incomplete monitor list")
+        raise ValueError("Pagination detected")
     found = {}
-    observed_paths = []
     for m in payload["data"]:
         if not isinstance(m, dict):
             raise ValueError("Malformed monitor")
-        url = canonical(m.get("url"))
-        if url is None:
-            observed_paths.append("other:" + url_issue(m.get("url")))
+        ident = str(m.get("id", ""))
+        if ident not in EXPECTED:
             continue
-        observed_paths.append(EXPECTED[url])
-        if url in found:
-            raise ValueError("Duplicate monitor for " + EXPECTED[url])
-        monitor_id = m.get("id")
-        if not isinstance(monitor_id, (int, str)) or not str(monitor_id).isdigit():
-            raise ValueError("Missing valid monitor ID")
-        status = m.get("status")
-        if status != "UP":
-            raise ValueError("Monitor " + EXPECTED[url] + " is not UP: " + str(status))
-        found[url] = {"id": str(monitor_id), "status": status, "role": EXPECTED[url]}
+        role, expected_url = EXPECTED[ident]
+        if ident in found:
+            raise ValueError("Duplicate expected monitor ID: " + role)
+        raw = m.get("url")
+        if canonical(raw) != expected_url:
+            raise ValueError("Expected monitor ID " + role + " has unexpected URL format: " + url_issue(raw))
+        if m.get("status") != "UP":
+            raise ValueError("Monitor " + role + " is not UP")
+        found[ident] = {"id": ident, "status": "UP", "role": role}
     if set(found) != set(EXPECTED):
-        raise ValueError("Missing required monitor(s); matched roles: " + ",".join(sorted(set(observed_paths))))
+        raise ValueError("Missing required monitor ID(s): " + ",".join(EXPECTED[k][0] for k in EXPECTED if k not in found))
     return {"checked_at_utc": datetime.now(timezone.utc).isoformat(),
             "source": "UptimeRobot v3 snapshot",
             "fresh_measurement_proven": False,
