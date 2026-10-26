@@ -130,7 +130,7 @@ try {
   $invalid['id'] = '0'; $invalid['market_price'] = '10'; $invalid['starting_bid'] = '20';
   $invalid['title'] = 'Dubbel lotnummer & tekst';
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
-  claim($status === 200 && str_contains($html,'lotnummer bestaat al'), 'Duplicate lot number rejected');
+  claim($status === 200 && str_contains($html,'lotnummer is al uitgegeven'), 'Duplicate lot number rejected');
   claim(str_contains($html,'value="Dubbel lotnummer &amp; tekst"'), 'Duplicate error retains submitted title');
   claim(lot_count() === 1, 'Duplicate did not create lot');
 
