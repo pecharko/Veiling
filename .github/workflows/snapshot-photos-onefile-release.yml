@@ -32,6 +32,10 @@ on:
         description: 'Exact separate production authorization'
         required: false
         type: string
+      manual_https_precheck:
+        description: 'Per-release browser check: website and admin-login both work; enter VERIFIED-<release_sha>'
+        required: false
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -154,15 +158,25 @@ jobs:
           path: snapshot-photos-onefile-preflight.json
           retention-days: 7
           if-no-files-found: error
-      - name: 'Preupload HTTPS availability (fail closed with HTTP diagnostics)'
+      - name: 'Manual HTTPS precheck approval (OVH WAF blocks GitHub runner)'
         if: inputs.mode == 'deploy'
-        run: bash scripts/snapshot_release_http_gate.sh
+        env:
+          MANUAL_HTTPS_PRECHECK: ${{ inputs.manual_https_precheck }}
+        run: |
+          set -euo pipefail
+          test "$MANUAL_HTTPS_PRECHECK" = "VERIFIED-$GITHUB_SHA"
+          echo 'Manual precheck acknowledged by dispatch operator for exact release SHA.'
+          echo 'This does not assert HTTP 200 from GitHub runner.'
       - name: 'Backup exact file, enforce drift and deploy'
         if: inputs.mode == 'deploy'
         run: python3 scripts/deploy_snapshot_photos_onefile.py deploy
-      - name: 'Read-only HTTPS checks after deploy (fail closed with HTTP diagnostics)'
+      - name: 'Require independent manual post-deployment acceptance'
         if: inputs.mode == 'deploy'
-        run: bash scripts/snapshot_release_http_gate.sh
+        run: |
+          echo 'Upload/remote SHA verified in prior step; HTTP postcheck from GitHub is blocked by OVH WAF.'
+          echo 'Release status: DEPLOYED, MANUAL HTTP ACCEPTANCE PENDING.'
+          echo 'Operator must verify homepage and admin/login.php from a regular browser and record acceptance on the release.'
+          echo 'Do NOT report this run as functionally verified solely because this job succeeds.'
       - name: 'Retain private rollback evidence seven days'
         if: inputs.mode == 'deploy' && always()
         uses: actions/upload-artifact@v4
