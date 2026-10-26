@@ -132,6 +132,12 @@ file_put_contents($uploads . '/' . $extra, 'New data that is not in original sna
 
 snap_restore($pdo, $name);
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
+
+verify((fileperms($uploads) & 0005) === 0005,
+       'Restored uploads root is traversable by webserver');
+verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
+       'Restored photo subdirectories are readable and traversable by webserver');
+
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
 $restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
