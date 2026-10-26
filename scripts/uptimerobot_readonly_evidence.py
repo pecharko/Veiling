@@ -82,6 +82,17 @@ def main():
             raise ValueError("Unexpected API status")
         payload = json.load(response)
     evidence = verify(payload)
+    # Schema discovery only: disclose field NAMES and types, not values.
+    # Do not mistake the API fetch time for the last independent HTTP probe.
+    known = {"804429448", "804429483"}
+    metadata = {}
+    for m in payload["data"]:
+        if str(m.get("id")) not in known:
+            continue
+        keys = sorted(k for k in m if isinstance(k, str)
+                      and any(term in k.lower() for term in ("check", "time", "date", "last", "interval", "region", "incident")))
+        metadata[str(m["id"])] = {k: type(m[k]).__name__ for k in keys}
+    evidence["freshness_schema_fields_only"] = metadata
     path = os.environ.get("EVIDENCE_PATH", "uptimerobot-evidence.json")
     with open(path, "x", encoding="utf-8") as handle:
         json.dump(evidence, handle, indent=2)
