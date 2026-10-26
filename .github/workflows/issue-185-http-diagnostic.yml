@@ -18,21 +18,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: 'Measure each HTTPS status without following redirects'
+      - name: 'Measure HTTPS statuses and non-sensitive response headers'
         shell: bash
         run: |
           set -euo pipefail
-          printf 'path,expected,status,redirect\n' > http-status.csv
+          printf 'path,expected,status,redirect,content_type,server,curl_exit\n' > http-status.csv
           for entry in '/:200' '/admin/login.php:200' '/admin/veiling-organisatie.php:303' '/admin/rollen.php:303'; do
             path="${entry%:*}"
             expected="${entry##*:}"
-            response="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code},%{redirect_url}' "https://41lokeren.be${path}")" || response='000,connection-failed'
-            printf '%s,%s,%s\n' "$path" "$expected" "$response" | tee -a http-status.csv
+            headers="$(mktemp)"
+            response="$(curl --silent --show-error --max-time 20 --dump-header "$headers" --output /dev/null --write-out '%{http_code},%{redirect_url},%{content_type}' "https://41lokeren.be${path}")" && exit_code=0 || exit_code=$?
+            server="$(awk 'tolower($1)=="server:" { $1=""; sub(/^[[:space:]]+/, ""); gsub(/[\r,]/, ""); value=$0 } END {print value}' "$headers")"
+            rm -f "$headers"
+            printf '%s,%s,%s,%s,%s\n' "$path" "$expected" "$response" "$server" "$exit_code" | tee -a http-status.csv
           done
       - name: 'Save read-only HTTP diagnosis'
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: issue-185-http-status-${{ github.run_id }}
           path: http-status.csv
           retention-days: 7
           if-no-files-found: error
+      - name: 'Fail on unexpected HTTPS results'
+        shell: bash
+        run: |
+          set -euo pipefail
+          awk -F, 'NR>1 && ($2 != $3 || $7 != 0) { printf "HTTP mismatch: %s expected=%s actual=%s curl_exit=%s\n", $1,$2,$3,$7; failed=1 } END { exit failed ? 1 : 0 }' http-status.csv
