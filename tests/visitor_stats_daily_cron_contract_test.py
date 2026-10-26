@@ -17,6 +17,9 @@ class DailyArchiveContract(unittest.TestCase):
     def test_cli_only_and_bounded_catchup(self):
         self.assertIn("PHP_SAPI !== 'cli'", CRON)
         self.assertIn("$maxDays = 14;", CRON)
+        self.assertIn("archive_catchup_limit_reached", CRON)
+        self.assertIn("archive_failed days_completed=", CRON)
+        self.assertIn("exit(1);", CRON)
         self.assertIn("visitor_stats_daily_cron", CRON)
         self.assertIn("GET_LOCK", CRON)
         self.assertIn("RELEASE_LOCK", CRON)
