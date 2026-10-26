@@ -40,9 +40,12 @@ if(is_post()){
    // No snapshot is created automatically: this reset deliberately removes the
    // issued-number registry. Existing snapshot ZIP archives remain untouched.
    $pdo=db(); catalog_data_lock($pdo);
-   try{$result=reset_catalog_lots($pdo);}
-   finally{catalog_data_unlock($pdo);}
-   $failed=reset_catalog_photo_files($result['paths'], dirname(__DIR__));
+   try{
+    $result=reset_catalog_lots($pdo);
+    // Keep the mutex during photo cleanup: another editor must not write
+    // while files from the deleted catalog are being removed.
+    $failed=reset_catalog_photo_files($result['paths'], dirname(__DIR__));
+   }finally{catalog_data_unlock($pdo);}
    flash($result['deleted'].' kavels verwijderd. Volgend kavelnummer is 1.'.($failed?' Waarschuwing: '.$failed.' fotobestanden konden niet worden verwijderd.':''),$failed?'warning':'success');
    redirect('admin/backup.php');
   }
