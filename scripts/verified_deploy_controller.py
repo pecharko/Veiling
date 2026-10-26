@@ -53,7 +53,7 @@ def registered_release(text):
     config = registry["releases"].get(workflow)
     if not isinstance(config, dict):
         raise ValueError("Workflow not approved in release registry")
-    if not {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs"}.issubset(config) or set(config) - {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs", "manifest_file", "allow_absent", "manual_schema_gate"}:
+    if not {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs"}.issubset(config) or set(config) - {"preflight", "artifact_prefix", "confirmation", "paths", "hash_inputs", "manifest_file", "allow_absent", "manual_schema_gate", "manual_https_gate"}:
         raise ValueError("Invalid registry entry")
     paths, inputs = config["paths"], config["hash_inputs"]
     if (not isinstance(paths, list) or not isinstance(inputs, list) or
@@ -82,6 +82,8 @@ def parse_registered_approval(text, workflow, config):
     keys = ["workflow", "release_sha", "preflight_run_id", *config["hash_inputs"]]
     if config.get("manual_schema_gate") is True:
         keys += ["manual_https_precheck", "migration_confirmed"]
+    elif config.get("manual_https_gate") is True:
+        keys += ["manual_https_precheck"]
     if len(lines) != len(keys) + 1 or lines[0] != "DEPLOY VERIFIED RELEASE":
         raise ValueError("Invalid approval field count")
     data = {}
@@ -96,6 +98,9 @@ def parse_registered_approval(text, workflow, config):
             raise ValueError("Missing exact-SHA manual HTTPS approval")
         if data["migration_confirmed"] != "MIGRATED-admins.is_active":
             raise ValueError("Missing explicit schema migration confirmation")
+    elif config.get("manual_https_gate") is True:
+        if data["manual_https_precheck"] != "VERIFIED-" + data["release_sha"]:
+            raise ValueError("Missing exact-SHA manual HTTPS approval")
     return data
 
 
@@ -332,6 +337,8 @@ def main():
     if registration is not None and config.get("manual_schema_gate") is True:
         command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}",
                     "-f", f"migration_confirmed={data['migration_confirmed']}")
+    elif registration is not None and config.get("manual_https_gate") is True:
+        command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}")
     dispatch_approved(command)
     print("Approved registered deployment dispatched once; approval issue closed.")
 
