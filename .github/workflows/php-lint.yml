@@ -139,6 +139,9 @@ jobs:
           php -l private/bootstrap.php
           php tests/user_disable_contract_test.php
 
+      - name: Verify daily visitor archive contract (7-day cutoff, CLI-only, rollback)
+        run: python3 tests/visitor_stats_daily_cron_contract_test.py
+
       - name: Detect whitespace errors
         shell: bash
         run: |
