@@ -35,6 +35,13 @@ function snap_assets(): array {
  }
  ksort($result);return $result;
 }
+function snap_require_referenced_photos(array $tables, array $hashes): void {
+ foreach(($tables['lot_images'] ?? []) as $image){
+  $path=$image['path'] ?? null;
+  if(!is_string($path) || !preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(webp|jpg|png)$~D',$path) || !isset($hashes[$path]))
+   throw new RuntimeException('Snapshot bevat niet alle kavelfoto’s: ontbrekende of ongeldige fotoverwijzing.');
+ }
+}
 function snap_lock(){ $fp=fopen(snap_dir().'/.operation.lock','c'); if(!$fp||!flock($fp,LOCK_EX|LOCK_NB))throw new RuntimeException('Er loopt al een backup- of herstelbewerking.');return $fp; }
 /** Allow a simulated quota only through explicit internal calls (e.g. isolated CI tests). */
 function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
@@ -72,6 +79,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   try{
    $zip->addFromString('database.json',$data);$hashes['database.json']=hash('sha256',$data);
    foreach($assets as $relative=>$file){$entry='uploads/'.$relative;if(!$zip->addFile($file,$entry))throw new RuntimeException('Kon foto niet toevoegen: '.$relative);$hashes[$entry]=hash_file('sha256',$file);}
+   snap_require_referenced_photos($rows,$hashes);
    $manifest=json_encode(['format'=>'41lokeren-v1','sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
    $zip->addFromString('manifest.json',$manifest);
   }finally{$zip->close();}
@@ -102,6 +110,7 @@ function snap_verified(string $name): array {
    if($size>350*1024*1024)throw new RuntimeException('Snapshot te groot.');
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
+  snap_require_referenced_photos($database['tables'],$hashes);
   foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['is_site_online']) || ($t==='admins' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['role']) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
@@ -123,6 +132,14 @@ function snap_restore(PDO $pdo,string $name): void {
     $ctx=hash_init('sha256');while(!feof($src)){$part=fread($src,1024*1024);if($part===false)throw new RuntimeException('Leesfout in ZIP.');hash_update($ctx,$part);if(fwrite($out,$part)!==strlen($part))throw new RuntimeException('Schrijffout bij foto.');}fclose($out);fclose($src);
     if(!hash_equals($hash,hash_final($ctx)))throw new RuntimeException('Foto checksum ongeldig.');
    }}finally{$zip->close();}
+  // Keep staging private until verification, then make the directory
+  // hierarchy traversable for the HTTP server before activation.
+  $directories=[$stage];
+  $walk=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($stage,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::SELF_FIRST);
+  foreach($walk as $item)if($item->isDir()&&!$item->isLink())$directories[]=$item->getPathname();
+  foreach($directories as $directory){
+   if(!chmod($directory,0755))throw new RuntimeException('Kan leesrechten voor herstelde fotomap niet instellen.');
+  }
   $uploads=snap_uploads();$hadUploads=is_dir($uploads);
   if(is_link($uploads))throw new RuntimeException('De actieve fotomap mag geen symlink zijn.');
   $old=dirname($uploads).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
