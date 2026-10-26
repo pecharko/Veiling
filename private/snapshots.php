@@ -7,7 +7,7 @@ const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','updated_at'],
  'admins'=>['id','email','password_hash','created_at','role'],
- 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','status','sale_location','auction_number','created_at','updated_at'],
+ 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'login_attempts'=>['id','ip_hash','attempted_at'],
 ];
@@ -102,7 +102,7 @@ function snap_verified(string $name): array {
    if($size>350*1024*1024)throw new RuntimeException('Snapshot te groot.');
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['is_site_online']) || ($t==='admins' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['role']) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['is_site_online']) || ($t==='admins' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['role']) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -153,9 +153,10 @@ function snap_restore(PDO $pdo,string $name): void {
     $columns=SNAP_INSERT[$table];
     if($table==='settings' && !$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='is_site_online'));
     if($table==='admins' && !$pdo->query("SHOW COLUMNS FROM admins LIKE 'role'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='role'));
+    if($table==='lots') { foreach(['market_price','starting_bid','auction_only','created_by_admin_id'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM lots LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
-    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='lots' && $col==='sale_location' ? 'markt' : null))),$columns));
+    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='lots' && $col==='sale_location' ? 'markt' : ($table==='lots' && $col==='auction_only' ? 0 : null)))),$columns));
    }
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
