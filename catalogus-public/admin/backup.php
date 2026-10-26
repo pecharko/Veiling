@@ -42,12 +42,7 @@ if(is_post()){
    $pdo=db(); catalog_data_lock($pdo);
    try{$result=reset_catalog_lots($pdo);}
    finally{catalog_data_unlock($pdo);}
-   $failed=0;
-   foreach($result['paths'] as $path) {
-     if(is_string($path) && preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(webp|jpg|png)$~',$path)) {
-       if(is_file(dirname(__DIR__).'/'.$path) && !@unlink(dirname(__DIR__).'/'.$path))$failed++;
-     }
-   }
+   $failed=reset_catalog_photo_files($result['paths'], dirname(__DIR__));
    flash($result['deleted'].' kavels verwijderd. Volgend kavelnummer is 1.'.($failed?' Waarschuwing: '.$failed.' fotobestanden konden niet worden verwijderd.':''),$failed?'warning':'success');
    redirect('admin/backup.php');
   }
