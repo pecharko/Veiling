@@ -6,6 +6,12 @@ $db=getenv('CI_DB_NAME') ?: 'auction_test';
 if ($host!=='127.0.0.1' || $db!=='auction_test') throw new RuntimeException('Refusing non-isolated database');
 $pdo=new PDO("mysql:host=$host;dbname=$db;charset=utf8mb4",getenv('CI_DB_USER') ?: 'root',getenv('CI_DB_PASSWORD') ?: '',[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
 require dirname(__DIR__).'/private/catalog_reset.php';
+ // The preceding HTTP suite leaves disposable fixture lots in this same CI DB.
+ // Isolate this test by clearing fixtures before inserting known numbers.
+ $pdo->exec('DELETE FROM lot_images');
+ $pdo->exec('DELETE FROM lots');
+ $pdo->exec('DELETE FROM issued_lot_numbers');
+
 $pdo->exec("INSERT INTO issued_lot_numbers (lot_number) VALUES (31),(32),(33)");
 $st=$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,'','','draft',?,?)");
 $st->execute([31,'one','veiling',1]);
