@@ -1,0 +1,61 @@
+name: UptimeRobot independent read-only evidence
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/uptimerobot-readonly-evidence.yml'
+      - 'scripts/uptimerobot_readonly_evidence.py'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Python syntax check
+        run: python3 -m py_compile scripts/uptimerobot_readonly_evidence.py
+      - name: Verify fail-closed monitor logic without API access
+        run: |
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          from uptimerobot_readonly_evidence import verify
+          good = {"data":[
+            {"id": 101, "url":"https://41lokeren.be/", "status":"UP"},
+            {"id": 102, "url":"https://41lokeren.be/admin/login.php", "status":"UP"}],
+            "nextLink": None}
+          assert verify(good)["release_gate_satisfied"] is False
+          for bad in (
+            {"data": good["data"][:1]},
+            {"data": [good["data"][0], dict(good["data"][1], status="DOWN")]},
+            {"data": good["data"], "nextLink": "more"},
+            {"data": good["data"] + [good["data"][0]]},
+          ):
+            try:
+              verify(bad)
+            except ValueError:
+              continue
+            raise AssertionError("Must reject incomplete, DOWN, paginated or duplicate monitors")
+          PY
+  read-only-monitor-check:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      UPTIMEROBOT_API_KEY: ${{ secrets.UPTIMEROBOT_API_KEY }}
+      EVIDENCE_PATH: uptimerobot-evidence.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch independent monitor statuses from UptimeRobot API
+        run: python3 scripts/uptimerobot_readonly_evidence.py
+      - name: Save read-only evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: uptimerobot-evidence-${{ github.run_id }}
+          path: uptimerobot-evidence.json
+          retention-days: 7
+          if-no-files-found: error
