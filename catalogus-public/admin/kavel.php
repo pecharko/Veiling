@@ -4,6 +4,7 @@ require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require dirname(__DIR__, 2) . '/private/images.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
+require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_auth();
 $pdo=db();
 $id=max(0,(int)($_GET['id']??$_POST['id']??0));
@@ -14,6 +15,21 @@ if(is_post()){
   check_csrf();
   // Hold until request shutdown, including every DB and photo-file mutation.
   catalog_lock_for_request($pdo);
+  // Re-read from storage after taking the catalog mutex; POST cannot dictate
+  // authorization, current publication status or ownership.
+  if ($id) {
+    $authSt = $pdo->prepare('SELECT * FROM lots WHERE id=?');
+    $authSt->execute([$id]);
+    $lot = $authSt->fetch();
+    if (!$lot) { http_response_code(404); exit('Kavel niet gevonden.'); }
+    if (!lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot)) {
+      http_response_code(403);
+      exit('Geen bewerkingsrechten voor dit kavel.');
+    }
+  } elseif (!lot_can_create(effective_admin_role())) {
+    http_response_code(403);
+    exit('Geen rechten om kavels aan te maken.');
+  }
   $action=(string)($_POST['action']??'save');
   if($action==='remove-photo'){
     $photoId=(int)($_POST['photo_id']??0);
@@ -46,11 +62,17 @@ if(is_post()){
     $details=mb_substr(trim((string)($_POST['details']??'')),0,10000);
     $min=trim((string)($_POST['estimate_min']??''));
     $max=trim((string)($_POST['estimate_max']??''));
-    $status=($_POST['status']??'draft')==='published'?'published':'draft';
+    $submittedStatus = ($_POST['status']??'draft')==='published'?'published':'draft';
+    // Assistants cannot publish, unpublish or use a fabricated POST status.
+    $role = effective_admin_role();
+    $status = lot_can_change_publication($role)
+      ? $submittedStatus : (string)($lot['status'] ?? 'draft');
+    $auctionOnly = !empty($_POST['auction_only']);
     $saleLocation=(string)($_POST['sale_location']??'markt');
     if($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($title==='')$error='Een titel is verplicht.';
+    elseif (lot_publication_conflict($status, $saleLocation, $auctionOnly)) $error='Dit kavel is uitsluitend voor de veiling en mag niet op Markt gepubliceerd worden. Publicatie afgebroken.';
     elseif($min!=='' && (!is_numeric($min)|| (float)$min<0))$error='Ongeldige minimumschatting.';
     elseif($max!=='' && (!is_numeric($max)|| (float)$max<0))$error='Ongeldige maximumschatting.';
     elseif($min!==''&&$max!==''&&(float)$max<(float)$min)$error='Maximumschatting mag niet lager zijn dan minimumschatting.';
