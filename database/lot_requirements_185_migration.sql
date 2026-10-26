@@ -1,5 +1,8 @@
 -- VOORBEREIDING, NIET AUTOMATISCH UITVOEREN.
--- Vereist afzonderlijke productieautorisatie en geverifieerde data-only backup.
+-- Vereist afzonderlijke exacte productieautorisatie en expliciete aanvaarding van
+-- het risico op onomkeerbaar gegevensverlies zonder databaseback-up.
+-- Volgens keuze voor issue #185: geen nieuwe databaseback-up en geen controle
+-- van bestaande herstelpunten. Dit SQL-bestand nooit automatisch uitvoeren.
 -- Bestaande kavels krijgen bewust GEEN verzonnen maker.
 -- De bestaande estimate_min/estimate_max blijven bestaan tijdens de gefaseerde
 -- migratie. Pas verwijderen na volledige code-, snapshot- en UI-omschakeling.
