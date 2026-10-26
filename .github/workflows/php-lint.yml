@@ -84,6 +84,11 @@ jobs:
       - name: Test sale location and auction number contracts
         run: php tests/lot_sale_location_test.php
 
+      - name: Test isolated catalog reset photo removal and safety contracts
+        run: |
+          php tests/catalog_reset_contract_test.php
+          php tests/catalog_reset_photo_test.php
+
       - name: Verify editor-only deployment files (offline)
         run: |
           python3 -m py_compile scripts/deploy_kavel_editor.py
