@@ -170,4 +170,30 @@ verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetch
        'New schema restore recovers the offline state');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
+// Simulate a verified pre-#185 archive with no new lot metadata.
+$legacyName = 'snapshot-20990102-000000-deadbeefcafe.zip';
+if (!copy(snap_path($name), snap_path($legacyName))) throw new RuntimeException('Could not prepare legacy snapshot');
+$legacyZip = new ZipArchive();
+if ($legacyZip->open(snap_path($legacyName)) !== true) throw new RuntimeException('Cannot open legacy test ZIP');
+$legacyDb = json_decode($legacyZip->getFromName('database.json'), true, 512, JSON_THROW_ON_ERROR);
+foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
+    foreach (['market_price','starting_bid','auction_only','created_by_admin_id'] as $newColumn) unset($legacyLot[$newColumn]);
+}
+unset($legacyLot);
+$legacyJson = json_encode($legacyDb, JSON_THROW_ON_ERROR);
+$legacyManifest = json_decode($legacyZip->getFromName('manifest.json'), true, 512, JSON_THROW_ON_ERROR);
+$legacyManifest['sha256']['database.json'] = hash('sha256', $legacyJson);
+$legacyZip->addFromString('database.json', $legacyJson);
+$legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
+$legacyZip->close();
+[$verifiedLegacy] = snap_verified($legacyName);
+verify(!array_key_exists('auction_only', $verifiedLegacy['tables']['lots'][0]),
+       'Old lot snapshot without #185 columns validates with correct checksums');
+$pdo->exec("UPDATE lots SET market_price=123, starting_bid=45, auction_only=1 WHERE lot_number=101");
+snap_restore($pdo, $legacyName);
+$legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid'] === null
+       && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null,
+       'Legacy restore safely defaults unknown valuations, ownership and auction-only flag');
+if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";

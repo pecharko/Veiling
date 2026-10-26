@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/lot_form.php';
+// The required PHP CI job executes this file; include authorization regressions.
+require __DIR__ . '/lot_permissions_test.php';
 
 function check_value(mixed $expected, mixed $actual, string $case): void {
   if ($expected !== $actual) {

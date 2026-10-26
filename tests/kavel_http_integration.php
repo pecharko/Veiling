@@ -112,13 +112,13 @@ try {
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
     'lot_number' => '99', 'title' => 'Nieuwe titel <&>',
     'category' => 'Design', 'description' => 'Niet opgeslagen',
-    'estimate_min' => '200', 'estimate_max' => '100', 'status' => 'published',
+    'market_price' => '-1', 'starting_bid' => '100', 'status' => 'published',
   ];
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
-  claim($status === 200 && str_contains($html,'Maximumschatting mag niet lager'), 'Invalid estimate rejected');
+  claim($status === 200 && str_contains($html,'Ongeldige marktprijs.'), 'Invalid market price rejected');
   claim(str_contains($html, 'value="Nieuwe titel &lt;&amp;&gt;"'), 'Submitted title restored and HTML escaped');
-  claim(str_contains($html, 'name="estimate_min" value="200"') && str_contains($html,'name="estimate_max" value="100"'), 'Submitted estimates restored');
-  claim(lot_count() === 0, 'No new lot after invalid estimate');
+  claim(str_contains($html, 'name="market_price" value="-1"') && str_contains($html,'name="starting_bid" value="100"'), 'Submitted market price and starting bid restored');
+  claim(lot_count() === 0, 'No new lot after invalid valuation');
 
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
@@ -127,7 +127,7 @@ try {
   claim($status === 200 && str_contains($html, 'value="Gewijzigde maar niet opgeslagen titel"'), 'Edit error retains changed title');
   claim(by_number(10)['title'] === 'Originele titel', 'Invalid edit did not change saved title');
 
-  $invalid['id'] = '0'; $invalid['estimate_min'] = '10'; $invalid['estimate_max'] = '20';
+  $invalid['id'] = '0'; $invalid['market_price'] = '10'; $invalid['starting_bid'] = '20';
   $invalid['title'] = 'Dubbel lotnummer & tekst';
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
   claim($status === 200 && str_contains($html,'lotnummer bestaat al'), 'Duplicate lot number rejected');
@@ -218,6 +218,44 @@ try {
   } catch (PDOException $e) {
     claim($e->getCode()==='23000','Database rejects duplicate auction number');
   }
+
+  // Role and ownership checks against the real HTTP endpoint and isolated database.
+  $actor = (int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (401,'Own draft','','','draft',?)")->execute([$actor]);
+  db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
+  db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
+  db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
+  claim($status===200 && !str_contains($ownForm,'alleen-lezen'), 'Assistant may open own draft for editing');
+  $csrfAssistant = token($ownForm);
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
+    'csrf'=>$csrfAssistant,'action'=>'save','id'=>(string)by_number(401)['id'],
+    'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'markt'
+  ]);
+  claim($status===303 && by_number(401)['title']==='Own edited' && by_number(401)['status']==='draft',
+    'Assistant edits own draft but cannot publish by forged POST');
+  [$status, $otherForm] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id']);
+  claim($status===200 && str_contains($otherForm,'alleen-lezen'), 'Other assistant draft is read-only');
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id'], [
+    'csrf'=>$csrfAssistant,'action'=>'save','id'=>(string)by_number(402)['id'],
+    'lot_number'=>'402','title'=>'FORGED'
+  ]);
+  claim($status===403 && by_number(402)['title']==='Other draft', 'Forged update of other draft blocked');
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(403)['id'], [
+    'csrf'=>$csrfAssistant,'action'=>'delete-lot','id'=>(string)by_number(403)['id']
+  ]);
+  claim($status===403 && (bool)by_number(403), 'Assistant cannot remove published own lot');
+  db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
+  [$status, $adminForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
+  claim($status===200, 'Administrator regains editor');
+  [$status, $conflict] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
+    'csrf'=>token($adminForm),'action'=>'save','id'=>(string)by_number(401)['id'],
+    'lot_number'=>'401','title'=>'Blocked publication','status'=>'published',
+    'sale_location'=>'markt','auction_only'=>'1'
+  ]);
+  claim($status===200 && str_contains($conflict,'Publicatie afgebroken') &&
+    by_number(401)['status']==='draft' && by_number(401)['title']==='Own edited',
+    'Auction-only on market aborts entire publication transaction');
 
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
