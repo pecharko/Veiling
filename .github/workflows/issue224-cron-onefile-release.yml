@@ -102,7 +102,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: issue224-cron-release-preflight-${{ github.run_id }}
-          path: issue224-archive-preflight.json
+          path: issue224-cron-release-preflight.json
           retention-days: 7
           if-no-files-found: error
       - name: Backup code and upload with drift and rollback
