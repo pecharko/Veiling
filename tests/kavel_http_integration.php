@@ -112,13 +112,13 @@ try {
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
     'lot_number' => '99', 'title' => 'Nieuwe titel <&>',
     'category' => 'Design', 'description' => 'Niet opgeslagen',
-    'estimate_min' => '200', 'estimate_max' => '100', 'status' => 'published',
+    'market_price' => '-1', 'starting_bid' => '100', 'status' => 'published',
   ];
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
-  claim($status === 200 && str_contains($html,'Maximumschatting mag niet lager'), 'Invalid estimate rejected');
+  claim($status === 200 && str_contains($html,'Ongeldige marktprijs.'), 'Invalid market price rejected');
   claim(str_contains($html, 'value="Nieuwe titel &lt;&amp;&gt;"'), 'Submitted title restored and HTML escaped');
-  claim(str_contains($html, 'name="estimate_min" value="200"') && str_contains($html,'name="estimate_max" value="100"'), 'Submitted estimates restored');
-  claim(lot_count() === 0, 'No new lot after invalid estimate');
+  claim(str_contains($html, 'name="market_price" value="-1"') && str_contains($html,'name="starting_bid" value="100"'), 'Submitted market price and starting bid restored');
+  claim(lot_count() === 0, 'No new lot after invalid valuation');
 
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
@@ -127,7 +127,7 @@ try {
   claim($status === 200 && str_contains($html, 'value="Gewijzigde maar niet opgeslagen titel"'), 'Edit error retains changed title');
   claim(by_number(10)['title'] === 'Originele titel', 'Invalid edit did not change saved title');
 
-  $invalid['id'] = '0'; $invalid['estimate_min'] = '10'; $invalid['estimate_max'] = '20';
+  $invalid['id'] = '0'; $invalid['market_price'] = '10'; $invalid['starting_bid'] = '20';
   $invalid['title'] = 'Dubbel lotnummer & tekst';
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
   claim($status === 200 && str_contains($html,'lotnummer bestaat al'), 'Duplicate lot number rejected');
