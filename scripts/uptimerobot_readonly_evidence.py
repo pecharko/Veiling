@@ -25,6 +25,21 @@ def canonical(url):
         return None
     return "https://41lokeren.be" + path
 
+def url_issue(url):
+    if not isinstance(url, str):
+        return "missing_url"
+    try:
+        parts = urlsplit(url)
+        if parts.hostname != "41lokeren.be":
+            return "unexpected_host"
+        if parts.scheme not in ("http", "https"):
+            return "unexpected_scheme"
+        if parts.username or parts.password or parts.port or parts.query or parts.fragment:
+            return "unexpected_url_components"
+        return "unexpected_path"
+    except ValueError:
+        return "invalid_url"
+
 def verify(payload):
     if not isinstance(payload, dict) or not isinstance(payload.get("data"), list):
         raise ValueError("API data must be an array")
@@ -37,7 +52,7 @@ def verify(payload):
             raise ValueError("Malformed monitor")
         url = canonical(m.get("url"))
         if url is None:
-            observed_paths.append("other")
+            observed_paths.append("other:" + url_issue(m.get("url")))
             continue
         observed_paths.append(EXPECTED[url])
         if url in found:
