@@ -26,4 +26,6 @@ if (!str_contains($backup, "reset_catalog_photo_files(\$result['paths'], dirname
 if (!str_contains($reset, "preg_match('~^uploads/") || !str_contains($reset, "!@unlink(\$file)")) throw new RuntimeException('Safe photo cleanup guard missing');
 if (str_contains($reset, 'TRUNCATE')) throw new RuntimeException('TRUNCATE cannot be rolled back in MySQL.');
 if (!str_contains($editor, 'compact_auction_numbers($pdo)')) throw new RuntimeException('Auction deletion must resequence.');
+$snap = file_get_contents(dirname(__DIR__).'/private/snapshots.php');
+if (!str_contains($snap, "INSERT IGNORE INTO issued_lot_numbers (lot_number) SELECT lot_number FROM lots")) throw new RuntimeException('Restore must preserve issued lot number history');
 echo "PASS catalog reset source contract\n";
