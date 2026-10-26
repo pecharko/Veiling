@@ -30,6 +30,9 @@ try {
         $stmt->closeCursor();
     }
     fwrite(STDOUT, "archive_ok days=$totalDays rows=$totalRows views=$totalViews cutoff=$cutoff\n");
+    if ($totalDays === $maxDays) {
+        fwrite(STDERR, "archive_catchup_limit_reached days=$totalDays cutoff=$cutoff\n");
+    }
 } catch (Throwable $e) {
     error_log('Archive cron failed; error type=' . get_class($e));
     fwrite(STDERR, "archive_failed days_completed=$totalDays\n");
