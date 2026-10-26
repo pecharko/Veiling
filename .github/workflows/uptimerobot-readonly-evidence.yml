@@ -23,8 +23,8 @@ jobs:
           sys.path.insert(0, "scripts")
           from uptimerobot_readonly_evidence import verify
           good = {"data":[
-            {"id": 101, "url":"https://41lokeren.be/", "status":"UP"},
-            {"id": 102, "url":"https://41lokeren.be/admin/login.php", "status":"UP"}],
+            {"id": 804429448, "url":"https://41lokeren.be/", "status":"UP"},
+            {"id": 804429483, "url":"https://41lokeren.be/admin/login.php", "status":"UP"}],
             "nextLink": None}
           assert verify(good)["release_gate_satisfied"] is False
           for bad in (
