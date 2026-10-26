@@ -137,6 +137,18 @@
       ],
       "manifest_file": "issue200-preflight.json",
       "manual_schema_gate": true
+    },
+    "gebruikers-ui-onefile-release.yml": {
+      "preflight": ".github/workflows/gebruikers-ui-onefile-release.yml",
+      "artifact_prefix": "gebruikers-ui-preflight",
+      "confirmation": "DEPLOY GEBRUIKERS UI ONEFILE WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/gebruikers.php"
+      ],
+      "hash_inputs": [
+        "expected_users"
+      ],
+      "manifest_file": "gebruikers-ui-preflight.json"
     }
   }
 }
