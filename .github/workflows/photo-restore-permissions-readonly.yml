@@ -1,0 +1,37 @@
+name: Photo restore permission diagnostic (read only)
+on:
+  pull_request:
+    paths:
+      - scripts/photo_permissions_readonly.py
+      - .github/workflows/photo-restore-permissions-readonly.yml
+permissions:
+  contents: read
+jobs:
+  inspect:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Validate read-only diagnostic'
+        run: python3 -m py_compile scripts/photo_permissions_readonly.py
+      - name: 'Install pinned SFTP client'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Inspect production upload directory permissions without writes'
+        run: python3 scripts/photo_permissions_readonly.py
+      - name: 'Save diagnostic evidence'
+        uses: actions/upload-artifact@v4
+        with:
+          name: photo-permissions-readonly-${{ github.run_id }}
+          path: photo-permissions-readonly.json
+          retention-days: 7
+          if-no-files-found: error
