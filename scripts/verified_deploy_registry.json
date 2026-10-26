@@ -148,7 +148,8 @@
       "hash_inputs": [
         "expected_users"
       ],
-      "manifest_file": "gebruikers-ui-preflight.json"
+      "manifest_file": "gebruikers-ui-preflight.json",
+      "manual_https_gate": true
     }
   }
 }
