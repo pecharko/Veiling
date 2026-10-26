@@ -60,8 +60,8 @@ if(is_post()){
     $category=mb_substr(trim((string)($_POST['category']??'Overige')),0,120);
     $description=mb_substr(trim((string)($_POST['description']??'')),0,30000);
     $details=mb_substr(trim((string)($_POST['details']??'')),0,10000);
-    $min=trim((string)($_POST['estimate_min']??''));
-    $max=trim((string)($_POST['estimate_max']??''));
+    $marketPrice=trim((string)($_POST['market_price']??''));
+    $startingBid=trim((string)($_POST['starting_bid']??''));
     $submittedStatus = ($_POST['status']??'draft')==='published'?'published':'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
@@ -73,9 +73,8 @@ if(is_post()){
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($title==='')$error='Een titel is verplicht.';
     elseif (lot_publication_conflict($status, $saleLocation, $auctionOnly)) $error='Dit kavel is uitsluitend voor de veiling en mag niet op Markt gepubliceerd worden. Publicatie afgebroken.';
-    elseif($min!=='' && (!is_numeric($min)|| (float)$min<0))$error='Ongeldige minimumschatting.';
-    elseif($max!=='' && (!is_numeric($max)|| (float)$max<0))$error='Ongeldige maximumschatting.';
-    elseif($min!==''&&$max!==''&&(float)$max<(float)$min)$error='Maximumschatting mag niet lager zijn dan minimumschatting.';
+    elseif($marketPrice!=='' && (!is_numeric($marketPrice)|| (float)$marketPrice<0))$error='Ongeldige marktprijs.';
+    elseif($startingBid!=='' && (!is_numeric($startingBid)|| (float)$startingBid<0))$error='Ongeldig startbod.';
     else{
       // Valideer alle uploadstatussen voordat er een kavel wordt aangemaakt of gewijzigd.
       try{
@@ -93,9 +92,9 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$category,$description,$details,$min===''?null:$min,$max===''?null:$max,$status,$saleLocation,$auctionNumber];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,estimate_min=?,estimate_max=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
-          else{$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,estimate_min,estimate_max,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?,?,?)');}
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
+          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
@@ -139,7 +138,7 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','estimate_min'=>'','estimate_max'=>'','status'=>'draft','sale_location'=>'markt','auction_number'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
@@ -162,6 +161,7 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
           <div class="lot-editor-fields lot-editor-two">
             <label>Lotnummer <span class="lot-required">*</span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
+            <label class="lot-full"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label>Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
             <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
@@ -170,8 +170,8 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
           <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Optionele schatting in euro, zichtbaar bij het kavel.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><label>Minimumschatting (€)<input type="number" min="0" step="0.01" name="estimate_min" value="<?=e($d['estimate_min'])?>" placeholder="0"></label><label>Maximumschatting (€)<input type="number" min="0" step="0.01" name="estimate_max" value="<?=e($d['estimate_max'])?>" placeholder="0"></label></div>
+        <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
+          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e($d['market_price'])?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e($d['starting_bid'])?>" placeholder="0"></label></div>
         </section>
       </div>
       <aside class="lot-editor-side">
