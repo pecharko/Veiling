@@ -1,0 +1,38 @@
+name: Issue 185 read-only HTTP status diagnostic
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+    types: [completed]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  http-status:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 'Measure each HTTPS status without following redirects'
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf 'path,expected,status,redirect\n' > http-status.csv
+          for entry in '/:200' '/admin/login.php:200' '/admin/veiling-organisatie.php:303' '/admin/rollen.php:303'; do
+            path="${entry%:*}"
+            expected="${entry##*:}"
+            response="$(curl --silent --show-error --max-time 20 --output /dev/null --write-out '%{http_code},%{redirect_url}' "https://41lokeren.be${path}")" || response='000,connection-failed'
+            printf '%s,%s,%s\n' "$path" "$expected" "$response" | tee -a http-status.csv
+          done
+      - name: 'Save read-only HTTP diagnosis'
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-185-http-status-${{ github.run_id }}
+          path: http-status.csv
+          retention-days: 7
+          if-no-files-found: error
