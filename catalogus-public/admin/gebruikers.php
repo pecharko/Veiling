@@ -48,7 +48,7 @@ if (is_post()) {
                 if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) throw new InvalidArgumentException('Ongeldige rol.');
                 if ((int)$target === $currentId && $role !== 'administrator') throw new InvalidArgumentException('Je kunt je eigen Administrator-rol niet verlagen.');
                 $pdo->beginTransaction();
-                $locked = $pdo->query("SELECT id, role FROM admins ORDER BY id FOR UPDATE")->fetchAll();
+                $locked = $pdo->query("SELECT id, role, is_active FROM admins ORDER BY id FOR UPDATE")->fetchAll();
                 $targetRow = null;
                 $adminCount = 0;
                 foreach ($locked as $row) {
@@ -56,6 +56,7 @@ if (is_post()) {
                     if ((int)$row['id'] === (int)$target) $targetRow = $row;
                 }
                 if (!$targetRow) throw new InvalidArgumentException('Beheerder bestaat niet.');
+                if ($role === 'administrator' && (int)$targetRow['is_active'] !== 1) throw new InvalidArgumentException('Activeer het account voordat je de Administrator-rol toekent.');
                 if ($targetRow['role'] === 'administrator' && $role !== 'administrator' && $adminCount <= 1) throw new InvalidArgumentException('Laatste Administrator mag niet worden gewijzigd naar een lagere rol.');
                 if ($password === '') {
                     $stmt = $pdo->prepare('UPDATE admins SET email=?, role=? WHERE id=?');
@@ -71,6 +72,21 @@ if (is_post()) {
                 }
                 $pdo->commit();
                 flash('Beheerder bijgewerkt. Een gewijzigd wachtwoord trekt bestaande sessies in.');
+            } elseif ($action === 'toggle-active') {
+                $target = filter_var($_POST['user_id'] ?? null, FILTER_VALIDATE_INT);
+                $activate = (string)($_POST['activate'] ?? '');
+                if (!$target || $target < 1 || !in_array($activate, ['0', '1'], true)) throw new InvalidArgumentException('Ongeldige accountactie.');
+                $pdo->beginTransaction();
+                $st = $pdo->prepare('SELECT role FROM admins WHERE id=? FOR UPDATE');
+                $st->execute([$target]);
+                $role = $st->fetchColumn();
+                if (!$role) throw new InvalidArgumentException('Account bestaat niet.');
+                if ($role === 'administrator') throw new InvalidArgumentException('Administratoraccounts kunnen niet gedeactiveerd worden.');
+                if ((int)$target === $currentId && $activate === '0') throw new InvalidArgumentException('Je kunt je eigen account niet deactiveren.');
+                $st = $pdo->prepare('UPDATE admins SET is_active=? WHERE id=? AND role<>?');
+                $st->execute([(int)$activate, $target, 'administrator']);
+                $pdo->commit();
+                flash($activate === '1' ? 'Account geactiveerd.' : 'Account gedeactiveerd. Bestaande sessies zijn onmiddellijk ongeldig.');
             } elseif ($action === 'delete') {
                 $target = filter_var($_POST['user_id'] ?? null, FILTER_VALIDATE_INT);
                 if (!$target || $target < 1 || $target === $currentId) {
@@ -106,7 +122,7 @@ if (is_post()) {
         }
     }
 }
-$users = $pdo->query('SELECT id,email,role FROM admins ORDER BY email')->fetchAll();
+$users = $pdo->query('SELECT id,email,role,is_active FROM admins ORDER BY email')->fetchAll();
 $selectedId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $selectedUser = null;
 foreach ($users as $candidate) {
@@ -134,12 +150,13 @@ admin_top('Gebruikersbeheer');
     <h2>Bestaande beheerders</h2>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table">
-        <thead><tr><th scope="col">E-mailadres</th><th scope="col">Rol</th><th scope="col">Actie</th></tr></thead>
+        <thead><tr><th scope="col">E-mailadres</th><th scope="col">Rol</th><th scope="col">Status</th><th scope="col">Actie</th></tr></thead>
         <tbody>
         <?php foreach ($users as $user): ?>
           <tr>
             <td><strong><?=e($user['email'])?></strong></td>
             <td><?= e($user['role'] === 'administrator' ? 'Administrator' : ($user['role'] === 'veilingmeester' ? 'Veilingmeester' : 'Assistent')) ?><?= (int)$user['id'] === $currentId ? ' (jij)' : '' ?></td>
+            <td><?= $user['role'] === 'administrator' ? 'Altijd actief' : ((int)$user['is_active'] === 1 ? 'Actief' : 'Gedeactiveerd') ?></td>
             <td><a class="dashboard-edit" href="<?=e(url('admin/gebruikers.php', ['id' => (int)$user['id']]))?>#beheerder-bewerken" <?= $selectedId === (int)$user['id'] ? 'aria-current="true"' : '' ?>>Selecteren →</a></td>
           </tr>
         <?php endforeach; ?>
@@ -160,6 +177,16 @@ admin_top('Gebruikersbeheer');
           <button type="submit">Wijzigingen opslaan</button>
           <a style="margin-left:12px" href="<?=e(url('admin/gebruikers.php'))?>">Annuleren</a>
         </form>
+        <?php if ($selectedUser['role'] !== 'administrator'): ?>
+          <form method="post" autocomplete="off">
+            <?=csrf_field()?>
+            <input type="hidden" name="action" value="toggle-active">
+            <input type="hidden" name="user_id" value="<?=e((string)$selectedUser['id'])?>">
+            <input type="hidden" name="activate" value="<?= (int)$selectedUser['is_active'] === 1 ? '0' : '1' ?>">
+            <label>Jouw huidige wachtwoord <input type="password" name="current_password" required autocomplete="current-password"></label>
+            <button type="submit"><?= (int)$selectedUser['is_active'] === 1 ? 'Account deactiveren' : 'Account activeren' ?></button>
+          </form>
+        <?php endif; ?>
         <?php if ((int)$selectedUser['id'] !== $currentId): ?>
           <form method="post" onsubmit="return confirm('Deze beheerder definitief verwijderen?');">
             <?=csrf_field()?>
