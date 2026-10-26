@@ -13,8 +13,10 @@ class PublicPrivacyTests(unittest.TestCase):
     def test_truthful_text_and_contacts(self):
         self.assertIn("gepseudonimiseerde", page)
         self.assertIn("31 oktober 2027",page)
-        self.assertIn("ouder dan 30 dagen handmatig", page)
-        self.assertIn("Zonder die handmatige actie blijven de codes langer bewaard", page)
+        self.assertIn("Momenteel archiveren beheerders oudere gegevens handmatig", page)
+        self.assertIn("Na afzonderlijke activering", page)
+        self.assertIn("laatste zeven volledige UTC-dagen", page)
+        self.assertIn("Bij een fout blijven de niet-gearchiveerde detailgegevens bewaard", page)
         self.assertNotIn("opschoning",page)
         self.assertIn('href="mailto:41clublokeren@gmail.com"', page)
         self.assertIn("Verantwoordelijke organisatie:</strong> 41 Lokeren",page)
