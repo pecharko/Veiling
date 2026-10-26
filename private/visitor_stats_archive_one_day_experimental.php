@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
 {
-    $limit = gmdate('Y-m-d', strtotime('-30 days'));
+    $limit = gmdate('Y-m-d', strtotime('-7 days'));
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
     if (!$date || $date->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Invalid historical UTC cutoff');
