@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "releases": {
+    "issue-185": {
+      "php_files": [
+        "catalogus-public/admin/kavel.php",
+        "catalogus-public/admin/rollen.php",
+        "catalogus-public/index.php",
+        "catalogus-public/kavel.php",
+        "private/bootstrap.php",
+        "private/lot_permissions.php",
+        "private/snapshots.php"
+      ],
+      "migration": "database/lot_requirements_185_migration.sql",
+      "required_columns": [
+        "created_by_admin_id",
+        "auction_only",
+        "market_price",
+        "starting_bid"
+      ]
+    }
+  }
+}
