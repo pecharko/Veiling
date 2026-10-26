@@ -94,6 +94,12 @@ if(is_post()){
           // The catalog mutex serializes allocation and gap-free resequencing.
           // All lot changes and shifts must succeed together.
           $pdo->beginTransaction();
+          // A newly assigned ordinary lot number is never reusable, even after delete.
+          // The permanent registry is part of this same transaction.
+          if (!$id || (int)$lot['lot_number'] !== $nr) {
+            $reserve = $pdo->prepare('INSERT INTO issued_lot_numbers (lot_number) VALUES (?)');
+            $reserve->execute([$nr]);
+          }
           $wasAuction = ($lot['auction_number'] ?? null) !== null;
           $auctionNumber = $saleLocation === 'markt' ? null : ($lot['auction_number'] ?? null);
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
@@ -119,7 +125,7 @@ if(is_post()){
             $driverCode=(int)($ex->errorInfo[1] ?? 0);
             $detail=(string)($ex->errorInfo[2] ?? '');
             if($driverCode===1062 && str_contains($detail,'uq_lots_auction_number'))$error='Dit veilingsnummer bestaat al. Het kavel is niet opgeslagen.';
-            elseif($driverCode===1062 && (str_contains($detail,'lot_number') || str_contains($detail,'PRIMARY')===false))$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+            elseif($driverCode===1062 && (str_contains($detail,'lot_number') || str_contains($detail,'PRIMARY'))) $error='Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.';
             else $error='Een unieke waarde bestaat al. Het kavel is niet opgeslagen.';
           }
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
@@ -138,7 +144,7 @@ if ($lot && !empty($lot['created_by_admin_id'])) {
 }
 $suggestedNumber = '';
 if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
-  $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+  $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $nextNumber = first_available_lot_number(($highestNumber === null || $highestNumber === false) ? [] : [$highestNumber]);
   if ($nextNumber !== null) {
     $suggestedNumber = $nextNumber;
@@ -148,7 +154,7 @@ if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
   }
 }
 if (!$lot && !is_post()) {
-  $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+  $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
 $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
