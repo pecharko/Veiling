@@ -48,12 +48,12 @@ def run():
             if not migration.startswith("database/"):
                 raise ValueError("Invalid migration root")
             sql = safe_file(migration, ".sql").read_text(encoding="utf-8")
-            if re.search(r"\\bDROP\\s+(?:TABLE|COLUMN|DATABASE)\\b", sql, re.IGNORECASE):
+            if re.search(r"\bDROP\s+(?:TABLE|COLUMN|DATABASE)\b", sql, re.IGNORECASE):
                 raise ValueError("Destructive migration requires separate review")
             for column in columns:
                 if not re.fullmatch(r"[a-z][a-z0-9_]{1,60}", column):
                     raise ValueError("Invalid SQL column identifier")
-                if len(re.findall(r"\\bADD\\s+COLUMN\\s+" + re.escape(column) + r"\\b", sql, re.IGNORECASE)) != 1:
+                if len(re.findall(r"\bADD\s+COLUMN\s+" + re.escape(column) + r"\b", sql, re.IGNORECASE)) != 1:
                     raise ValueError("Missing/duplicate migration column: " + column)
             hashes[migration] = hashlib.sha256(sql.encode("utf-8")).hexdigest()
         elif columns:
