@@ -142,7 +142,9 @@ $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
+$canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
+if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
 if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
 ?>
 <div class="lot-editor">
@@ -150,11 +152,12 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
     <div><a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a><p class="lot-editor-hint">Beheer gegevens, waardering, publicatie en foto's op één plek.</p></div>
     <div class="lot-editor-toolbar-actions">
       <?php if($lot && $d['status']==='published'): ?><a class="secondary" href="<?=e(url('kavel.php',['nr'=>$d['lot_number']]))?>" target="_blank" rel="noopener">Bekijk online ↗</a><?php endif; ?>
-      <button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button>
+      <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?>
     </div>
   </div>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
+    <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
     <div class="lot-editor-layout">
       <div class="lot-editor-main">
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>
@@ -185,13 +188,14 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
         <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Huidige status</dt><dd><?=($d['status']==='published'?'Gepubliceerd':'Concept')?></dd></dl></section><?php endif; ?>
       </aside>
     </div>
-    <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><button class="primary" type="submit">Wijzigingen opslaan →</button></div>
+    </fieldset>
+    <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button class="primary" type="submit">Wijzigingen opslaan →</button><?php endif; ?></div>
   </form>
   <?php if($lot): ?>
   <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg extra foto’s hierboven toe en sla het kavel opnieuw op.</p></div></div>
-    <div class="lot-editor-photo-grid"><?php foreach($images as $photo): ?><div class="lot-editor-photo"><img src="<?=e(url($photo['path']))?>" alt="Kavelfoto"><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form></div><?php endforeach; ?><?php if(!$images): ?><p class="lot-editor-empty">Nog geen foto's toegevoegd. Upload foto's via het paneel hierboven.</p><?php endif; ?></div>
+    <div class="lot-editor-photo-grid"><?php foreach($images as $photo): ?><div class="lot-editor-photo"><img src="<?=e(url($photo['path']))?>" alt="Kavelfoto"><?php if($canEditLot): ?><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form><?php endif; ?></div><?php endforeach; ?><?php if(!$images): ?><p class="lot-editor-empty">Nog geen foto's toegevoegd. Upload foto's via het paneel hierboven.</p><?php endif; ?></div>
   </section>
-  <details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details>
+  <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
 <?php admin_bottom(); ?>
