@@ -42,16 +42,23 @@ if(is_post()){
     redirect('admin/kavel.php',['id'=>$id]);
   }
   if($action==='delete-lot' && $lot){
-    // Keep the existing deletion protection for numbered lots; moving to Markt
-    // first clears the auction number and closes gaps transactionally.
-    if ($lot['auction_number'] !== null) {
-      flash('Verplaats dit kavel eerst naar Markt (hierbij wordt het veilingsnummer vrijgegeven en de veiling hernummerd) voordat je het verwijdert.', 'warning');
+    // Deletion and gap-free auction numbering are one atomic DB operation.
+    // The request-wide catalog mutex also serializes number allocation.
+    try {
+      $pdo->beginTransaction();
+      $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
+      $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
+      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo);
+      $pdo->commit();
+    } catch (Throwable $ex) {
+      if ($pdo->inTransaction()) $pdo->rollBack();
+      error_log('Kavel verwijderen/hernummeren mislukt: '.$ex->getMessage());
+      flash('Kavel kon niet verwijderd worden. Er zijn geen veilingsnummers gewijzigd.', 'warning');
       redirect('admin/kavel.php', ['id' => $id]);
     }
-    $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
-    $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
+    // File removal only after successful DB commit; never on rollback.
     foreach($paths as $path)if(preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~',$path))@unlink(dirname(__DIR__).'/'.$path);
-    flash('Kavel verwijderd.');redirect('admin/index.php');
+    flash('Kavel verwijderd. Veilingsnummers zijn indien nodig herberekend.');redirect('admin/index.php');
   }
   if($action==='save'){
     $nr=(int)($_POST['lot_number']??0);
@@ -87,6 +94,12 @@ if(is_post()){
           // The catalog mutex serializes allocation and gap-free resequencing.
           // All lot changes and shifts must succeed together.
           $pdo->beginTransaction();
+          // A newly assigned ordinary lot number is never reusable, even after delete.
+          // The permanent registry is part of this same transaction.
+          if (!$id || (int)$lot['lot_number'] !== $nr) {
+            $reserve = $pdo->prepare('INSERT INTO issued_lot_numbers (lot_number) VALUES (?)');
+            $reserve->execute([$nr]);
+          }
           $wasAuction = ($lot['auction_number'] ?? null) !== null;
           $auctionNumber = $saleLocation === 'markt' ? null : ($lot['auction_number'] ?? null);
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
@@ -112,7 +125,7 @@ if(is_post()){
             $driverCode=(int)($ex->errorInfo[1] ?? 0);
             $detail=(string)($ex->errorInfo[2] ?? '');
             if($driverCode===1062 && str_contains($detail,'uq_lots_auction_number'))$error='Dit veilingsnummer bestaat al. Het kavel is niet opgeslagen.';
-            elseif($driverCode===1062 && (str_contains($detail,'lot_number') || str_contains($detail,'PRIMARY')===false))$error='Dit lotnummer bestaat al. Kies een uniek nummer.';
+            elseif($driverCode===1062 && (str_contains($detail,'lot_number') || str_contains($detail,'PRIMARY'))) $error='Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.';
             else $error='Een unieke waarde bestaat al. Het kavel is niet opgeslagen.';
           }
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
@@ -130,18 +143,18 @@ if ($lot && !empty($lot['created_by_admin_id'])) {
   $creatorLabel = (string)($creatorSt->fetchColumn() ?: 'Account niet meer aanwezig');
 }
 $suggestedNumber = '';
-if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
-  $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+if (str_starts_with($error, 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.')) {
+  $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $nextNumber = first_available_lot_number(($highestNumber === null || $highestNumber === false) ? [] : [$highestNumber]);
   if ($nextNumber !== null) {
     $suggestedNumber = $nextNumber;
-    $error = 'Dit lotnummer bestaat al. Voorgesteld nieuw lotnummer: ' . $nextNumber . '. Je kunt dit aanpassen.';
+    $error = 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt. Voorgesteld nieuw lotnummer: ' . $nextNumber . '. Je kunt dit aanpassen.';
   } else {
-    $error = 'Dit lotnummer bestaat al. Er is geen volgend lotnummer beschikbaar binnen de toegestane reeks.';
+    $error = 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt. Er is geen volgend lotnummer beschikbaar binnen de toegestane reeks.';
   }
 }
 if (!$lot && !is_post()) {
-  $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
+  $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
 $defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
