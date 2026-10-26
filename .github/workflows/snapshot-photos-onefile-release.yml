@@ -154,21 +154,15 @@ jobs:
           path: snapshot-photos-onefile-preflight.json
           retention-days: 7
           if-no-files-found: error
-      - name: 'Preupload HTTPS availability'
+      - name: 'Preupload HTTPS availability (fail closed with HTTP diagnostics)'
         if: inputs.mode == 'deploy'
-        run: |
-          set -euo pipefail
-          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
-          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+        run: bash scripts/snapshot_release_http_gate.sh
       - name: 'Backup exact file, enforce drift and deploy'
         if: inputs.mode == 'deploy'
         run: python3 scripts/deploy_snapshot_photos_onefile.py deploy
-      - name: 'Read-only HTTPS checks after deploy'
+      - name: 'Read-only HTTPS checks after deploy (fail closed with HTTP diagnostics)'
         if: inputs.mode == 'deploy'
-        run: |
-          set -euo pipefail
-          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
-          test "$(curl --max-time 20 -sS -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+        run: bash scripts/snapshot_release_http_gate.sh
       - name: 'Retain private rollback evidence seven days'
         if: inputs.mode == 'deploy' && always()
         uses: actions/upload-artifact@v4
