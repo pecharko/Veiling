@@ -66,6 +66,14 @@ verify($initialStorage['snapshots'] === 0, 'No snapshot existed before isolated 
 $name = snap_create($pdo);
 verify(!$pdo->inTransaction(), 'Successful snapshot ends consistent read transaction before archiving photos');
 verify(snap_name($name) && is_file(snap_path($name)), 'Snapshot created with safe filename');
+
+$missingPhoto = 'uploads/2026/10/' . str_repeat('f',32) . '.jpg';
+$pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
+    ->execute([$lotId,$missingPhoto,99,'missing-test.jpg']);
+assert_throws(fn() => snap_create($pdo), 'ontbrekende of ongeldige fotoverwijzing',
+    'Snapshot rejects DB photo references without corresponding file');
+$pdo->prepare('DELETE FROM lot_images WHERE path=?')->execute([$missingPhoto]);
+
 $listing = snap_listing();
 verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['size'] > 0,
        'Snapshot listed with nonzero exact ZIP size');
