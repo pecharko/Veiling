@@ -1,0 +1,173 @@
+name: Issue 139 four-file code release with rollback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue-139-code-release.yml'
+      - 'scripts/deploy_issue139_code.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only plan, remote preflight, or separately authorized deploy'
+        required: true
+        type: choice
+        options:
+          - plan
+          - preflight
+          - deploy
+        default: plan
+      release_sha:
+        description: 'Exact approved main commit SHA'
+        required: false
+        type: string
+      confirmation:
+        description: 'Explicit final production authorization'
+        required: false
+        type: string
+      expected_reset:
+        description: 'Approved remote SHA-256 or ABSENT for new reset helper'
+        required: false
+        type: string
+      expected_snapshots:
+        description: 'Approved remote SHA-256 for snapshots helper'
+        required: false
+        type: string
+      expected_admin_lot:
+        description: 'Approved remote SHA-256 for lot editor'
+        required: false
+        type: string
+      expected_backup:
+        description: 'Approved remote SHA-256 for backup admin'
+        required: false
+        type: string
+permissions:
+        description: 'Approved SHA-256 or ABSENT for expected_permissions'
+        required: false
+        type: string
+      expected_snapshots:
+        description: 'Approved SHA-256 or ABSENT for expected_snapshots'
+        required: false
+        type: string
+      expected_roles:
+        description: 'Approved SHA-256 or ABSENT for expected_roles'
+        required: false
+        type: string
+      expected_admin_lot:
+        description: 'Approved SHA-256 or ABSENT for expected_admin_lot'
+        required: false
+        type: string
+      expected_public_lot:
+        description: 'Approved SHA-256 or ABSENT for expected_public_lot'
+        required: false
+        type: string
+      expected_home:
+        description: 'Approved SHA-256 or ABSENT for expected_home'
+        required: false
+        type: string
+      expected_bootstrap:
+        description: 'Approved SHA-256 or ABSENT for expected_bootstrap'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  validate-workflow:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Validate workflow with actionlint'
+        run: |
+          set -euo pipefail
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 -color .github/workflows/issue-139-code-release.yml
+      - name: 'Validate code-only release plan'
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/deploy_issue139_code.py
+          python3 scripts/deploy_issue139_code.py plan
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      EXPECTED_REMOTE_HASHES: ${{ format('{0},{1},{2},{3}', inputs.expected_reset, inputs.expected_snapshots, inputs.expected_admin_lot, inputs.expected_backup) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: 'Require exact SHA for any remote operation'
+        if: inputs.mode != 'plan'
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+      - name: 'Install PHP'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: 'Offline PHP and release checks'
+        run: |
+          set -euo pipefail
+          for file in private/catalog_reset.php private/snapshots.php catalogus-public/admin/kavel.php catalogus-public/admin/backup.php; do php -l "$file"; done
+          python3 scripts/generic_release_offline_check.py
+          python3 -m py_compile scripts/deploy_issue139_code.py
+          python3 scripts/deploy_issue139_code.py plan
+      - name: 'Gate final authorization'
+        if: inputs.mode == 'deploy'
+        env:
+          APPROVED_SHA: ${{ inputs.release_sha }}
+          APPROVED_TEXT: ${{ inputs.confirmation }}
+        run: |
+          set -euo pipefail
+          test "$APPROVED_SHA" = "$GITHUB_SHA"
+          test "$APPROVED_TEXT" = 'DEPLOY ISSUE 139 CODE WITH ROLLBACK'
+      - name: 'Pinned OVH SFTP'
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: 'Read-only production hashes'
+        if: inputs.mode != 'plan'
+        env:
+          PREFLIGHT_MANIFEST_PATH: issue-139-code-preflight.json
+        run: python3 scripts/deploy_issue139_code.py preflight
+      - name: 'Save preflight evidence'
+        if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-139-code-preflight-${{ github.run_id }}
+          path: issue-139-code-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: 'Backup and deploy exactly four files with drift gate'
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_issue139_code.py deploy
+      - name: 'Read-only HTTPS smoke tests'
+        if: inputs.mode == 'deploy'
+        run: |
+          set -euo pipefail
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/login.php)" = 200
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/veiling-organisatie.php)" = 303
+          test "$(curl -sS --max-time 20 -o /dev/null -w '%{http_code}' https://41lokeren.be/admin/rollen.php)" = 303
+      - name: 'Private rollback evidence for seven days'
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-139-code-rollback
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
