@@ -162,6 +162,7 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
 .user-admin .ua-filter select{max-width:165px}
 .user-admin .ua-user-list{display:block}
 .user-admin .ua-user{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid #f0e9e5;color:inherit;text-decoration:none}
+.user-admin .ua-user[hidden]{display:none}
 .user-admin .ua-user:hover,.user-admin .ua-user.selected{background:#fcf5f1;text-decoration:none}
 .user-admin .ua-user.selected{box-shadow:inset 4px 0 var(--ua-wine)}
 .user-admin .ua-avatar{display:grid;place-items:center;background:#f5e6e1;border-radius:11px;width:43px;height:43px;flex-shrink:0;color:var(--ua-wine);font-weight:850}
