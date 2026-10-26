@@ -132,6 +132,13 @@ jobs:
           python3 tests/recovery_remote_preflight_test.py
           echo 'No OVH connection, secrets, SQL or production writes used by T-060.'
 
+      - name: Verify disabled account access safeguards
+        run: |
+          php -l catalogus-public/admin/gebruikers.php
+          php -l catalogus-public/admin/login.php
+          php -l private/bootstrap.php
+          php tests/user_disable_contract_test.php
+
       - name: Detect whitespace errors
         shell: bash
         run: |

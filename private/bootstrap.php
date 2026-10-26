@@ -104,11 +104,12 @@ function can_edit_auction(): bool {
 function require_auth(): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
-  $st = db()->prepare('SELECT password_hash FROM admins WHERE id=?');
+  $st = db()->prepare('SELECT password_hash, is_active FROM admins WHERE id=?');
   $st->execute([$_SESSION['admin_id']]);
-  $hash = $st->fetchColumn();
+  $account = $st->fetch();
+  $hash = $account['password_hash'] ?? null;
   $proof = (string)($_SESSION['admin_credential_hash'] ?? '');
-  if (!is_string($hash) || $proof === '' || !hash_equals(hash('sha256', $hash), $proof)) {
+  if (!is_string($hash) || (int)($account['is_active'] ?? 0) !== 1 || $proof === '' || !hash_equals(hash('sha256', $hash), $proof)) {
     $_SESSION = [];
     session_regenerate_id(true);
     redirect('admin/login.php');
