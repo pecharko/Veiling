@@ -158,6 +158,10 @@ function snap_restore(PDO $pdo,string $name): void {
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
     foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='lots' && $col==='sale_location' ? 'markt' : ($table==='lots' && $col==='auction_only' ? 0 : null)))),$columns));
    }
+   // Keep permanent lot-number reservations monotonic across snapshot restores.
+   // A restore may reintroduce lots deleted after the snapshot was taken.
+   // Never clear the registry here: only the administrator's explicit full reset can.
+   $pdo->exec('INSERT IGNORE INTO issued_lot_numbers (lot_number) SELECT lot_number FROM lots');
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
    if(!$pdo->commit())throw new RuntimeException('Databasecommit kon niet worden bevestigd.');
