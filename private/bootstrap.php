@@ -66,10 +66,13 @@ function money(mixed $amount): string {
   return '€ ' . number_format((float)$amount, 0, ',', '.');
 }
 function estimate(array $lot): string {
-  if ($lot['estimate_min'] === null && $lot['estimate_max'] === null) return 'Geen schatting';
-  if ($lot['estimate_min'] === null) return 'Tot ' . money($lot['estimate_max']);
-  if ($lot['estimate_max'] === null) return 'Vanaf ' . money($lot['estimate_min']);
-  return money($lot['estimate_min']) . ' – ' . money($lot['estimate_max']);
+  $market = $lot['market_price'] ?? null;
+  $starting = $lot['starting_bid'] ?? null;
+  if ($market === null && $starting === null) return 'Geen waardebepaling';
+  $parts = [];
+  if ($market !== null) $parts[] = 'Marktprijs: ' . money($market);
+  if ($starting !== null) $parts[] = 'Startbod: ' . money($starting);
+  return implode(' · ', $parts);
 }
 function date_nl(?string $date): string {
   if (!$date) return 'Nog te bepalen';
