@@ -118,6 +118,25 @@
       "allow_absent": [
         "catalogus-public/privacy.php"
       ]
+    },
+    "issue-200-code-release.yml": {
+      "preflight": ".github/workflows/issue-200-code-release.yml",
+      "artifact_prefix": "issue200-preflight",
+      "confirmation": "DEPLOY ISSUE 200 FOUR FILES WITH ROLLBACK",
+      "paths": [
+        "catalogus-public/admin/gebruikers.php",
+        "catalogus-public/admin/login.php",
+        "private/snapshots.php",
+        "private/bootstrap.php"
+      ],
+      "hash_inputs": [
+        "expected_users",
+        "expected_login",
+        "expected_snapshots",
+        "expected_bootstrap"
+      ],
+      "manifest_file": "issue200-preflight.json",
+      "manual_schema_gate": true
     }
   }
 }
