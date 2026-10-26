@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/issue-139-code-release.yml'
       - 'scripts/deploy_issue139_code.py'
+      - 'scripts/release_http_preflight.sh'
   workflow_dispatch:
     inputs:
       mode:
@@ -189,6 +190,9 @@ jobs:
           path: issue-139-code-preflight.json
           retention-days: 7
           if-no-files-found: error
+      - name: 'Fail-closed HTTP preflight BEFORE any upload'
+        if: inputs.mode == 'deploy'
+        run: bash scripts/release_http_preflight.sh
       - name: 'Backup and deploy exactly four files with drift gate'
         if: inputs.mode == 'deploy'
         run: python3 scripts/deploy_issue139_code.py deploy
