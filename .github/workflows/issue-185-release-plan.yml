@@ -1,0 +1,76 @@
+name: Issue 185 release preparation (offline only)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue-185-release-plan.yml'
+  workflow_dispatch:
+    inputs:
+      expected_main_sha:
+        description: 'Exact intended main SHA; leave blank only for PR test'
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  offline-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Verify exact SHA when manually dispatched
+        env:
+          EXPECTED: ${{ inputs.expected_main_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${GITHUB_EVENT_NAME}" = workflow_dispatch ]; then
+            test "${GITHUB_REF}" = refs/heads/main
+            test -n "${EXPECTED}"
+            test "${EXPECTED}" = "$(git rev-parse HEAD)"
+          fi
+      - name: Validate fixed seven-file PHP allowlist
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            catalogus-public/admin/kavel.php
+            catalogus-public/admin/rollen.php
+            catalogus-public/index.php
+            catalogus-public/kavel.php
+            private/bootstrap.php
+            private/lot_permissions.php
+            private/snapshots.php
+          )
+          for file in "${files[@]}"; do
+            test -f "$file"
+            php -l "$file"
+            sha256sum "$file"
+          done
+          printf '%s\n' "${files[@]}" > issue-185-code-allowlist.txt
+          test "${#files[@]}" -eq 7
+      - name: Validate non-executed migration contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          sql=Path("database/lot_requirements_185_migration.sql").read_text()
+          required=("ADD COLUMN created_by_admin_id", "ADD COLUMN auction_only", "ADD COLUMN market_price", "ADD COLUMN starting_bid")
+          assert all(sql.count(s)==1 for s in required)
+          assert "DROP " not in sql.upper()
+          print("SQL inspected only; no database connection or migration")
+          PY
+      - name: Record immutable offline evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue-185-offline-plan-${{ github.run_id }}
+          path: issue-185-code-allowlist.txt
+          retention-days: 7
+          if-no-files-found: error
