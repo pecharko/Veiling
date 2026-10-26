@@ -38,9 +38,6 @@ on:
         type: string
 permissions:
   contents: read
-concurrency:
-  group: ovh-production-deploy
-  cancel-in-progress: false
 jobs:
   workflow-validation:
     if: github.event_name == 'pull_request'
@@ -56,6 +53,9 @@ jobs:
           python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
           python3 scripts/deploy_snapshot_photos_onefile.py plan
   automatic-readonly:
+    concurrency:
+      group: snapshot-photo-readonly-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
     if: >-
       github.event_name == 'workflow_run' &&
       github.event.workflow_run.event == 'push' &&
@@ -101,6 +101,9 @@ jobs:
           retention-days: 7
           if-no-files-found: error
   release:
+    concurrency:
+      group: ovh-production-deploy
+      cancel-in-progress: false
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 20
