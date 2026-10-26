@@ -42,16 +42,23 @@ if(is_post()){
     redirect('admin/kavel.php',['id'=>$id]);
   }
   if($action==='delete-lot' && $lot){
-    // Keep the existing deletion protection for numbered lots; moving to Markt
-    // first clears the auction number and closes gaps transactionally.
-    if ($lot['auction_number'] !== null) {
-      flash('Verplaats dit kavel eerst naar Markt (hierbij wordt het veilingsnummer vrijgegeven en de veiling hernummerd) voordat je het verwijdert.', 'warning');
+    // Deletion and gap-free auction numbering are one atomic DB operation.
+    // The request-wide catalog mutex also serializes number allocation.
+    try {
+      $pdo->beginTransaction();
+      $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
+      $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
+      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo);
+      $pdo->commit();
+    } catch (Throwable $ex) {
+      if ($pdo->inTransaction()) $pdo->rollBack();
+      error_log('Kavel verwijderen/hernummeren mislukt: '.$ex->getMessage());
+      flash('Kavel kon niet verwijderd worden. Er zijn geen veilingsnummers gewijzigd.', 'warning');
       redirect('admin/kavel.php', ['id' => $id]);
     }
-    $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
-    $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
+    // File removal only after successful DB commit; never on rollback.
     foreach($paths as $path)if(preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~',$path))@unlink(dirname(__DIR__).'/'.$path);
-    flash('Kavel verwijderd.');redirect('admin/index.php');
+    flash('Kavel verwijderd. Veilingsnummers zijn indien nodig herberekend.');redirect('admin/index.php');
   }
   if($action==='save'){
     $nr=(int)($_POST['lot_number']??0);
