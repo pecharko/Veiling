@@ -29,7 +29,13 @@ class DailyArchiveContract(unittest.TestCase):
         self.assertIn("Day exceeds safety limit (20000)", ARCH)
         self.assertLess(ARCH.index("INSERT INTO visitor_stats_day_totals"), ARCH.index("DELETE FROM visitor_stats_daily"))
         self.assertNotIn("visitor_id", CRON)
-        self.assertNotIn("visitor_stats_daily_cron.php", (ROOT / "private/visitor_stats.php").read_text())
+        tracking = (ROOT / "private/visitor_stats.php").read_text()
+        self.assertNotIn("visitor_stats_daily_cron.php", tracking)
+        # The public tracker only writes today's UTC date, not old archived days.
+        self.assertIn("$day = gmdate('Y-m-d');", tracking)
+        self.assertIn("$stmt->execute([$day, $identifier", tracking)
+        # Unexpected historical writes must fail closed on the unique aggregate key.
+        self.assertNotIn("ON DUPLICATE KEY UPDATE", ARCH)
 
 if __name__ == "__main__":
     unittest.main()
