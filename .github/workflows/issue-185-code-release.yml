@@ -68,7 +68,7 @@ jobs:
       OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
       OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
       OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
-      EXPECTED_REMOTE_HASHES: ${{ join(fromJSON(format('["{0}","{1}","{2}","{3}","{4}","{5}","{6}"]', inputs.expected_permissions, inputs.expected_snapshots, inputs.expected_roles, inputs.expected_admin_lot, inputs.expected_public_lot, inputs.expected_home, inputs.expected_bootstrap)), ',') }}
+      EXPECTED_REMOTE_HASHES: ${{ format('{0},{1},{2},{3},{4},{5},{6}', inputs.expected_permissions, inputs.expected_snapshots, inputs.expected_roles, inputs.expected_admin_lot, inputs.expected_public_lot, inputs.expected_home, inputs.expected_bootstrap) }}
     steps:
       - uses: actions/checkout@v4
         with:
