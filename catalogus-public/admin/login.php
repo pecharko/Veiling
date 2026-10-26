@@ -21,9 +21,9 @@ if (is_post()) {
   else {
     $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
     $password = (string)($_POST['password'] ?? '');
-    $u = $pdo->prepare('SELECT id,password_hash FROM admins WHERE email=? LIMIT 1');
+    $u = $pdo->prepare('SELECT id,password_hash,is_active FROM admins WHERE email=? LIMIT 1');
     $u->execute([$email]); $admin = $u->fetch();
-    if ($admin && password_verify($password, $admin['password_hash'])) {
+    if ($admin && (int)$admin['is_active'] === 1 && password_verify($password, $admin['password_hash'])) {
       session_regenerate_id(true);
       unset($_SESSION['admin_view_role']);
       $_SESSION['admin_id'] = (int)$admin['id'];
