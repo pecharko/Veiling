@@ -24,15 +24,15 @@ on:
         required: false
         type: string
       expected_privacy:
-        description: Remote SHA-256 for login.php
+        description: Remote SHA-256 for privacy.php
         required: false
         type: string
       expected_archive:
-        description: Remote SHA-256 for snapshots.php
+        description: Remote SHA-256 for archive helper
         required: false
         type: string
       expected_cron:
-        description: Remote SHA-256 for bootstrap.php
+        description: Remote SHA-256 for CLI cron file
         required: false
         type: string
       confirmation:
@@ -43,7 +43,7 @@ on:
         description: Verified manually in browser for exact SHA
         required: false
         type: string
-    permissions:
+permissions:
   contents: read
 jobs:
   validate:
@@ -64,7 +64,7 @@ jobs:
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.conclusion == 'success'
     concurrency:
-      group: issue200-readonly-${{ github.event.workflow_run.head_sha }}
+      group: issue224-archive-readonly-${{ github.event.workflow_run.head_sha }}
       cancel-in-progress: false
     runs-on: ubuntu-latest
     environment: production
