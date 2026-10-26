@@ -123,6 +123,12 @@ if(is_post()){
 }
 if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$lot=$st->fetch();}
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
+$creatorLabel = 'Onbekend (bestaand kavel)';
+if ($lot && !empty($lot['created_by_admin_id'])) {
+  $creatorSt = $pdo->prepare('SELECT email FROM admins WHERE id=?');
+  $creatorSt->execute([(int)$lot['created_by_admin_id']]);
+  $creatorLabel = (string)($creatorSt->fetchColumn() ?: 'Account niet meer aanwezig');
+}
 $suggestedNumber = '';
 if (str_starts_with($error, 'Dit lotnummer bestaat al.')) {
   $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM lots')->fetchColumn();
@@ -185,7 +191,7 @@ if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
           <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · 16 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
           <p class="lot-editor-help">Foto's worden toegevoegd wanneer je het kavel opslaat.</p>
         </section>
-        <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Huidige status</dt><dd><?=($d['status']==='published'?'Gepubliceerd':'Concept')?></dd></dl></section><?php endif; ?>
+        <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Aangemaakt door</dt><dd><?=e($creatorLabel)?></dd><dt>Huidige status</dt><dd><?=($d['status']==='published'?'Gepubliceerd':'Concept')?></dd></dl></section><?php endif; ?>
       </aside>
     </div>
     </fieldset>
