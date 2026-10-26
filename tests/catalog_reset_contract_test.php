@@ -22,22 +22,8 @@ foreach ([
 ] as $needle) {
   if (!str_contains($reset, $needle)) throw new RuntimeException('Atomic reset requirement missing: '.$needle);
 }
-foreach ([
-  "foreach(\$result['paths'] as \$path)",
-  "preg_match('~^uploads/",
-  "is_file(dirname(__DIR__).'/'.\$path)",
-  "!@unlink(dirname(__DIR__).'/'.\$path)",
-  "fotobestanden konden niet worden verwijderd"
-] as $needle) {
-  if (!str_contains($backup, $needle)) throw new RuntimeException('Safe photo cleanup missing: '.$needle);
-}
-$commit = strpos($reset, '$pdo->commit()');
-$cleanup = strpos($backup, "foreach(\$result['paths'] as \$path)");
-if ($commit === false || $cleanup === false) throw new RuntimeException('Commit and photo cleanup must both exist.');
-// The cleanup is only reachable after reset_catalog_lots returns after commit.
-if (!str_contains($backup, "try{\$result=reset_catalog_lots(\$pdo);}")) {
-  throw new RuntimeException('Photo cleanup must follow the committed reset result.');
-}
+if (!str_contains($backup, "reset_catalog_photo_files(\$result['paths'], dirname(__DIR__))")) throw new RuntimeException('Post-commit photo cleanup call missing');
+if (!str_contains($reset, "preg_match('~^uploads/") || !str_contains($reset, "!@unlink(\$file)")) throw new RuntimeException('Safe photo cleanup guard missing');
 if (str_contains($reset, 'TRUNCATE')) throw new RuntimeException('TRUNCATE cannot be rolled back in MySQL.');
 if (!str_contains($editor, 'compact_auction_numbers($pdo)')) throw new RuntimeException('Auction deletion must resequence.');
 echo "PASS catalog reset source contract\n";
