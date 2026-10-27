@@ -29,4 +29,35 @@ def reconcile(run, jobs, document, artifacts, *, run_id, release_sha, expected_p
         "independent_remote_readback": "NOT_VERIFIED",
         "independent_browser_acceptance": "PENDING",
     }
+    # Provenance is categorical: a workflow's self-reported readback is
+    # never equivalent to a second independent check against OVH.
+    output["provenance"] = {
+        "github_actions": {
+            "source": "github_api_run_jobs",
+            "status": run_result["status"],
+            "reason": run_result["reason"],
+            "run_id": run_id,
+            "release_sha": release_sha,
+        },
+        "artifact_and_rollback": {
+            "source": "github_api_artifact_inventory_and_runner_json",
+            "status": artifact_result["status"],
+            "reason": artifact_result["reason"],
+            "run_id": run_id,
+            "release_sha": release_sha,
+            "retention_7_days_independently_verified": False,
+        },
+        "runner_reported_sftp_readback": {
+            "source": "same_deployment_runner_not_independent",
+            "status": "NOT_INDEPENDENTLY_VERIFIED",
+        },
+        "external_ovh_readback": {
+            "source": "independent_ovh_read_not_performed",
+            "status": "NOT_VERIFIED",
+        },
+        "browser_acceptance": {
+            "source": "user_browser_confirmation_not_collected",
+            "status": "PENDING",
+        },
+    }
     return output
