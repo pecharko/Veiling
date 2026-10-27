@@ -96,6 +96,7 @@ jobs:
 
       - name: Test B1 passive post-run workflow identity offline
         run: |
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/controller-passive-postrun.yml
           python3 -m py_compile scripts/controller_passive_postrun.py tests/controller_passive_postrun_test.py
           python3 -m unittest discover -s tests -p controller_passive_postrun_test.py -v
 
