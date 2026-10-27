@@ -120,7 +120,197 @@ def review(responses):
         return reader.collect_review("synthetic-token", 512, 77, now=NOW), fake.called
 
 
+
+def git_blob_sha(raw):
+    typed = b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw
+    return hashlib.sha1(typed).hexdigest()
+
+
+def make_large_api():
+    """Represent the documented GitHub Contents encoding=none response."""
+    responses, data = make_api()
+    large = b"x" * (1024 * 1024 + 103)
+    objsha = git_blob_sha(large)
+    srcsha = hashlib.sha256(large).hexdigest()
+    path = "catalogus-public/admin/admin.css"
+    manifest = json.loads(data["manifest_bytes"]) if "manifest_bytes" in data else json.loads(
+        data["artifact_files"]["releases/shared-demo.json"]
+    )
+    manifest["files"][0]["source_sha256"] = srcsha
+    new_manifest = (json.dumps(manifest, indent=2) + "\n").encode()
+    comment = responses["/issues/comments/77"]
+    lines = comment["body"].splitlines()
+    for i, line in enumerate(lines):
+        if line.startswith("manifest_sha256="):
+            lines[i] = "manifest_sha256=" + hashlib.sha256(new_manifest).hexdigest()
+        if line.startswith("file=" + path + "|"):
+            fields = line.split("|")
+            fields[1] = srcsha
+            lines[i] = "|".join(fields)
+    comment["body"] = "\n".join(lines)
+    responses["/contents/releases/shared-demo.json?ref=" + MAIN_SHA] = git_item(new_manifest)
+    data["artifact_files"] = {
+        "releases/shared-demo.json": new_manifest,
+        "shared-ovh-readonly-baselines.json": new_manifest,
+    }
+    responses["/actions/artifacts/321/zip"] = archive(data["artifact_files"])
+    responses["/contents/" + path + "?ref=" + MAIN_SHA] = {
+        "type": "file", "encoding": "none", "content": "",
+        "size": len(large), "sha": objsha,
+    }
+    blob = {
+        "sha": objsha, "size": len(large), "encoding": "base64",
+        "content": base64.b64encode(large).decode(),
+    }
+    return responses, data, blob, large, objsha
+
+
+class FakeBlobHTTPResponse:
+    def __init__(self, url, data, status=200):
+        self.url = url
+        self.data = data
+        self.status = status
+        self.read_limit = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+    def geturl(self):
+        return self.url
+
+    def read(self, limit):
+        self.read_limit = limit
+        return self.data[:limit]
+
+
 class GitHubEvidenceReadOnlyTests(unittest.TestCase):
+    def test_large_immutable_source_file_retrieves_blob_and_verifies_git_sha1(self):
+        responses, _, blob, large, blobsha = make_large_api()
+        with patch.object(reader, "_bounded_blob_json", return_value=blob) as fetch:
+            result, _ = review(responses)
+        fetch.assert_called_once_with("synthetic-token", blobsha, len(large))
+        self.assertEqual(result["status"], "OFFLINE_CONTRACT_VERIFIED")
+        self.assertEqual(result["preflight_outcome"], "SUCCESSFUL_PREFLIGHT")
+        self.assertIs(result["dispatch_started"], False)
+
+    def test_large_file_hash_and_blob_metadata_mismatch_fail_closed(self):
+        for case in ("wrong_sha", "wrong_size", "wrong_encoding",
+                     "altered_blob_content", "truncated_blob_content"):
+            with self.subTest(case=case):
+                responses, _, blob, large, _ = make_large_api()
+                blob = dict(blob)
+                if case == "wrong_sha":
+                    blob["sha"] = "a" * 40
+                elif case == "wrong_size":
+                    blob["size"] -= 1
+                elif case == "wrong_encoding":
+                    blob["encoding"] = "utf-8"
+                elif case == "altered_blob_content":
+                    blob["content"] = base64.b64encode(b"z" * len(large)).decode()
+                else:
+                    blob["content"] = base64.b64encode(large[:-1]).decode()
+                with patch.object(reader, "_bounded_blob_json", return_value=blob):
+                    with self.assertRaises(ValueError):
+                        review(responses)
+
+    def test_large_file_requires_content_address_and_never_uses_download_url(self):
+        for value in (None, "not-a-git-object", "a" * 39, "g" * 40):
+            with self.subTest(value=value):
+                responses, _, _, _, _ = make_large_api()
+                responses[
+                    "/contents/catalogus-public/admin/admin.css?ref=" + MAIN_SHA
+                ]["sha"] = value
+                with patch.object(reader, "_bounded_blob_json") as fetch:
+                    with self.assertRaises(ValueError):
+                        review(responses)
+                fetch.assert_not_called()
+
+    def test_large_source_exceeding_8mib_fails_before_blob_get(self):
+        responses, _, blob, _, _ = make_large_api()
+        responses["/contents/catalogus-public/admin/admin.css?ref=" + MAIN_SHA]["size"] = (
+            reader.MAX_CONTENT + 1
+        )
+        with patch.object(reader, "_bounded_blob_json", return_value=blob) as fetch:
+            with self.assertRaises(ValueError):
+                review(responses)
+        fetch.assert_not_called()
+
+    def test_blob_http_get_is_bounded_fixed_host_and_strictly_read_only(self):
+        _, _, blob, large, blobsha = make_large_api()
+        url = reader.BASE + "/git/blobs/" + blobsha
+        response = FakeBlobHTTPResponse(url, encode(blob))
+        class FakeOpener:
+            def open(self, request, timeout):
+                self_inner = self
+                self_inner.url = request.full_url
+                self_inner.method = request.get_method()
+                self_inner.timeout = timeout
+                self_inner.auth = request.get_header("Authorization")
+                return response
+        opener = FakeOpener()
+        with patch.object(reader, "build_opener", return_value=opener) as make:
+            returned = reader._bounded_blob_json("synthetic-token", blobsha, len(large))
+        self.assertEqual(returned["sha"], blobsha)
+        self.assertEqual(opener.url, url)
+        self.assertEqual(opener.method, "GET")
+        self.assertEqual(opener.timeout, 20)
+        self.assertEqual(opener.auth, "Bearer synthetic-token")
+        self.assertEqual(make.call_args.args[0].__class__.__name__, "ArtifactRedirect")
+        self.assertLess(response.read_limit, 13 * 1024 * 1024)
+
+    def test_blob_http_redirect_non_200_and_oversized_json_fail_closed(self):
+        _, _, blob, large, blobsha = make_large_api()
+        url = reader.BASE + "/git/blobs/" + blobsha
+        for case in ("redirect", "bad_status", "oversize"):
+            with self.subTest(case=case):
+                initial_size = ((len(large) + 2) // 3) * 4 + 64 * 1024
+                payload = encode(blob)
+                response = FakeBlobHTTPResponse(
+                    "https://untrusted.example/blobs" if case == "redirect" else url,
+                    (b"x" * (initial_size + 12)) if case == "oversize" else payload,
+                    403 if case == "bad_status" else 200,
+                )
+                class FakeOpener:
+                    def open(self, request, timeout):
+                        return response
+                with patch.object(reader, "build_opener", return_value=FakeOpener()):
+                    with self.assertRaises(ValueError):
+                        reader._bounded_blob_json(
+                            "synthetic-token", blobsha, len(large)
+                        )
+
+    def test_git_blob_redirect_cannot_forward_authorization(self):
+        from urllib.request import Request
+        _, _, _, _, blobsha = make_large_api()
+        request = Request(
+            reader.BASE + "/git/blobs/" + blobsha,
+            headers={"Authorization": "Bearer synthetic-token"},
+        )
+        redirect = reader.ArtifactRedirect()
+        with self.assertRaises(ValueError):
+            redirect.redirect_request(
+                request, None, 302, "Found", {},
+                "https://objects.githubusercontent.com/unsafe-blob",
+            )
+
+    def test_blob_endpoint_rejects_invalid_token_blob_sha_or_size(self):
+        _, _, _, large, blobsha = make_large_api()
+        cases = (
+            ("", blobsha, len(large)),
+            ("token", "x" * 40, len(large)),
+            ("token", blobsha, 0),
+            ("token", blobsha, reader.MAX_CONTENT + 1),
+        )
+        for token, sha, size in cases:
+            with self.subTest(sha=sha, size=size, token=token):
+                with patch.object(reader, "build_opener") as network:
+                    with self.assertRaises(ValueError):
+                        reader._bounded_blob_json(token, sha, size)
+                    network.assert_not_called()
+
     def test_full_green_run_reads_evidence_and_produces_only_inert_plan(self):
         result, calls = review(make_api()[0])
         self.assertEqual(result["status"], "OFFLINE_CONTRACT_VERIFIED")
