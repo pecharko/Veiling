@@ -5,6 +5,7 @@ on:
       - '.github/workflows/shared-ovh-release.yml'
       - 'scripts/shared_ovh_release.py'
       - 'tests/shared_ovh_release_contract_test.py'
+      - 'scripts/ovh_deploy_evidence_contract.py'
   workflow_dispatch:
     inputs:
       release_id:
@@ -30,7 +31,7 @@ jobs:
           persist-credentials: false
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/shared-ovh-release.yml
       - run: python3 -m unittest discover -s tests -p shared_ovh_release_contract_test.py
-      - run: python3 -m py_compile scripts/shared_ovh_release.py
+      - run: python3 -m py_compile scripts/shared_ovh_release.py scripts/ovh_deploy_evidence_contract.py
   release:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -70,6 +71,14 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Backup and upload exactly manifest files with drift gate and rollback
         run: python3 scripts/shared_ovh_release.py deploy "$RELEASE_ID"
+      - name: Preserve machine-readable observed release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ovh-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
       - name: Preserve rollback artifact even on failure
         if: always()
         uses: actions/upload-artifact@v4
