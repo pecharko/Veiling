@@ -46,7 +46,7 @@ foreach ([
   [$lot, 'admin_name_label((string)$creatorName)', 'Creator missing name is labelled safely'],
   [$snapshot, "'admins'=>['id','name','email'", 'Snapshots include administrator name'],
   [$snapshot, "col==='name' ? ''", 'Legacy snapshot restore defaults name to empty'],
-  [$recovery, "if(!array_key_exists('name', $row))", 'Read-only diagnosis handles legacy snapshot names'],
+  [$recovery, "if(!array_key_exists('name', \$row))", 'Read-only diagnosis handles legacy snapshot names'],
 ] as [$contents,$needle,$reason]) {
   name_contract(str_contains($contents,$needle),$reason);
 }
