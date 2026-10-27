@@ -100,6 +100,11 @@ jobs:
           python3 -m py_compile scripts/controller_passive_postrun.py tests/controller_passive_postrun_test.py
           python3 -m unittest discover -s tests -p controller_passive_postrun_test.py -v
 
+      - name: Test isolated B3.2 SQLite concurrent claims (temporary DB only)
+        run: |
+          python3 -m py_compile scripts/controller_sqlite_claim_experiment.py tests/controller_sqlite_claim_experiment_test.py
+          python3 -m unittest discover -s tests -p controller_sqlite_claim_experiment_test.py -v
+
       - name: Test B3.2 offline transactional dual-unique claim model
         run: |
           python3 -m py_compile scripts/controller_transactional_claim_model.py tests/controller_transactional_claim_model_test.py
