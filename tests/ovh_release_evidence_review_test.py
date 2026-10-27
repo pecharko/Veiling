@@ -9,7 +9,7 @@ SHA = "b" * 40
 HASH = "a" * 64
 BASE = "c" * 64
 RUN = {"id": 123, "head_sha": SHA, "event": "workflow_dispatch",
-       "head_branch": "main", "path": "pecharko/Veiling/.github/workflows/shared-ovh-release.yml",
+       "head_branch": "main", "path": ".github/workflows/shared-ovh-release.yml@main",
        "status": "completed", "conclusion": "success"}
 EVIDENCE = {"schema": 1, "release_id": "test-abc", "release_sha": SHA,
             "run_id": 123, "status": "VERIFIED", "rollback_artifact": None,
@@ -26,6 +26,32 @@ ARTIFACTS = [{"id": 10, "name": "shared-ovh-evidence-123", "expired": False},
 class ReviewTests(unittest.TestCase):
     def test_accept_realistic_verified_snapshot(self):
         self.assertEqual(verify(RUN, EVIDENCE, MANIFEST, ARTIFACTS)["status"], "TECHNICALLY_VERIFIED")
+
+    def test_accept_ref_heads_main_and_legacy_workflow_paths(self):
+        allowed = (
+            ".github/workflows/shared-ovh-release.yml@refs/heads/main",
+            "pecharko/Veiling/.github/workflows/shared-ovh-release.yml@main",
+            "pecharko/Veiling/.github/workflows/shared-ovh-release.yml@refs/heads/main",
+            ".github/workflows/shared-ovh-release.yml",
+        )
+        for path in allowed:
+            with self.subTest(path=path):
+                result = verify({**RUN, "path": path}, EVIDENCE, MANIFEST, ARTIFACTS)
+                self.assertEqual(result["status"], "TECHNICALLY_VERIFIED")
+
+    def test_reject_wrong_workflow_ref_path_and_nonstring(self):
+        rejected = (
+            ".github/workflows/shared-ovh-release.yml@feature",
+            ".github/workflows/shared-ovh-release.yml@refs/heads/staging",
+            ".github/workflows/other-release.yml@main",
+            "other/repo/.github/workflows/shared-ovh-release.yml@main",
+            "attack.github/workflows/shared-ovh-release.yml@main",
+            ".github/workflows/shared-ovh-release.yml@main/evil",
+            None,
+        )
+        for path in rejected:
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                verify({**RUN, "path": path}, EVIDENCE, MANIFEST, ARTIFACTS)
 
     def test_reject_user_report_without_completed_run(self):
         with self.assertRaises(ValueError):

@@ -13,6 +13,12 @@ from ovh_deploy_evidence_contract import validate
 
 RELEASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 SHA = re.compile(r"^[0-9a-f]{40}$")
+# GitHub REST workflow-run metadata includes an @branch suffix in 'path'.
+# Accept only the reviewed workflow on main (or the legacy unsuffixed form).
+RELEASE_WORKFLOW_PATH = re.compile(
+    r"^(?:pecharko/Veiling/)?\.github/workflows/shared-ovh-release\.yml"
+    r"(?:@(?:refs/heads/)?main)?$"
+)
 
 
 def verify(run, evidence, manifest, artifacts):
@@ -31,10 +37,8 @@ def verify(run, evidence, manifest, artifacts):
             or run.get("conclusion") != "success"):
         raise ValueError("Run does not independently prove successful approved main dispatch")
     workflow = run.get("path", "")
-    if not isinstance(workflow, str) or not workflow.endswith(
-        ".github/workflows/shared-ovh-release.yml"
-    ):
-        raise ValueError("Not the reviewed shared release workflow")
+    if not isinstance(workflow, str) or not RELEASE_WORKFLOW_PATH.fullmatch(workflow):
+        raise ValueError("Not the reviewed shared release workflow on main")
     if evidence["status"] != "VERIFIED":
         raise ValueError("Attestation does not indicate verified readback")
     if evidence["browser_acceptance"] != "PENDING":
