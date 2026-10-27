@@ -4,7 +4,6 @@
     "catalogus-public/admin/gebruikers.php",
     "catalogus-public/admin/kavel.php",
     "private/admin_names.php",
-    "private/restore_diagnosis.php",
-    "private/snapshots.php"
+    "private/restore_diagnosis.php"
   ]
 }
