@@ -49,3 +49,33 @@ def review_claim(key, record, *, durable_cas_proven):
     return {"status": "BLOCKED", "reason": "external_one_shot_gate_required",
             "claim_state": state, "dispatch_allowed": False,
             "automatic_retry_allowed": False}
+
+
+def assess_create_only_outcome(key, *, http_status, observed_ref, expected_target_sha):
+    """Pure model for an external atomic create-ref transaction; never dispatch.
+
+    A 201 is only a claimed API response, not proof of exclusive immutable
+    ownership. A 422, timeout, or conflicting readback always fail closed.
+    """
+    if not isinstance(key, tuple) or len(key) != 5 or key != claim_key(*key):
+        raise ValueError("Invalid canonical claim")
+    if not isinstance(expected_target_sha, str) or not SHA.fullmatch(expected_target_sha):
+        raise ValueError("Invalid expected target")
+    if http_status not in (201, 422, None):
+        return {"status": "BLOCKED", "reason": "unexpected_api_outcome",
+                "dispatch_allowed": False, "automatic_retry_allowed": False}
+    if http_status is None:
+        reason = "create_result_unknown"
+    elif http_status == 422:
+        reason = "claim_already_exists_or_conflict"
+    else:
+        reason = "unproven_exclusive_persistence"
+    if observed_ref is not None:
+        if not isinstance(observed_ref, dict) or set(observed_ref) != {"key", "target_sha"}:
+            reason = "invalid_ref_readback"
+        elif observed_ref["key"] != key or observed_ref["target_sha"] != expected_target_sha:
+            reason = "ref_identity_or_target_drift"
+        elif http_status == 201:
+            reason = "matching_ref_not_proof_of_irreversibility"
+    return {"status": "BLOCKED", "reason": reason,
+            "dispatch_allowed": False, "automatic_retry_allowed": False}
