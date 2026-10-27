@@ -73,7 +73,8 @@ jobs:
             { echo "Invalid CI impact verdict"; exit 1; }
       - name: Explicitly record not applicable (no MySQL or PHP test)
         if: needs.impact.outputs.run == 'false'
-        run: echo "NOT_APPLICABLE: no runtime, shared-code, test infra or workflow changes"
+        run: |
+          echo "NOT_APPLICABLE - no runtime, shared-code, test infra or workflow changes"
 
       - name: Checkout PR code
         if: needs.impact.outputs.run == 'true'
