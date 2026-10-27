@@ -108,6 +108,9 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-fields label {display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:750;color:var(--ed-ink);min-width:0}
 .lot-editor-fields input:not([type=file]),.lot-editor-fields select,.lot-editor-fields textarea {display:block;width:100%;min-width:0;max-width:none;border:1px solid #d6ddd5;background:#fff;border-radius:9px;padding:12px 13px;font-size:14px;line-height:1.5;color:#1e382f}
 .lot-editor-fields input:not([type=file]),.lot-editor-fields select {min-height:49px}
+.lot-editor-fields label.lot-full:has(> input[type="checkbox"]) {display:flex;flex-direction:row;align-items:center;gap:10px;cursor:pointer}
+.lot-editor-fields label.lot-full > input[type="checkbox"] {appearance:auto;display:inline-block;flex:0 0 18px;width:18px;min-width:18px;max-width:18px;height:18px;min-height:18px;margin:0;padding:0;border:0;accent-color:var(--wine);cursor:pointer}
+
 .lot-editor-fields textarea {min-height:125px;resize:vertical}
 .lot-editor-fields input:focus,.lot-editor-fields select:focus,.lot-editor-fields textarea:focus {outline:3px solid rgba(239,133,134,.18);border-color:var(--wine)}
 .lot-required {color:var(--wine)}
