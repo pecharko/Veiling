@@ -79,6 +79,11 @@ jobs:
           python3 -m py_compile scripts/controller_artifact_consistency.py tests/controller_artifact_consistency_test.py
           python3 -m unittest discover -s tests -p controller_artifact_consistency_test.py -v
 
+      - name: Test read-only Actions release run evidence binding offline
+        run: |
+          python3 -m py_compile scripts/controller_run_evidence_binding.py tests/controller_run_evidence_binding_test.py
+          python3 -m unittest discover -s tests -p controller_run_evidence_binding_test.py -v
+
       - name: Validate conservative integration CI impact routing offline
         run: |
           python3 -m py_compile scripts/ci_pr_impact.py tests/ci_pr_impact_test.py
