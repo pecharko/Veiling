@@ -133,9 +133,9 @@ def make_large_api():
     objsha = git_blob_sha(large)
     srcsha = hashlib.sha256(large).hexdigest()
     path = "catalogus-public/admin/admin.css"
-    manifest = json.loads(data["manifest_bytes"]) if "manifest_bytes" in data else json.loads(
-        data["artifact_files"]["releases/shared-demo.json"]
-    )
+    # make_api() already replaced synthetic placeholder hashes with real file
+    # hashes; build on that current manifest, not fixture() original placeholders.
+    manifest = json.loads(data["artifact_files"]["releases/shared-demo.json"])
     manifest["files"][0]["source_sha256"] = srcsha
     new_manifest = (json.dumps(manifest, indent=2) + "\n").encode()
     comment = responses["/issues/comments/77"]
