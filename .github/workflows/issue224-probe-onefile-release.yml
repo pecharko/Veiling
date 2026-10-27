@@ -1,0 +1,122 @@
+name: Issue 224 diagnostic probe one-file code release with rollback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/issue224-probe-onefile-release.yml'
+      - 'scripts/deploy_issue224_probe_onefile.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Read-only plan/preflight or explicitly authorized deploy
+        required: true
+        type: choice
+        options: [plan, preflight, deploy]
+        default: plan
+      release_sha:
+        description: Exact approved main commit SHA
+        required: false
+        type: string
+      expected_probe:
+        description: Exact remote SHA-256 or ABSENT for diagnostic probe
+        required: false
+        type: string
+      confirmation:
+        description: Exact final production authorization
+        required: false
+        type: string
+      manual_https_precheck:
+        description: Verified manually in browser for exact SHA
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/issue224-probe-onefile-release.yml
+      - run: |
+          python3 -m py_compile scripts/deploy_issue224_probe_onefile.py
+          python3 scripts/deploy_issue224_probe_onefile.py plan
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    concurrency:
+      group: ovh-production-deploy
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      EXPECTED_REMOTE_HASHES: ${{ inputs.expected_probe }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      PREFLIGHT_MANIFEST_PATH: issue224-probe-release-preflight.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact immutable main SHA
+        run: |
+          set -euo pipefail
+          test "$RELEASE_SHA" = "$GITHUB_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: none
+          coverage: none
+      - name: Validate code and offline plan
+        run: |
+          set -euo pipefail
+          php -l private/visitor_stats_cron_runtime_probe.php
+          python3 -m py_compile scripts/deploy_issue224_probe_onefile.py
+          python3 scripts/deploy_issue224_probe_onefile.py plan
+      - name: Exact final production authorization and independent HTTPS acceptance
+        if: inputs.mode == 'deploy'
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+          MANUAL_HTTPS: ${{ inputs.manual_https_precheck }}
+        run: |
+          set -euo pipefail
+          test "$CONFIRMATION" = "DEPLOY ISSUE 224 PROBE ONEFILE WITH ROLLBACK"
+          test "$MANUAL_HTTPS" = "VERIFIED-$GITHUB_SHA"
+      - name: Pinned SFTP client
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Read-only remote baseline
+        if: inputs.mode != 'plan'
+        run: python3 scripts/deploy_issue224_probe_onefile.py preflight
+      - name: Save read-only artifact
+        if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue224-probe-release-preflight-${{ github.run_id }}
+          path: issue224-probe-release-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Backup code and upload with drift and rollback
+        if: inputs.mode == 'deploy'
+        run: python3 scripts/deploy_issue224_probe_onefile.py deploy
+      - name: Require manual post-deploy browser acceptance
+        if: inputs.mode == 'deploy'
+        run: |
+          echo 'PROBE CODE UPLOADED; DIAGNOSTIC NOT EXECUTED; MANUAL BROWSER ACCEPTANCE PENDING'
+          echo 'Browser-confirm homepage and admin access; diagnostic and cron remain OFF.'
+      - name: Retain rollback artifact
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue224-probe-onefile-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
