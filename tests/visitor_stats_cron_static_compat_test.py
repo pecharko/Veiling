@@ -14,7 +14,7 @@ checks = {
  "CLI guard precedes bootstrap": code.find("PHP_SAPI !== 'cli'") > 0 and code.find("PHP_SAPI !== 'cli'") < code.find("require_once"),
  "7 UTC days retention": "strtotime('-7 days')" in code,
  "14 day catch-up limit": "$maxDays = 14;" in code,
- "explicit warning exit status": "archive_catchup_limit_reached" in code and re.search(r"archive_catchup_limit_reached[\\s\\S]*?exit\\(2\\)",code) is not None,
+ "explicit warning exit status": "exit(2);" in code.split("archive_catchup_limit_reached", 1)[-1][:180] if "archive_catchup_limit_reached" in code else False,
  "20k row ceiling in helper": "20000" in archive,
  "transactional archive": "$pdo->beginTransaction()" in archive and "$pdo->commit()" in archive and "$pdo->rollBack()" in archive,
 }
