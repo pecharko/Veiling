@@ -46,7 +46,7 @@ def load_manifest(release_id):
         name, source_sha, remote_sha = (entry[k] for k in ("path", "source_sha256", "remote_sha256"))
         if not isinstance(name, str) or not name.startswith(ALLOWED_PREFIX) or not name.endswith(ALLOWED_SUFFIX):
             raise ValueError("Not an allowed runtime file")
-        if (name.startswith("/") or "\\" in name or any(part in ("", ".", "..") for part in name.split("/"))
+        if (name.startswith("/") or "\\" in name or any(part in ("", ".", "..") or part.startswith(".") for part in name.split("/"))
                 or any(name.startswith(blocked) for blocked in PROTECTED) or name in payload):
             raise ValueError("Invalid or protected path")
         if not isinstance(source_sha, str) or not HASH.fullmatch(source_sha):
