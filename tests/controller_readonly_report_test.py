@@ -73,7 +73,7 @@ class EvidenceReportTest(unittest.TestCase):
         good = self.inspect()
         stages = {k: good for k in ("deployment", "readback", "rollback",
                                     "browser_acceptance")}
-        self.assertTrue(report(stages)["fully_accepted"])
+        self.assertFalse(report(stages)["fully_accepted"])  # caller claims are not evidence
         self.assertIn('"read_only":true', as_json(stages))
         self.assertIn("rollback: VERIFIED", as_text(stages))
 
