@@ -334,3 +334,20 @@ rechtstreeks verbonden met OVH-MySQL worden aangenomen.
 **Huidige toestand:** ontwerpwijziging uitsluitend in documentatie.
 Geen SQL uitgevoerd, geen bestaande tabel of backup/restorecode aangepast,
 geen nieuwe credential, dispatch of productiedeployment.
+
+### Eerste read-only codecontrole huidige website
+
+In `private/snapshots.php` is `SNAP_TABLES` momenteel een expliciete
+allowlist: `settings`, `admins`, `lots`, `lot_images`,
+`login_attempts`. Een **nieuwe** claimtabel valt daarmee niet
+automatisch binnen deze data-only snapshots. Dat is gunstig voor
+anti-replay, maar vereist een *eigen* onafhankelijke backup- en
+herstelprocedure voor de claimgegevens.
+
+`private/catalog_reset.php` wist expliciet de tabellen
+`lot_images`, `lots` en `issued_lot_numbers`. Een nieuwe claimtabel
+staat niet in die wisoperaties. Het toekomstige databaseontwerp mag
+deze beperkte delete-scope niet verruimen. Volledige MySQL-backups,
+handmatige SQL-reset en toekomstige restore-migraties blijven
+apart te beoordelen. Dit is een repositorycodecontrole, geen
+bewijs van de daadwerkelijke productierechten of inhoud.
