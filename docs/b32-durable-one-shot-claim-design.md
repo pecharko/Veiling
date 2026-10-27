@@ -278,3 +278,59 @@ Geen hiervan is met alleen PR-CI bewezen.
 Deze sectie is *alleen architectuur en acceptatiecriteria*; geen nieuwe
 database, token, recht, GitHub-eventtrigger, ref, workflow_dispatch,
 OVH-write of wijziging aan de releasegate.
+
+## Besluit opdrachtgever: dezelfde bestaande MySQL-database (27 oktober 2026)
+
+**Deze beslissing vervangt de eerdere voorkeur voor een afzonderlijke database.**
+De duurzame controllerclaims worden ontworpen in **de bestaande MySQL-database
+van 41lokeren.be**, in strikt gescheiden InnoDB-tabellen. Er wordt geen
+nieuwe database aangevraagd. De eerdere vergelijkingsparagrafen hierboven
+zijn historische afwegingen, niet langer de gekozen architectuur.
+
+**Geplande dataorganisatie (nog geen migratie):**
+
+- Eigen tabel `controller_release_claims`; twee onafhankelijke UNIQUE-sleutels:
+  `(repository, issue_id, comment_id)` én
+  `(repository, release_id, release_sha)`.
+  Verifieer bij implementatie ook of het release-ID over verschillende
+  main-SHA's herbruikbaar mag zijn; default is fail-closed bij twijfel.
+- Immutable provenance van goedkeuring, releasebron en exacte commit;
+  statusovergangen en run-ID alleen gecontroleerd/transactioneel.
+- Atomaire InnoDB-insert in één transactie; duplicate key en onbekende
+  commituitkomst zijn **geen** toestemming voor dispatch of herpoging.
+- App-functies en claimopslag delen fysieke MySQL-host en database, maar
+  geen tabelbeheer of herstelrechten. Bestaande websitecode mag de
+  claimtabel niet wijzigen of legen.
+
+**Harde nieuwe veiligheidsvoorwaarde bij gedeelde database:
+snapshot, herstel en reset.** De bestaande site beschikt over
+`Back-up & herstel` en catalogus-reset. Een oude snapshot terugzetten
+mag **nooit** een eenmaal geregistreerde autorisatie wissen, overschrijven
+of terugrollen. Vóór productiegebruik dus de huidige backup-/restore-
+en resetcode volledig auditen: deze tabel moet worden uitgesloten van
+data-only snapshot/restore/reset, of een aantoonbaar equivalent
+append-only extern auditbewijs/anti-replaymechanisme krijgen. Een
+`TRUNCATE`, `DROP`, restore van een oud tabelbeeld of beheerdermatige
+DELETE moet detecteerbaar en preventief beveiligd zijn. Alleen
+`niet opgenomen in snapshot` is onvoldoende als een beheerder toch
+direct de tabel kan aanpassen; documenteer dat resterende risico.
+
+**Rechten en bereikbaarheid:** bekijk eerst de werkelijke OVH
+MySQL-accountrechten read-only. Als alleen één DB-gebruiker mogelijk is
+en de applicatie dezelfde brede rechten bezit, kan least-privilege
+niet worden geclaimd. Vereis aparte minimale DB-credentials voor
+claimschrijver waar OVH dat toelaat; geen secrets in GitHub-comments
+of CI-logs. GitHub-hosted runners mogen niet stilzwijgend als
+rechtstreeks verbonden met OVH-MySQL worden aangenomen.
+
+**Nog afzonderlijk te autoriseren:**
+1. Read-only audit van effectieve restore/reset/snapshotdekking en
+   MySQL-bereikbaarheid/rechten.
+2. Exacte InnoDB-migratie en afzonderlijke productie-DB-goedkeuring,
+   inclusief data-only backup en test-herstelstrategie.
+3. Aparte minimale credentials en securityreview van runtimepad.
+4. Pas daarna afzonderlijke, exacte dispatch-/releasegateautorisatie.
+
+**Huidige toestand:** ontwerpwijziging uitsluitend in documentatie.
+Geen SQL uitgevoerd, geen bestaande tabel of backup/restorecode aangepast,
+geen nieuwe credential, dispatch of productiedeployment.
