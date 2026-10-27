@@ -119,8 +119,19 @@ def run():
     confirmation = os.environ.get("DEPLOY_CONFIRMATION", "")
     if confirmation != "DEPLOY-" + release_id + "-" + sha:
         raise ValueError("Exact release authorization missing")
-    client, base = connect()
+    evidence = {
+        "schema": 1, "release_id": release_id, "release_sha": sha,
+        "run_id": int(os.environ.get("GITHUB_RUN_ID", "0")),
+        "status": "NOT_STARTED", "rollback_artifact": None,
+        "browser_acceptance": "PENDING",
+        "files": [{"path": name, "source_sha256": digest(data),
+                   "baseline_sha256": expected[name], "readback_sha256": None}
+                  for name, data in payload.items()]
+    }
+    evidence_rows = {row["path"]: row for row in evidence["files"]}
+    client = None
     try:
+        client, base = connect()
         with client.open_sftp() as sftp:
             sentinel = read_remote(sftp, posixpath.join(base, "catalogus-public/admin/index.php"))
             if sentinel is None or b"dashboard-table" not in sentinel:
@@ -150,6 +161,7 @@ def run():
                 for name, data in payload.items():
                     if prior[name] == data:
                         print("UNCHANGED", name)
+                        evidence_rows[name]["readback_sha256"] = digest(prior[name])
                         continue
                     dest = posixpath.join(base, name)
                     changed.append(name)
@@ -159,8 +171,10 @@ def run():
                     after = read_remote(sftp, dest)
                     if after != data:
                         raise RuntimeError("Upload verification failed: " + name)
+                    evidence_rows[name]["readback_sha256"] = digest(after)
                     print("VERIFIED", name, digest(after))
             except Exception:
+                rollback_failed = False
                 for name in reversed(changed):
                     dest = posixpath.join(base, name)
                     try:
@@ -174,10 +188,21 @@ def run():
                             raise RuntimeError("Rollback verification failed")
                         print("ROLLBACK VERIFIED", name)
                     except Exception as err:
+                        rollback_failed = True
                         print("CRITICAL MANUAL RESTORE", name, repr(err), file=sys.stderr)
+                evidence["status"] = "ROLLBACK_FAILED" if rollback_failed else "ROLLED_BACK"
                 raise
+            evidence["status"] = "VERIFIED"
+    except Exception:
+        if evidence["status"] == "NOT_STARTED":
+            evidence["status"] = "FAILED"
+        raise
     finally:
-        client.close()
+        if client is not None:
+            client.close()
+        from ovh_deploy_evidence_contract import validate
+        path = ROOT / "deployment-evidence.json"
+        path.write_text(json.dumps(validate(evidence), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
