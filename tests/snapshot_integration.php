@@ -36,6 +36,7 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 }
 
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
+$pdo->exec("UPDATE admins SET name='CI Beheerder'");
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
 $pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?)")
     ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
@@ -43,6 +44,7 @@ $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
 $originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
+$originalAdminName = $pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn();
 
 $relative = '2026/10/' . str_repeat('a', 32) . '.jpg';
 $extra = '2026/10/' . str_repeat('b', 32) . '.jpg';
@@ -125,7 +127,7 @@ assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is
 
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
 $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
-$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid'");
+$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
@@ -147,6 +149,8 @@ verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === '
        'Restore returns the original event settings');
 verify($pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn() === $originalAdmin,
        'Restore returns the original administrator');
+verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === $originalAdminName,
+       'Restore preserves administrator display name');
 verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 1,
        'Restore returns login attempts');
 verify((int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE lot_id='.$lotId)->fetchColumn() === 1,
@@ -194,6 +198,8 @@ foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
     foreach (['market_price','starting_bid','auction_only','created_by_admin_id'] as $newColumn) unset($legacyLot[$newColumn]);
 }
 unset($legacyLot);
+foreach ($legacyDb['tables']['admins'] as &$legacyAdmin) unset($legacyAdmin['name']);
+unset($legacyAdmin);
 $legacyJson = json_encode($legacyDb, JSON_THROW_ON_ERROR);
 $legacyManifest = json_decode($legacyZip->getFromName('manifest.json'), true, 512, JSON_THROW_ON_ERROR);
 $legacyManifest['sha256']['database.json'] = hash('sha256', $legacyJson);
@@ -201,10 +207,14 @@ $legacyZip->addFromString('database.json', $legacyJson);
 $legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
 $legacyZip->close();
 [$verifiedLegacy] = snap_verified($legacyName);
+verify(!array_key_exists('name', $verifiedLegacy['tables']['admins'][0]),
+       'Legacy snapshot without admin names validates with correct checksums');
 verify(!array_key_exists('auction_only', $verifiedLegacy['tables']['lots'][0]),
        'Old lot snapshot without #185 columns validates with correct checksums');
 $pdo->exec("UPDATE lots SET market_price=123, starting_bid=45, auction_only=1 WHERE lot_number=101");
 snap_restore($pdo, $legacyName);
+verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === '',
+       'Legacy snapshot restore leaves administrator name blank rather than using email');
 $legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
 verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid'] === null
        && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null,
