@@ -89,6 +89,11 @@ jobs:
           python3 -m py_compile scripts/controller_readonly_reconciliation.py tests/controller_readonly_reconciliation_test.py
           python3 -m unittest discover -s tests -p controller_readonly_reconciliation_test.py -v
 
+      - name: Test Phase A bounded read-only evidence collector
+        run: |
+          python3 -m py_compile scripts/controller_evidence_collector.py tests/controller_evidence_collector_test.py
+          python3 -m unittest discover -s tests -p controller_evidence_collector_test.py -v
+
       - name: Validate conservative integration CI impact routing offline
         run: |
           python3 -m py_compile scripts/ci_pr_impact.py tests/ci_pr_impact_test.py
