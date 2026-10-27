@@ -3,6 +3,7 @@
 
 No workflow_dispatch, no GitHub mutations, no OVH access. Requires GITHUB_TOKEN.
 """
+import argparse
 import base64
 import io
 import json
@@ -111,7 +112,7 @@ def inspect_run(run, token):
     return verify(run, evidence, manifest, artifacts)
 
 
-def latest_review(token):
+def latest_review(token, expected_run_id=None):
     payload = json_get(API + "/actions/workflows/" + WORKFLOW +
                        "/runs?event=workflow_dispatch&branch=main&per_page=30", token)
     runs = payload.get("workflow_runs")
@@ -120,17 +121,26 @@ def latest_review(token):
     # GitHub lists workflow runs newest first. Never report an older success as
     # current green when the latest release failed, was cancelled, or is running.
     run = runs[0]
+    if expected_run_id is not None and (
+        type(expected_run_id) is not int or expected_run_id <= 0
+        or run.get("id") != expected_run_id
+    ):
+        raise ValueError("Newest dispatch is not the triggering release run")
     if run.get("status") != "completed" or run.get("conclusion") != "success":
         raise ValueError("Latest shared release dispatch is not successful")
     return inspect_run(run, token)
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Read-only OVH release evidence review")
+    parser.add_argument("--expected-run-id", type=int, default=None,
+                        help="Require the verified run to match the workflow_run trigger")
+    args = parser.parse_args()
     token = os.getenv("GITHUB_TOKEN")
     if not token:
         raise SystemExit("GITHUB_TOKEN required (read-only Actions/contents access)")
     try:
-        print(json.dumps(latest_review(token), indent=2))
+        print(json.dumps(latest_review(token, expected_run_id=args.expected_run_id), indent=2))
     except Exception as exc:
         print("EVIDENCE NOT VERIFIED:", str(exc), file=sys.stderr)
         sys.exit(1)
