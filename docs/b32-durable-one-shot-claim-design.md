@@ -84,3 +84,58 @@ of OVH-productie te wijzigen. B3.2 werkt na PR #277 nog steeds alleen offline.
 De gedeelde production writer en alle bestaande autorisatiegates blijven
 ongewijzigd. De daadwerkelijke CAS-/dispatch-koppeling vereist aparte
 scope-, risico- en exacte commitgoedkeuring.
+
+## Security decision gate — whether Git refs are acceptable
+
+**Current decision: NOT APPROVED for a writer.** Creating a branch ref is
+insufficient until protection against deletion/force-push, bypass privileges
+and actor separation is independently verified in the real repository.
+GitHub branch naming and a successful create-ref response do not themselves
+prove a permanent audit ledger.
+
+Before any executable proposal, collect *read-only*, redacted evidence for:
+
+| Gate | Required result | If missing |
+|---|---|---|
+| Atomic create-only | Same canonical key claimed by at most one contender | BLOCK |
+| Ref immutability | No delete/force-update by dispatcher or ordinary writer token | BLOCK |
+| Privilege separation | Claim writer cannot change repository protections or writer code | BLOCK |
+| Recovery after crash | Claim persists after crash/restart; ambiguous dispatch is never retried | BLOCK |
+| Durable audit identity | Issue/comment IDs + release ID/SHA + original approval remain auditable | BLOCK |
+| Main/manifest freshness | Authorization adapter revalidates immutable main and reviewed hashes | BLOCK |
+| Deployment independence | No change to existing SFTP drift gate, backups, rollback, browser acceptance | BLOCK |
+
+### Deliberately NOT an exactly-once guarantee
+
+Even an atomic immutable claim can guarantee at most *one attempted dispatch*
+from a correctly constrained claim issuer. It does **not** guarantee a release
+ran once, nor that GitHub accepted the request, nor that OVH changed.
+The correct objective is **at-most-once attempt, fail-closed ambiguity**.
+An unsuccessful or ambiguous dispatch may require a *new* explicit approval
+after independent reconciliation. Never delete an old claim to retry.
+
+### Threat scenarios to demonstrate before separate executable PR
+
+1. Two runners claim the same key simultaneously: exactly one create-only
+   operation wins; the loser cannot dispatch.
+2. Runner crashes just after creating the claim: no second dispatch, even if
+   no Actions run was started.
+3. API times out after creating the ref: later readback may show the ref,
+   but this does not authorize a replay or count as a dispatch.
+4. Dispatch times out after acceptance: no second dispatch until independently
+   reconciled; absence in a recent runs list is not proof of non-acceptance.
+5. Token with branch-delete rights removes claim: demonstrate that the
+   repository's server-side policy forbids it, otherwise reject Git refs as
+   durable claim storage.
+6. Different comment ID for same release/main cannot bypass any required
+   per-release idempotence rule. Keying only by comment is insufficient if the
+   user can submit multiple approved comments on one release; an additional
+   release-scoped consumption key or exclusive owner authorization must be
+   specified before dispatch.
+7. Expired, edited, deleted or author-mismatched issue/comment: deny, even if
+   an earlier event payload claimed success.
+
+**Next work item:** inspect actual repository rulesets and effective token
+permissions read-only. If their enforced behavior cannot be verified,
+choose a backend with demonstrable durable uniqueness instead. Do not grant
+new rights as a shortcut.
