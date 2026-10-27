@@ -59,6 +59,11 @@ jobs:
           python3 -m py_compile scripts/ovh_deploy_evidence_contract.py tests/ovh_deploy_evidence_contract_test.py
           python3 -m unittest discover -s tests -p ovh_deploy_evidence_contract_test.py -v
 
+      - name: Test inert shared OVH controller adapter without GitHub or OVH access
+        run: |
+          python3 -m py_compile scripts/shared_ovh_controller_adapter.py tests/shared_ovh_controller_adapter_test.py
+          python3 -m unittest discover -s tests -p shared_ovh_controller_adapter_test.py -v
+
       - name: Test deployment controller security guards offline
         run: |
           python3 -m py_compile scripts/verified_deploy_controller.py
