@@ -148,7 +148,53 @@ def verify_owner_event(approval, issue, comment, previously_closed, now):
     return created
 
 
-def verify_preflight(approval, run, artifact_inventory, now, comment_created):
+# When the action cannot open its manifest PR, the workflow may be red even
+# though all read-only SFTP/hash/artifact steps passed. The recovery is NOT a
+# successful workflow run: accept only an independently fetched job whose sole
+# failure was the bot PR-creation step. Unknown/renamed steps fail closed.
+PR_CREATION_STEP = "Open manifest review PR (never production upload)"
+EXPECTED_RECOVERY_STEPS = (
+    "Set up job",
+    "Checkout approved main snapshot",
+    "Verify main remains source",
+    "Determine reviewed release request",
+    "Install pinned SSH/SFTP client",
+    "Collect real remote hashes and generate valid manifest",
+    "Upload proof artifact even if GitHub cannot create PR",
+    PR_CREATION_STEP,
+    "Post Checkout approved main snapshot",
+    "Complete job",
+)
+
+
+def _prove_pr_creation_only_failure(jobs):
+    """Prove run=red solely because the manifest PR API failed, not SFTP."""
+    if not isinstance(jobs, list) or len(jobs) != 1:
+        raise ValueError("Failed preflight has no unique independent prepare job")
+    job = jobs[0]
+    if (not isinstance(job, dict) or job.get("name") != "prepare"
+            or job.get("status") != "completed" or job.get("conclusion") != "failure"):
+        raise ValueError("Failed preflight job is not an isolated PR-creation failure")
+    raw_steps = job.get("steps")
+    if not isinstance(raw_steps, list) or len(raw_steps) != len(EXPECTED_RECOVERY_STEPS):
+        raise ValueError("Failed preflight job steps missing/changed")
+    by_name = {}
+    for step in raw_steps:
+        if (not isinstance(step, dict) or not isinstance(step.get("name"), str)
+                or step["name"] in by_name):
+            raise ValueError("Invalid or duplicated failed-preflight step")
+        by_name[step["name"]] = step
+    if set(by_name) != set(EXPECTED_RECOVERY_STEPS):
+        raise ValueError("Unexpected failed-preflight step inventory")
+    for name in EXPECTED_RECOVERY_STEPS:
+        expected = "failure" if name == PR_CREATION_STEP else "success"
+        step = by_name[name]
+        if step.get("status") != "completed" or step.get("conclusion") != expected:
+            raise ValueError("Read-only preflight had an unverified or failing step")
+
+
+def verify_preflight(approval, run, artifact_inventory, now, comment_created,
+                     preflight_jobs=None):
     """Bind the approved preflight to the latest immutable GitHub run evidence."""
     if (not isinstance(run, dict)
             or type(run.get("id")) is not int
@@ -157,10 +203,17 @@ def verify_preflight(approval, run, artifact_inventory, now, comment_created):
             or run.get("head_branch") != "main"
             or run.get("event") not in ("push", "workflow_dispatch")
             or run.get("status") != "completed"
-            or run.get("conclusion") != "success"
+            or run.get("conclusion") not in ("success", "failure")
             or not isinstance(run.get("path"), str)
             or not PREFLIGHT_WORKFLOW.fullmatch(run["path"])):
         raise ValueError("Untrusted or unsuccessful read-only preflight")
+    # A red run is NEVER treated as run success; only the named API-PR failure
+    # may be independently recovered. The immutable artifact/manifest/source
+    # checks below must still succeed for either outcome.
+    outcome = "SUCCESSFUL_PREFLIGHT"
+    if run["conclusion"] == "failure":
+        _prove_pr_creation_only_failure(preflight_jobs)
+        outcome = "BASELINE_VERIFIED_PR_CREATION_FAILED"
     started = _datetime(run.get("created_at"))
     _require_fresh(started, now, "Read-only preflight")
     if started > comment_created:
@@ -179,6 +232,7 @@ def verify_preflight(approval, run, artifact_inventory, now, comment_created):
             (not isinstance(artifact["workflow_run"], dict)
              or artifact["workflow_run"].get("id") != run["id"])):
         raise ValueError("Expired or unrelated preflight artifact")
+    return outcome
 
 
 def _validate_manifest(manifest, approved):
@@ -227,7 +281,7 @@ def build_dispatch_command(approval):
 def review_offline(text, *, issue, comment, previously_closed, run,
                    artifact_inventory, artifact_files, manifest_bytes,
                    request_at_main, request_at_preflight, current_main_sha,
-                   source_hashes, now):
+                   source_hashes, now, preflight_jobs=None):
     """Offline plan only; all inputs must be independently fetched by a future guard.
 
     No authorization is consumed and no dispatch is started. The caller must
@@ -244,7 +298,9 @@ def review_offline(text, *, issue, comment, previously_closed, run,
     comment_created = verify_owner_event(
         approval, issue, comment, previously_closed, now
     )
-    verify_preflight(approval, run, artifact_inventory, now, comment_created)
+    preflight_outcome = verify_preflight(
+        approval, run, artifact_inventory, now, comment_created, preflight_jobs
+    )
     if (not isinstance(manifest_bytes, bytes)
             or hashlib.sha256(manifest_bytes).hexdigest() != approval["manifest_sha256"]):
         raise ValueError("Immutable manifest digest differs from owner approval")
@@ -274,6 +330,7 @@ def review_offline(text, *, issue, comment, previously_closed, run,
         "release_id": approval["release_id"],
         "release_sha": approval["release_sha"],
         "preflight_run_id": approval["preflight_run_id"],
+        "preflight_outcome": preflight_outcome,
         "manifest_sha256": approval["manifest_sha256"],
         "approved_files": paths,
         "dispatch_command": build_dispatch_command(approval),
