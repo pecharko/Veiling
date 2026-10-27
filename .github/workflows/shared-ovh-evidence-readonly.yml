@@ -1,0 +1,82 @@
+name: Independent OVH deployment evidence (read-only)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/shared-ovh-evidence-readonly.yml'
+      - 'scripts/ovh_release_evidence_discovery.py'
+      - 'tests/ovh_release_evidence_discovery_test.py'
+  workflow_run:
+    workflows:
+      - Shared OVH manifest release with rollback
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate new read-only workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/shared-ovh-evidence-readonly.yml
+      - name: Validate synthetic GitHub evidence and exact run binding
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/ovh_release_evidence_discovery.py
+          python3 -m unittest discover -s tests -p ovh_release_evidence_discovery_test.py -v
+          python3 -m unittest discover -s tests -p ovh_release_evidence_review_test.py -v
+
+  verify-deployment:
+    # A failed or cancelled production dispatch must not be reported as green.
+    # PR validation runs of the shared release workflow cannot reach this job.
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Independently verify exact triggering OVH release (no writes)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TRIGGERED_RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$TRIGGERED_RELEASE_RUN_ID"
+          python3 scripts/ovh_release_evidence_discovery.py \
+            --expected-run-id "$TRIGGERED_RELEASE_RUN_ID" \
+            > "$RUNNER_TEMP/ovh-release-reviewed.json"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          result = json.loads(
+              (Path(os.environ["RUNNER_TEMP"]) / "ovh-release-reviewed.json").read_text()
+          )
+          expected = int(os.environ["TRIGGERED_RELEASE_RUN_ID"])
+          if (type(result.get("run_id")) is not int
+                  or result["run_id"] != expected
+                  or result.get("status") != "TECHNICALLY_VERIFIED"
+                  or result.get("browser_acceptance") != "PENDING"):
+              raise SystemExit("STOP: independent evidence did not match triggering run")
+          msg = (
+              f"Technical readback VERIFIED for release {result['release_id']} "
+              f"(run {expected}). Independent browser acceptance PENDING."
+          )
+          print(msg)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as fh:
+              fh.write(msg + "\n")
+          PY
