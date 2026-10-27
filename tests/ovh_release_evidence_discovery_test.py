@@ -138,6 +138,44 @@ class DiscoveryTests(unittest.TestCase):
         self.assertEqual(result["browser_acceptance"], "PENDING")
         self.assertEqual(get_zip.call_count, 1)
 
+    def test_exact_trigger_run_id_is_required(self):
+        response = {"workflow_runs": [
+            {"id": 123, "status": "completed", "conclusion": "success"},
+            {"id": 122, "status": "completed", "conclusion": "success"},
+        ]}
+        with patch.object(discovery, "json_get", return_value=response), patch.object(
+            discovery, "inspect_run", return_value={"status": "TECHNICALLY_VERIFIED"}
+        ) as inspect:
+            self.assertEqual(discovery.latest_review("dummy", expected_run_id=123)["status"],
+                             "TECHNICALLY_VERIFIED")
+            inspect.assert_called_once()
+
+    def test_old_trigger_cannot_inherit_new_green_run(self):
+        response = {"workflow_runs": [
+            {"id": 123, "status": "completed", "conclusion": "success"},
+            {"id": 122, "status": "completed", "conclusion": "success"},
+        ]}
+        with patch.object(discovery, "json_get", return_value=response), patch.object(
+            discovery, "inspect_run"
+        ) as inspect:
+            with self.assertRaisesRegex(ValueError, "not the triggering"):
+                discovery.latest_review("dummy", expected_run_id=122)
+            inspect.assert_not_called()
+
+    def test_invalid_trigger_run_id_fails_closed(self):
+        response = {"workflow_runs": [
+            {"id": 123, "status": "completed", "conclusion": "success"}
+        ]}
+        for bad in (None, "123", -1, True, 0):
+            if bad is None:
+                continue
+            with self.subTest(bad=bad), patch.object(
+                discovery, "json_get", return_value=response
+            ), patch.object(discovery, "inspect_run") as inspect:
+                with self.assertRaises(ValueError):
+                    discovery.latest_review("dummy", expected_run_id=bad)
+                inspect.assert_not_called()
+
     def test_no_successful_run(self):
         with patch.object(discovery, "json_get", return_value={"workflow_runs": []}):
             with self.assertRaises(ValueError):
