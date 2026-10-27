@@ -3,6 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_administrator();
 require_no_index();
+require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 
 $pdo = db();
 $error = '';
@@ -21,6 +22,7 @@ if (is_post()) {
     } else {
         try {
             if ($action === 'create') {
+                $name = admin_validated_name((string)($_POST['name'] ?? ''));
                 $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
                 $password = (string)($_POST['new_password'] ?? '');
                 if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
@@ -31,10 +33,11 @@ if (is_post()) {
                 }
                 $role = (string)($_POST['role'] ?? '');
                 if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) throw new InvalidArgumentException('Ongeldige rol.');
-                $stmt = $pdo->prepare('INSERT INTO admins (email, password_hash, role) VALUES (?, ?, ?)');
-                $stmt->execute([$email, password_hash($password, PASSWORD_DEFAULT), $role]);
+                $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
+                $stmt->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT), $role]);
                 flash('Beheerder toegevoegd.');
             } elseif ($action === 'update') {
+                $name = admin_validated_name((string)($_POST['name'] ?? ''));
                 $target = filter_var($_POST['user_id'] ?? null, FILTER_VALIDATE_INT);
                 $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
                 $password = (string)($_POST['new_password'] ?? '');
@@ -59,11 +62,11 @@ if (is_post()) {
                 if ($role === 'administrator' && (int)$targetRow['is_active'] !== 1) throw new InvalidArgumentException('Activeer het account voordat je de Administrator-rol toekent.');
                 if ($targetRow['role'] === 'administrator' && $role !== 'administrator' && $adminCount <= 1) throw new InvalidArgumentException('Laatste Administrator mag niet worden gewijzigd naar een lagere rol.');
                 if ($password === '') {
-                    $stmt = $pdo->prepare('UPDATE admins SET email=?, role=? WHERE id=?');
-                    $stmt->execute([$email, $role, $target]);
+                    $stmt = $pdo->prepare('UPDATE admins SET name=?, email=?, role=? WHERE id=?');
+                    $stmt->execute([$name, $email, $role, $target]);
                 } else {
-                    $stmt = $pdo->prepare('UPDATE admins SET email=?, password_hash=?, role=? WHERE id=?');
-                    $stmt->execute([$email, password_hash($password, PASSWORD_DEFAULT), $role, $target]);
+                    $stmt = $pdo->prepare('UPDATE admins SET name=?, email=?, password_hash=?, role=? WHERE id=?');
+                    $stmt->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT), $role, $target]);
                 }
                 if ($stmt->rowCount() === 0) {
                     $exists = $pdo->prepare('SELECT COUNT(*) FROM admins WHERE id=?');
@@ -122,7 +125,7 @@ if (is_post()) {
         }
     }
 }
-$users = $pdo->query('SELECT id,email,role,is_active FROM admins ORDER BY email')->fetchAll();
+$users = $pdo->query('SELECT id,name,email,role,is_active FROM admins ORDER BY name,email')->fetchAll();
 $selectedId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $selectedUser = null;
 foreach ($users as $candidate) {
@@ -215,13 +218,13 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
   <div class="ua-grid">
     <section class="ua-panel" aria-label="Gebruikersoverzicht">
       <div class="ua-panel-head"><h2>Alle gebruikers</h2><p>Zoek of filter gebruikers en selecteer een account om te beheren.</p>
-        <div class="ua-filter"><input id="ua-search" type="search" placeholder="Zoek op e-mailadres…" aria-label="Zoek gebruikers"><select id="ua-filter" aria-label="Filter op status"><option value="all">Alle accounts</option><option value="active">Actief</option><option value="off">Gedeactiveerd</option><option value="administrator">Administrators</option></select></div>
+        <div class="ua-filter"><input id="ua-search" type="search" placeholder="Zoek op naam of e-mailadres…" aria-label="Zoek gebruikers"><select id="ua-filter" aria-label="Filter op status"><option value="all">Alle accounts</option><option value="active">Actief</option><option value="off">Gedeactiveerd</option><option value="administrator">Administrators</option></select></div>
       </div>
       <div class="ua-user-list" id="ua-list">
         <?php foreach ($users as $user): $id = (int)$user['id']; $isAdmin = $user['role'] === 'administrator'; $active = (int)$user['is_active'] === 1; ?>
-          <a class="ua-user<?= $selectedId === $id ? ' selected' : '' ?>" data-email="<?= e(mb_strtolower($user['email'])) ?>" data-status="<?= $isAdmin ? 'administrator' : ($active ? 'active' : 'off') ?>" href="<?= e(url('admin/gebruikers.php', ['id'=>$id])) ?>#ua-selected" <?= $selectedId === $id ? 'aria-current="true"' : '' ?>>
-            <span class="ua-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($user['email'],0,2))) ?></span>
-            <span class="ua-user-info"><strong><?= e($user['email']) ?></strong><small><?= e($roleName($user['role'])) ?><?= $id === $currentId ? ' · Jij' : '' ?></small></span>
+          <a class="ua-user<?= $selectedId === $id ? ' selected' : '' ?>" data-search="<?= e(mb_strtolower(admin_name_label($user['name']) . ' ' . $user['email'])) ?>" data-status="<?= $isAdmin ? 'administrator' : ($active ? 'active' : 'off') ?>" href="<?= e(url('admin/gebruikers.php', ['id'=>$id])) ?>#ua-selected" <?= $selectedId === $id ? 'aria-current="true"' : '' ?>>
+            <span class="ua-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr(admin_name_label($user['name']),0,2))) ?></span>
+            <span class="ua-user-info"><strong><?= e(admin_name_label($user['name'])) ?></strong><small><?= e($user['email']) ?> · <?= e($roleName($user['role'])) ?><?= $id === $currentId ? ' · Jij' : '' ?></small></span>
             <span class="ua-status<?= !$active ? ' off' : ($isAdmin ? ' admin' : '') ?>"><?= $isAdmin ? 'Altijd actief' : ($active ? 'Actief' : 'Inactief') ?></span><span class="ua-chev">›</span>
           </a>
         <?php endforeach; ?>
@@ -233,16 +236,17 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
       <?php if ($selectedUser === null): ?>
         <div class="ua-placeholder"><h2>Selecteer een gebruiker</h2><p>Kies links een account om de gegevens of toegang te beheren.</p></div>
       <?php else: $selectedAdmin = $selectedUser['role'] === 'administrator'; $selectedActive = (int)$selectedUser['is_active'] === 1; $accessTab = ($_GET['tab'] ?? '') === 'access'; ?>
-        <div class="ua-detail-top"><span class="ua-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr($selectedUser['email'],0,2))) ?></span><div><h2><?= e($selectedUser['email']) ?></h2><span class="ua-status<?= !$selectedActive ? ' off' : ($selectedAdmin ? ' admin' : '') ?>"><?= $selectedAdmin ? 'Altijd actief' : ($selectedActive ? 'Actief' : 'Inactief') ?></span> <small><?= e($roleName($selectedUser['role'])) ?><?= (int)$selectedUser['id'] === $currentId ? ' · Jij' : '' ?></small></div></div>
+        <div class="ua-detail-top"><span class="ua-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr(admin_name_label($selectedUser['name']),0,2))) ?></span><div><h2><?= e(admin_name_label($selectedUser['name'])) ?></h2><small><?= e($selectedUser['email']) ?></small> <span class="ua-status<?= !$selectedActive ? ' off' : ($selectedAdmin ? ' admin' : '') ?>"><?= $selectedAdmin ? 'Altijd actief' : ($selectedActive ? 'Actief' : 'Inactief') ?></span> <small><?= e($roleName($selectedUser['role'])) ?><?= (int)$selectedUser['id'] === $currentId ? ' · Jij' : '' ?></small></div></div>
         <nav class="ua-tabs" aria-label="Accountinstellingen">
           <a class="<?= !$accessTab ? 'current' : '' ?>" href="<?= e(url('admin/gebruikers.php',['id'=>(int)$selectedUser['id']])) ?>#ua-selected">Gegevens &amp; rol</a>
           <a class="<?= $accessTab ? 'current' : '' ?>" href="<?= e(url('admin/gebruikers.php',['id'=>(int)$selectedUser['id'],'tab'=>'access'])) ?>#ua-selected">Toegang &amp; beveiliging</a>
         </nav>
         <div class="ua-detail-body">
         <?php if (!$accessTab): ?>
-          <h3>Accountgegevens</h3><p class="ua-hint">Pas e-mailadres, rol en eventueel het wachtwoord aan.</p>
+          <h3>Accountgegevens</h3><p class="ua-hint">Pas naam, e-mailadres, rol en eventueel het wachtwoord aan.</p>
           <form method="post" class="ua-form" autocomplete="off">
             <?= csrf_field() ?><input type="hidden" name="action" value="update"><input type="hidden" name="user_id" value="<?= (int)$selectedUser['id'] ?>">
+            <label class="ua-wide">Naam<input type="text" name="name" maxlength="120" required autocomplete="name" value="<?= e($selectedUser['name']) ?>" placeholder="Voor- en achternaam"></label>
             <label class="ua-wide">E-mailadres<input type="email" name="email" maxlength="190" required value="<?= e($selectedUser['email']) ?>"></label>
             <label>Rol<select name="role" required><option value="assistant" <?= $selectedUser['role']==='assistant' ? 'selected' : '' ?>>Assistent</option><option value="veilingmeester" <?= $selectedUser['role']==='veilingmeester' ? 'selected' : '' ?>>Veilingmeester</option><option value="administrator" <?= $selectedUser['role']==='administrator' ? 'selected' : '' ?>>Administrator</option></select></label>
             <label>Nieuw wachtwoord<input type="password" name="new_password" minlength="12" autocomplete="new-password" placeholder="Leeg = ongewijzigd"></label>
@@ -274,6 +278,7 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
   <dialog id="ua-new-dialog" aria-labelledby="ua-new-heading"><h2 id="ua-new-heading">Nieuwe gebruiker</h2><p class="ua-hint">Maak een account aan. Je huidige wachtwoord is verplicht.</p>
     <form method="post" class="ua-form" autocomplete="off">
       <?= csrf_field() ?><input type="hidden" name="action" value="create">
+      <label class="ua-wide">Naam<input type="text" name="name" maxlength="120" required autocomplete="name" placeholder="Voor- en achternaam"></label>
       <label class="ua-wide">E-mailadres<input type="email" name="email" maxlength="190" required autocomplete="off"></label>
       <label class="ua-wide">Rol<select name="role" required><option value="assistant">Assistent</option><option value="veilingmeester">Veilingmeester</option><option value="administrator">Administrator</option></select></label>
       <label class="ua-wide">Nieuw wachtwoord (minimaal 12 tekens)<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label>
@@ -289,7 +294,7 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
   root.querySelector('#ua-open-new').addEventListener('click',()=>modal.showModal());
   root.querySelector('#ua-close-new').addEventListener('click',()=>modal.close());
   const search=root.querySelector('#ua-search'),filter=root.querySelector('#ua-filter'),rows=[...root.querySelectorAll('.ua-user')],empty=root.querySelector('#ua-empty');
-  function apply(){let count=0;for(const row of rows){const status=row.dataset.status;const f=filter.value;const visible=row.dataset.email.includes(search.value.trim().toLowerCase())&&(f==='all'||(f==='administrator'?status==='administrator':f==='active'?status==='active'||status==='administrator':status==='off'));row.hidden=!visible;if(visible)count++}empty.style.display=count?'none':'block'}
+  function apply(){let count=0;for(const row of rows){const status=row.dataset.status;const f=filter.value;const visible=row.dataset.search.includes(search.value.trim().toLowerCase())&&(f==='all'||(f==='administrator'?status==='administrator':f==='active'?status==='active'||status==='administrator':status==='off'));row.hidden=!visible;if(visible)count++}empty.style.display=count?'none':'block'}
   search.addEventListener('input',apply);filter.addEventListener('change',apply);
 })();
 </script>

@@ -4,6 +4,7 @@ require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require dirname(__DIR__, 2) . '/private/images.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
+require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_auth();
 $pdo=db();
@@ -138,9 +139,10 @@ if($id){$st=$pdo->prepare('SELECT * FROM lots WHERE id=?');$st->execute([$id]);$
 $images=[];if($lot){$st=$pdo->prepare('SELECT * FROM lot_images WHERE lot_id=? ORDER BY sort_order,id');$st->execute([$id]);$images=$st->fetchAll();}
 $creatorLabel = 'Onbekend (bestaand kavel)';
 if ($lot && !empty($lot['created_by_admin_id'])) {
-  $creatorSt = $pdo->prepare('SELECT email FROM admins WHERE id=?');
+  $creatorSt = $pdo->prepare('SELECT name FROM admins WHERE id=?');
   $creatorSt->execute([(int)$lot['created_by_admin_id']]);
-  $creatorLabel = (string)($creatorSt->fetchColumn() ?: 'Account niet meer aanwezig');
+  $creatorName = $creatorSt->fetchColumn();
+  $creatorLabel = $creatorName === false ? 'Account niet meer aanwezig' : admin_name_label((string)$creatorName);
 }
 $suggestedNumber = '';
 if (str_starts_with($error, 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.')) {

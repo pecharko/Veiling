@@ -52,7 +52,16 @@ function recovery_compare_database(PDO $pdo,array $target): array {
         foreach(SNAP_TABLES as $table){
             $query='SELECT * FROM '.chr(96).$table.chr(96);
             $actual=$pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
-            if(!hash_equals(recovery_table_digest($target['tables'][$table]),
+            // Pre-name snapshots omit admins.name. Compare them as blank names;
+            // a populated name in the live DB must still produce a mismatch.
+            $expected=$target['tables'][$table];
+            if($table==='admins') {
+                foreach($expected as &$row) {
+                    if(!array_key_exists('name', $row)) $row['name']='';
+                }
+                unset($row);
+            }
+            if(!hash_equals(recovery_table_digest($expected),
                             recovery_table_digest($actual))){
                 $differences[]=$table;
             }

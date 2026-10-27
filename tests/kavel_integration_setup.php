@@ -88,5 +88,16 @@ $ddl = [
 foreach ($ddl as $sql) $pdo->exec($sql);
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
+// Exercise the actual reviewed migration on the disposable pre-name CI account.
+$migration = file_get_contents($dir . '/database/admin_name_migration.sql');
+if (!is_string($migration) ||
+    !preg_match("/^ALTER TABLE admins ADD COLUMN name VARCHAR\\(120\\) NOT NULL DEFAULT '' AFTER email;$/m", $migration, $sqlMatch)) {
+  throw new RuntimeException('Admin name migration SQL not found in reviewed file.');
+}
+$pdo->exec($sqlMatch[0]);
+$afterMigration = $pdo->query("SELECT name,email FROM admins WHERE email='ci-admin@example.invalid'")->fetch(PDO::FETCH_ASSOC);
+if (!$afterMigration || $afterMigration['name'] !== '' || $afterMigration['email'] !== 'ci-admin@example.invalid') {
+  throw new RuntimeException('Migration did not preserve the existing CI account with an empty name.');
+}
 $pdo->exec("INSERT INTO settings (id,title,introduction,practical_info) VALUES (1,'CI catalogus','','')");
 echo "Isolated MySQL schema ready; production is not accessed.\n";
