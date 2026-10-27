@@ -1,0 +1,85 @@
+name: Auto prepare shared OVH release manifest (read-only)
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'release-requests/*.json'
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Existing reviewed request ID'
+        required: true
+        type: string
+permissions:
+  contents: write
+  pull-requests: write
+concurrency:
+  group: auto-ovh-readonly-preparation
+  cancel-in-progress: false
+jobs:
+  prepare:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      REQUESTED_ID: ${{ inputs.release_id }}
+    steps:
+      - name: Checkout approved main snapshot
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Verify main remains source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Determine reviewed release request
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "${{ github.event_name }}" = workflow_dispatch; then
+            ID="$REQUESTED_ID"
+          else
+            mapfile -t REQUESTS < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- 'release-requests/*.json')
+            test "${#REQUESTS[@]}" -eq 1
+            ID="${REQUESTS[0]##*/}"
+            ID="${ID%.json}"
+          fi
+          [[ "$ID" =~ ^[a-z0-9][a-z0-9-]{2,60}$ ]]
+          echo "RELEASE_ID=$ID" >> "$GITHUB_ENV"
+      - name: Install pinned SSH/SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Collect real remote hashes and generate valid manifest
+        run: python3 -m scripts.prepare_shared_ovh_manifest "$RELEASE_ID"
+      - name: Upload proof artifact even if GitHub cannot create PR
+        uses: actions/upload-artifact@v4
+        with:
+          name: readonly-release-${{ github.run_id }}
+          path: |
+            shared-ovh-readonly-baselines.json
+            releases/${{ env.RELEASE_ID }}.json
+          retention-days: 7
+          if-no-files-found: error
+      - name: Open manifest review PR (never production upload)
+        shell: bash
+        run: |
+          set -euo pipefail
+          BRANCH="release-manifest/$RELEASE_ID-$GITHUB_RUN_ID"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$BRANCH"
+          git add -- "releases/$RELEASE_ID.json"
+          git commit -m "release: verified read-only OVH manifest for $RELEASE_ID"
+          git push origin "$BRANCH"
+          gh pr create --base main --head "$BRANCH" \
+            --title "release: reviewed OVH baseline manifest $RELEASE_ID" \
+            --body "Automatisch gegenereerd uit read-only OVH-SFTP-controle in run $GITHUB_RUN_ID. Alleen releases/$RELEASE_ID.json toegevoegd. Dit is GEEN productieautorisatie. Controleer CI en actuele main voor merge; afzonderlijke, specifieke productieautorisatie blijft vereist."
