@@ -18,13 +18,16 @@ DATA = b"body { color: green; }"
 SENTINEL = b"dashboard-table"
 
 class Remote:
-    def __init__(self, upload_fails=False):
+    def __init__(self, upload_fails=False, rollback_fails=False):
         self.files = {"/site/catalogus-public/admin/index.php": SENTINEL}
         self.upload_fails = upload_fails
+        self.rollback_fails = rollback_fails
 
     def __enter__(self): return self
     def __exit__(self, *args): return False
-    def remove(self, name): self.files.pop(name, None)
+    def remove(self, name):
+        if self.rollback_fails: raise OSError("simulated rollback failure")
+        self.files.pop(name, None)
 
 class Client:
     def __init__(self, remote): self.remote = remote
@@ -45,11 +48,11 @@ def read_remote(remote, name):
     return remote.files.get(name)
 
 class EvidenceIntegration(unittest.TestCase):
-    def execute(self, upload_fails=False, drift=False, connect_fails=False):
+    def execute(self, upload_fails=False, drift=False, connect_fails=False, rollback_fails=False):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             backup = root / "deployment-backups"
-            remote = Remote(upload_fails=upload_fails)
+            remote = Remote(upload_fails=upload_fails, rollback_fails=rollback_fails)
             if drift:
                 remote.files["/site/" + PATH] = b"unexpected remote content"
             remote.open = lambda name, mode: FakeWriter(remote, name)
@@ -91,6 +94,11 @@ class EvidenceIntegration(unittest.TestCase):
         evidence, _ = self.execute(upload_fails=True)
         # In this scenario rollback removes the previously absent target.
         self.assertEqual(evidence["status"], "ROLLED_BACK")
+
+    def test_failed_rollback_is_never_marked_successful(self):
+        evidence, _ = self.execute(upload_fails=True, rollback_fails=True)
+        self.assertEqual(evidence["status"], "ROLLBACK_FAILED")
+        self.assertIsNone(evidence["files"][0]["readback_sha256"])
 
     def test_connect_failure_still_publishes_failure_evidence(self):
         evidence, _ = self.execute(connect_fails=True)
