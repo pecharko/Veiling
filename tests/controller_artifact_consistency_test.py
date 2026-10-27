@@ -54,6 +54,10 @@ class ConsistencyTest(unittest.TestCase):
             with self.subTest(inventory=inventory):
                 self.assertEqual(self.check(inventory=inventory)["status"], "INCOMPLETE")
 
+    def test_malformed_unrelated_inventory_entry_is_ignored(self):
+        self.assertEqual(self.check(inventory=[None] + ARTIFACTS)["status"],
+                         "INCOMPLETE")
+
     def test_artifact_not_bound_to_run(self):
         inventory = [{**ARTIFACTS[0], "workflow_run": {"id": 124}}, ARTIFACTS[1]]
         self.assertEqual(self.check(inventory=inventory)["reason"],
