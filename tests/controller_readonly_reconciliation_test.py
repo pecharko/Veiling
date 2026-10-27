@@ -41,6 +41,24 @@ class ReconciliationTest(unittest.TestCase):
         self.assertEqual(x["stages"]["deployment"]["status"], "INCOMPLETE")
         self.assertEqual(x["review"]["independent_remote_readback"], "NOT_VERIFIED")
 
+    def test_provenance_never_infers_independent_ovh_or_acceptance(self):
+        x = self.examine()
+        p = x["provenance"]
+        self.assertEqual(p["github_actions"]["source"], "github_api_run_jobs")
+        self.assertEqual(p["artifact_and_rollback"]["source"],
+                         "github_api_artifact_inventory_and_runner_json")
+        self.assertFalse(p["artifact_and_rollback"]["retention_7_days_independently_verified"])
+        self.assertEqual(p["runner_reported_sftp_readback"]["status"],
+                         "NOT_INDEPENDENTLY_VERIFIED")
+        self.assertEqual(p["external_ovh_readback"]["status"], "NOT_VERIFIED")
+        self.assertEqual(p["browser_acceptance"]["status"], "PENDING")
+        self.assertFalse(x["fully_accepted"])
+
+    def test_failed_run_preserves_failure_provenance(self):
+        x = self.examine(run={**RUN, "conclusion": "failure"})
+        self.assertEqual(x["provenance"]["github_actions"]["status"], "FAILED")
+        self.assertFalse(x["fully_accepted"])
+
     def test_missing_artifact_cannot_be_hidden_by_green_run(self):
         x = self.examine(artifacts=[])
         self.assertEqual(x["review"]["artifact_metadata"]["reason"],
