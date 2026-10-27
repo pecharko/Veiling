@@ -1,0 +1,44 @@
+name: B3.2 isolated MySQL 8.4 claim schema tests
+on:
+  pull_request:
+    paths:
+      - "database/controller_release_claims_migration.sql"
+      - "tests/controller_mysql_claim_integration.php"
+      - ".github/workflows/controller-claims-mysql-integration.yml"
+permissions:
+  contents: read
+jobs:
+  claims-mysql-isolated:
+    name: Isolated claim schema and uniqueness tests
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: local-claims-root
+          MYSQL_DATABASE: claim_ci
+          MYSQL_USER: ci
+          MYSQL_PASSWORD: local-claims-ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -uroot -plocal-claims-root"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up PHP with PDO MySQL
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: pdo_mysql
+          coverage: none
+      - name: Run isolated claim DDL and duplicate/rollback integration
+        env:
+          CLAIM_TEST_DSN: "mysql:host=127.0.0.1;port=3306;dbname=claim_ci;charset=utf8mb4"
+          CLAIM_TEST_USER: ci
+          CLAIM_TEST_PASSWORD: local-claims-ci
+        run: |
+          php -l tests/controller_mysql_claim_integration.php
+          php tests/controller_mysql_claim_integration.php
