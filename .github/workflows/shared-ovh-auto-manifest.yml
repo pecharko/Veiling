@@ -80,6 +80,23 @@ jobs:
           git add -- "releases/$RELEASE_ID.json"
           git commit -m "release: verified read-only OVH manifest for $RELEASE_ID"
           git push origin "$BRANCH"
-          gh pr create --base main --head "$BRANCH" \
-            --title "release: reviewed OVH baseline manifest $RELEASE_ID" \
-            --body "Automatisch gegenereerd uit read-only OVH-SFTP-controle in run $GITHUB_RUN_ID. Alleen releases/$RELEASE_ID.json toegevoegd. Dit is GEEN productieautorisatie. Controleer CI en actuele main voor merge; afzonderlijke, specifieke productieautorisatie blijft vereist."
+          # Creating a PR can fail after an otherwise successful read-only proof/branch push.
+          # Never rerun remote collection merely because the GitHub PR API was transient.
+          PR_TITLE="release: reviewed OVH baseline manifest $RELEASE_ID"
+          PR_BODY="Automatisch gegenereerd uit read-only OVH-SFTP-controle in run $GITHUB_RUN_ID. Alleen releases/$RELEASE_ID.json toegevoegd. Dit is GEEN productieautorisatie. Controleer CI en actuele main voor merge; afzonderlijke, specifieke productieautorisatie blijft vereist."
+          for attempt in 1 2 3; do
+            if gh pr create --base main --head "$BRANCH" --title "$PR_TITLE" --body "$PR_BODY"; then
+              echo "Manifest PR created for $BRANCH" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            # GitHub might have created the PR despite returning an API/transport error.
+            EXISTING="$(gh pr list --state open --head "$BRANCH" --json url --jq '.[0].url // empty' || true)"
+            if test -n "$EXISTING"; then
+              echo "Manifest PR exists: $EXISTING" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if test "$attempt" -lt 3; then sleep 5; fi
+          done
+          echo "::error::Manifest branch $BRANCH was pushed but no PR could be created. Check GitHub Actions PR creation policy/permissions; do not recollect SFTP baseline or enable production upload."
+          echo "Manifest branch exists: $BRANCH; PR not created. Read-only artifact is preserved." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
