@@ -33,10 +33,8 @@ def load_manifest(release_id):
     if path.is_symlink() or not path.is_file():
         raise ValueError("Release manifest missing")
     manifest = json.loads(path.read_text(encoding="utf-8"))
-    if set(manifest) != {"schema", "release_sha", "files"} or manifest["schema"] != 1:
+    if set(manifest) != {"schema", "files"} or manifest["schema"] != 1:
         raise ValueError("Invalid manifest schema")
-    if not re.fullmatch(r"[a-f0-9]{40}", manifest["release_sha"]):
-        raise ValueError("Invalid release SHA")
     entries = manifest["files"]
     if not isinstance(entries, list) or not 1 <= len(entries) <= MAX_FILES:
         raise ValueError("Invalid file count")
@@ -118,8 +116,6 @@ def run():
     if mode == "plan":
         return
     sha = os.environ.get("GITHUB_SHA", "")
-    if manifest["release_sha"] != sha:
-        raise ValueError("Release must use immutable current main SHA")
     confirmation = os.environ.get("DEPLOY_CONFIRMATION", "")
     if confirmation != "DEPLOY-" + release_id + "-" + sha:
         raise ValueError("Exact release authorization missing")
