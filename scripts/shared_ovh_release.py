@@ -200,7 +200,7 @@ def run():
         client.close()
         from scripts.ovh_deploy_evidence_contract import validate
         path = ROOT / "deployment-evidence.json"
-        path.write_text(json.dumps(validate(evidence), indent=2) + "\\n", encoding="utf-8")
+        path.write_text(json.dumps(validate(evidence), indent=2) + "\n", encoding="utf-8")
 
 
 if __name__ == "__main__":
