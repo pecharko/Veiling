@@ -71,6 +71,14 @@ class ImpactTests(unittest.TestCase):
             with self.subTest(path=path):
                 self.assertEqual(impact.classify([path]), (True, True))
 
+    def test_owner_authorization_adapter_requires_real_integration_suites(self):
+        for path in (
+            "scripts/shared_ovh_controller_adapter.py",
+            "tests/shared_ovh_controller_adapter_test.py",
+        ):
+            with self.subTest(path=path):
+                self.assertEqual(impact.classify([path]), (True, True))
+
     def test_mixed_impact_can_never_skip_functional_tests(self):
         self.assertEqual(impact.classify([
             "docs/example.md",
