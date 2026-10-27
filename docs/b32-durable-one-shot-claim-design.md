@@ -227,3 +227,54 @@ afgeschermde schrijfrechten, gedeelde persistente toegang en crash-/recoverybewi
 Zolang zo'n infrastructuur niet bestaat of is goedgekeurd, blijft de offline
 B3.2-code de veilige eindtoestand. Nieuwe infrastructuur, credentials,
 database-schema en dispatch vragen elk aparte expliciete autorisatie.
+
+## B3.2 operationele topologie en afzonderlijke goedkeuringsgates
+
+**Gecontroleerde main na PR #281:** `f69e913ef1b3078e6970eea4cb2fa46d0e50afdd`.
+De daar gemergede tijdelijke SQLite-concurrentietest bewijst slechts gedrag
+op één geïsoleerde runner. Er bestaat nog geen toegestane gedeelde opslag.
+
+**Voorgestelde scheiding:**
+
+- **GitHub-eventlezer:** alleen read-only toegang tot issue, comment, run,
+  manifest en immutable code. Controleert B3.1 en geeft een exact afgebakende
+  kandidaatclaim door. Heeft geen database- of OVH-schrijfrechten.
+- **Claimservice:** afzonderlijke runtime met duurzame transactionele
+  backend. Twee onafhankelijke server-side unieke indices op
+  `(repo, issue_id, comment_id)` en `(repo, release_id, release_sha)`.
+  Minimaal alleen INSERT en beperkte SELECT/UPDATE op eigen claimtabellen,
+  geen DROP/ALTER/DELETE of toegangsbeheer. Beschikbaarheid, continuiteit
+  en vertrouwensgrens moeten vooraf bewezen worden.
+- **Dispatchservice (nog niet aanwezig):** mag een release uitsluitend na
+  *onafhankelijk bevestigde* atomische claim starten, met een aparte
+  expliciete productiegoedkeuring. Rechten mogen niet bij de observer
+  of de bestaande SFTP-writer worden toegevoegd.
+- **Productie-writer:** ongewijzigde bestaande GitHub Actions-releasegate,
+  manifestallowlist, remote SHA-driftcontrole, back-up, rollback en
+  onafhankelijke browseracceptatie.
+
+**Gating in volgorde:** 1) exacte owner-toestemming en evidence;
+2) bron/manifest/main- en scopeverificatie; 3) atomaire claim-commit;
+4) afzonderlijke uitvoerende autorisatie; 5) ten hoogste één dispatchpoging;
+6) job-/artifact-/serverbewijs; 7) handmatige browseracceptatie.
+
+**Recovery / incidentregels:** na crash of timeout direct na transactie-commit
+blijft de claim **verbruikt en geblokkeerd**, zelfs zonder workflowrun.
+Een tweede comment op dezelfde release mag niet ontsnappen via nieuw
+comment-ID. Toestand `UNKNOWN` is nooit reden voor automatische retry.
+Auditgegevens moeten begrijpelijk blijven na herstart, met controle op
+retentie, backup/restore, klokverschil, operator-identiteit, incidentproces
+en inperking van data/credentials in logs. Nooit claims verwijderen
+om een deployment opnieuw te proberen.
+
+**Nog ontbrekend bewijs voor de volgende afzonderlijke goedkeuring:**
+werkelijke gekozen hostinglocatie, netwerkbereikbaarheid vanaf een
+geautoriseerde runtime, versleuteling/secretbeheer, rol/permissionbewijs,
+foutisolatie ten opzichte van de website-MySQL, externe backup- en
+herstelproef, onafhankelijke duurzaamheid na runnerherstart, expliciete
+database/schema-autorisatie en schriftelijk afgebakende dispatchbevoegdheid.
+Geen hiervan is met alleen PR-CI bewezen.
+
+Deze sectie is *alleen architectuur en acceptatiecriteria*; geen nieuwe
+database, token, recht, GitHub-eventtrigger, ref, workflow_dispatch,
+OVH-write of wijziging aan de releasegate.
