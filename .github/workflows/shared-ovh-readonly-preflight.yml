@@ -1,0 +1,42 @@
+name: Shared OVH read-only manifest preflight
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'Comma-separated runtime paths; read-only SHA baselines'
+        required: true
+        type: string
+        default: 'private/bootstrap.php,catalogus-public/admin/admin.css'
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  baseline:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    env:
+      RELEASE_FILES: ${{ inputs.files }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install pinned client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Read-only source and OVH remote hash manifest
+        run: python3 -m scripts.shared_ovh_readonly_baselines
+      - name: Retain read-only evidence for seven days
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ovh-readonly-${{ github.run_id }}
+          path: shared-ovh-readonly-baselines.json
+          retention-days: 7
+          if-no-files-found: error
