@@ -139,3 +139,63 @@ after independent reconciliation. Never delete an old claim to retry.
 permissions read-only. If their enforced behavior cannot be verified,
 choose a backend with demonstrable durable uniqueness instead. Do not grant
 new rights as a shortcut.
+
+## B3.2 opslagkeuze na repositorycontrole — 27 oktober 2026
+
+**Voorkeur: een afzonderlijke transactionele opslag met UNIQUE-constraint,
+niet een onbeveiligde Git-ref.** Dit is een architectuurbesluit voor de
+volgende review en geen toestemming om een database of connector te wijzigen.
+
+Onderbouwing:
+
+- Een Git-ref is alleen geschikt wanneer create-only exclusiviteit,
+  bescherming tegen delete/force-update en actorisolatie aantoonbaar zijn.
+  De read-only repositorycontrole zag geen rulesets; branch-protection
+  uitlezen leverde 403. Die garanties zijn hier dus niet bewezen.
+- Een afzonderlijke transactionele database kan een unieke sleutel voor
+  **zowel (repo, issue_id, comment_id) als (repo, release_id, release_sha)**
+  afdwingen. Daarmee voorkomen we ook het omzeilen van comment-gebaseerde
+  replaybescherming door een tweede goedkeuringscomment.
+- De bestaande website-MySQL of productietabellen zijn **niet automatisch**
+  een geschikte opslag: controllerbeschikbaarheid, rechten, scheiding van
+  productiegegevens, netwerktoegang, disaster recovery en auditretentie
+  moeten eerst onafhankelijk worden beoordeeld.
+- GitHub Issues, labels, workflow-concurrency en artifacts zijn op zichzelf
+  geen bewezen, duurzame, atomaire claimopslag.
+
+### Voorstel voor transactioneel contract (uitsluitend specificatie)
+
+1. Verifieer eerst de bestaande B3.1 owner-event-, main-SHA-, manifest-
+   en preflightchecks. Een gewone chat-`go` of GitHub-comment zonder
+   geverifieerde eigenaar is geen toestemming.
+2. Voer één transactie uit met twee onafhankelijk unieke dimensies:
+   authorisatie-identiteit en release-identiteit. Schrijf de immutable
+   referenties plus de status `CLAIMED`. Commit vóór elke dispatchpoging.
+3. Bij conflict, timeout, transactie-onzekerheid of ontbrekend bewijs:
+   **geen dispatch**. Alleen een afzonderlijke read-only reconciliatie;
+   geen automatische retry op basis van afwezigheid in een zoekresultaat.
+4. Leg bewijs vast van wie/wanneer/waarom een claim creëerde, bron-SHA,
+   manifestdigest en event-ID. Geheimen en credentials worden nooit gelogd.
+5. Een later geslaagde workflow_dispatch-respons is geen deploybewijs;
+   observeer het werkelijke Actions-runresultaat en onafhankelijk OVH-readback.
+6. Claimrecords niet verwijderen om een mislukte run opnieuw te starten.
+   Een nieuw releaseverzoek vereist afzonderlijke expliciete goedkeuring
+   en een aantoonbaar nieuwe identiteit.
+
+### Verplichte acceptatiecriteria vóór code met schrijfrechten
+
+- Twee gelijktijdige transacties voor dezelfde release: hoogstens één commit.
+- Twee verschillende comments voor dezelfde release: tweede claim wordt
+  geweigerd dankzij de release-UNIQUE-constraint.
+- Process crash na commit, vóór dispatch: claim blijft bestaan en blokkeert
+  herhaling; handmatige herstelprocedure.
+- Onzekere database-commit en onzekere workflow_dispatch-uitkomst:
+  beide fail-closed, geen tweede dispatchpoging.
+- Aantoonbaar least-privilege runtime-identiteit en een controleerbare
+  backup-/retentie- en incidentprocedure.
+- Het codepad dat claimt mag niet zelf de `production` environment,
+  bestaande rollbackworkflow, secrets of releasegate aanpassen.
+
+**Besluitstatus:** opslagkeuze is voorgesteld maar nog **niet operationeel
+goedgekeurd**. Geen nieuwe DB, schema, permissie, token, workflow of
+network endpoint zonder afzonderlijke securityreview en expliciete opdracht.
