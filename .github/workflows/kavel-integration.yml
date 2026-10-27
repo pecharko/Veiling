@@ -8,12 +8,47 @@ permissions:
   contents: read
 
 jobs:
+  impact:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.route.outputs.kavel || steps.manual.outputs.kavel }}
+    steps:
+      - name: Checkout complete PR history for a verified diff
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select relevant integration using both immutable PR SHAs
+        id: route
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$HEAD_SHA^{commit}"
+          git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" |
+            python3 scripts/ci_pr_impact.py >> "$GITHUB_OUTPUT"
+
+      - name: Full integration for manually dispatched workflow
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          printf 'kavel=true\nsnapshot=true\n' >> "$GITHUB_OUTPUT"
+
   kavel-mysql-http:
+    needs: impact
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
       mysql:
-        image: mysql:8.4
+        image: ${{ needs.impact.outputs.run == 'true' && 'mysql:8.4' || '' }}
         env:
           MYSQL_ROOT_PASSWORD: ci-password-only
           MYSQL_DATABASE: auction_test
@@ -25,10 +60,28 @@ jobs:
           --health-timeout 5s
           --health-retries 15
     steps:
+      - name: Fail closed when CI routing cannot be verified
+        if: always()
+        env:
+          IMPACT_JOB: ${{ needs.impact.result }}
+          RUN_SUITE: ${{ needs.impact.outputs.run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$IMPACT_JOB" == "success" ]] || { echo "Unverified impact; CI fails"; exit 1; }
+          [[ "$RUN_SUITE" == "true" || "$RUN_SUITE" == "false" ]] ||
+            { echo "Invalid CI impact verdict"; exit 1; }
+      - name: Explicitly record not applicable (no MySQL or PHP test)
+        if: needs.impact.outputs.run == 'false'
+        run: |
+          echo "NOT_APPLICABLE - no runtime, shared-code, test infra or workflow changes"
+
       - name: Checkout PR code
+        if: needs.impact.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up PHP 8.2 with isolated test dependencies
+        if: needs.impact.outputs.run == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
@@ -37,6 +90,7 @@ jobs:
           coverage: none
 
       - name: Create disposable schema and test administrator
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
@@ -45,6 +99,7 @@ jobs:
         run: php tests/kavel_integration_setup.php
 
       - name: Test real HTTP login, editor errors and photo uploads
+        if: needs.impact.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -60,6 +115,7 @@ jobs:
           php tests/kavel_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
 
       - name: Test full catalog reset in disposable MySQL database
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test

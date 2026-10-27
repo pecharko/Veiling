@@ -8,12 +8,47 @@ permissions:
   contents: read
 
 jobs:
+  impact:
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.route.outputs.snapshot || steps.manual.outputs.snapshot }}
+    steps:
+      - name: Checkout complete PR history for a verified diff
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select relevant integration using both immutable PR SHAs
+        id: route
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          [[ "$HEAD_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$HEAD_SHA^{commit}"
+          git diff --no-renames --name-only -z "$BASE_SHA" "$HEAD_SHA" |
+            python3 scripts/ci_pr_impact.py >> "$GITHUB_OUTPUT"
+
+      - name: Full integration for manually dispatched workflow
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          printf 'kavel=true\nsnapshot=true\n' >> "$GITHUB_OUTPUT"
+
   snapshot-isolated:
+    needs: impact
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 12
     services:
       mysql:
-        image: mysql:8.4
+        image: ${{ needs.impact.outputs.run == 'true' && 'mysql:8.4' || '' }}
         env:
           MYSQL_ROOT_PASSWORD: ci-password-only
           MYSQL_DATABASE: auction_test
@@ -25,10 +60,28 @@ jobs:
           --health-timeout 5s
           --health-retries 15
     steps:
+      - name: Fail closed when CI routing cannot be verified
+        if: always()
+        env:
+          IMPACT_JOB: ${{ needs.impact.result }}
+          RUN_SUITE: ${{ needs.impact.outputs.run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$IMPACT_JOB" == "success" ]] || { echo "Unverified impact; CI fails"; exit 1; }
+          [[ "$RUN_SUITE" == "true" || "$RUN_SUITE" == "false" ]] ||
+            { echo "Invalid CI impact verdict"; exit 1; }
+      - name: Explicitly record not applicable (no MySQL or PHP test)
+        if: needs.impact.outputs.run == 'false'
+        run: |
+          echo "NOT_APPLICABLE - no runtime, shared-code, test infra or workflow changes"
+
       - name: Checkout source (no production config or backups)
+        if: needs.impact.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up isolated PHP
+        if: needs.impact.outputs.run == 'true'
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.2'
@@ -37,6 +90,7 @@ jobs:
           coverage: none
 
       - name: Initialize disposable auction database
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
@@ -45,6 +99,7 @@ jobs:
         run: php tests/kavel_integration_setup.php
 
       - name: Snapshot ZIP integrity and isolated destructive restore tests
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -52,6 +107,7 @@ jobs:
         run: php tests/snapshot_integration.php
 
       - name: Exercise authenticated backup UI and HTTP snapshot flows
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -71,6 +127,7 @@ jobs:
           php tests/snapshot_http_integration.php || { tail -n 90 /tmp/snapshot-http.log; exit 1; }
 
       - name: Simulate 79/80/89/90 percent and low-quota snapshot rejection
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -78,6 +135,7 @@ jobs:
         run: php tests/snapshot_storage_limits_test.php
 
       - name: T-050A prove consistent DB snapshot during concurrent atomic updates
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -85,6 +143,7 @@ jobs:
         run: php tests/snapshot_concurrent_probe.php
 
       - name: T-050B reproduce SIGKILL restore crash window (disposable fixture only)
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -92,6 +151,7 @@ jobs:
         run: php tests/snapshot_sigkill_probe.php
 
       - name: T-052 durable restore journal and fail-closed maintenance
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -99,6 +159,7 @@ jobs:
         run: php tests/restore_journal_unit_test.php
 
       - name: T-053 injected SQL failure fully rolls back photos and DB
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -106,6 +167,7 @@ jobs:
         run: php tests/restore_journal_exception_test.php
 
       - name: T-051 verify MySQL mutex and nested snapshot plus restore
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -113,6 +175,7 @@ jobs:
         run: php tests/catalog_mutex_integration.php
 
       - name: T-054 SIGKILL after DB commit retains ambiguous journal until verification
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -120,6 +183,7 @@ jobs:
         run: php tests/restore_journal_postcommit_test.php
 
       - name: T-055 readonly recovery diagnosis compares entire DB and all archive photos
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -127,6 +191,7 @@ jobs:
         run: php tests/restore_diagnosis_integration.php
 
       - name: T-056 simulate approved finalize-only recovery after SIGKILL (disposable CI)
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -134,6 +199,7 @@ jobs:
         run: php tests/restore_finalize_integration.php
 
       - name: T-057 pre-commit crash photo-only rollback with two resumable SIGKILL checkpoints
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
@@ -141,6 +207,7 @@ jobs:
         run: php tests/restore_precommit_integration.php
 
       - name: T-058 forensic read-only diagnosis of mixed database and photo evidence
+        if: needs.impact.outputs.run == 'true'
         env:
           CI_SNAPSHOT_TEST: 'yes'
           CI_DB_HOST: 127.0.0.1
