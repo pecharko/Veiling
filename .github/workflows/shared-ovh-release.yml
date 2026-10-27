@@ -1,0 +1,82 @@
+name: Shared OVH manifest release with rollback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/shared-ovh-release.yml'
+      - 'scripts/shared_ovh_release.py'
+      - 'tests/shared_ovh_release_contract_test.py'
+  workflow_dispatch:
+    inputs:
+      release_id:
+        description: 'Reviewed releases/<id>.json manifest identifier'
+        required: true
+        type: string
+      confirmation:
+        description: 'Exact final deployment approval: DEPLOY-<release_id>-<main SHA>'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/shared-ovh-release.yml
+      - run: python3 -m unittest discover -s tests -p shared_ovh_release_contract_test.py
+      - run: python3 -m py_compile scripts/shared_ovh_release.py
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      RELEASE_ID: ${{ inputs.release_id }}
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Immutable current main SHA
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Offline manifest validation and source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/shared_ovh_release.py
+          python3 -m unittest discover -s tests -p shared_ovh_release_contract_test.py
+          python3 scripts/shared_ovh_release.py plan "$RELEASE_ID"
+      - name: Verify exact per-release final authorization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DEPLOY_CONFIRMATION" = "DEPLOY-$RELEASE_ID-$GITHUB_SHA"
+      - name: Pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Backup and upload exactly manifest files with drift gate and rollback
+        run: python3 scripts/shared_ovh_release.py deploy "$RELEASE_ID"
+      - name: Preserve rollback artifact even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shared-ovh-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Request independent browser acceptance
+        run: echo 'UPLOAD VERIFIED; independent post-deploy browser acceptance pending.'
