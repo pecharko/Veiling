@@ -1,0 +1,30 @@
+name: Passive shared OVH release evidence review (read-only)
+on:
+  workflow_run:
+    workflows:
+      - Shared OVH manifest release with rollback
+    types: [completed]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  evidence:
+    if: >-
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.path == 'pecharko/Veiling/.github/workflows/shared-ovh-release.yml'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify B1 passive workflow and collector tests offline
+        run: python3 -m unittest discover -s tests -p controller_passive_postrun_test.py -v
+      - name: Review exact completed release run (no OVH access)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          python3 scripts/controller_passive_postrun.py --run-id "$RUN_ID" --release-sha "$RUN_SHA"
