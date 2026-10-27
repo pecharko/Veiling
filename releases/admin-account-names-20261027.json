@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/gebruikers.php",
+      "source_sha256": "eb7705551aa6ad91067594b842aaea23a3f9b49caef36c7ead94b4a1fd05e0e9",
+      "remote_sha256": "01be0fa9a0c637191968a6b2cd22821d9f0160ef587f71bdbe97573b8d3dd526"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "98a6ec89742189e9f4119a272b69f50f9016052f3a54a8d94095a6fd4842c7c2",
+      "remote_sha256": "99c3627abde37eccf3edb11e78be7391ae0cb32bfb778ac1fc766ffcfa403b65"
+    },
+    {
+      "path": "private/admin_names.php",
+      "source_sha256": "e7ed19f19dbc8fe0056a1aee7ab3bffa97c0da55f0c6e428eb347c71fc5260e1",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/restore_diagnosis.php",
+      "source_sha256": "3beeae2be5639bdca7945af541ac65ca27f8c0ed211420b3db3c3da5b1fe4a41",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
