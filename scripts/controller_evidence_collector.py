@@ -11,6 +11,7 @@ import os
 import re
 import sys
 import urllib.request
+from urllib.parse import urlparse
 import zipfile
 
 from controller_readonly_reconciliation import reconcile
@@ -19,6 +20,18 @@ BASE = "https://api.github.com/repos/pecharko/Veiling"
 SHA = re.compile(r"^[a-f0-9]{40}$")
 MAX_ZIP = 8 * 1024 * 1024
 MAX_JSON = 1024 * 1024
+
+
+class SafeRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urlparse(newurl).scheme != 'https':
+            raise ValueError('Refusing non-HTTPS artifact redirect')
+        redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if redirected is not None and urlparse(newurl).hostname != 'api.github.com':
+            for key in list(redirected.headers):
+                if key.lower() == 'authorization':
+                    del redirected.headers[key]
+        return redirected
 
 
 def get_bytes(url, token, *, limit):
@@ -30,7 +43,7 @@ def get_bytes(url, token, *, limit):
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "Veiling-ReadOnly-Evidence/1",
     }, method="GET")
-    with urllib.request.urlopen(req, timeout=20) as response:
+    with urllib.request.build_opener(SafeRedirect()).open(req, timeout=20) as response:
         data = response.read(limit + 1)
     if len(data) > limit:
         raise ValueError("Response exceeds bounded read limit")
