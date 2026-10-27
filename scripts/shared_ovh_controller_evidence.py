@@ -14,9 +14,10 @@ import json
 import re
 import stat
 from urllib.parse import quote
+from urllib.request import Request, build_opener
 import zipfile
 
-from ovh_release_evidence_discovery import get as github_get
+from ovh_release_evidence_discovery import ArtifactRedirect, get as github_get
 from shared_ovh_controller_adapter import (
     HASH, RELEASE_ID, SHA, MAX_JSON_BYTES, _valid_path,
     parse_approval, review_offline,
@@ -57,6 +58,37 @@ def _list(token, path, key=None):
     return values
 
 
+def _bounded_blob_json(token, blob_sha, expected_size):
+    """GET only the exact GitHub git-blob endpoint, bounded to 8 MiB raw.
+
+    GitHub Contents API returns encoding=none for larger files. Request the
+    immutable content-addressed blob via GitHub's JSON Git Blobs API. The API
+    token may NEVER be forwarded on an HTTP redirect from this endpoint.
+    """
+    if (not isinstance(token, str) or not token
+            or not isinstance(blob_sha, str) or not SHA.fullmatch(blob_sha)
+            or type(expected_size) is not int
+            or not 0 < expected_size <= MAX_CONTENT):
+        raise ValueError("Unsafe immutable Git blob request")
+    url = BASE + "/git/blobs/" + blob_sha
+    max_json_bytes = ((expected_size + 2) // 3) * 4 + 64 * 1024
+    request = Request(url, headers={
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    }, method="GET")
+    # This handler disallows all redirects except the special unrelated
+    # artifact endpoint, where Authorization is explicitly stripped.
+    opener = build_opener(ArtifactRedirect())
+    with opener.open(request, timeout=20) as response:
+        if response.geturl() != url or response.status != 200:
+            raise ValueError("Redirected or unsuccessful immutable Git blob GET")
+        payload = response.read(max_json_bytes + 1)
+    if len(payload) > max_json_bytes:
+        raise ValueError("Oversized immutable Git blob JSON")
+    return json.loads(payload)
+
+
 def _git_file(token, path, sha, *, limit=MAX_CONTENT):
     if not SHA.fullmatch(sha):
         raise ValueError("Unsafe immutable Git commit")
@@ -65,13 +97,38 @@ def _git_file(token, path, sha, *, limit=MAX_CONTENT):
     uri = "/contents/" + quote(path, safe="/") + "?ref=" + sha
     item = _api_json(token, uri)
     if (not isinstance(item, dict) or item.get("type") != "file"
-            or item.get("encoding") != "base64"
-            or not isinstance(item.get("content"), str)
             or type(item.get("size")) is not int
             or not 0 < item["size"] <= limit):
         raise ValueError("Invalid immutable Git contents metadata")
-    raw = base64.b64decode(item["content"].replace("\n", ""), validate=True)
-    if len(raw) != item["size"]:
+
+    encoding = item.get("encoding")
+    if encoding == "base64":
+        if not isinstance(item.get("content"), str):
+            raise ValueError("Invalid immutable Git Base64 contents")
+        raw = base64.b64decode(item["content"].replace("\n", ""), validate=True)
+    elif encoding == "none":
+        # GitHub REST Contents API returns only metadata for files over 1 MB.
+        # Bind the Git Blob response to the exact content-addressed blob SHA
+        # supplied by the Contents endpoint at the immutable commit.
+        blob_sha = item.get("sha")
+        if (not isinstance(blob_sha, str) or not SHA.fullmatch(blob_sha)
+                or item.get("content") not in ("", None)):
+            raise ValueError("Invalid immutable Git blob metadata")
+        blob = _bounded_blob_json(token, blob_sha, item["size"])
+        if (not isinstance(blob, dict) or blob.get("sha") != blob_sha
+                or blob.get("size") != item["size"]
+                or blob.get("encoding") != "base64"
+                or not isinstance(blob.get("content"), str)):
+            raise ValueError("Immutable Git Blob response disagrees with Contents")
+        raw = base64.b64decode(blob["content"].replace("\n", ""), validate=True)
+        # The Git object ID is a SHA-1 over the typed Git object, not over the
+        # plain file data; source SHA-256 is separately checked by the adapter.
+        typed = b"blob " + str(len(raw)).encode("ascii") + b"\0" + raw
+        if hashlib.sha1(typed).hexdigest() != blob_sha:
+            raise ValueError("Immutable Git Blob object hash mismatch")
+    else:
+        raise ValueError("Unsupported immutable Git contents encoding")
+    if len(raw) != item["size"] or len(raw) > limit:
         raise ValueError("Immutable Git file size mismatch")
     return raw
 
