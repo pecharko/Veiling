@@ -44,6 +44,11 @@ jobs:
           python3 -m py_compile scripts/generic_release_offline_check.py
           python3 scripts/generic_release_offline_check.py
 
+      - name: Validate read-only GitHub release evidence discovery offline
+        run: |
+          python3 -m py_compile scripts/ovh_release_evidence_discovery.py tests/ovh_release_evidence_discovery_test.py
+          python3 -m unittest discover -s tests -p ovh_release_evidence_discovery_test.py -v
+
       - name: Reconcile independent OVH release evidence offline
         run: |
           python3 -m py_compile scripts/ovh_release_evidence_review.py tests/ovh_release_evidence_review_test.py
