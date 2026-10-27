@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from shared_ovh_controller_adapter import (
     EXPECTED_RECOVERY_STEPS, PR_CREATION_STEP,
-    PREFIX, build_dispatch_command, parse_approval, review_offline,
+    PREFIX, build_dispatch_command, parse_approval, review_offline, review_owner_event_dryrun,
 )
 
 NOW = datetime(2026, 10, 27, 13, 8, tzinfo=timezone.utc)
@@ -411,6 +411,62 @@ class AdapterOfflineTests(unittest.TestCase):
         self.assertNotIn("bash", command)
         self.assertEqual(command[-1], "confirmation=DEPLOY-shared-demo-" + MAIN_SHA)
 
+
+
+class B31OwnerEventTests(unittest.TestCase):
+    def make(self):
+        data = fixture()
+        data["comment"]["id"] = 912
+        event = {
+            "action": "created",
+            "repository": {"full_name": "pecharko/Veiling"},
+            "issue": {"number": ISSUE_NUMBER},
+            "comment": {k: data["comment"][k] for k in
+                        ("id", "body", "created_at", "updated_at", "user")},
+        }
+        return data, event
+
+    def check(self, data, event):
+        return review_owner_event_dryrun(
+            event, issue=data["issue"], comment=data["comment"],
+            previously_closed=data["previously_closed"], now=data["now"],
+            **{key: value for key, value in data.items()
+               if key not in ("text", "issue", "comment", "previously_closed", "now")})
+
+    def test_exact_event_is_dry_run_only(self):
+        data, event = self.make()
+        result = self.check(data, event)
+        self.assertEqual(result["status"], "OFFLINE_CONTRACT_VERIFIED")
+        self.assertEqual(result["comment_id"], 912)
+        self.assertFalse(result["dispatch_started"])
+        self.assertFalse(result["authorization_consumed"])
+
+    def test_event_replay_or_identity_drift_is_rejected(self):
+        for part, field, value in (
+            ("top", "action", "edited"),
+            ("repository", "full_name", "attacker/Veiling"),
+            ("issue", "number", 44),
+            ("comment", "id", 913),
+            ("comment", "body", "go"),
+            ("comment", "updated_at", "2026-10-27T13:09:00Z"),
+            ("comment", "user", {"login": "attacker"}),
+        ):
+            with self.subTest(part=part, field=field):
+                data, event = self.make()
+                target = event if part == "top" else event[part]
+                target[field] = value
+                with self.assertRaises(ValueError):
+                    self.check(data, event)
+
+    def test_closed_issue_and_main_drift_fail(self):
+        data, event = self.make()
+        data["previously_closed"] = True
+        with self.assertRaises(ValueError):
+            self.check(data, event)
+        data, event = self.make()
+        data["current_main_sha"] = "f" * 40
+        with self.assertRaises(ValueError):
+            self.check(data, event)
 
 if __name__ == "__main__":
     unittest.main()

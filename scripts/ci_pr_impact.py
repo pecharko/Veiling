@@ -12,12 +12,10 @@ MAX_PATHS = 5000
 MAX_INPUT = 1024 * 1024
 
 READONLY_CONTROLLER_FILES = {
-    "scripts/shared_ovh_controller_adapter.py",
     "scripts/shared_ovh_controller_evidence.py",
     "scripts/ovh_release_evidence_review.py",
     "scripts/ovh_release_evidence_discovery.py",
     "scripts/ovh_deploy_evidence_contract.py",
-    "tests/shared_ovh_controller_adapter_test.py",
     "tests/shared_ovh_controller_evidence_test.py",
     "tests/ovh_release_evidence_review_test.py",
     "tests/ovh_release_evidence_discovery_test.py",

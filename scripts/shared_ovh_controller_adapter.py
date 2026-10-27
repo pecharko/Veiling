@@ -337,3 +337,51 @@ def review_offline(text, *, issue, comment, previously_closed, run,
         "dispatch_started": False,
         "browser_acceptance": "PENDING",
     }
+
+
+def review_owner_event_dryrun(event, *, issue, comment, previously_closed,
+                              now, **evidence):
+    """Bind a GitHub issue_comment event to verified snapshots, then review offline.
+
+    This deliberately cannot dispatch, close issues, persist authorization, or
+    accept unverified GitHub API data as independent provenance. The caller must
+    obtain issue/comment/evidence snapshots from trusted read-only endpoints.
+    """
+    if not isinstance(event, dict) or set(event) != {
+            "action", "repository", "issue", "comment"}:
+        raise ValueError("Unexpected GitHub event payload")
+    repository = event["repository"]
+    if (event["action"] != "created"
+            or not isinstance(repository, dict)
+            or repository.get("full_name") != REPO
+            or not isinstance(event["issue"], dict)
+            or not isinstance(event["comment"], dict)
+            or not isinstance(issue, dict)
+            or not isinstance(comment, dict)):
+        raise ValueError("Untrusted event identity")
+    issue_id = issue.get("number")
+    comment_id = comment.get("id")
+    if (type(issue_id) is not int or issue_id <= 0
+            or type(comment_id) is not int or comment_id <= 0
+            or event["issue"].get("number") != issue_id
+            or event["comment"].get("id") != comment_id
+            or event["comment"].get("body") != comment.get("body")
+            or event["comment"].get("created_at") != comment.get("created_at")
+            or event["comment"].get("updated_at") != comment.get("updated_at")
+            or event["comment"].get("user", {}).get("login") != comment.get("user", {}).get("login")):
+        raise ValueError("Event does not match independently retrieved issue/comment")
+    result = review_offline(comment.get("body"), issue=issue, comment=comment,
+                            previously_closed=previously_closed, now=now,
+                            **evidence)
+    return {
+        "status": result["status"],
+        "source": "offline_verified_github_event_snapshots",
+        "issue_id": issue_id,
+        "comment_id": comment_id,
+        "release_id": result["release_id"],
+        "release_sha": result["release_sha"],
+        "manifest_sha256": result["manifest_sha256"],
+        "dispatch_started": False,
+        "authorization_consumed": False,
+        "browser_acceptance": "PENDING",
+    }
