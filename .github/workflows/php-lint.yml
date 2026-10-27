@@ -44,6 +44,11 @@ jobs:
           python3 -m py_compile scripts/generic_release_offline_check.py
           python3 scripts/generic_release_offline_check.py
 
+      - name: Test OVH deployment evidence contract offline
+        run: |
+          python3 -m py_compile scripts/ovh_deploy_evidence_contract.py tests/ovh_deploy_evidence_contract_test.py
+          python3 -m unittest discover -s tests -p ovh_deploy_evidence_contract_test.py -v
+
       - name: Test deployment controller security guards offline
         run: |
           python3 -m py_compile scripts/verified_deploy_controller.py
