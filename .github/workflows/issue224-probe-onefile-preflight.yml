@@ -1,0 +1,111 @@
+name: Issue 224 runtime probe one-file read-only preflight
+on:
+  workflow_run:
+    workflows: [PHP syntax and repository checks]
+    types: [completed]
+  pull_request:
+    paths:
+      - '.github/workflows/issue224-probe-onefile-preflight.yml'
+      - 'scripts/preflight_issue224_probe_onefile.py'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact main SHA to inspect (no writes)
+        required: true
+        type: string
+      mode:
+        description: Offline plan or read-only OVH SFTP inspection
+        required: true
+        type: choice
+        options: [plan, preflight]
+        default: plan
+permissions:
+  contents: read
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/preflight_issue224_probe_onefile.py
+          python3 scripts/preflight_issue224_probe_onefile.py plan
+          go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/issue224-probe-onefile-preflight.yml
+  automatic-readonly:
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.conclusion == 'success'
+    concurrency:
+      group: issue224-probe-onefile-readonly-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Exact immutable current main SHA
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - run: python3 scripts/preflight_issue224_probe_onefile.py plan
+      - run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - run: python3 scripts/preflight_issue224_probe_onefile.py preflight
+      - uses: actions/upload-artifact@v4
+        with:
+          name: issue224-probe-onefile-preflight-${{ github.run_id }}
+          path: issue224-probe-onefile-preflight.json
+          retention-days: 7
+          if-no-files-found: error
+  manual-readonly:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      RELEASE_SHA: ${{ inputs.release_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Immutable current main SHA
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$RELEASE_SHA"
+      - run: python3 scripts/preflight_issue224_probe_onefile.py plan
+      - if: inputs.mode == 'preflight'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - if: inputs.mode == 'preflight'
+        run: python3 scripts/preflight_issue224_probe_onefile.py preflight
+      - if: inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: issue224-probe-onefile-preflight-${{ github.run_id }}
+          path: issue224-probe-onefile-preflight.json
+          retention-days: 7
+          if-no-files-found: error
