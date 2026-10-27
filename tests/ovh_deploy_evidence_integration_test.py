@@ -24,6 +24,7 @@ class Remote:
 
     def __enter__(self): return self
     def __exit__(self, *args): return False
+    def remove(self, name): self.files.pop(name, None)
 
 class Client:
     def __init__(self, remote): self.remote = remote
