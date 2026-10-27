@@ -1,4 +1,5 @@
 """Offline tests for GitHub evidence discovery. No network used."""
+import base64
 import io
 import json
 import sys
@@ -89,6 +90,53 @@ class DiscoveryTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "not successful"):
                 discovery.latest_review("dummy")
         inspect.assert_not_called()
+
+    def test_full_mocked_artifact_reconciles_immutable_manifest(self):
+        sha = "b" * 40
+        manifest = {"schema": 1, "files": [{
+            "path": "catalogus-public/admin/admin.css",
+            "source_sha256": "a" * 64, "remote_sha256": "c" * 64,
+        }]}
+        evidence = {
+            "schema": 1, "release_id": "test-abc", "release_sha": sha,
+            "run_id": 123, "status": "VERIFIED", "rollback_artifact": None,
+            "browser_acceptance": "PENDING",
+            "files": [{
+                "path": "catalogus-public/admin/admin.css",
+                "source_sha256": "a" * 64, "baseline_sha256": "c" * 64,
+                "readback_sha256": "a" * 64,
+            }],
+        }
+        run = {
+            "id": 123, "head_sha": sha, "event": "workflow_dispatch",
+            "head_branch": "main",
+            "path": "pecharko/Veiling/.github/workflows/shared-ovh-release.yml",
+            "status": "completed", "conclusion": "success",
+        }
+        artifacts = [
+            {"id": 10, "name": "shared-ovh-evidence-123", "expired": False},
+            {"id": 11, "name": "shared-ovh-rollback-123", "expired": False},
+        ]
+        zipped = io.BytesIO()
+        with ZipFile(zipped, "w") as archive:
+            archive.writestr("deployment-evidence.json", json.dumps(evidence))
+        def fake_json_get(url, token):
+            if "/actions/runs/123/artifacts" in url:
+                return {"artifacts": artifacts}
+            if "/contents/releases/test-abc.json?" in url:
+                return {"type": "file", "encoding": "base64",
+                        "content": base64.b64encode(
+                            json.dumps(manifest).encode()
+                        ).decode()}
+            self.fail("Unexpected API request: " + url)
+        with patch.object(discovery, "json_get", side_effect=fake_json_get), patch.object(
+            discovery, "get", return_value=zipped.getvalue()
+        ) as get_zip:
+            result = discovery.inspect_run(run, "dummy")
+        self.assertEqual(result["status"], "TECHNICALLY_VERIFIED")
+        self.assertEqual(result["release_sha"], sha)
+        self.assertEqual(result["browser_acceptance"], "PENDING")
+        self.assertEqual(get_zip.call_count, 1)
 
     def test_no_successful_run(self):
         with patch.object(discovery, "json_get", return_value={"workflow_runs": []}):
