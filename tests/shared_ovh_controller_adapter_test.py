@@ -8,6 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from shared_ovh_controller_adapter import (
+    EXPECTED_RECOVERY_STEPS, PR_CREATION_STEP,
     PREFIX, build_dispatch_command, parse_approval, review_offline,
 )
 
@@ -94,11 +95,115 @@ def fixture():
     }
 
 
+def recovered_preflight_fixture():
+    data = fixture()
+    data["run"]["conclusion"] = "failure"
+    data["preflight_jobs"] = [{
+        "name": "prepare",
+        "status": "completed",
+        "conclusion": "failure",
+        "steps": [
+            {"name": name, "status": "completed",
+             "conclusion": "failure" if name == PR_CREATION_STEP else "success"}
+            for name in EXPECTED_RECOVERY_STEPS
+        ],
+    }]
+    return data
+
+
 def run_review(data):
     return review_offline(data["text"], **{k: v for k, v in data.items() if k != "text"})
 
 
 class AdapterOfflineTests(unittest.TestCase):
+    def test_real_bot_pr_creation_failure_preserves_proven_readonly_evidence(self):
+        # This is the observed 40463684380 step-conclusion pattern; the real
+        # run was red *only* because GitHub's bot PR creation failed.
+        data = recovered_preflight_fixture()
+        result = run_review(data)
+        self.assertEqual(result["status"], "OFFLINE_CONTRACT_VERIFIED")
+        self.assertEqual(result["preflight_outcome"],
+                         "BASELINE_VERIFIED_PR_CREATION_FAILED")
+        self.assertIs(result["dispatch_started"], False)
+        self.assertEqual(
+            result["dispatch_command"][-1],
+            "confirmation=DEPLOY-shared-demo-" + MAIN_SHA,
+        )
+
+    def test_red_run_without_independent_step_proof_fails_closed(self):
+        data = recovered_preflight_fixture()
+        del data["preflight_jobs"]
+        with self.assertRaises(ValueError):
+            run_review(data)
+
+    def test_red_run_rejects_any_failed_baseline_or_artifact_step(self):
+        for name in (
+            "Verify main remains source",
+            "Collect real remote hashes and generate valid manifest",
+            "Upload proof artifact even if GitHub cannot create PR",
+            "Determine reviewed release request",
+        ):
+            with self.subTest(name=name):
+                data = recovered_preflight_fixture()
+                steps = data["preflight_jobs"][0]["steps"]
+                next(s for s in steps if s["name"] == name)["conclusion"] = "failure"
+                with self.assertRaises(ValueError):
+                    run_review(data)
+
+    def test_red_run_rejects_other_causes_and_missing_steps(self):
+        cases = ("job_wrong", "job_extra", "missing", "renamed", "duplicate",
+                 "pr_succeeded", "pr_cancelled", "job_success", "run_cancelled")
+        for case in cases:
+            with self.subTest(case=case):
+                data = recovered_preflight_fixture()
+                job = data["preflight_jobs"][0]
+                if case == "job_wrong":
+                    job["name"] = "other"
+                elif case == "job_extra":
+                    data["preflight_jobs"].append(dict(job))
+                elif case == "missing":
+                    job["steps"].pop(2)
+                elif case == "renamed":
+                    job["steps"][2]["name"] = "New unchecked action"
+                elif case == "duplicate":
+                    job["steps"][2]["name"] = job["steps"][0]["name"]
+                elif case == "pr_succeeded":
+                    next(s for s in job["steps"] if s["name"] == PR_CREATION_STEP)["conclusion"] = "success"
+                elif case == "pr_cancelled":
+                    next(s for s in job["steps"] if s["name"] == PR_CREATION_STEP)["conclusion"] = "cancelled"
+                elif case == "job_success":
+                    job["conclusion"] = "success"
+                else:
+                    data["run"]["conclusion"] = "cancelled"
+                with self.assertRaises(ValueError):
+                    run_review(data)
+
+    def test_red_run_still_requires_unexpired_artifact_and_exact_manifest_bytes(self):
+        for case in ("expired", "missing", "tampered"):
+            with self.subTest(case=case):
+                data = recovered_preflight_fixture()
+                if case == "expired":
+                    data["artifact_inventory"][0]["expired"] = True
+                elif case == "missing":
+                    data["artifact_inventory"] = []
+                else:
+                    data["artifact_files"]["releases/shared-demo.json"] = b"{}"
+                with self.assertRaises(ValueError):
+                    run_review(data)
+
+    def test_red_run_cannot_bypass_owner_or_current_main_commit(self):
+        for case in ("wrong_actor", "old_approval", "main_drift"):
+            with self.subTest(case=case):
+                data = recovered_preflight_fixture()
+                if case == "wrong_actor":
+                    data["comment"]["user"]["login"] = "github-actions[bot]"
+                elif case == "old_approval":
+                    data["previously_closed"] = True
+                else:
+                    data["current_main_sha"] = "f" * 40
+                with self.assertRaises(ValueError):
+                    run_review(data)
+
     def test_happy_path_is_inert_and_uses_only_two_shared_workflow_inputs(self):
         data = fixture()
         result = run_review(data)
