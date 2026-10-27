@@ -173,4 +173,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 @media(prefers-reduced-motion:reduce){.dashboard-stats .dashboard-stat{transition:none}.dashboard-stats .dashboard-stat:hover{transform:none}}
 
 /* Active session role is displayed consistently for every admin role. */
-.admin-active-role{display:inline-flex;align-items:center;white-space:nowrap;padding:5px 11px;border:1px solid rgba(255,255,255,.65);border-radius:999px;color:#fff;font-size:12px;font-weight:800;letter-spacing:.02em;background:rgba(255,255,255,.14)}
+.admin-brand-row{display:flex;align-items:center;gap:13px;flex-wrap:nowrap;margin-bottom:14px;min-width:0}
+.admin-brand-row .admin-logo{font-size:21px;font-weight:850;letter-spacing:-.025em;line-height:1.25;text-decoration:none;white-space:nowrap}
+.admin-brand-row .admin-active-role{display:inline-flex;align-items:center;flex:none;white-space:nowrap;padding:6px 12px;border:1px solid #b7dccc;border-radius:999px;color:#214c3b;font-size:12px;font-weight:800;letter-spacing:.01em;background:#dcefe3}
+@media(max-width:420px){.admin-brand-row{gap:8px}.admin-brand-row .admin-logo{font-size:18px}.admin-brand-row .admin-active-role{font-size:11px;padding:5px 8px}}
