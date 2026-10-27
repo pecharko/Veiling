@@ -17,7 +17,7 @@ foreach ($indexes as $row) { if ((int)$row['Non_unique'] === 0) $unique[(string)
 foreach (['uq_claim_comment', 'uq_claim_release_sha', 'uq_claim_release_id'] as $name) {
     if (!isset($unique[$name])) throw new RuntimeException("Missing unique index $name");
 }
-$insert = $pdo->prepare("INSERT INTO controller_release_claims(repository,issue_id,comment_id,release_id,release_sha) VALUES ('pecharko/Veiling',?,?,?,?,?)");
+$insert = $pdo->prepare("INSERT INTO controller_release_claims(repository,issue_id,comment_id,release_id,release_sha) VALUES ('pecharko/Veiling',?,?,?,?)");
 function addClaim(PDOStatement $insert, int $issue, int $comment, string $release, string $sha): void {
     $insert->execute([$issue,$comment,$release,$sha]);
 }
