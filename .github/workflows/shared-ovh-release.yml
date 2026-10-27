@@ -32,6 +32,7 @@ jobs:
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/shared-ovh-release.yml
       - run: python3 -m unittest discover -s tests -p shared_ovh_release_contract_test.py
       - run: python3 -m py_compile scripts/shared_ovh_release.py scripts/ovh_deploy_evidence_contract.py
+      - run: python3 -m unittest discover -s tests -p ovh_deploy_evidence_integration_test.py -v
   release:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
