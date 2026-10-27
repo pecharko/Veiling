@@ -69,6 +69,11 @@ jobs:
           python3 -m py_compile scripts/shared_ovh_controller_evidence.py tests/shared_ovh_controller_evidence_test.py
           python3 -m unittest discover -s tests -p shared_ovh_controller_evidence_test.py -v
 
+      - name: Test inert controller read-only report and adversarial fixtures
+        run: |
+          python3 -m py_compile scripts/controller_readonly_report.py tests/controller_readonly_report_test.py
+          python3 -m unittest discover -s tests -p controller_readonly_report_test.py -v
+
       - name: Validate conservative integration CI impact routing offline
         run: |
           python3 -m py_compile scripts/ci_pr_impact.py tests/ci_pr_impact_test.py
