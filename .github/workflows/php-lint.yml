@@ -74,6 +74,11 @@ jobs:
           python3 -m py_compile scripts/controller_readonly_report.py tests/controller_readonly_report_test.py
           python3 -m unittest discover -s tests -p controller_readonly_report_test.py -v
 
+      - name: Test read-only release artifact and rollback evidence consistency
+        run: |
+          python3 -m py_compile scripts/controller_artifact_consistency.py tests/controller_artifact_consistency_test.py
+          python3 -m unittest discover -s tests -p controller_artifact_consistency_test.py -v
+
       - name: Validate conservative integration CI impact routing offline
         run: |
           python3 -m py_compile scripts/ci_pr_impact.py tests/ci_pr_impact_test.py
