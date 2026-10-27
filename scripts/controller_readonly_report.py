@@ -69,11 +69,10 @@ def report(stages):
         if name in ("deployment", "readback", "rollback", "browser_acceptance") and entry["status"] == "NOT_APPLICABLE":
             raise ValueError("Production evidence cannot be declared NVT")
         items[name] = entry.copy()
-    # A completed job is not evidence that readback, rollback or acceptance exist.
+    # This inert reporter cannot authenticate user-provided stage claims. Even
+    # all VERIFIED strings must never become an authorization/acceptance fact.
     return {"schema": 1, "read_only": True, "dispatch_started": False,
-            "stages": items, "fully_accepted": all(
-                items[k]["status"] == "VERIFIED"
-                for k in ("deployment", "readback", "rollback", "browser_acceptance"))}
+            "stages": items, "fully_accepted": False}
 
 
 def as_json(stages):
