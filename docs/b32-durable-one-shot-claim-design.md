@@ -199,3 +199,31 @@ Onderbouwing:
 **Besluitstatus:** opslagkeuze is voorgesteld maar nog **niet operationeel
 goedgekeurd**. Geen nieuwe DB, schema, permissie, token, workflow of
 network endpoint zonder afzonderlijke securityreview en expliciete opdracht.
+
+## Repository-inventaris van bestaande opslag (read-only, 27 oktober 2026)
+
+De actuele GitHub-`main` op `3734d8e11615d3cf07405c01d7f6b3321b9a9600`
+bevat bestaande `database/*_migration.sql` voor **applicatie-/veilinggegevens**
+(o.a. rollen, kavels en website-instellingen) en een reeks bestaande
+deploy-/controllerworkflows. Er is geen reeds bewezen, afgescheiden
+transactionele opslag voor controllerclaims geïdentificeerd op basis van
+de repositorystructuur. De aanwezigheid van een OVH-MySQL-database voor de
+website is geen rechtvaardiging om releaseautorisaties in die productie-DB
+te schrijven.
+
+**Beoordeelde mogelijkheden:**
+
+| Optie | Atomaire dubbele-claimpreventie | Isolatie en beperking |
+|---|---|---|
+| Bestaande productie-MySQL | UNIQUE constraints technisch mogelijk | Ongewenste koppeling van controller aan live websitegegevens; nieuwe DB-rechten/schema nodig; niet goedgekeurd |
+| Afzonderlijke transactionele DB | Twee UNIQUE constraints en transactie uitvoerbaar | Voorkeur voor verdere evaluatie; hosting, credentials, bereikbaarheid, backup en minimumrechten nog onbewezen |
+| GitHub create-only refs | Mogelijk atomisch bij create | Delete/force-update- en protection-garanties niet aangetoond; onvoldoende |
+| GitHub Issues, labels, artifacts of concurrency | Geen voldoende duurzame exclusieve CAS bewezen | Afwijzen als enige bron van waarheid |
+| Lokale SQLite op ephemeral Actions-runner | Lokale transactie mogelijk | Geen gedeelde duurzame opslag over nieuwe runners; afwijzen |
+
+**Go/no-go voor uitvoerende implementatie:** kies uitsluitend een opslag met
+aantoonbaar transactionele commit, twee onafhankelijke unieke constraints,
+afgeschermde schrijfrechten, gedeelde persistente toegang en crash-/recoverybewijs.
+Zolang zo'n infrastructuur niet bestaat of is goedgekeurd, blijft de offline
+B3.2-code de veilige eindtoestand. Nieuwe infrastructuur, credentials,
+database-schema en dispatch vragen elk aparte expliciete autorisatie.
