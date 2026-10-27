@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_one_shot_claim_contract import claim_key, review_claim
+from controller_one_shot_claim_contract import claim_key, review_claim, assess_create_only_outcome
 
 K = claim_key("pecharko/Veiling", 512, 912, "shared-demo", "a" * 40)
 
@@ -45,6 +45,34 @@ class OneShotTests(unittest.TestCase):
                              "run_id": None}, durable_cas_proven=True)
         self.assertEqual(x["claim_state"], "DISPATCH_UNKNOWN")
         self.assertFalse(x["automatic_retry_allowed"])
+
+    def test_atomic_create_reply_never_authorizes_release(self):
+        for status in (201, 422, None, 500):
+            with self.subTest(status=status):
+                result = assess_create_only_outcome(
+                    K, http_status=status,
+                    observed_ref={"key": K, "target_sha": "a" * 40},
+                    expected_target_sha="a" * 40)
+                self.assertFalse(result["dispatch_allowed"])
+                self.assertFalse(result["automatic_retry_allowed"])
+
+    def test_deleted_or_recreated_ref_cannot_prove_persistent_claim(self):
+        for observed in (None, {"key": K, "target_sha": "b" * 40},
+                         {"key": claim_key("pecharko/Veiling", 512, 913,
+                                           "shared-demo", "a" * 40),
+                          "target_sha": "a" * 40}):
+            with self.subTest(observed=observed):
+                result = assess_create_only_outcome(
+                    K, http_status=201, observed_ref=observed,
+                    expected_target_sha="a" * 40)
+                self.assertFalse(result["dispatch_allowed"])
+
+    def test_unknown_network_result_never_retried(self):
+        result = assess_create_only_outcome(
+            K, http_status=None, observed_ref=None,
+            expected_target_sha="a" * 40)
+        self.assertEqual(result["reason"], "create_result_unknown")
+        self.assertFalse(result["automatic_retry_allowed"])
 
     def test_unverified_run_provenance_denied(self):
         x = review_claim(K, {"key": K, "state": "DISPATCH_CONFIRMED",
