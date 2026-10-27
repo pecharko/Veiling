@@ -129,8 +129,9 @@ def run():
                   for name, data in payload.items()]
     }
     evidence_rows = {row["path"]: row for row in evidence["files"]}
-    client, base = connect()
+    client = None
     try:
+        client, base = connect()
         with client.open_sftp() as sftp:
             sentinel = read_remote(sftp, posixpath.join(base, "catalogus-public/admin/index.php"))
             if sentinel is None or b"dashboard-table" not in sentinel:
@@ -197,8 +198,9 @@ def run():
             evidence["status"] = "FAILED"
         raise
     finally:
-        client.close()
-        from scripts.ovh_deploy_evidence_contract import validate
+        if client is not None:
+            client.close()
+        from ovh_deploy_evidence_contract import validate
         path = ROOT / "deployment-evidence.json"
         path.write_text(json.dumps(validate(evidence), indent=2) + "\n", encoding="utf-8")
 
