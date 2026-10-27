@@ -49,7 +49,7 @@ jobs:
           if test "${{ github.event_name }}" = workflow_dispatch; then
             ID="$REQUESTED_ID"
           else
-            mapfile -t REQUESTS < <(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA" -- 'release-requests/*.json')
+            mapfile -t REQUESTS < <(git diff --name-only "$GITHUB_SHA^1" "$GITHUB_SHA" -- 'release-requests/*.json')
             test "${#REQUESTS[@]}" -eq 1
             ID="${REQUESTS[0]##*/}"
             ID="${ID%.json}"
