@@ -1,0 +1,29 @@
+name: Issue 224 cron PHP 8.5 offline static compatibility
+on:
+  pull_request:
+    paths:
+      - 'tests/visitor_stats_cron_static_compat_test.py'
+      - '.github/workflows/issue224-cron-php85-offline.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Static cron safety contract
+        run: python3 tests/visitor_stats_cron_static_compat_test.py
+      - name: PHP 8.5 syntax check only
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: none
+          coverage: none
+      - run: |
+          php -v
+          php -l private/visitor_stats_daily_cron.php
+          php -l private/visitor_stats_archive_one_day_experimental.php
+          echo 'Offline runner PHP only. No archive script execution and no remote/database access.'
