@@ -100,6 +100,11 @@ jobs:
           python3 -m py_compile scripts/controller_passive_postrun.py tests/controller_passive_postrun_test.py
           python3 -m unittest discover -s tests -p controller_passive_postrun_test.py -v
 
+      - name: Test B3.2 manual MySQL migration contract (static only)
+        run: |
+          python3 -m py_compile tests/controller_mysql_claim_migration_test.py
+          python3 -m unittest discover -s tests -p controller_mysql_claim_migration_test.py -v
+
       - name: Test isolated B3.2 SQLite concurrent claims (temporary DB only)
         run: |
           python3 -m py_compile scripts/controller_sqlite_claim_experiment.py tests/controller_sqlite_claim_experiment_test.py
