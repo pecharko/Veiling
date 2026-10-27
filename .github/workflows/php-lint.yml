@@ -100,6 +100,11 @@ jobs:
           python3 -m py_compile scripts/controller_passive_postrun.py tests/controller_passive_postrun_test.py
           python3 -m unittest discover -s tests -p controller_passive_postrun_test.py -v
 
+      - name: Test B3.2 inert one-shot authorization and replay contract
+        run: |
+          python3 -m py_compile scripts/controller_one_shot_claim_contract.py tests/controller_one_shot_claim_contract_test.py
+          python3 -m unittest discover -s tests -p controller_one_shot_claim_contract_test.py -v
+
       - name: Validate conservative integration CI impact routing offline
         run: |
           python3 -m py_compile scripts/ci_pr_impact.py tests/ci_pr_impact_test.py
