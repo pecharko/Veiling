@@ -48,8 +48,9 @@ def inspect_release_evidence(document, artifacts, *, run_id, release_sha,
                 a["id"] <= 0 or not isinstance(a.get("workflow_run"), dict) or
                 a["workflow_run"].get("id") != run_id):
             return unknown("expired_or_unbound_artifact")
-    if validated["rollback_artifact"] != next(
-            a["id"] for a in artifacts if a.get("name") == names[1]):
+    rollback_matches = [a for a in artifacts if isinstance(a, dict)
+                        and a.get("name") == names[1]]
+    if validated["rollback_artifact"] != rollback_matches[0]["id"]:
         return {"status": "FAILED", "reason": "rollback_id_mismatch",
                 "source": source}
     # Contract, file hashes and inventory match. GitHub-run conclusion,
