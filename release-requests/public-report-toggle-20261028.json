@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/admin/instellingen.php",
+    "catalogus-public/index.php"
+  ]
+}
