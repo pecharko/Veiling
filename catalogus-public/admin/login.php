@@ -29,6 +29,7 @@ if (is_post()) {
       $_SESSION['admin_id'] = (int)$admin['id'];
       $_SESSION['admin_credential_hash'] = hash('sha256', (string)$admin['password_hash']);
       $pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')->execute([$ip]);
+      $pdo->prepare('UPDATE admins SET last_login_at=UTC_TIMESTAMP() WHERE id=? AND is_active=1')->execute([(int)$admin['id']]);
       redirect('admin/index.php');
     }
     $pdo->prepare('INSERT INTO login_attempts (ip_hash) VALUES (?)')->execute([$ip]);

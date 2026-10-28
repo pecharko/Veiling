@@ -132,7 +132,19 @@ $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
+// A token issued after the snapshot must never survive restoration.
+$pendingTokenHash=hash('sha256', 'disposable-snapshot-invite');
+$pdo->prepare("INSERT INTO admin_invitations (name,email,role,token_hash,created_at,expires_at)
+ VALUES ('Snapshot invite','ci-snapshot-invite@example.invalid','assistant',?,UTC_TIMESTAMP(),
+ DATE_ADD(UTC_TIMESTAMP(),INTERVAL 48 HOUR))")->execute([$pendingTokenHash]);
+verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 1,
+       'Pending invitation exists before restoring snapshot');
 snap_restore($pdo, $name);
+verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 0,
+       'Snapshot restore invalidates pending invitation tokens');
+verify($pdo->query("SELECT last_login_at FROM admins LIMIT 1")->fetchColumn() === null,
+       'Snapshot restores nullable last-login timestamp');
+
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
 
 verify((fileperms($uploads) & 0005) === 0005,
