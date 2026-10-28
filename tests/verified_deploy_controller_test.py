@@ -183,4 +183,42 @@ with TemporaryDirectory() as folder:
                 pass
             else:
                 raise AssertionError("Second release accepted unsafe evidence")
+
+# B3.3 GitHub-native cross-issue replay guard; all calls mocked, no API writes.
+from unittest.mock import patch as cross_patch
+prior = {"number": 27, "state": "closed"}
+approval_prior = "DEPLOY VERIFIED RELEASE\\nworkflow=sample-release.yml\\nrelease_sha=" + sha
+def history(endpoint, *args, **kwargs):
+    if endpoint.endswith("/issues?state=all&labels=approved-deploy-request&per_page=100"):
+        return [prior]
+    if endpoint.endswith("/issues/27/comments?per_page=100"):
+        return [{"body": approval_prior}]
+    raise AssertionError("Unexpected API: " + endpoint)
+with cross_patch.object(module, "gh", side_effect=history), cross_patch.object(module, "has_closed_event", return_value=True):
+    try:
+        module.reject_prior_approved_release("pecharko/Veiling", "28", "sample-release.yml", sha)
+    except ValueError as exc:
+        assert "already authorized" in str(exc)
+    else:
+        raise AssertionError("Cross-issue replay accepted")
+    module.reject_prior_approved_release("pecharko/Veiling", "28", "other-release.yml", sha)
+    module.reject_prior_approved_release("pecharko/Veiling", "28", "sample-release.yml", "b" * 40)
+with cross_patch.object(module, "gh", return_value=[prior]), cross_patch.object(module, "has_closed_event", return_value=False):
+    module.reject_prior_approved_release("pecharko/Veiling", "28", "sample-release.yml", sha)
+with cross_patch.object(module, "gh", return_value=[prior] * 100):
+    try:
+        module.reject_prior_approved_release("pecharko/Veiling", "28", "sample-release.yml", sha)
+    except ValueError as exc:
+        assert "incomplete" in str(exc)
+    else:
+        raise AssertionError("Unbounded issue scan accepted")
+with cross_patch.object(module, "gh", side_effect=RuntimeError("GitHub unavailable")):
+    try:
+        module.reject_prior_approved_release("pecharko/Veiling", "28", "sample-release.yml", sha)
+    except RuntimeError:
+        pass
+    else:
+        raise AssertionError("Unavailable history allowed")
+assert main_body.index("reject_prior_approved_release(") < main_body.index('state=closed')
+
 print("PASS independent second workflow with negative safety cases; no dispatch")
