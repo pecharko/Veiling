@@ -11,3 +11,7 @@ Afzender: `noreply@41lokeren.be`. De implementatie gebruikt PHP `mail()` met vas
 5. Evalueer of productie mailverzending veilig beschikbaar is; totdat dit bewezen is, geen functionele acceptatie.
 
 Security: generieke respons (geen accountdetectie), CSRF, SHA-256 tokenhashes, maximaal 30 minuten, éénmalig token, IP+e-mail rate limiting, noindex/no-referrer, geen persoonsgegevens of links in logs. De tabel bevat requestmetadata, en moet worden meegenomen in snapshot/restore-beleid voordat de functie live gaat.
+
+## Snapshotherstel
+
+Resetverzoeken worden bewust **niet** in exports opgenomen. Bij een volledig snapshotherstel wist de hersteltransactie alle openstaande en gebruikte resetverzoeken in de bestaande `admin_password_resets`-tabel, voordat accounts worden teruggezet. Als de tabel bij een oude installatie ontbreekt, blijft het herstel compatibel. Er is dus geen heractiveerbare resetlink na herstel. Controleer dit expliciet in de geïsoleerde hersteltests.
