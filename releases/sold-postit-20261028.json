@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "f7b95ccd6b30a418a15c4ecd64bc18551953e6ebd065cba0213a8d29fa094860",
+      "remote_sha256": "01ab331b04b8287024ba2dbc7328f4e45555b6447592bf3a957cee322d4ecbf1"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "cf88fef44d632de06fe8850d8de4546b53f15d1509e5ca2361246b2e512d6031",
+      "remote_sha256": "d9667bb957c97946222f05cf01a175dcd20c3e6ca6b7a81a452cd579ddced2cf"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "ee5f890ec6535aa6e9d354c762fd3423599926a2a1339023119cde62ad7d1f0d",
+      "remote_sha256": "9508a462f9ee2a5d64339baa146ebef64425cd930652fa242095aef1cd8c07b2"
+    }
+  ]
+}
