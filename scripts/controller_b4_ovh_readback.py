@@ -10,6 +10,7 @@ import os
 import posixpath
 import re
 import subprocess
+from pathlib import Path
 from shared_ovh_release import ROOT, connect, digest, load_manifest, read_remote
 from controller_evidence_collector import get_json
 from controller_run_evidence_binding import inspect_run
@@ -45,10 +46,10 @@ def verify_release_run(run_id, release_sha, token, *, read_json=get_json):
     return decision
 
 
-def check_checkout():
+def check_checkout(source_root=ROOT):
     """Fail closed unless the Git checkout is clean and points to one commit."""
     head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"],
-                          cwd=ROOT, check=True, capture_output=True,
+                          cwd=source_root, check=True, capture_output=True,
                           text=True, timeout=10).stdout.strip()
     dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
                            cwd=ROOT, check=True, capture_output=True,
@@ -58,15 +59,16 @@ def check_checkout():
     return head
 
 
-def verify(release_id, release_sha, run_id, *, read=None, checkout_check=check_checkout):
+def verify(release_id, release_sha, run_id, *, read=None, checkout_check=check_checkout, source_root=None):
     """Read bounded exact manifest paths; no acceptance verdict if incomplete."""
     if (not isinstance(release_sha, str) or not SHA.fullmatch(release_sha)
             or type(run_id) is not int or run_id <= 0):
         raise ValueError("Invalid immutable release identity")
     # Check commit and working tree before opening an OVH connection.
-    if checkout_check() != release_sha:
+    if (checkout_check() if source_root is None else checkout_check(source_root)) != release_sha:
         raise ValueError("Refusing unpinned OVH manifest checkout")
-    manifest, payload, _baselines = load_manifest(release_id)
+    manifest, payload, _baselines = (load_manifest(release_id) if source_root is None else
+                                     load_manifest(release_id, source_root=source_root))
     rows = []
     def check(reader):
         for entry in manifest["files"]:
@@ -104,10 +106,14 @@ def main():
     parser.add_argument("--release-id", required=True)
     parser.add_argument("--release-sha", required=True)
     parser.add_argument("--run-id", type=int, required=True)
+    parser.add_argument("--release-checkout", default=None)
     args = parser.parse_args()
     # GITHUB_TOKEN needs only Actions:read. No remote contact without proof.
     verify_release_run(args.run_id, args.release_sha, os.environ.get("GITHUB_TOKEN", ""))
-    result = verify(args.release_id, args.release_sha, args.run_id)
+    release_root = Path(args.release_checkout).resolve() if args.release_checkout else None
+    if release_root is not None and (not release_root.is_dir() or release_root == ROOT):
+        raise ValueError("Separate immutable release data checkout required")
+    result = verify(args.release_id, args.release_sha, args.run_id, source_root=release_root)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "OBSERVED_MATCH" else 1
 
