@@ -75,3 +75,9 @@ body{background:#fffaf6;color:var(--ink)}
     box-shadow: 0 5px 18px rgba(65, 29, 30, .07);
   }
 }
+
+/* Sold lots remain visible with a clear availability indicator. */
+.lot-cover{position:relative}
+.lot-sold-badge{display:inline-block;padding:7px 13px;border-radius:5px;background:#850015;color:#fff;font-size:12px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;line-height:1.25}
+.lot-cover .lot-sold-badge{position:absolute;right:12px;top:12px;z-index:2;box-shadow:0 3px 12px rgba(0,0,0,.18)}
+.detail-sold-badge{margin-bottom:15px}
