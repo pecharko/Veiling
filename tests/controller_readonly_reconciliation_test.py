@@ -4,7 +4,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_readonly_reconciliation import reconcile
+from controller_readonly_reconciliation import reconcile, reconcile_independent_b4
 from controller_b4_ovh_readback_test import B4OVHReadbackTests  # no-network OVH readback regression
 from controller_b4_github_readonly_test import B4GitHubReadTests  # include B4 trusted GET tests in CI
 from controller_b4_owner_evidence_binding_test import OwnerEvidenceTests  # B4 bounded owner/OVH proof tests
@@ -84,6 +84,77 @@ class ReconciliationTest(unittest.TestCase):
         x = self.examine()
         self.assertEqual(x["stages"]["browser_acceptance"]["status"], "INCOMPLETE")
         self.assertEqual(x["review"]["independent_browser_acceptance"], "PENDING")
+
+
+class B5aReadbackJoinTests(unittest.TestCase):
+    def setUp(self):
+        self.base = reconcile(RUN, JOBS, DOCUMENT, ARTIFACTS,
+                              run_id=123, release_sha=SHA, expected_paths=[PATH])
+        self.observation = {
+            "schema": 1, "source": "separate_read_only_ovh_sftp_session",
+            "release_id": "test-release", "release_sha": SHA, "run_id": 123,
+            "status": "OBSERVED_MATCH", "writes_performed": False,
+            "checkout_sha_verified": True,
+            "files": [{"path": PATH, "expected_sha256": DIGEST,
+                       "observed_sha256": DIGEST, "match": True}],
+        }
+        self.run = {"event": "workflow_dispatch", "status": "completed",
+                    "conclusion": "success", "head_sha": SHA}
+
+    def joined(self, observation=None, execution_run=None, base=None, main=None):
+        return reconcile_independent_b4(
+            self.base if base is None else base,
+            self.observation if observation is None else observation,
+            release_id="test-release", release_sha=SHA,
+            run_id=123, expected_files=[PATH],
+            execution_run=self.run if execution_run is None else execution_run,
+            authorized_main_sha=main)
+
+    def test_positive_offline_consistency_never_accepts_or_dispatches(self):
+        x = self.joined(main=SHA)
+        self.assertEqual(x["status"], "VERIFIED")
+        self.assertEqual(x["evidence_scope"], "offline_consistency_only")
+        self.assertFalse(x["independent_provenance_authenticated"])
+        self.assertFalse(x["fully_accepted"])
+        self.assertFalse(x["deployment_authorized"])
+        self.assertFalse(x["dispatch_started"])
+        self.assertEqual(x["browser_acceptance"], "PENDING")
+
+    def test_main_authorization_change_fails_closed(self):
+        x = self.joined(main="c" * 40)
+        self.assertEqual(x["status"], "MISMATCH")
+        self.assertEqual(x["reason"], "execution_commit_outside_authorization")
+
+    def test_mismatch_or_missing_observation_never_verifies(self):
+        bad = dict(self.observation)
+        bad["files"] = [{**self.observation["files"][0],
+                         "observed_sha256": "c" * 64, "match": False}]
+        self.assertEqual(self.joined(observation=bad)["status"], "MISMATCH")
+        self.assertEqual(self.joined(observation={})["status"], "MISMATCH")
+        self.assertEqual(self.joined(observation=None)["status"], "VERIFIED")
+
+    def test_missing_release_provenance_is_incomplete(self):
+        self.assertEqual(self.joined(base={})["status"], "INCOMPLETE")
+
+    def test_mismatched_release_identity_or_paths_fail_closed(self):
+        self.assertEqual(self.joined(observation={**self.observation,
+            "release_sha": "c" * 40})["reason"], "release_identity_mismatch")
+        bad = {**self.observation, "files": [
+            {**self.observation["files"][0], "path": "catalogus-public/kavel.php"}]}
+        self.assertEqual(self.joined(observation=bad)["reason"],
+                         "file_allowlist_mismatch")
+
+    def test_not_a_successful_manual_b4_run(self):
+        self.assertEqual(self.joined(execution_run={**self.run, "event": "push"})
+                         ["status"], "INCOMPLETE")
+
+    def test_incomplete_or_write_claim_cannot_verify(self):
+        for key, value in (("writes_performed", True),
+                           ("checkout_sha_verified", False),
+                           ("source", "deployment_runner")):
+            with self.subTest(key=key):
+                self.assertEqual(self.joined(observation={
+                    **self.observation, key: value})["status"], "INCOMPLETE")
 
 
 if __name__ == "__main__":
