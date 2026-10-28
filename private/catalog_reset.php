@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/photo_delete_safety.php';
 
 /**
  * Destructive, explicit administrator operation.
@@ -24,13 +25,11 @@ function reset_catalog_lots(PDO $pdo): array {
   }
 }
 
-/** Remove only files referenced by the deleted rows and inside the upload root. */
+/** Remove referenced photos, failing closed for suspicious filesystem paths. */
 function reset_catalog_photo_files(array $paths, string $publicRoot): int {
   $failed = 0;
   foreach ($paths as $path) {
-    if (!is_string($path) || !preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(webp|jpg|png)$~', $path)) continue;
-    $file = rtrim($publicRoot, '/') . '/' . $path;
-    if (is_file($file) && !@unlink($file)) $failed++;
+    if (!is_string($path) || !catalog_safe_unlink_photo($path, $publicRoot)) $failed++;
   }
   return $failed;
 }
