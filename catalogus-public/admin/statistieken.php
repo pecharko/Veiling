@@ -5,6 +5,7 @@ require_auth();
 require_no_index();
 require_once dirname(__DIR__, 2) . '/private/analytics_control.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive_one_day_experimental.php';
+require_once dirname(__DIR__, 2) . '/private/visitor_stats_cron_log.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
@@ -179,6 +180,7 @@ try {
 } catch (PDOException $exception) {
     $available = false;
 }
+$cronRuns = visitor_stats_cron_log_read();
 $collectionEnabled = analytics_collection_enabled();
 admin_top('Bezoekersstatistieken');
 ?>
@@ -224,6 +226,32 @@ admin_top('Bezoekersstatistieken');
       </tbody></table></div>
     </section>
   <?php endif; ?>
+  <section class="dashboard-panel" aria-labelledby="analytics-cron-title">
+    <h2 id="analytics-cron-title">Automatische archivering — cronlog</h2>
+    <p>De laatste 30 geregistreerde uitvoeringen, in UTC. Het aantal verwijderde records betreft uitsluitend <code>visitor_stats_daily</code>. Een ontbrekend log bewijst niet dat de cronjob niet actief is.</p>
+    <?php if (!$cronRuns): ?>
+      <p>Nog geen geregistreerde cronuitvoeringen. Controleer of de geplande taak actief is en of de private map schrijfbaar is.</p>
+    <?php else: ?>
+      <?php $lastCron = $cronRuns[0]; ?>
+      <p><strong>Laatste uitvoering:</strong> <?=e((string)$lastCron['finished_utc'])?> ·
+        <strong>Status:</strong> <?=e(['ok' => 'Geslaagd', 'error' => 'Fout', 'limit' => 'Inhaallimiet bereikt'][$lastCron['status']])?> ·
+        <strong>Verwijderd:</strong> <?=e((string)$lastCron['rows_deleted'])?> records.</p>
+      <div class="dashboard-table-scroll"><table class="dashboard-table">
+        <thead><tr><th>Uitgevoerd (UTC)</th><th>Resultaat</th><th>Verwijderde records</th><th>Gearchiveerde dagen</th><th>Foutcategorie</th></tr></thead>
+        <tbody>
+        <?php foreach ($cronRuns as $run): ?>
+          <tr>
+            <td><?=e((string)$run['finished_utc'])?></td>
+            <td><?=e(['ok' => 'Geslaagd', 'error' => 'Fout', 'limit' => 'Inhaallimiet bereikt'][$run['status']])?></td>
+            <td><?=e((string)$run['rows_deleted'])?></td>
+            <td><?=e((string)($run['days_archived'] ?? 0))?></td>
+            <td><?=e((string)($run['error_type'] ?? '—'))?></td>
+          </tr>
+        <?php endforeach; ?>
+        </tbody>
+      </table></div>
+    <?php endif; ?>
+  </section>
   <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
     <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
     <p>Na jouw bevestiging wordt maximaal één afgesloten UTC-dag ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden alleen na succesvolle opslag van die dag verwijderd. Start deze actie opnieuw voor de volgende dag. Er is geen automatische opschoning.</p>
