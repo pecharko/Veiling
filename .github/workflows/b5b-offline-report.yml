@@ -1,0 +1,52 @@
+name: B5b offline evidence consistency report (opt-in)
+
+# Never accesses OVH, production environment, deployment or write-capable secrets.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/b5b-offline-report.yml'
+      - 'scripts/controller_b5b_offline_report.py'
+      - 'tests/controller_b5b_offline_report_test.py'
+  workflow_dispatch:
+    inputs:
+      snapshot_path:
+        description: 'Existing committed evidence-inputs/<name>.json (untrusted offline data)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test-offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test offline B5b contract
+        run: python3 -m unittest discover -s tests -p controller_b5b_offline_report_test.py -v
+      - name: Validate workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/b5b-offline-report.yml
+
+  report:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: test-offline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Generate local-only machine-readable consistency report
+        env:
+          SNAPSHOT_PATH: ${{ inputs.snapshot_path }}
+        run: |
+          python3 -c 'import os,re; p=os.environ["SNAPSHOT_PATH"]; assert re.fullmatch(r"evidence-inputs/[A-Za-z0-9_-]+[.]json", p), "Invalid snapshot path"'
+          python3 scripts/controller_b5b_offline_report.py --input "$SNAPSHOT_PATH" --output b5b-consistency-report.json
+      - name: Preserve untrusted consistency report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: b5b-offline-consistency-${{ github.run_id }}
+          path: b5b-consistency-report.json
+          retention-days: 7
+          if-no-files-found: error
