@@ -102,6 +102,7 @@ if (!$afterMigration || $afterMigration['name'] !== '' || $afterMigration['email
 // Apply the proposed issue-354 schema exclusively to the disposable CI database.
 $inviteMigration = file_get_contents($dir . '/database/admin_invitation_migration.sql');
 if (!is_string($inviteMigration)) throw new RuntimeException('Missing invitation migration fixture.');
+$pdo->exec("ALTER TABLE admins ADD COLUMN role VARCHAR(32) NOT NULL DEFAULT 'administrator'");
 $pdo->exec('ALTER TABLE admins ADD COLUMN last_login_at DATETIME NULL DEFAULT NULL');
 if (!preg_match('/CREATE TABLE admin_invitations \\([\\s\\S]*?\\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;/',
     $inviteMigration, $invitationDdl)) {
