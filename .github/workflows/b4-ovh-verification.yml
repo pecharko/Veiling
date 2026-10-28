@@ -82,10 +82,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git -C release-data rev-parse HEAD)" = "$RELEASE_SHA"
-          test -z "$(git -C release-data status --porcelain --untracked-files=all)"
-          # Allow only the expected nested checkout; reject other dirty/untracked files.
-          test -z "$(git status --porcelain --untracked-files=normal | grep -v '^?? release-data/$' || true)"
+          if [ "$(git -C release-data rev-parse HEAD)" != "$RELEASE_SHA" ]; then
+            echo "::error::B4 checkout checkpoint 1 failed: release SHA mismatch"
+            exit 1
+          fi
+          echo "B4 checkout checkpoint 1 OK: exact release SHA"
+          if [ -n "$(git -C release-data status --porcelain --untracked-files=all)" ]; then
+            echo "::error::B4 checkout checkpoint 2 failed: release data checkout not clean"
+            exit 1
+          fi
+          echo "B4 checkout checkpoint 2 OK: clean release data"
+          # Exclude only the expected untracked nested checkout, reject all other changes.
+          if [ -n "$(git status --porcelain --untracked-files=normal | grep -v '^?? release-data/$' || true)" ]; then
+            echo "::error::B4 checkout checkpoint 3 failed: unexpected trusted repository changes"
+            git status --porcelain --untracked-files=normal | sed -E 's@^(.{2}) .*@\\1 [path redacted]@' | sort -u
+            exit 1
+          fi
+          echo "B4 checkout checkpoint 3 OK: trusted repository unchanged"
       - name: Pinned readback SFTP dependency
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Observe OVH file hashes without writes
