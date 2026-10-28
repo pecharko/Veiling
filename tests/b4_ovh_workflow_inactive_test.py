@@ -42,20 +42,30 @@ class B4WorkflowSecurityTests(unittest.TestCase):
 
     def test_nested_release_checkout_only_is_exempted(self):
         text = WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("git status --porcelain --untracked-files=normal", text)
-        self.assertIn("grep -v '^?? release-data/$'", text)
+        self.assertIn("git diff --quiet HEAD -- .", text)
+        self.assertIn("git ls-files --others --exclude-standard -- .", text)
+        self.assertIn("':(exclude)release-data'", text)
         with tempfile.TemporaryDirectory() as td:
             root = pathlib.Path(td)
             subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
+            (root / "tracked.txt").write_text("original")
+            subprocess.run(["git", "-C", str(root), "add", "tracked.txt"], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "initial"], check=True)
             (root / "release-data").mkdir()
             subprocess.run(["git", "init", "-q", str(root / "release-data")], check=True)
             (root / "release-data" / "manifest.json").write_text("{}")
-            def unexpected():
-                proc = subprocess.run(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=root, check=True, text=True, capture_output=True)
-                return [line for line in proc.stdout.splitlines() if line != "?? release-data/"]
-            self.assertEqual(unexpected(), [])
+            def valid():
+                tracked = subprocess.run(["git", "diff", "--quiet", "HEAD", "--", "."], cwd=root)
+                others = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--", ".", ":(exclude)release-data", ":(exclude)release-data/**"], cwd=root, text=True, capture_output=True, check=True).stdout
+                return tracked.returncode == 0 and not others
+            self.assertTrue(valid(), "Nested checkout must be allowed")
             (root / "unreviewed.txt").write_text("unexpected")
-            self.assertIn("?? unreviewed.txt", unexpected())
+            self.assertFalse(valid(), "New root-level files must be rejected")
+            (root / "unreviewed.txt").unlink()
+            (root / "tracked.txt").write_text("modified")
+            self.assertFalse(valid(), "Tracked modifications must be rejected")
 
     def test_checkout_checkpoints_fail_closed_without_sftp(self):
         text = WORKFLOW.read_text(encoding="utf-8")
@@ -63,8 +73,8 @@ class B4WorkflowSecurityTests(unittest.TestCase):
             self.assertIn(f"B4 checkout checkpoint {checkpoint} failed:", text)
             self.assertIn(f"B4 checkout checkpoint {checkpoint} OK:", text)
         self.assertIn("git -C release-data status --porcelain --untracked-files=all", text)
-        self.assertIn("git status --porcelain --untracked-files=normal", text)
-        self.assertIn("grep -v '^?? release-data/$'", text)
+        self.assertIn("git diff --quiet HEAD -- .", text)
+        self.assertIn("git ls-files --others --exclude-standard -- .", text)
         self.assertLess(text.index("B4 checkout checkpoint 3 OK"), text.index("Pinned readback SFTP dependency"))
 
     def test_no_production_secrets_in_pr_validation_job(self):
