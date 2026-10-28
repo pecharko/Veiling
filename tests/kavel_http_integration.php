@@ -219,6 +219,21 @@ try {
     claim($e->getCode()==='23000','Database rejects duplicate auction number');
   }
 
+  // Issue #289: both terminal statuses round-trip through the HTTP editor.
+  foreach (['sold', 'canceled'] as $terminal) {
+    [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+    claim($httpStatus===200, 'Terminal status test editor loads');
+    [$httpStatus] = request_page('/admin/kavel.php?id='.$auctionId, [
+      'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+      'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'veiling', 'status'=>$terminal
+    ]);
+    claim($httpStatus===303 && by_number(301)['status']===$terminal,
+      'Terminal status saved: '.$terminal);
+    [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+    claim($httpStatus===200 && str_contains($editor, 'value="'.$terminal.'" selected'),
+      'Terminal status shown after reload: '.$terminal);
+  }
+
   // Role and ownership checks against the real HTTP endpoint and isolated database.
   $actor = (int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (401,'Own draft','','','draft',?)")->execute([$actor]);
