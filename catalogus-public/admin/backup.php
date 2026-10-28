@@ -51,7 +51,7 @@ if(is_post()){
   }
   elseif($action==='delete'){
    $name=(string)($_POST['snapshot']??'');if(($_POST['confirm']??'')!=='VERWIJDER')throw new RuntimeException('Typ VERWIJDER om te bevestigen.');
-   snap_init();$lock=snap_lock();try{$p=snap_path($name);if(!is_file($p)||!unlink($p))throw new RuntimeException('Kon snapshot niet verwijderen.');}finally{flock($lock,LOCK_UN);fclose($lock);}
+   snap_init();$lock=snap_lock();try{snap_delete($name);}finally{flock($lock,LOCK_UN);fclose($lock);}
    flash('Snapshot verwijderd.');redirect('admin/backup.php');
   }else throw new RuntimeException('Onbekende actie.');
  }catch(Throwable $e){error_log('[41Lokeren backup] '.$e->getMessage());$error=$e->getMessage();}
