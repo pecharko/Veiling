@@ -55,24 +55,6 @@ body:
     validations:
       required: true
   - type: textarea
-    id: verwacht
-    attributes:
-      label: Wat verwacht je of wat zou de verbetering opleveren?
-      placeholder: "De foto opent groot, of: sorteren helpt mij sneller het juiste kavel vinden."
-    validations:
-      required: false
-  - type: dropdown
-    id: ernst
-    attributes:
-      label: Welke prioriteit zou je geven?
-      description: Je eigen inschatting, ook voor verbeteringen; de beheerder bepaalt de planning.
-      options:
-        - Hoog - belangrijk om snel aan te pakken
-        - Normaal - nuttig om op te lossen of te verbeteren
-        - Laag - kleine correctie of wens
-    validations:
-      required: true
-  - type: textarea
     id: screenshot
     attributes:
       label: Screenshot of extra uitleg (optioneel)
