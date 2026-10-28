@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/pecharko.php",
+    "catalogus-public/assets/pecharko.css",
+    "catalogus-public/index.php",
+    "catalogus-public/kavel.php"
+  ]
+}
