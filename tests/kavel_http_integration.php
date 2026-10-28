@@ -219,20 +219,47 @@ try {
     claim($e->getCode()==='23000','Database rejects duplicate auction number');
   }
 
-  // Issue #289: both terminal statuses round-trip through the HTTP editor.
-  foreach (['sold', 'canceled'] as $terminal) {
-    [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
-    claim($httpStatus===200, 'Terminal status test editor loads');
-    [$httpStatus] = request_page('/admin/kavel.php?id='.$auctionId, [
-      'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
-      'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'veiling', 'status'=>$terminal
-    ]);
-    claim($httpStatus===303 && by_number(301)['status']===$terminal,
-      'Terminal status saved: '.$terminal);
-    [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
-    claim($httpStatus===200 && str_contains($editor, 'value="'.$terminal.'" selected'),
-      'Terminal status shown after reload: '.$terminal);
-  }
+  // Auction lots may be sold, but must move to market in a separate save before cancellation.
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$httpStatus] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+    'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'veiling', 'status'=>'sold'
+  ]);
+  claim($httpStatus===303 && by_number(301)['status']==='sold', 'Auction lot may be sold');
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$httpStatus, $body] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+    'lot_number'=>'301', 'title'=>'Blocked cancel', 'sale_location'=>'veiling', 'status'=>'canceled'
+  ]);
+  claim($httpStatus===200 && str_contains($body,'eerst afzonderlijk over naar Markt') &&
+    by_number(301)['status']==='sold' && by_number(301)['title']==='Auction one',
+    'Auction lot cannot be canceled');
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$httpStatus, $body] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+    'lot_number'=>'301', 'title'=>'Blocked combined cancel', 'sale_location'=>'markt', 'status'=>'canceled'
+  ]);
+  claim($httpStatus===200 && str_contains($body,'eerst afzonderlijk over naar Markt') &&
+    by_number(301)['sale_location']==='veiling' && by_number(301)['status']==='sold',
+    'Cannot bypass two-step flow by combining transfer and cancel');
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$httpStatus] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+    'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'markt', 'status'=>'sold'
+  ]);
+  claim($httpStatus===303 && by_number(301)['sale_location']==='markt' &&
+    by_number(301)['auction_number']===null && (int)by_number(302)['auction_number']===1,
+    'Separate market transfer clears auction number and compacts sequence');
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  [$httpStatus] = request_page('/admin/kavel.php?id='.$auctionId, [
+    'csrf'=>token($editor), 'action'=>'save', 'id'=>(string)$auctionId,
+    'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'markt', 'status'=>'canceled'
+  ]);
+  claim($httpStatus===303 && by_number(301)['status']==='canceled' &&
+    by_number(301)['auction_number']===null, 'Market lot can be canceled after transfer');
+  [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
+  claim($httpStatus===200 && str_contains($editor,'value="canceled" selected'),
+    'Canceled market status shown after reload');
 
   // Role and ownership checks against the real HTTP endpoint and isolated database.
   $actor = (int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
