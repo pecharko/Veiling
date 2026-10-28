@@ -72,6 +72,20 @@ class B4OVHReadbackTests(unittest.TestCase):
                 module.check_checkout()
 
 
+    def test_checkout_checks_sha_and_cleanliness_in_same_source_root(self):
+        from types import SimpleNamespace
+        source_root = Path("/tmp/b4-pinned-source-root")
+        calls = []
+        def fake_run(args, **kwargs):
+            calls.append((args, kwargs.get("cwd")))
+            return SimpleNamespace(stdout=SHA + "\\n" if "rev-parse" in args else "")
+        with patch.object(module.subprocess, "run", side_effect=fake_run):
+            self.assertEqual(module.check_checkout(source_root), SHA)
+        self.assertEqual(len(calls), 2)
+        self.assertEqual(calls[0][1], source_root)
+        self.assertEqual(calls[1][1], source_root)
+        self.assertIn("status", calls[1][0])
+
     def test_github_run_preflight_binds_exact_release(self):
         from controller_run_evidence_binding import REQUIRED_STEPS, WORKFLOW
         run = {"id": 31, "head_sha": SHA, "path": WORKFLOW,
