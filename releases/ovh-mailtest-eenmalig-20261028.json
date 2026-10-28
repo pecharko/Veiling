@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/mailtest-eenmalig.php",
+      "source_sha256": "4bed0df92fcafed8b24dcbf713d229260cfd27f6f923ba49b286334f5d103285",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
