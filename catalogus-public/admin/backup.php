@@ -54,7 +54,7 @@ if(is_post()){
    snap_init();$lock=snap_lock();try{snap_delete($name);}finally{flock($lock,LOCK_UN);fclose($lock);}
    flash('Snapshot verwijderd.');redirect('admin/backup.php');
   }else throw new RuntimeException('Onbekende actie.');
- }catch(Throwable $e){error_log('[41Lokeren backup] '.$e->getMessage());$error=$e->getMessage();}
+ }catch(Throwable $e){error_log('[41Lokeren backup] '.$e->getMessage());$error='De actie is mislukt. Probeer opnieuw of raadpleeg de beheerder.';}
 }
 $available=snap_listing();$total=array_sum(array_column($available,'size'));
 $quota=1073741824; // OVHcloud Starter: 1 GiB nominale webopslag; pas aan als abonnement wijzigt.
