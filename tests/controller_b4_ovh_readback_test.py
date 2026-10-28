@@ -65,7 +65,7 @@ class B4OVHReadbackTests(unittest.TestCase):
     def test_checkout_requires_clean_tree(self):
         from types import SimpleNamespace
         with patch.object(module.subprocess, "run", side_effect=[
-            SimpleNamespace(stdout=SHA + "\\n"),
+            SimpleNamespace(stdout=SHA + "\n"),
             SimpleNamespace(stdout=" M releases/demo.json\\n")
         ]):
             with self.assertRaisesRegex(ValueError, "clean pinned"):
