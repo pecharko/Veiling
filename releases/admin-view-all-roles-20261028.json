@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "bad352aec296374209557dcfd1520be028862ff58c724a4191dc6625bcbc203d",
+      "remote_sha256": "4cb88db40d41d3169a5c14e15a22cf07efbd331a125f341cb45ad2106372d4a9"
+    }
+  ]
+}
