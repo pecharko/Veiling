@@ -1,0 +1,115 @@
+name: Snyk snapshot deletion protected two-file release
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/snyk-snapshot-delete-protected-release.yml'
+      - 'scripts/deploy_snyk_snapshot_delete.py'
+      - 'tests/deploy_snyk_snapshot_delete_test.py'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Read-only plan/preflight or separately authorized code-only deploy'
+        type: choice
+        options: [plan, preflight, deploy]
+        required: true
+        default: plan
+      expected_snapshot_sha:
+        description: 'Approved remote SHA-256 for private/snapshots.php'
+        required: false
+        type: string
+      expected_backup_sha:
+        description: 'Approved remote SHA-256 for admin/backup.php'
+        required: false
+        type: string
+      confirmation:
+        description: 'DEPLOY-snyk-snapshot-delete-20261028-<exact current main SHA>'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m unittest discover -s tests -p deploy_snyk_snapshot_delete_test.py -v
+  release:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    env:
+      EXPECTED_SNAPSHOT_SHA: ${{ inputs.expected_snapshot_sha }}
+      EXPECTED_BACKUP_SHA: ${{ inputs.expected_backup_sha }}
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify immutable current main SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Validate exact source and offline tests
+        run: |
+          python3 -m unittest discover -s tests -p deploy_snyk_snapshot_delete_test.py -v
+          python3 -m scripts.deploy_snyk_snapshot_delete plan
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - name: Validate two PHP files
+        run: |
+          php -l private/snapshots.php
+          php -l catalogus-public/admin/backup.php
+      - name: Check exact independent deploy authorization
+        if: inputs.mode == 'deploy'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$DEPLOY_CONFIRMATION" = "DEPLOY-snyk-snapshot-delete-20261028-$GITHUB_SHA"
+          [[ "$EXPECTED_SNAPSHOT_SHA" =~ ^[a-f0-9]{64}$ ]]
+          [[ "$EXPECTED_BACKUP_SHA" =~ ^[a-f0-9]{64}$ ]]
+      - name: Install pinned SFTP
+        if: inputs.mode != 'plan'
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Read-only SFTP baseline
+        if: inputs.mode != 'plan'
+        run: python3 -m scripts.deploy_snyk_snapshot_delete preflight
+      - name: Backup, drift-check, upload, readback and rollback
+        if: inputs.mode == 'deploy'
+        run: python3 -m scripts.deploy_snyk_snapshot_delete deploy
+      - name: Preserve observed evidence
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-snapshot-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Preserve rollback files
+        if: inputs.mode == 'deploy' && always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-snapshot-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
