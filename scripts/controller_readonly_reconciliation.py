@@ -124,6 +124,14 @@ def reconcile_independent_b4(base_report, observation, *, release_id, release_sh
                "browser_acceptance": "PENDING", "fully_accepted": False,
                "deployment_authorized": False, "dispatch_started": False,
                "independent_provenance_authenticated": False}
+    deployment = base_report.get("provenance", {}).get("github_actions", {})
+    if (not isinstance(deployment, dict) or
+            deployment.get("run_id") != run_id or
+            deployment.get("release_sha") != release_sha or
+            deployment.get("source") != "github_api_run_jobs" or
+            deployment.get("reason") != "actions_success_not_independent_remote_proof"):
+        outcome["reason"] = "release_evidence_not_bound"
+        return outcome
     if not isinstance(observation, dict) or not isinstance(execution_run, dict):
         return outcome
     # The B4 Python verifier emits the observation; the GitHub metadata is
