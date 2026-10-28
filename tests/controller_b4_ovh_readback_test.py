@@ -78,7 +78,7 @@ class B4OVHReadbackTests(unittest.TestCase):
         calls = []
         def fake_run(args, **kwargs):
             calls.append((args, kwargs.get("cwd")))
-            return SimpleNamespace(stdout=SHA + "\\n" if "rev-parse" in args else "")
+            return SimpleNamespace(stdout=SHA + "\n" if "rev-parse" in args else "")
         with patch.object(module.subprocess, "run", side_effect=fake_run):
             self.assertEqual(module.check_checkout(source_root), SHA)
         self.assertEqual(len(calls), 2)
