@@ -61,7 +61,7 @@ jobs:
           test "$CONFIRMATION" = "VERIFY-$RELEASE_ID-$RELEASE_SHA-$RELEASE_RUN_ID"
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
       - name: Authenticate release run before executing pinned release code
@@ -70,6 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
           python3 -c 'import os,sys; sys.path.insert(0,"scripts"); from controller_b4_ovh_readback import verify_release_run; verify_release_run(int(os.environ["RELEASE_RUN_ID"]),os.environ["RELEASE_SHA"],os.environ["GITHUB_TOKEN"])'
       - uses: actions/checkout@v4
         with:
