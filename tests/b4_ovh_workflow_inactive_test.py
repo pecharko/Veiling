@@ -67,6 +67,23 @@ class B4WorkflowSecurityTests(unittest.TestCase):
             (root / "tracked.txt").write_text("modified")
             self.assertFalse(valid(), "Tracked modifications must be rejected")
 
+    def test_release_authentication_import_does_not_dirty_trusted_checkout(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("python3 -B -c 'import os,sys;", text)
+        with tempfile.TemporaryDirectory() as td:
+            root = pathlib.Path(td)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.email", "test@example.org"], check=True)
+            subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
+            scripts = root / "scripts"
+            scripts.mkdir()
+            (scripts / "b4_auth_example.py").write_text("VALID = True\n")
+            subprocess.run(["git", "-C", str(root), "add", "scripts"], check=True)
+            subprocess.run(["git", "-C", str(root), "commit", "-qm", "init"], check=True)
+            subprocess.run(["python3", "-B", "-c", "import sys; sys.path.insert(0, 'scripts'); import b4_auth_example; assert b4_auth_example.VALID"], cwd=root, check=True)
+            unexpected = subprocess.run(["git", "ls-files", "--others", "--exclude-standard"], cwd=root, text=True, capture_output=True, check=True)
+            self.assertEqual(unexpected.stdout, "", "Authentication import must not create untracked bytecode")
+
     def test_checkout_checkpoints_fail_closed_without_sftp(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         for checkpoint in (1, 2, 3):
