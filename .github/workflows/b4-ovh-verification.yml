@@ -1,0 +1,26 @@
+name: B4 independent OVH verification (INACTIVE)
+# Security staging only. NO workflow_dispatch, NO OVH secrets or environment.
+# A separately approved future PR must review/activate a verification job.
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/b4-ovh-verification.yml'
+      - 'scripts/controller_b4_ovh_readback.py'
+      - 'tests/controller_b4_ovh_readback_test.py'
+      - 'tests/b4_ovh_workflow_inactive_test.py'
+permissions:
+  contents: read
+  actions: read
+jobs:
+  validate-inactive-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate B4 workflow is still inactive
+        run: python3 -m unittest discover -s tests -p b4_ovh_workflow_inactive_test.py -v
+      - name: Test existing B4 offline OVH verification
+        run: python3 -m unittest discover -s tests -p controller_b4_ovh_readback_test.py -v
+      - name: Lint B4 workflow
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/b4-ovh-verification.yml
