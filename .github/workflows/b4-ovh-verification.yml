@@ -84,7 +84,8 @@ jobs:
           set -euo pipefail
           test "$(git -C release-data rev-parse HEAD)" = "$RELEASE_SHA"
           test -z "$(git -C release-data status --porcelain --untracked-files=all)"
-          test -z "$(git status --porcelain --untracked-files=all | grep -v '^?? release-data/' || true)"
+          # Allow only the expected nested checkout; reject other dirty/untracked files.
+          test -z "$(git status --porcelain --untracked-files=normal | grep -v '^?? release-data/$' || true)"
       - name: Pinned readback SFTP dependency
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Observe OVH file hashes without writes

@@ -1,6 +1,8 @@
 """B4 security contract: PR validation isolated from opt-in readback."""
 import pathlib
 import re
+import subprocess
+import tempfile
 import unittest
 
 WORKFLOW = pathlib.Path(__file__).resolve().parents[1] / ".github/workflows/b4-ovh-verification.yml"
@@ -37,6 +39,23 @@ class B4WorkflowSecurityTests(unittest.TestCase):
         self.assertNotIn("issues: write", text)
         self.assertNotIn("contents: write", text)
         self.assertNotIn("actions: write", text)
+
+    def test_nested_release_checkout_only_is_exempted(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("git status --porcelain --untracked-files=normal", text)
+        self.assertIn("grep -v '^?? release-data/$'", text)
+        with tempfile.TemporaryDirectory() as td:
+            root = pathlib.Path(td)
+            subprocess.run(["git", "init", "-q", str(root)], check=True)
+            (root / "release-data").mkdir()
+            subprocess.run(["git", "init", "-q", str(root / "release-data")], check=True)
+            (root / "release-data" / "manifest.json").write_text("{}")
+            def unexpected():
+                proc = subprocess.run(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=root, check=True, text=True, capture_output=True)
+                return [line for line in proc.stdout.splitlines() if line != "?? release-data/"]
+            self.assertEqual(unexpected(), [])
+            (root / "unreviewed.txt").write_text("unexpected")
+            self.assertIn("?? unreviewed.txt", unexpected())
 
     def test_no_production_secrets_in_pr_validation_job(self):
         text = WORKFLOW.read_text(encoding="utf-8")
