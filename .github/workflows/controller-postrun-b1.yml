@@ -1,0 +1,28 @@
+name: B1 passive shared OVH release evidence
+on:
+  workflow_run:
+    workflows: ["Shared OVH manifest release with rollback"]
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  passive-evidence:
+    if: >-
+      github.event.workflow_run.event == 'workflow_dispatch' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.path == '.github/workflows/shared-ovh-release.yml'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted main (no credentials persisted)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Read-only bound evidence report (never authorizes or deploys)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: python3 scripts/controller_postrun_b1.py
