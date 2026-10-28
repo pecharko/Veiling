@@ -22,6 +22,32 @@ class ImpactTests(unittest.TestCase):
             "tests/ovh_release_evidence_discovery_test.py",
         ]), (False, False))
 
+    def test_verified_controller_and_its_regressions_skip_unrelated_php_suites(self):
+        self.assertEqual(impact.classify([
+            "scripts/verified_deploy_controller.py",
+            "tests/verified_deploy_controller_test.py",
+        ]), (False, False))
+        for path in ("scripts/verified_deploy_controller.py",
+                     "tests/verified_deploy_controller_test.py"):
+            with self.subTest(path=path):
+                self.assertEqual(impact.classify([path]), (False, False))
+
+    def test_verified_controller_mixed_with_app_or_test_infra_runs_both(self):
+        for path in ("private/lot_form.php",
+                     "migrations/issue-289-lot-statuses.sql",
+                     "tests/kavel_http_integration.php",
+                     "tests/snapshot_integration.php",
+                     "tests/kavel_integration_setup.php",
+                     ".github/workflows/kavel-integration.yml",
+                     "scripts/ci_pr_impact.py",
+                     "scripts/shared_ovh_controller_adapter.py"):
+            with self.subTest(path=path):
+                self.assertEqual(impact.classify([
+                    "scripts/verified_deploy_controller.py",
+                    "tests/verified_deploy_controller_test.py",
+                    path,
+                ]), (True, True))
+
     def test_release_manifest_and_docs_only_do_not_need_mysql_http(self):
         self.assertEqual(impact.classify([
             "release-requests/website-beheer.json",
