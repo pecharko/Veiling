@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/index.php",
+      "source_sha256": "17e5a4d18ef2b27dd58724224a82a0fc9bd8d69b3e2fdec49f9eae26382a792f",
+      "remote_sha256": "3d320d420b6d3d8818e2e86428c853c294a6a5ab89312874eeb4d39766635995"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "f325ec50f2b3cbe580188f3d22ac7ea020a8231b6c5c260a661205f3b8ec9fa6",
+      "remote_sha256": "98a6ec89742189e9f4119a272b69f50f9016052f3a54a8d94095a6fd4842c7c2"
+    },
+    {
+      "path": "private/lot_form.php",
+      "source_sha256": "b57df3588c1a165c2a4146f63cc6747d1a240374fe15612eb41f65448b45817d",
+      "remote_sha256": "df914bb89fb7e5e53664074986016ae2057f94ddb548311a327c00c917bb98af"
+    }
+  ]
+}
