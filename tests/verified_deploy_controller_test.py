@@ -95,9 +95,35 @@ with secure_patch.dict(os.environ, {
 }), secure_patch.object(module, "gh", side_effect=fake_gh), \
      secure_patch.object(module, "has_closed_event", return_value=False), \
      secure_patch.object(module, "download_artifact", return_value=__import__("json").dumps(manifest).encode()), \
+     secure_patch.object(module, "reject_prior_approved_release") as replay_check, \
      secure_patch.object(module, "dispatch_approved", side_effect=AssertionError("Dispatched during dry-run")):
     module.main()
+    replay_check.assert_called_once_with("pecharko/Veiling", "77", module.WORKFLOW, sha)
 print("PASS valid dry-run returns without issue write or deployment dispatch")
+
+# B3.4: an already consumed release or unavailable history must fail dry-run
+# before issue mutation, and must not dispatch. All operations are mocked.
+for failure in (ValueError("Release already authorized in a prior consumed issue"),
+                RuntimeError("GitHub unavailable")):
+    with secure_patch.dict(os.environ, {
+        "REPOSITORY": "pecharko/Veiling", "ISSUE_NUMBER": "77",
+        "ACTOR": "pecharko", "APPROVAL_TEXT": approval,
+        "CONTROLLER_DRY_RUN": "true"
+    }), secure_patch.object(module, "gh", side_effect=fake_gh), \
+         secure_patch.object(module, "has_closed_event", return_value=False), \
+         secure_patch.object(module, "download_artifact", return_value=__import__("json").dumps(manifest).encode()), \
+         secure_patch.object(module, "reject_prior_approved_release", side_effect=failure) as replay_check, \
+         secure_patch.object(module, "dispatch_approved", side_effect=AssertionError("Dry-run dispatched")):
+        try:
+            module.main()
+        except type(failure):
+            pass
+        else:
+            raise AssertionError("Dry-run accepted unsafe replay history")
+        replay_check.assert_called_once()
+assert main_body.index("reject_prior_approved_release(repo, issue_number, target_workflow_identity") < main_body.index('if os.environ.get("CONTROLLER_DRY_RUN"')
+print("PASS B3.4 dry-run replay and GitHub-history errors fail closed")
+
 
 # Registered-format tests: exact workflow, SHA, hashes and artifact remain mandatory.
 import json
