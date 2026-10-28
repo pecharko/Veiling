@@ -117,7 +117,7 @@ if (is_post()) {
             redirect('admin/gebruikers.php');
         } catch (InvalidArgumentException $exception) {
             if ($pdo->inTransaction()) $pdo->rollBack();
-            $error = $exception->getMessage();
+            $error = 'Ongeldige invoer of de bewerking is niet toegestaan.';
         } catch (PDOException $exception) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             error_log('Admin user management query failed: ' . $exception->getCode());
