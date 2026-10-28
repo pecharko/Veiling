@@ -79,6 +79,7 @@ if(is_post()){
     $saleLocation=(string)($_POST['sale_location']??'markt');
     if($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
+    elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
     elseif($title==='')$error='Een titel is verplicht.';
     elseif (lot_publication_conflict($status, $saleLocation, $auctionOnly)) $error='Dit kavel is uitsluitend voor de veiling en mag niet op Markt gepubliceerd worden. Publicatie afgebroken.';
     elseif($marketPrice!=='' && (!is_numeric($marketPrice)|| (float)$marketPrice<0))$error='Ongeldige marktprijs.';
