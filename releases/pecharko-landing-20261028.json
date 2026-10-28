@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/pecharko.php",
+      "source_sha256": "93ab1f4dc33bedaea59c765c06d0e35f856062a002d2268929d06389215a3dd5",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/pecharko.css",
+      "source_sha256": "8622bfe016180dd7e0f02f2174347240aedfc98b5274ab6c83f22226da346892",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "fb70334019ece14fd37fb71ca58b91522425434d350d22724acd25f5b66b2a04",
+      "remote_sha256": "96ef7894c8925d713a7050b35a0cc785d9df3c789aa327b034d2d306514572ad"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "0ba908641d8ab44fd35f9153312905909c29bec8f1307ed848536254982a1b76",
+      "remote_sha256": "cf88fef44d632de06fe8850d8de4546b53f15d1509e5ca2361246b2e512d6031"
+    }
+  ]
+}
