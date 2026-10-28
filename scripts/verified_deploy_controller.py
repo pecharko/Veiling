@@ -37,6 +37,13 @@ from lot_sale_controller_adapter import (
     CONFIRMATION as LOT_SALE_CONFIRMATION, parse_approval as parse_lot_sale,
     verify_plan as verify_lot_sale_plan,
 )
+from shared_manifest_controller_adapter import (
+    PREFIX as SHARED_PREFIX, WORKFLOW as SHARED_WORKFLOW,
+    parse_approval as parse_shared_approval,
+    verify_approval as verify_shared_approval,
+    dispatch_command as shared_dispatch_command,
+)
+import shared_ovh_release as shared_engine
 from datetime import datetime, timezone
 
 PREFIX = "DEPLOY KAVELNUMMER THUMBNAILS WITH ROLLBACK"
@@ -235,7 +242,7 @@ def has_closed_event(repo, issue_number):
     return "closed" in result.stdout.splitlines()
 
 
-def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha):
+def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha, *, shared_release_id=None):
     """Fail closed if an older owner authorization issue consumed this release.
 
     Scan bounded GitHub issue/comment history; API errors or excess history
@@ -247,6 +254,9 @@ def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha
         raise ValueError("Invalid workflow")
     if not re.fullmatch(r"[0-9a-f]{40}", release_sha):
         raise ValueError("Invalid release SHA")
+    if shared_release_id is not None and (workflow_name != SHARED_WORKFLOW or
+            not isinstance(shared_release_id, str) or not shared_engine.ID.fullmatch(shared_release_id)):
+        raise ValueError("Invalid shared release replay identity")
     response = gh(f"repos/{repo}/issues?state=all&labels=approved-deploy-request&per_page=100")
     if not isinstance(response, list) or len(response) >= 100:
         raise ValueError("Issue history incomplete; manual review required")
@@ -266,6 +276,12 @@ def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha
                 raise ValueError("Invalid approval history")
             lines = comment["body"].replace("\r", "").strip().split("\n")
             if not lines:
+                continue
+            if lines[0] == SHARED_PREFIX:
+                if shared_release_id is not None:
+                    previous = parse_shared_approval(comment["body"])
+                    if previous["release_id"] == shared_release_id:
+                        raise ValueError("Shared release already authorized in a prior consumed issue")
                 continue
             if lines[0] == "DEPLOY VERIFIED RELEASE":
                 fields = dict(line.split("=", 1) for line in lines[1:]
@@ -352,8 +368,16 @@ def main():
         raise ValueError("Approval issue has already been consumed or history is unavailable")
     main_sha = gh(f"repos/{repo}/branches/main")["commit"]["sha"]
     text = os.environ["APPROVAL_TEXT"]
-    is_lot_sale = text.replace("\r", "").strip().split("\n")[0] == LOT_SALE_PREFIX
-    if is_lot_sale:
+    approval_type = text.replace("\r", "").strip().split("\n")[0]
+    is_lot_sale = approval_type == LOT_SALE_PREFIX
+    is_shared = approval_type == SHARED_PREFIX
+    if is_shared:
+        checkout_sha = subprocess.run(("git", "rev-parse", "HEAD"),
+                                      cwd=shared_engine.ROOT, capture_output=True,
+                                      check=True, text=True).stdout.strip()
+        data = verify_shared_approval(text, main_sha, checkout_sha=checkout_sha)
+        registration = None
+    elif is_lot_sale:
         data = lot_sale_authorization(repo, text, main_sha)
         registration = None
     else:
@@ -381,9 +405,14 @@ def main():
                 if registration is not None else validate(text, manifest, run, main_sha))
     # Cross-issue replay protection is read-only and must apply to dry runs too.
     # Never report a green dry run for a release the live controller would reject.
-    target_workflow_identity = (LOT_SALE_WORKFLOW if is_lot_sale else
+    target_workflow_identity = (SHARED_WORKFLOW if is_shared else
+                                LOT_SALE_WORKFLOW if is_lot_sale else
                                 workflow if registration is not None else WORKFLOW)
-    reject_prior_approved_release(repo, issue_number, target_workflow_identity, data["release_sha"])
+    if is_shared:
+        reject_prior_approved_release(repo, issue_number, target_workflow_identity,
+                                      data["release_sha"], shared_release_id=data["release_id"])
+    else:
+        reject_prior_approved_release(repo, issue_number, target_workflow_identity, data["release_sha"])
     # Dry run checks the same read-only release evidence without consuming approval.
     if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
         print("DRY RUN PASS: authorization, artifact and replay history verified; no issue write or dispatch")
@@ -395,26 +424,31 @@ def main():
         raise ValueError("Approval already consumed in immutable issue history")
     if fresh["state"] != "open":
         raise ValueError("Approval already consumed")
+    if is_shared and gh(f"repos/{repo}/branches/main")["commit"]["sha"] != data["release_sha"]:
+        raise ValueError("Main advanced before shared release authorization could be consumed")
     gh(f"repos/{repo}/issues/{issue_number}", "-X", "PATCH",
        "-f", "state=closed", "-f", "state_reason=completed")
-    target_workflow = (LOT_SALE_WORKFLOW if is_lot_sale else
-                       workflow if registration is not None else WORKFLOW)
-    confirmation = (LOT_SALE_CONFIRMATION if is_lot_sale else
-                    config["confirmation"] if registration is not None else PREFIX)
-    hash_keys = (() if is_lot_sale else
-                 config["hash_inputs"] if registration is not None else FIELDS[2:])
-    command = ("gh", "workflow", "run", target_workflow, "--repo", repo, "--ref", "main",
-               "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
-               "-f", f"confirmation={confirmation}")
-    command += tuple(item for key in hash_keys for item in ("-f", f"{key}={data[key]}"))
-    if is_lot_sale:
-        command += ("-f", f"plan_run_id={data['plan_run_id']}",
-                    "-f", f"schema_ready={data['schema_ready']}")
-    if registration is not None and config.get("manual_schema_gate") is True:
-        command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}",
-                    "-f", f"migration_confirmed={data['migration_confirmed']}")
-    elif registration is not None and config.get("manual_https_gate") is True:
-        command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}")
+    if is_shared:
+        command = shared_dispatch_command(repo, data)
+    else:
+        target_workflow = (LOT_SALE_WORKFLOW if is_lot_sale else
+                           workflow if registration is not None else WORKFLOW)
+        confirmation = (LOT_SALE_CONFIRMATION if is_lot_sale else
+                        config["confirmation"] if registration is not None else PREFIX)
+        hash_keys = (() if is_lot_sale else
+                     config["hash_inputs"] if registration is not None else FIELDS[2:])
+        command = ("gh", "workflow", "run", target_workflow, "--repo", repo, "--ref", "main",
+                   "-f", "mode=deploy", "-f", f"release_sha={data['release_sha']}",
+                   "-f", f"confirmation={confirmation}")
+        command += tuple(item for key in hash_keys for item in ("-f", f"{key}={data[key]}"))
+        if is_lot_sale:
+            command += ("-f", f"plan_run_id={data['plan_run_id']}",
+                        "-f", f"schema_ready={data['schema_ready']}")
+        if registration is not None and config.get("manual_schema_gate") is True:
+            command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}",
+                        "-f", f"migration_confirmed={data['migration_confirmed']}")
+        elif registration is not None and config.get("manual_https_gate") is True:
+            command += ("-f", f"manual_https_precheck={data['manual_https_precheck']}")
     dispatch_approved(command)
     print("Approved registered deployment dispatched once; approval issue closed.")
 

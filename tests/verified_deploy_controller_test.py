@@ -248,3 +248,13 @@ with cross_patch.object(module, "gh", side_effect=RuntimeError("GitHub unavailab
 assert main_body.index("reject_prior_approved_release(") < main_body.index('state=closed')
 
 print("PASS independent second workflow with negative safety cases; no dispatch")
+
+# Run the shared-manifest authorization regression suite in the existing
+# controller security CI entrypoint; it must not be silently skipped.
+import unittest as _unittest
+import sys as _sys
+_sys.path.insert(0, str(root / "tests"))
+from shared_manifest_controller_adapter_test import SharedManifestAdapterTests
+_suite = _unittest.defaultTestLoader.loadTestsFromTestCase(SharedManifestAdapterTests)
+_result = _unittest.TextTestRunner(verbosity=2).run(_suite)
+assert _result.wasSuccessful(), "Shared manifest approval security tests failed"
