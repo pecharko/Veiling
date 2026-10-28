@@ -21,6 +21,12 @@ function invitation_issue(PDO $pdo, string $name, string $address, string $role,
     $role = invitation_role($role);
     $token = bin2hex(random_bytes(32));
     $hash = hash('sha256', $token);
+    // One bounded database advisory lock serializes concurrent invitation issuance.
+    $lockName = 'admin_invite_' . substr(hash('sha256', $email), 0, 40);
+    $lockStmt = $pdo->prepare('SELECT GET_LOCK(?, 2)');
+    $lockStmt->execute([$lockName]);
+    if ((int)$lockStmt->fetchColumn() !== 1) throw new RuntimeException('Uitnodiging is tijdelijk vergrendeld.');
+    try {
     $pdo->beginTransaction();
     try {
         $existing = $pdo->prepare('SELECT id FROM admins WHERE email=? LIMIT 1');
@@ -39,6 +45,10 @@ function invitation_issue(PDO $pdo, string $name, string $address, string $role,
     } catch (Throwable $e) {
         if ($pdo->inTransaction()) $pdo->rollBack();
         throw $e;
+    }
+    } finally {
+        $release = $pdo->prepare('SELECT RELEASE_LOCK(?)');
+        $release->execute([$lockName]);
     }
     $link = 'https://41lokeren.be' . url('admin/uitnodiging.php', ['token'=>$token]);
     $subject = '41 Lokeren - uitnodiging beheeromgeving';
