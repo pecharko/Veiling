@@ -46,3 +46,7 @@ error_log
 .netrc
 .ftpconfig
 .ftppass
+
+# Runtimegeschiedenis cron (alleen op OVH, niet committen)
+private/visitor_stats_cron_log.json
+private/visitor_stats_cron_log.json.lock
