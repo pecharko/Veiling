@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/index.php",
+    "catalogus-public/kavel.php",
+    "catalogus-public/assets/catalogus.css"
+  ]
+}
