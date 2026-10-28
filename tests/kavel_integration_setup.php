@@ -99,5 +99,14 @@ $afterMigration = $pdo->query("SELECT name,email FROM admins WHERE email='ci-adm
 if (!$afterMigration || $afterMigration['name'] !== '' || $afterMigration['email'] !== 'ci-admin@example.invalid') {
   throw new RuntimeException('Migration did not preserve the existing CI account with an empty name.');
 }
+// Apply the proposed issue-354 schema exclusively to the disposable CI database.
+$inviteMigration = file_get_contents($dir . '/database/admin_invitation_migration.sql');
+if (!is_string($inviteMigration)) throw new RuntimeException('Missing invitation migration fixture.');
+$pdo->exec('ALTER TABLE admins ADD COLUMN last_login_at DATETIME NULL DEFAULT NULL');
+if (!preg_match('/CREATE TABLE admin_invitations \\([\\s\\S]*?\\) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;/',
+    $inviteMigration, $invitationDdl)) {
+  throw new RuntimeException('Invitation table declaration missing in reviewed migration.');
+}
+$pdo->exec($invitationDdl[0]);
 $pdo->exec("INSERT INTO settings (id,title,introduction,practical_info) VALUES (1,'CI catalogus','','')");
 echo "Isolated MySQL schema ready; production is not accessed.\n";
