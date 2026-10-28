@@ -35,7 +35,8 @@ def main():
             raise ValueError("Explicit protected snapshot authorization required")
         # Shared engine independently checks its DEPLOY confirmation before any write.
         os.environ["DEPLOY_CONFIRMATION"] = "DEPLOY-" + RELEASE_ID + "-" + main_sha
-    # The shared engine expects its adjacent evidence contract as a top-level import.\n    scripts_dir = str(engine.ROOT / "scripts")\n    if scripts_dir not in sys.path:\n        sys.path.insert(0, scripts_dir)\n    engine.load_manifest = guarded_load\n    sys.argv = ["shared_ovh_release.py", mode, RELEASE_ID]
+    # The shared engine expects its adjacent evidence contract as a top-level import.
+    scripts_dir = str(engine.ROOT / "scripts")\n    if scripts_dir not in sys.path:\n        sys.path.insert(0, scripts_dir)\n    engine.load_manifest = guarded_load\n    sys.argv = ["shared_ovh_release.py", mode, RELEASE_ID]
     engine.run()
 
 if __name__ == "__main__":
