@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/admin/statistieken.php",
+    "private/visitor_stats_cron_log.php"
+  ]
+}
