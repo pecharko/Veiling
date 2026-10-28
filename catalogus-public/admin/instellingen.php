@@ -25,6 +25,7 @@ if (is_post()) {
     'practical_info' => mb_substr(trim((string)($_POST['practical_info'] ?? '')), 0, 5000),
     'is_published' => isset($_POST['is_published']) ? 1 : 0,
     'is_site_online' => isset($_POST['is_site_online']) ? 1 : 0,
+    'show_report_issue_link' => isset($_POST['show_report_issue_link']) ? 1 : 0,
   ];
 
   if ($fields['title'] === '') {
@@ -47,7 +48,8 @@ if (is_post()) {
       contact_email = :contact_email,
       practical_info = :practical_info,
       is_published = :is_published,
-      is_site_online = :is_site_online
+      is_site_online = :is_site_online,
+      show_report_issue_link = :show_report_issue_link
       WHERE id = 1');
     $st->execute($fields);
 
@@ -72,6 +74,7 @@ $completedCount = count(array_filter($checkFields));
 $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelden ingevuld';
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
+$reportIssueEnabled = (int)($s['show_report_issue_link'] ?? 0) === 1;
 $publicStateText = !$siteOnline ? 'Website offline — bezoekers zien Binnenkort online' : ($publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar');
 $dateStateText = !empty($s['event_date']) ? date_nl((string)$s['event_date']) : 'Datum nog niet vastgelegd';
 $contactStateText = !empty($s['contact_email']) ? (string)$s['contact_email'] : 'Nog geen contactadres';
@@ -302,6 +305,17 @@ if ($error) {
                 <span class="auction-settings-toggle-copy">
                   <strong>Kavels tonen op website</strong>
                   <span>Uit: geen kavels, kavelknoppen of favorieten op de website; directe kavellinks geven 404. Aan: uitsluitend gepubliceerde kavels zichtbaar. De rest van de website blijft altijd zichtbaar.</span>
+                </span>
+              </span>
+            </label>
+
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="show_report_issue_link" value="1" <?= $reportIssueEnabled ? 'checked' : '' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy">
+                  <strong>Probleem melden op publieke website</strong>
+                  <span>Toon een link naar het GitHub-keuzescherm direct na ‘Het goede doel’ in het publieke menu. Standaard uitgeschakeld. De adminlink blijft altijd zichtbaar.</span>
                 </span>
               </span>
             </label>
