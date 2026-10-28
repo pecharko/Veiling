@@ -1,0 +1,60 @@
+name: Retire one-shot OVH mailtest with rollback
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/retire-ovh-mailtest.yml'
+      - 'scripts/retire_ovh_mailtest.py'
+      - 'tests/retire_ovh_mailtest_contract_test.py'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'DELETE-ovh-mailtest-retirement-20261028-<immutable main SHA>'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m unittest discover -s tests -p retire_ovh_mailtest_contract_test.py
+  retire:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Require exact current main authorization
+        env:
+          APPROVAL: ${{ inputs.confirmation }}
+          CURRENT_SHA: ${{ github.sha }}
+          CURRENT_REF: ${{ github.ref }}
+        run: |
+          test "$CURRENT_REF" = refs/heads/main
+          test "$APPROVAL" = "DELETE-ovh-mailtest-retirement-20261028-$CURRENT_SHA"
+      - name: Install pinned SFTP client
+        run: python3 -m pip install paramiko==3.5.1
+      - name: Delete only authorized temporary file
+        env:
+          OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+          OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+          OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+          OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+          OVH_SFTP_BASE: ${{ secrets.OVH_SFTP_BASE }}
+          DELETE_CONFIRMATION: ${{ inputs.confirmation }}
+        run: python3 -m scripts.retire_ovh_mailtest delete
+      - name: Preserve rollback file even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mailtest-retirement-rollback-${{ github.run_id }}
+          path: deployment-backups/ovh-mailtest-retirement-20261028-original.php
+          if-no-files-found: warn
+          retention-days: 7
