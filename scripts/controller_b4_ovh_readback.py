@@ -52,7 +52,7 @@ def check_checkout(source_root=ROOT):
                           cwd=source_root, check=True, capture_output=True,
                           text=True, timeout=10).stdout.strip()
     dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
-                           cwd=ROOT, check=True, capture_output=True,
+                           cwd=source_root, check=True, capture_output=True,
                            text=True, timeout=10).stdout
     if not SHA.fullmatch(head) or dirty:
         raise ValueError("OVH readback requires a clean pinned Git checkout")
