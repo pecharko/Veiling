@@ -23,7 +23,9 @@ foreach ([
   if (!str_contains($reset, $needle)) throw new RuntimeException('Atomic reset requirement missing: '.$needle);
 }
 if (!str_contains($backup, "reset_catalog_photo_files(\$result['paths'], dirname(__DIR__))")) throw new RuntimeException('Post-commit photo cleanup call missing');
-if (!str_contains($reset, "preg_match('~^uploads/") || !str_contains($reset, "!@unlink(\$file)")) throw new RuntimeException('Safe photo cleanup guard missing');
+if (!str_contains($reset, "catalog_safe_unlink_photo(\$path, \$publicRoot)")) throw new RuntimeException('Safe photo cleanup helper missing');
+$photoGuard = file_get_contents(dirname(__DIR__).'/private/photo_delete_safety.php');
+foreach (['realpath(', 'is_link(', 'is_file(', 'unlink('] as $guard) if (!str_contains($photoGuard, $guard)) throw new RuntimeException('Photo safety guard missing: '.$guard);
 if (str_contains($reset, 'TRUNCATE')) throw new RuntimeException('TRUNCATE cannot be rolled back in MySQL.');
 if (!str_contains($editor, 'compact_auction_numbers($pdo)')) throw new RuntimeException('Auction deletion must resequence.');
 $snap = file_get_contents(dirname(__DIR__).'/private/snapshots.php');
