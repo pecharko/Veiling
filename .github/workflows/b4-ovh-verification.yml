@@ -50,12 +50,6 @@ jobs:
       RELEASE_SHA: ${{ inputs.release_sha }}
       RELEASE_RUN_ID: ${{ inputs.release_run_id }}
       CONFIRMATION: ${{ inputs.confirmation }}
-      GH_TOKEN_READONLY: ${{ github.token }}
-      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
-      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
-      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
-      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
-      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
     steps:
       - name: Validate immutable run and confirmation before checkout
         shell: bash
@@ -80,23 +74,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.release_sha }}
+          path: release-data
           fetch-depth: 0
           persist-credentials: false
       - name: Validate exact release checkout before network access
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "$RELEASE_SHA"
-          test -z "$(git status --porcelain --untracked-files=all)"
+          test "$(git -C release-data rev-parse HEAD)" = "$RELEASE_SHA"
+          test -z "$(git -C release-data status --porcelain --untracked-files=all)"
+          test -z "$(git status --porcelain --untracked-files=all | grep -v '^?? release-data/' || true)"
       - name: Pinned readback SFTP dependency
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Observe OVH file hashes without writes
         shell: bash
         env:
           GITHUB_TOKEN: ${{ github.token }}
+          OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+          OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+          OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+          OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+          OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
         run: |
           set -euo pipefail
           python3 scripts/controller_b4_ovh_readback.py \
             --release-id "$RELEASE_ID" \
             --release-sha "$RELEASE_SHA" \
-            --run-id "$RELEASE_RUN_ID"
+            --run-id "$RELEASE_RUN_ID" \
+            --release-checkout release-data
