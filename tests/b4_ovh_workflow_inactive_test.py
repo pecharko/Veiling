@@ -33,7 +33,7 @@ class B4WorkflowSecurityTests(unittest.TestCase):
         self.assertIn('test "$(git rev-parse HEAD)" = "$GITHUB_SHA"', text)
         self.assertNotIn("ref: main", text)
         self.assertIn("verify_release_run(int(os.environ", text)
-        self.assertIn('test "$(git -C release-data rev-parse HEAD)" = "$RELEASE_SHA"', text)
+        self.assertIn('"$(git -C release-data rev-parse HEAD)" != "$RELEASE_SHA"', text)
         self.assertIn("persist-credentials: false", text)
         self.assertNotIn("scripts/shared_ovh_release.py deploy", text)
         self.assertNotIn("issues: write", text)
