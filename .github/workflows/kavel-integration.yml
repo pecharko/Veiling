@@ -107,6 +107,15 @@ jobs:
           CI_DB_PASSWORD: ci-password-only
         run: php tests/admin_invitation_mysql_test.php
 
+      - name: Test overlapping invitation acceptance workers in disposable MySQL
+        if: needs.impact.outputs.run == 'true'
+        env:
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+          CI_DB_USER: root
+          CI_DB_PASSWORD: ci-password-only
+        run: php tests/admin_invitation_concurrency_test.php
+
       - name: Test real HTTP login, editor errors and photo uploads
         if: needs.impact.outputs.run == 'true'
         shell: bash
