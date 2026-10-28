@@ -91,3 +91,28 @@ def unify_offline_b5_evidence(*, base_report, observation, b4_run, b4_jobs,
         "fully_accepted": False, "deployment_authorized": False,
         "dispatch_started": False, "browser_acceptance": "PENDING",
     }
+
+
+def collect_b4_github_metadata(b4_run_id, token, *, read_json=None):
+    """Bounded Actions:read-only retrieval of B4 run/jobs; no dispatch/OVH.
+
+    Does not authenticate an existing SFTP observation or grant acceptance.
+    The caller must separately pin and verify the intended B4 execution SHA.
+    """
+    from controller_evidence_collector import get_json
+    if type(b4_run_id) is not int or b4_run_id <= 0:
+        raise ValueError("Invalid B4 run ID")
+    if not isinstance(token, str) or not token:
+        raise ValueError("Actions:read token required")
+    reader = get_json if read_json is None else read_json
+    run = reader("/actions/runs/" + str(b4_run_id), token)
+    page = reader("/actions/runs/" + str(b4_run_id) + "/jobs?per_page=100", token)
+    if (not isinstance(page, dict) or
+            type(page.get("total_count")) is not int or
+            page["total_count"] <= 0 or page["total_count"] >= 100 or
+            not isinstance(page.get("jobs"), list) or
+            len(page["jobs"]) != page["total_count"]):
+        raise ValueError("B4 jobs page incomplete or unbounded")
+    if not isinstance(run, dict):
+        raise ValueError("B4 run metadata missing")
+    return run, page["jobs"]
