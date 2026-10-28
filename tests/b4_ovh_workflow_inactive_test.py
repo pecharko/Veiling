@@ -57,6 +57,16 @@ class B4WorkflowSecurityTests(unittest.TestCase):
             (root / "unreviewed.txt").write_text("unexpected")
             self.assertIn("?? unreviewed.txt", unexpected())
 
+    def test_checkout_checkpoints_fail_closed_without_sftp(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        for checkpoint in (1, 2, 3):
+            self.assertIn(f"B4 checkout checkpoint {checkpoint} failed:", text)
+            self.assertIn(f"B4 checkout checkpoint {checkpoint} OK:", text)
+        self.assertIn("git -C release-data status --porcelain --untracked-files=all", text)
+        self.assertIn("git status --porcelain --untracked-files=normal", text)
+        self.assertIn("grep -v '^?? release-data/$'", text)
+        self.assertLess(text.index("B4 checkout checkpoint 3 OK"), text.index("Pinned readback SFTP dependency"))
+
     def test_no_production_secrets_in_pr_validation_job(self):
         text = WORKFLOW.read_text(encoding="utf-8")
         jobs = text.split("  readback:", 1)
