@@ -78,5 +78,58 @@ class B5bOfflineReportTests(unittest.TestCase):
             self.assertEqual(json.loads(target.read_text())["status"], "VERIFIED")
 
 
+class B5fFullReportTests(unittest.TestCase):
+    def full(self):
+        p = payload()
+        p["b4_run"] = {"id": 45, "head_sha": SHA, "head_branch": "main",
+                       "path": ".github/workflows/b4-ovh-verification.yml",
+                       "event": "workflow_dispatch", "status": "completed",
+                       "conclusion": "success"}
+        p["b4_jobs"] = [{"name": "readback", "head_sha": SHA,
+                         "status": "completed", "conclusion": "success"}]
+        p["b4_run_id"] = 45
+        p["b4_execution_sha"] = SHA
+        return p
+
+    def test_full_evidence_report_is_not_acceptance(self):
+        p = self.full()
+        result = module.render(p)
+        self.assertEqual(result["status"], "VERIFIED")
+        self.assertEqual(result["evidence_scope"], "offline_consistency_only")
+        self.assertIn("b4_run_identity", result)
+        self.assertFalse(result["independent_provenance_authenticated"])
+        self.assertFalse(result["fully_accepted"])
+        self.assertFalse(result["deployment_authorized"])
+        self.assertFalse(result["dispatch_started"])
+        self.assertEqual(result["browser_acceptance"], "PENDING")
+
+    def test_bad_b4_job_makes_incomplete(self):
+        p = self.full()
+        p["b4_jobs"] = []
+        self.assertEqual(module.render(p)["status"], "INCOMPLETE")
+
+    def test_b4_commit_drift_fails_closed(self):
+        p = self.full()
+        p["b4_execution_sha"] = "c" * 40
+        self.assertEqual(module.render(p)["status"], "MISMATCH")
+
+    def test_partial_extended_snapshot_rejected(self):
+        p = payload()
+        p["b4_run_id"] = 45
+        with self.assertRaises(ValueError):
+            module.render(p)
+
+    def test_cli_accepts_full_offline_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "input.json"
+            target = Path(directory) / "report.json"
+            source.write_text(json.dumps(self.full()), encoding="utf-8")
+            with patch.object(sys, "argv", ["report", "--input", str(source),
+                                            "--output", str(target)]):
+                self.assertEqual(module.main(), 0)
+            self.assertEqual(json.loads(target.read_text())["status"], "VERIFIED")
+
+
+
 if __name__ == "__main__":
     unittest.main()

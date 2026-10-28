@@ -10,10 +10,46 @@ from controller_readonly_reconciliation import reconcile_independent_b4
 
 
 def render(payload):
-    if not isinstance(payload, dict) or set(payload) != {
+    if not isinstance(payload, dict):
+        raise ValueError("Exact B5b offline snapshot contract required")
+    if not {"b4_run", "b4_jobs", "b4_run_id", "b4_execution_sha"}.intersection(payload) and set(payload) != {
             "base_report", "observation", "execution_run", "release_id",
             "release_sha", "release_run_id", "expected_paths", "authorized_main_sha"}:
         raise ValueError("Exact B5b offline snapshot contract required")
+    # B5f uses the existing combined B5e checker only when the caller
+    # explicitly supplies the complete extra B4 run/job identity snapshot.
+    # Legacy B5b snapshots remain supported and never imply B5e checks.
+    b5f_fields = {"b4_run", "b4_jobs", "b4_run_id", "b4_execution_sha"}
+    if isinstance(payload, dict) and b5f_fields.intersection(payload):
+        if set(payload) != {
+                "base_report", "observation", "execution_run", "release_id",
+                "release_sha", "release_run_id", "expected_paths",
+                "authorized_main_sha", *b5f_fields}:
+            raise ValueError("Incomplete or unexpected B5f identity snapshot")
+        from controller_b5c_github_evidence import unify_offline_b5_evidence
+        combined = unify_offline_b5_evidence(
+            base_report=payload["base_report"],
+            observation=payload["observation"],
+            b4_run=payload["b4_run"], b4_jobs=payload["b4_jobs"],
+            release_id=payload["release_id"],
+            release_sha=payload["release_sha"],
+            release_run_id=payload["release_run_id"],
+            expected_paths=payload["expected_paths"],
+            authorized_main_sha=payload["authorized_main_sha"],
+            b4_run_id=payload["b4_run_id"],
+            b4_execution_sha=payload["b4_execution_sha"])
+        return {"schema": 1, "source": "untrusted_offline_snapshot_consistency",
+                "status": combined["status"], "reason": combined["reason"],
+                "b4_run_identity": combined["b4_run_identity"],
+                "readback_consistency": combined["readback_consistency"],
+                "evidence_scope": "offline_consistency_only",
+                "independent_provenance_authenticated": False,
+                "browser_acceptance": "PENDING", "fully_accepted": False,
+                "deployment_authorized": False, "dispatch_started": False,
+                "release_id": payload["release_id"],
+                "release_sha": payload["release_sha"],
+                "release_run_id": payload["release_run_id"],
+                "expected_paths": payload["expected_paths"]}
     result = reconcile_independent_b4(
         payload["base_report"], payload["observation"],
         release_id=payload["release_id"], release_sha=payload["release_sha"],
