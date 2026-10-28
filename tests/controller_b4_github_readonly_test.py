@@ -1,9 +1,10 @@
 """B4 trusted REST GET source binding, no writes, fail-closed cases."""
 import sys
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_b4_github_readonly import collect_owner_evidence, collect_comment_history
+from controller_b4_github_readonly import collect_owner_evidence, collect_comment_history, review_registration
 
 BASE = "https://api.github.com/repos/pecharko/Veiling/issues/7"
 ISSUE = {"number": 7, "repository_url": "https://api.github.com/repos/pecharko/Veiling"}
@@ -42,6 +43,44 @@ class B4GitHubReadTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     collect_comment_history(7, "read-token",
                                             read_json=lambda *a: comments)
+
+    def test_composed_review_is_inert_and_replay_safe(self):
+        import controller_b4_github_readonly as mod
+        decision = {
+            "status": "READY_FOR_REVIEW", "annotation_permitted": False,
+            "writes_performed": False,
+            "identity": {"run_id": 17, "release_sha": "a" * 40,
+                         "release_id": "release-demo"},
+            "owner_comment_id": 11, "owner_issue": 7}
+        args = dict(issue_number=7, comment_id=11, token="read-token",
+                    expected_owner="pecharko", evidence={},
+                    ovh_attestation={}, run_id=17,
+                    release_sha="a" * 40, release_id="release-demo")
+        with patch.object(mod, "review_owner_with_github", return_value=decision):
+            first = review_registration(**args,
+                read_json=lambda path, token: [])
+            self.assertEqual(first["status"], "READY_FOR_MANUAL_REVIEW")
+            self.assertFalse(first["write_permitted"])
+            self.assertFalse(first["write_executed"])
+            duplicate = review_registration(**args, read_json=lambda path, token: [
+                {**COMMENT, "body": first["proposed_body"]}])
+            self.assertEqual(duplicate["status"], "ALREADY_RECORDED")
+            with self.assertRaises(ValueError):
+                review_registration(**args,
+                    read_json=lambda path, token: [COMMENT] * 100)
+
+    def test_incomplete_owner_review_prevents_history_fetch(self):
+        import controller_b4_github_readonly as mod
+        with patch.object(mod, "review_owner_with_github",
+                          return_value={"status": "BLOCKED"}):
+            result = review_registration(
+                issue_number=7, comment_id=11, token="read-token",
+                expected_owner="pecharko", evidence={},
+                ovh_attestation={}, run_id=17,
+                release_sha="a" * 40, release_id="release-demo",
+                read_json=lambda *a: self.fail("comment history fetched"))
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertFalse(result["write_permitted"])
 
     def test_invalid_id_avoids_network(self):
         for issue, comment in ((True, 11), (7, True), (0, 11)):
