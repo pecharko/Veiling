@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/photo_delete_safety.php",
+      "source_sha256": "16cdb4596b0ece688aa1c50bf6ae1fb098018a3e14385ee32d9271377abfc1fd",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/catalog_reset.php",
+      "source_sha256": "34855a27a0b9232d2352f34690c8f994f52e1a44f618c718b2beffb105579efb",
+      "remote_sha256": "06e508308ec8a16f1a1b35262d6ba90c9fbf1603ee015c730a3e51b4d95040cd"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "b3ae1d56b3cc32db9d7fa06e203e96a1da83ab32a91e1eec2f8b8c8b200788c3",
+      "remote_sha256": "488e748a1bc26cd5cde2b3932c58c442586848384babe5f61eb0986a5f322a70"
+    },
+    {
+      "path": "catalogus-public/admin/backup.php",
+      "source_sha256": "12e21f1fa056fa9bab5933cf4013a0f439959e822612a1f7a586e5eb291b82a2",
+      "remote_sha256": "13dce0016d1f721adc2c9e3e1f3dfcca0ecc945022824ec18031499ec1cf0336"
+    },
+    {
+      "path": "catalogus-public/admin/gebruikers.php",
+      "source_sha256": "87a20e6872ec6f8768da08dd903093f7d7640b47fc6e385bf2813f339703e11f",
+      "remote_sha256": "6ed6b9fa7e3cd29b29415263a428b50bf6299c6a127c9022705740298cc6e4d9"
+    },
+    {
+      "path": "catalogus-public/admin/veiling-organisatie.php",
+      "source_sha256": "793b4e3955becd9ab5fbd8ff86131d47196b8f967a2143cb53a9e5a199c6173e",
+      "remote_sha256": "dd70e089f71f74b4ae978694615c46f4d4863b17b9e25dfd6238eaf8fe06f7b5"
+    }
+  ]
+}
