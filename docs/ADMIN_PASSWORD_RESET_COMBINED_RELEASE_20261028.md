@@ -1,17 +1,19 @@
-# Gecombineerde productiewijziging: wachtwoordreset en tijdelijke testpagina opruimen
+# Gecombineerde release: wachtwoordreset en mailtest-opruiming
 
-## Uitvoerbare voorbereidende stap
-De read-only releaseaanvraag in deze PR vraagt baselines voor precies vijf runtimebestanden:
+## Vastgelegde scope
+Vier bestanden via bestaande OVH-release met exact hashmanifest:
 - catalogus-public/admin/login.php
 - catalogus-public/admin/wachtwoord-vergeten.php
 - catalogus-public/admin/wachtwoord-reset.php
 - private/admin_password_reset.php
-- private/snapshots.php
 
-## Afzonderlijke voorwaarden vóór productie
-1. Read-only controle van actuele productie-DB: admins.id-type, admins.is_active, en afwezigheid/structuur van admin_password_resets. Back-up en hersteltest, daarna expliciete autorisatie voor database/admin_password_reset_migration.sql; DB eerst migreren.
-2. Het verwijderen van catalogus-public/admin/mailtest-eenmalig.php is niet ondersteund als delete-operatie in scripts/shared_ovh_release.py (deze eist een bestaand bronbestand en een SHA). Niet via uploadmanifest proberen en de oude endpoint niet ongemerkt laten staan.
-3. Ontwerp een afzonderlijk goedgekeurde fail-closed delete-stap met actuele remote SHA, backup/rollback en post-delete 404-controle. Gecombineerde acceptatie vergt zowel vijf uploads als deze ene verwijdering. Laat de live testpagina niet staan na activatie.
-4. Bij elke afzonderlijke productieactie exact immutable main-SHA en actuele remote baselines vastleggen; gebruikersautorisatie vereist. Geen nieuwe CI/security gates omzeilen.
+De tijdelijke catalogus-public/admin/mailtest-eenmalig.php wordt via de afzonderlijke geautoriseerde verwijderingsworkflow verwijderd, niet via het generieke uploadmanifest. Dit zijn technisch twee acties, met één gezamenlijke functionele acceptatie.
 
-Deze PR bevat **geen uitvoerende delete-code**, geen SQL-uitvoering, geen mail, geen productie-upload en geen releaseautorisatie.
+## Minimale databasevoorwaarde
+Geen algemene schema-compatibiliteitsstudie. Controleer uitsluitend read-only of admin_password_resets bestaat. Indien afwezig, maak eerst een gecontroleerde back-up en pas uitsluitend database/admin_password_reset_migration.sql toe na afzonderlijke expliciete autorisatie. De code mag niet actief worden vóór de tabel bestaat. Geen automatische SQL-uitvoering via HTTP of tijdens deployment.
+
+## Snapshotveiligheid
+private/snapshots.php is beschermd tegen standaarddeployments. De repository bevat reset-tokeninvalidatie bij snapshotherstel, maar er is nog geen goedgekeurde uitzondering voor dit beschermde bestand. Behoud die bescherming; activeer de reset niet zolang een herstel oude links kan heractiveren. Behandel dit via een afzonderlijk beoordeeld beveiligd releasepad of bewijs een equivalent veilig alternatief.
+
+## Productiegates
+De upload en verwijdering vereisen elk actuele immutable main-SHA, exacte hashes en expliciete productieautorisatie. Bewaar rollbackartifacts ten minste zeven dagen. Vóór functionele acceptatie: controleer dat de tijdelijke pagina verdwenen is, resetmail aankomt, link eenmalig bruikbaar is, wachtwoord veranderd wordt, oude sessies ongeldig zijn en gedeactiveerde accounts niet kunnen resetten. Geen rechten/secrets wijzigen.
