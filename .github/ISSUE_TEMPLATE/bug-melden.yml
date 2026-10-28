@@ -72,30 +72,6 @@ body:
         - Laag - kleine correctie of wens
     validations:
       required: true
-  - type: dropdown
-    id: browser
-    attributes:
-      label: Welke browser gebruik je?
-      options:
-        - Chrome
-        - Safari
-        - Firefox
-        - Edge
-        - Andere of onbekend
-    validations:
-      required: false
-  - type: dropdown
-    id: toestel
-    attributes:
-      label: Welk toestel gebruik je?
-      options:
-        - Computer of laptop
-        - iPhone
-        - Android-telefoon
-        - iPad of andere tablet
-        - Ander of onbekend
-    validations:
-      required: false
   - type: textarea
     id: screenshot
     attributes:
