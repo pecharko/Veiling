@@ -1,5 +1,10 @@
 name: B1 passive shared OVH release evidence
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/controller-postrun-b1.yml'
+      - 'scripts/controller_postrun_b1.py'
+      - 'tests/controller_postrun_b1_test.py'
   workflow_run:
     workflows: ["Shared OVH manifest release with rollback"]
     types: [completed]
@@ -7,8 +12,20 @@ permissions:
   contents: read
   actions: read
 jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run B1 offline security tests
+        run: python3 -m unittest discover -s tests -p controller_postrun_b1_test.py -v
+      - name: Validate workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/controller-postrun-b1.yml
   passive-evidence:
     if: >-
+      github.event_name == 'workflow_run' &&
       github.event.workflow_run.event == 'workflow_dispatch' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.path == '.github/workflows/shared-ovh-release.yml'
