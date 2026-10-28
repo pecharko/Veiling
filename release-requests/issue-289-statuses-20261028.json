@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/admin/index.php",
+    "catalogus-public/admin/kavel.php",
+    "private/lot_form.php"
+  ]
+}
