@@ -26,10 +26,11 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
-def load_manifest(release_id):
+def load_manifest(release_id, *, source_root=None):
     if not ID.fullmatch(release_id):
         raise ValueError("Invalid release id")
-    path = ROOT / "releases" / (release_id + ".json")
+    root = ROOT if source_root is None else source_root
+    path = root / "releases" / (release_id + ".json")
     if path.is_symlink() or not path.is_file():
         raise ValueError("Release manifest missing")
     manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -53,7 +54,7 @@ def load_manifest(release_id):
             raise ValueError("Invalid source SHA")
         if not isinstance(remote_sha, str) or (remote_sha != "ABSENT" and not HASH.fullmatch(remote_sha)):
             raise ValueError("Invalid remote SHA")
-        src = ROOT / name
+        src = root / name
         if src.is_symlink() or not src.is_file():
             raise ValueError("Missing/unsafe source")
         data = src.read_bytes()
