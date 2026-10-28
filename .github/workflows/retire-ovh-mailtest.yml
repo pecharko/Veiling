@@ -39,7 +39,7 @@ jobs:
         run: |
           test "$CURRENT_REF" = refs/heads/main
           test "$APPROVAL" = "DELETE-ovh-mailtest-retirement-20261028-$CURRENT_SHA"
-      - name: Install pinned SFTP client
+      - name: Verify immutable current main\n        run: |\n          git fetch --no-tags origin main\n          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"\n      - name: Install pinned SFTP client
         run: python3 -m pip install paramiko==3.5.1
       - name: Delete only authorized temporary file
         env:
@@ -47,7 +47,7 @@ jobs:
           OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
           OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
           OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
-          OVH_SFTP_BASE: ${{ secrets.OVH_SFTP_BASE }}
+          OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
           DELETE_CONFIRMATION: ${{ inputs.confirmation }}
         run: python3 -m scripts.retire_ovh_mailtest delete
       - name: Preserve rollback file even on failure
