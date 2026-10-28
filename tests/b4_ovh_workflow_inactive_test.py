@@ -77,7 +77,7 @@ class B4WorkflowSecurityTests(unittest.TestCase):
             subprocess.run(["git", "-C", str(root), "config", "user.name", "Test"], check=True)
             scripts = root / "scripts"
             scripts.mkdir()
-            (scripts / "b4_auth_example.py").write_text("VALID = True\\n")
+            (scripts / "b4_auth_example.py").write_text("VALID = True\n")
             subprocess.run(["git", "-C", str(root), "add", "scripts"], check=True)
             subprocess.run(["git", "-C", str(root), "commit", "-qm", "init"], check=True)
             subprocess.run(["python3", "-B", "-c", "import sys; sys.path.insert(0, 'scripts'); import b4_auth_example; assert b4_auth_example.VALID"], cwd=root, check=True)
