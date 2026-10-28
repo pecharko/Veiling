@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "370fc711d78d8eddc4a50ad3b6ba4d20e3606957b35d121b400a4aa4599812ec",
+      "remote_sha256": "6095d36cc6eeccc5060b078e93a70e98eb6ec5c909351a875480cd5d7cc425eb"
+    },
+    {
+      "path": "private/visitor_stats_cron_log.php",
+      "source_sha256": "9e969f45a87e948fb6372bca6130ac0aa15887dc6e1c8b32ad757d5a69fc5e1a",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
