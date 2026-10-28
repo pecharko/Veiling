@@ -1,5 +1,5 @@
-name: "Bug melden - 41 Lokeren"
-description: "Meld een fout op de website of in de administratie."
+name: "Bug of verbetering melden - 41 Lokeren"
+description: "Meld een fout of stel een verbetering voor."
 title: "[Bug] "
 labels:
   - bug
@@ -9,15 +9,25 @@ body:
       value: |
         Bedankt om de website van 41 Lokeren te testen!
 
-        Bekijk eerst [de bestaande meldingen](https://github.com/pecharko/Veiling/issues?q=is%3Aissue+is%3Aopen+%22%5BBug%5D%22) om dubbels te vermijden.
+        Bekijk eerst [de bestaande meldingen](https://github.com/pecharko/Veiling/issues) om dubbels te vermijden.
 
         **Let op:** deze melding en eventuele screenshots zijn openbaar.
         Vermeld geen wachtwoorden, e-mailadressen, uitnodigingslinks, tokens,
         persoonlijke gegevens of andere vertrouwelijke informatie.
   - type: dropdown
+    id: soort
+    attributes:
+      label: Wat wil je melden?
+      description: Kies of het om een fout of om een suggestie gaat.
+      options:
+        - Bug - iets werkt niet zoals verwacht
+        - Verbeteringsvoorstel - iets kan gebruiksvriendelijker of beter
+    validations:
+      required: true
+  - type: dropdown
     id: onderdeel
     attributes:
-      label: Waar doet het probleem zich voor?
+      label: Op welk onderdeel heeft je melding betrekking?
       options:
         - Publieke website (computer)
         - Publieke website (mobiel)
@@ -28,16 +38,16 @@ body:
   - type: textarea
     id: probleem
     attributes:
-      label: Wat gaat er mis?
-      description: Beschrijf wat je ziet, zo concreet mogelijk.
-      placeholder: "Bij het openen van een kavel verschijnt de eerste foto niet."
+      label: Wat wil je melden of verbeteren?
+      description: Beschrijf de fout of je verbeteringsidee zo concreet mogelijk.
+      placeholder: "De eerste kavel-foto verschijnt niet, of: ik wil kavels kunnen sorteren op categorie."
     validations:
       required: true
   - type: textarea
     id: stappen
     attributes:
-      label: Hoe kunnen we het probleem herhalen?
-      description: Schrijf de stappen op die je hebt gevolgd.
+      label: Welke stappen of situatie zijn relevant?
+      description: Bij een bug vermeld je de stappen om de fout te herhalen. Bij een verbetering beschrijf je waar je het idee zou gebruiken.
       placeholder: |
         1. Open de website.
         2. Klik op een kavel.
@@ -47,19 +57,19 @@ body:
   - type: textarea
     id: verwacht
     attributes:
-      label: Wat had er moeten gebeuren?
-      placeholder: "De foto wordt groot getoond."
+      label: Wat verwacht je of wat zou de verbetering opleveren?
+      placeholder: "De foto opent groot, of: sorteren helpt mij sneller het juiste kavel vinden."
     validations:
       required: false
   - type: dropdown
     id: ernst
     attributes:
-      label: Hoe ernstig is het probleem?
-      description: Jouw inschatting; de beheerder bepaalt de uiteindelijke prioriteit.
+      label: Welke prioriteit zou je geven?
+      description: Je eigen inschatting, ook voor verbeteringen; de beheerder bepaalt de planning.
       options:
-        - Blokkerend - ik kan niet verder
-        - Hinderlijk - iets werkt niet goed
-        - Klein - opmaak of tekst
+        - Hoog - belangrijk om snel aan te pakken
+        - Normaal - nuttig om op te lossen of te verbeteren
+        - Laag - kleine correctie of wens
     validations:
       required: true
   - type: dropdown
