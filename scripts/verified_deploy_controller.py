@@ -214,6 +214,56 @@ def has_closed_event(repo, issue_number):
     return "closed" in result.stdout.splitlines()
 
 
+def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha):
+    """Fail closed if an older owner authorization issue consumed this release.
+
+    Scan bounded GitHub issue/comment history; API errors or excess history
+    are blockers, never permission to dispatch. No GitHub writes.
+    """
+    if not re.fullmatch(r"[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+", repo):
+        raise ValueError("Invalid repository")
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+\.yml", workflow_name):
+        raise ValueError("Invalid workflow")
+    if not re.fullmatch(r"[0-9a-f]{40}", release_sha):
+        raise ValueError("Invalid release SHA")
+    response = gh(f"repos/{repo}/issues?state=all&labels=approved-deploy-request&per_page=100")
+    if not isinstance(response, list) or len(response) >= 100:
+        raise ValueError("Issue history incomplete; manual review required")
+    for other in response:
+        if not isinstance(other, dict) or type(other.get("number")) is not int:
+            raise ValueError("Invalid prior issue history")
+        if other["number"] == int(issue_number) or "pull_request" in other:
+            continue
+        # Reopened issues may still contain a consumed release.
+        if not has_closed_event(repo, other["number"]):
+            continue
+        comments = gh(f"repos/{repo}/issues/{other['number']}/comments?per_page=100")
+        if not isinstance(comments, list) or len(comments) >= 100:
+            raise ValueError("Approval comment history incomplete")
+        for comment in comments:
+            if not isinstance(comment, dict) or not isinstance(comment.get("body"), str):
+                raise ValueError("Invalid approval history")
+            lines = comment["body"].replace("\r", "").strip().split("\n")
+            if not lines:
+                continue
+            if lines[0] == "DEPLOY VERIFIED RELEASE":
+                fields = dict(line.split("=", 1) for line in lines[1:]
+                              if line.count("=") == 1)
+                candidate = fields.get("workflow"), fields.get("release_sha")
+            elif lines[0] == LOT_SALE_PREFIX:
+                fields = dict(line.split("=", 1) for line in lines[1:]
+                              if line.count("=") == 1)
+                candidate = LOT_SALE_WORKFLOW, fields.get("release_sha")
+            elif lines[0] == PREFIX:
+                fields = dict(line.split("=", 1) for line in lines[1:]
+                              if line.count("=") == 1)
+                candidate = WORKFLOW, fields.get("release_sha")
+            else:
+                continue
+            if candidate == (workflow_name, release_sha):
+                raise ValueError("Release already authorized in a prior consumed issue")
+
+
 def validate(text, manifest, run, main_sha):
     lines = text.replace("\r", "").strip().split("\n")
     if len(lines) != 7 or lines[0] != PREFIX:
@@ -312,6 +362,9 @@ def main():
     if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
         print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")
         return
+    target_workflow_identity = (LOT_SALE_WORKFLOW if is_lot_sale else
+                                workflow if registration is not None else WORKFLOW)
+    reject_prior_approved_release(repo, issue_number, target_workflow_identity, data["release_sha"])
     # Serial controller concurrency + closing the issue before dispatch prevents replay.
     # Fail closed on a stale or already-consumed approval before dispatch.
     fresh = gh(f"repos/{repo}/issues/{issue_number}")

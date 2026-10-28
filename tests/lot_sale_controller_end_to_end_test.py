@@ -30,6 +30,8 @@ closed = False
 def gh(endpoint, *args):
     global closed
     calls.append((endpoint, args))
+    if endpoint.endswith("/issues?state=all&labels=approved-deploy-request&per_page=100"):
+        return []
     if endpoint.endswith("/issues/77"):
         if args:
             assert args == ("-X", "PATCH", "-f", "state=closed", "-f", "state_reason=completed")
