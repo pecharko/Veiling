@@ -11,6 +11,27 @@ from pathlib import Path
 
 # Also support importlib-based isolated regression runs from tests/.
 sys.path.insert(0, os.path.dirname(__file__))
+from controller_b5_report_consumer import summarize as summarize_b5_report
+
+
+def inspect_b5_advisory_report(report, *, run_id, head_sha, artifact_name):
+    """Optional offline operator review; NEVER used to authorize or dispatch.
+
+    Deliberately not called by main() or the issue_comment workflow. The
+    execution gate remains unchanged until separately reviewed and approved.
+    """
+    review = summarize_b5_report(
+        report, run_id=run_id, head_sha=head_sha, artifact_name=artifact_name)
+    return {
+        "status": review["status"],
+        "reason": review["reason"],
+        "evidence_scope": "offline_consistency_only",
+        "deployment_authorized": False,
+        "fully_accepted": False,
+        "controller_gate_changed": False,
+    }
+
+
 from lot_sale_controller_adapter import (
     PREFIX as LOT_SALE_PREFIX, WORKFLOW as LOT_SALE_WORKFLOW,
     CONFIRMATION as LOT_SALE_CONFIRMATION, parse_approval as parse_lot_sale,
