@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require dirname(__DIR__, 2) . '/private/images.php';
+require_once dirname(__DIR__, 2) . '/private/photo_delete_safety.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
 require_once dirname(__DIR__, 2) . '/private/admin_names.php';
