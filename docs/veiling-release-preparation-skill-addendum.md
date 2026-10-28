@@ -1,0 +1,13 @@
+# Veiling releasevoorbereiding: geen tussentijdse 'go'
+
+Deze werkinstructie vult de Veiling Deploy Manager-skill aan. Ze verleent **geen nieuwe autorisatie**.
+
+1. Na een functionele wijzigingsopdracht: alle gewone, toegestane GitHub-voorbereidingen in één actieve sessie afhandelen: code-PR, relevante CI, merge, read-only release-request, manifest, nieuwe CI en baselines. Geen afzonderlijke 'go' na een groene PR, geslaagd manifest of main-push-CI.
+2. **Vóór** een release-request: controleer bestandsroutes offline met `python3 -m scripts.release_path_routing '["catalogus-public/admin/statistieken.php","private/visitor_stats_daily_cron.php"]'`. Een gedeelde release krijgt **uitsluitend** `shared_ovh`; `special` gaat naar bestaande afzonderlijke workflow. Niet automatisch een denylist wijzigen, niet een onbekend pad toelaten en niet combineren in een gedeeld manifest. De tool is slechts een advies: de bestaande fail-closed releasechecks blijven gezaghebbend.
+3. Speciale routes zijn op dit moment alleen expliciet herkend voor `private/visitor_stats_daily_cron.php` via `issue224-cron-onefile`. Bij andere beschermde of onherkende paden stoppen en geschikt releasepad onderzoeken; nooit een nieuwe gate of permissie toevoegen zonder aparte toestemming.
+4. Bij meerdere routes: afhankelijke code eerst (bij cronlogging admin-UI en loghelper, daarna croncode), read-only hashes voor elke route, één **expliciete** gecombineerde gebruikersautorisatie indien exacte scopes/commit/baselines en risico's alle duidelijk zijn; dat is geen vrijstelling van afzonderlijke releasecontrollers.
+5. Een gewone 'go' autoriseert geen OVH-upload, DB, cron-uitvoering, workflowdispatch of releasegatewijziging. Geen dubbele dispatch. Bij nieuwe main-SHA opnieuw controleren en bij mismatch stoppen voor herautorisatie, ook wanneer parallelle PR's inhoudelijk niet overlappen.
+6. Na handmatige/geautoriseerde Actions-uitvoering: run + exacte inputs + per-bestand hashes + driftcontrole + evidence/rollback automatisch lezen; alleen functionele browseracceptatie aan gebruiker vragen. Deze kan nog niet bewijzen dat geplande cron al effectief gelogd heeft.
+7. Als CI nog loopt, binnen de sessie redelijk poll-en en voorbereiden; geen voortgangsbericht presenteren als een nieuwe 'go'-gate. Geen asynchroon vervolg beloven.
+
+Voorbeeld incident 28-10-2026: release `stats-cron-log-20261028` faalde doordat een beschermd cronbestand in de gedeelde release-request stond. Correcte splitsing: `stats-cron-log-ui-20261028` voor twee normale bestanden, aparte `issue224-cron-onefile` voor het cronbestand. De splitsing moet **voor** de eerste release-request gebeuren.
