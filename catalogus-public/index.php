@@ -20,7 +20,7 @@ if ($onlyFavorites) {
 }
 $page = max(1, min(9999, (int)($_GET['pagina'] ?? 1)));
 $perPage = 24;
-$where = ["l.status='published'"];
+$where = ["l.status IN ('published','sold')"];
 $params = [];
 if ($q !== '') {
   $where[] = "(CAST(l.lot_number AS CHAR) LIKE ? OR l.title LIKE ? OR l.subtitle LIKE ? OR l.description LIKE ? OR l.category LIKE ?)";
@@ -49,8 +49,8 @@ $order = $orders[$sort] ?? $orders['number'];
 $rows = []; $categories = []; $total = 0; $totalPublic = 0;
 if ($published) {
   $pdo = db();
-  $totalPublic = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status='published'")->fetchColumn();
-  $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE status='published' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+  $totalPublic = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status IN ('published','sold')")->fetchColumn();
+  $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE status IN ('published','sold') ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
   $whereSql = implode(' AND ', $where);
   $count = $pdo->prepare('SELECT COUNT(*) FROM lots l WHERE ' . $whereSql);
   $count->execute($params);
@@ -75,7 +75,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=186"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <header class="site-header front-header" id="top">
     <div class="shell header-inner front-header-inner">
@@ -163,7 +163,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <div class="catalog-status"><div><span class="result-count"><?=e((string)$total)?> kavels</span> <span class="status-separator">/</span><span class="status-caption">Pagina <?=e((string)$page)?> van <?=e((string)($pages ?? 1))?></span></div><div class="status-actions"><a class="chip <?=$onlyFavorites?'selected':''?>" id="favoritesOnly" href="<?=e(url('index.php',['favorieten'=>1]))?>">♡ Mijn favorieten</a><a class="text-button" href="<?=e(url('index.php'))?>#catalogus">Wis filters ↺</a></div></div>
     <?php if (!$rows): ?><div class="empty-state"><span class="empty-art">◌</span><h3>Geen kavels gevonden</h3><p>Pas je zoekterm of filters aan, of bekijk alle kavels.</p><a class="btn btn-dark" href="<?=e(url('index.php'))?>#catalogus">Toon alle kavels</a></div>
     <?php else: ?><div class="catalog-grid"><?php foreach($rows as $lot): ?>
-    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><div class="lot-estimate"><small>MARKTPRIJS</small><strong><?=e(estimate($lot))?></strong></div><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
+    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><div class="lot-estimate"><small>MARKTPRIJS</small><strong><?=e(estimate($lot))?></strong></div><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
     <?php endforeach; ?></div>
     <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
