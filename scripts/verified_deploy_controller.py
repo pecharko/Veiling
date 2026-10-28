@@ -358,13 +358,15 @@ def main():
         manifest = json.loads(download_artifact(repo, matches[0]["id"], config.get("manifest_file", "preflight-sha256.json") if registration is not None else "preflight-sha256.json"))
         data = (validate_registered(text, normalize_registered_manifest(manifest, run, workflow, config), run, main_sha, workflow, config)
                 if registration is not None else validate(text, manifest, run, main_sha))
-    # Dry run checks the complete authorization evidence but never consumes approval.
-    if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
-        print("DRY RUN PASS: authorization and artifact verified; no issue write or dispatch")
-        return
+    # Cross-issue replay protection is read-only and must apply to dry runs too.
+    # Never report a green dry run for a release the live controller would reject.
     target_workflow_identity = (LOT_SALE_WORKFLOW if is_lot_sale else
                                 workflow if registration is not None else WORKFLOW)
     reject_prior_approved_release(repo, issue_number, target_workflow_identity, data["release_sha"])
+    # Dry run checks the same read-only release evidence without consuming approval.
+    if os.environ.get("CONTROLLER_DRY_RUN", "false") == "true":
+        print("DRY RUN PASS: authorization, artifact and replay history verified; no issue write or dispatch")
+        return
     # Serial controller concurrency + closing the issue before dispatch prevents replay.
     # Fail closed on a stale or already-consumed approval before dispatch.
     fresh = gh(f"repos/{repo}/issues/{issue_number}")
