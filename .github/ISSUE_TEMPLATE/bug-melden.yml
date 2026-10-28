@@ -1,5 +1,7 @@
-name: "Bug of verbetering melden - 41 Lokeren"
-description: "Meld een fout of stel een verbetering voor."
+name: "Bug melden - 41 Lokeren"
+description: "Meld dat iets niet werkt zoals verwacht."
+labels:
+  - bug
 body:
   - type: markdown
     attributes:
@@ -11,16 +13,6 @@ body:
         **Let op:** deze melding en eventuele screenshots zijn openbaar.
         Vermeld geen wachtwoorden, e-mailadressen, uitnodigingslinks, tokens,
         persoonlijke gegevens of andere vertrouwelijke informatie.
-  - type: dropdown
-    id: soort
-    attributes:
-      label: Wat wil je melden?
-      description: Kies of het om een fout of om een suggestie gaat.
-      options:
-        - Bug - iets werkt niet zoals verwacht
-        - Verbeteringsvoorstel - iets kan gebruiksvriendelijker of beter
-    validations:
-      required: true
   - type: dropdown
     id: onderdeel
     attributes:
@@ -35,20 +27,9 @@ body:
   - type: textarea
     id: probleem
     attributes:
-      label: Wat wil je melden of verbeteren?
+      label: Wat gaat er mis?
       description: Beschrijf de fout of je verbeteringsidee zo concreet mogelijk.
       placeholder: "De eerste kavel-foto verschijnt niet, of: ik wil kavels kunnen sorteren op categorie."
-    validations:
-      required: true
-  - type: textarea
-    id: stappen
-    attributes:
-      label: Welke stappen of situatie zijn relevant?
-      description: Bij een bug vermeld je de stappen om de fout te herhalen. Bij een verbetering beschrijf je waar je het idee zou gebruiken.
-      placeholder: |
-        1. Open de website.
-        2. Klik op een kavel.
-        3. Probeer de foto te openen.
     validations:
       required: true
   - type: textarea

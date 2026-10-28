@@ -1,0 +1,49 @@
+name: "Verbetering voorstellen - 41 Lokeren"
+description: "Stel een verbetering of een nieuw idee voor."
+labels:
+  - idea
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bedankt om de website van 41 Lokeren te testen!
+
+        Bekijk eerst [de bestaande meldingen](https://github.com/pecharko/Veiling/issues) om dubbels te vermijden.
+
+        **Let op:** deze melding en eventuele screenshots zijn openbaar.
+        Vermeld geen wachtwoorden, e-mailadressen, uitnodigingslinks, tokens,
+        persoonlijke gegevens of andere vertrouwelijke informatie.
+  - type: dropdown
+    id: onderdeel
+    attributes:
+      label: Op welk onderdeel heeft je melding betrekking?
+      options:
+        - Publieke website (computer)
+        - Publieke website (mobiel)
+        - Administratie
+        - Anders of niet zeker
+    validations:
+      required: true
+  - type: textarea
+    id: probleem
+    attributes:
+      label: Welke verbetering stel je voor?
+      description: Beschrijf de fout of je verbeteringsidee zo concreet mogelijk.
+      placeholder: "De eerste kavel-foto verschijnt niet, of: ik wil kavels kunnen sorteren op categorie."
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot of extra uitleg (optioneel)
+      description: Je kunt hier een screenshot toevoegen. Verberg eerst alle privégegevens en toegangscodes.
+      placeholder: "Sleep een screenshot in dit vak of geef extra informatie."
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Controle vóór het verzenden
+      options:
+        - label: "Ik heb geen wachtwoorden, tokens, uitnodigingslinks of persoonsgegevens toegevoegd."
+          required: true
