@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity, unify_offline_b5_evidence
+from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity, unify_offline_b5_evidence, collect_b4_github_metadata
 
 SHA = "a" * 40
 DIGEST = "b" * 64
@@ -172,6 +172,49 @@ class B5eUnifiedEvidenceTests(unittest.TestCase):
             {**self.observation["files"][0], "observed_sha256": "c" * 64}]}
         self.assertEqual(self.check(observation=obs)["status"], "MISMATCH")
 
+
+
+class B5gGitHubMetadataTests(unittest.TestCase):
+    def setUp(self):
+        self.paths = []
+        self.run = {"id": 42, "path": ".github/workflows/b4-ovh-verification.yml"}
+        self.jobs = [{"name": "readback", "status": "completed"}]
+
+    def reader(self, path, token):
+        self.paths.append((path, token))
+        return self.run if path == "/actions/runs/42" else {
+            "total_count": 1, "jobs": self.jobs}
+
+    def test_only_two_bounded_read_requests(self):
+        run, jobs = collect_b4_github_metadata(
+            42, "read-only-token", read_json=self.reader)
+        self.assertEqual(run, self.run)
+        self.assertEqual(jobs, self.jobs)
+        self.assertEqual(self.paths, [
+            ("/actions/runs/42", "read-only-token"),
+            ("/actions/runs/42/jobs?per_page=100", "read-only-token")])
+
+    def test_invalid_run_or_missing_token_never_issues_get(self):
+        for run_id, token in ((0, "token"), (42, ""), (True, "token")):
+            with self.subTest(run_id=run_id, token=token):
+                with self.assertRaises(ValueError):
+                    collect_b4_github_metadata(
+                        run_id, token, read_json=self.reader)
+        self.assertEqual(self.paths, [])
+
+    def test_partial_or_paginated_jobs_fail_closed(self):
+        def missing(path, token):
+            return self.run if path == "/actions/runs/42" else {
+                "total_count": 2, "jobs": self.jobs}
+        with self.assertRaisesRegex(ValueError, "incomplete or unbounded"):
+            collect_b4_github_metadata(42, "token", read_json=missing)
+
+    def test_no_readback_artifact_is_inferred(self):
+        run, jobs = collect_b4_github_metadata(
+            42, "token", read_json=self.reader)
+        self.assertNotIn("observation", run)
+        self.assertNotIn("independent_ovh_readback", run)
+        self.assertEqual(len(jobs), 1)
 
 
 if __name__ == "__main__":
