@@ -94,6 +94,11 @@ jobs:
           python3 -m py_compile scripts/controller_evidence_collector.py tests/controller_evidence_collector_test.py
           python3 -m unittest discover -s tests -p controller_evidence_collector_test.py -v
 
+      - name: Test B5 report consumer offline (non-authorizing)
+        run: |
+          python3 -m py_compile scripts/controller_b5_report_consumer.py tests/controller_b5_report_consumer_test.py
+          python3 -m unittest discover -s tests -p controller_b5_report_consumer_test.py -v
+
       - name: Test B1 passive post-run workflow identity offline
         run: |
           go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/controller-passive-postrun.yml
