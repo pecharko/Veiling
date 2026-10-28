@@ -24,6 +24,9 @@ class SoldVisibilityTest(unittest.TestCase):
         source = (ROOT / "assets/catalogus.css").read_text()
         self.assertIn(".lot-cover .lot-sold-badge", source)
         self.assertIn(".detail-sold-badge", source)
+        self.assertIn("rotate(30deg)", source)
+        self.assertIn("#cfe3cf", source)
+        self.assertIn(".lot-badge{border-radius:8px}", source)
 
 
 if __name__ == "__main__":
