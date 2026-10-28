@@ -29,7 +29,7 @@ if (is_post()) {
     redirect('admin/veiling-organisatie.php');
   } catch (Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
-    $error = $ex instanceof PDOException ? 'Opslaan mislukt. De bestaande volgorde bleef behouden.' : $ex->getMessage();
+    $error = $ex instanceof InvalidArgumentException ? 'Kies een kavel en een geldig veilingsnummer.' : 'Opslaan mislukt of de volgorde is gewijzigd. Vernieuw de pagina en probeer opnieuw.';
     error_log('[Auction order] '.$ex->getMessage());
   }
 }
