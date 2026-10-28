@@ -180,3 +180,15 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .admin-brand-row .admin-logo{font-size:21px;font-weight:850;letter-spacing:-.025em;line-height:1.25;text-decoration:none;white-space:nowrap}
 .admin-brand-row .admin-active-role{display:inline-flex;align-items:center;flex:none;white-space:nowrap;padding:6px 12px;border:1px solid #b7dccc;border-radius:999px;color:#214c3b;font-size:12px;font-weight:800;letter-spacing:.01em;background:#dcefe3}
 @media(max-width:420px){.admin-brand-row{gap:8px}.admin-brand-row .admin-logo{font-size:18px}.admin-brand-row .admin-active-role{font-size:11px;padding:5px 8px}}
+
+
+/* Auction cancellation: accessible modal warning with native dialog backdrop. */
+.lot-cancel-dialog{width:min(440px,calc(100% - 32px));max-height:calc(100% - 32px);margin:auto;padding:0;border:0;border-radius:18px;background:#fff;color:#25232a;box-shadow:0 24px 70px rgba(25,17,21,.26)}
+.lot-cancel-dialog::backdrop{background:rgba(22,17,25,.58)}
+.lot-cancel-dialog-content{padding:30px;text-align:left}
+.lot-cancel-dialog-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#fff0dc;color:#91500d;font-size:28px;font-weight:750;margin-bottom:18px}
+.lot-cancel-dialog h2{font-size:22px;margin:0 0 12px}
+.lot-cancel-dialog p{line-height:1.55;margin:0 0 24px}
+.lot-cancel-dialog form{text-align:right}
+.lot-cancel-dialog button{min-width:110px}
+.lot-cancel-fallback[hidden]{display:none}
