@@ -12,6 +12,10 @@ MAX_PATHS = 5000
 MAX_INPUT = 1024 * 1024
 
 READONLY_CONTROLLER_FILES = {
+    # GitHub-only verified authorization controller; unrelated to PHP/MySQL suites.
+    # Its dedicated security regression suite remains in php-lint CI.
+    "scripts/verified_deploy_controller.py",
+    "tests/verified_deploy_controller_test.py",
     "scripts/shared_ovh_controller_evidence.py",
     "scripts/ovh_release_evidence_review.py",
     "scripts/ovh_release_evidence_discovery.py",
