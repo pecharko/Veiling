@@ -6,12 +6,43 @@ secret printing. Output is an observation, not deployment/browser acceptance.
 """
 import argparse
 import json
+import os
 import posixpath
 import re
 import subprocess
 from shared_ovh_release import ROOT, connect, digest, load_manifest, read_remote
+from controller_evidence_collector import get_json
+from controller_run_evidence_binding import inspect_run
 
 SHA = re.compile(r"^[a-f0-9]{40}$")
+
+
+def verify_release_run(run_id, release_sha, token, *, read_json=get_json):
+    """Require real GitHub successful shared-release job before any OVH read.
+
+    inspect_run deliberately returns INCOMPLETE even on success because
+    GitHub metadata is not independent OVH proof. Accept only its exact
+    positive-observation reason, never a generic CI-success claim.
+    """
+    if (type(run_id) is not int or run_id <= 0
+            or not isinstance(release_sha, str) or not SHA.fullmatch(release_sha)
+            or not isinstance(token, str) or not token):
+        raise ValueError("Invalid GitHub release evidence identity")
+    run = read_json("/actions/runs/" + str(run_id), token)
+    page = read_json("/actions/runs/" + str(run_id) + "/jobs?per_page=100", token)
+    if (not isinstance(page, dict)
+            or type(page.get("total_count")) is not int
+            or page["total_count"] <= 0 or page["total_count"] >= 100
+            or not isinstance(page.get("jobs"), list)
+            or len(page["jobs"]) != page["total_count"]):
+        raise ValueError("Unbounded or incomplete release jobs")
+    decision = inspect_run(run, page["jobs"], run_id=run_id,
+                           release_sha=release_sha)
+    if (decision.get("status") != "INCOMPLETE"
+            or decision.get("reason") !=
+            "actions_success_not_independent_remote_proof"):
+        raise ValueError("GitHub release-run identity or job not verified")
+    return decision
 
 
 def check_checkout():
@@ -74,6 +105,8 @@ def main():
     parser.add_argument("--release-sha", required=True)
     parser.add_argument("--run-id", type=int, required=True)
     args = parser.parse_args()
+    # GITHUB_TOKEN needs only Actions:read. No remote contact without proof.
+    verify_release_run(args.run_id, args.release_sha, os.environ.get("GITHUB_TOKEN", ""))
     result = verify(args.release_id, args.release_sha, args.run_id)
     print(json.dumps(result, indent=2, sort_keys=True))
     return 0 if result["status"] == "OBSERVED_MATCH" else 1

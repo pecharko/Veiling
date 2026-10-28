@@ -52,6 +52,38 @@ class B4OVHReadbackTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "clean pinned"):
                 module.check_checkout()
 
+
+    def test_github_run_preflight_binds_exact_release(self):
+        from controller_run_evidence_binding import REQUIRED_STEPS, WORKFLOW
+        run = {"id": 31, "head_sha": SHA, "path": WORKFLOW,
+               "event": "workflow_dispatch", "head_branch": "main",
+               "status": "completed", "conclusion": "success"}
+        jobs = [{"name": "release", "status": "completed",
+                 "conclusion": "success", "steps": [
+                     {"name": n, "status": "completed", "conclusion": "success"}
+                     for n in REQUIRED_STEPS]}]
+        seen = []
+        def read(path, token):
+            seen.append(path)
+            return run if path == "/actions/runs/31" else {"total_count": 1, "jobs": jobs}
+        result = module.verify_release_run(31, SHA, "read-token", read_json=read)
+        self.assertEqual(result["reason"], "actions_success_not_independent_remote_proof")
+        self.assertEqual(seen, ["/actions/runs/31", "/actions/runs/31/jobs?per_page=100"])
+        for bad_run in ({**run, "head_sha": "b" * 40},
+                        {**run, "event": "pull_request"},
+                        {**run, "conclusion": "failure"}):
+            with self.subTest(bad_run=bad_run):
+                with self.assertRaises(ValueError):
+                    module.verify_release_run(31, SHA, "read-token",
+                        read_json=lambda path, token: bad_run if path == "/actions/runs/31" else {"total_count": 1, "jobs": jobs})
+        with self.assertRaises(ValueError):
+            module.verify_release_run(31, SHA, "read-token",
+                read_json=lambda path, token: run if path == "/actions/runs/31" else {"total_count": 100, "jobs": jobs})
+
+    def test_missing_token_fails_before_api(self):
+        with self.assertRaises(ValueError):
+            module.verify_release_run(31, SHA, "", read_json=lambda *a: self.fail("network"))
+
     def test_reader_failure_does_not_report_success(self):
         with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
             with self.assertRaises(OSError):
