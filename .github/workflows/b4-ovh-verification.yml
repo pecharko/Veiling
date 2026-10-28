@@ -92,13 +92,17 @@ jobs:
             exit 1
           fi
           echo "B4 checkout checkpoint 2 OK: clean release data"
-          # Exclude only the expected untracked nested checkout, reject all other changes.
-          if [ -n "$(git status --porcelain --untracked-files=normal | grep -v '^?? release-data/$' || true)" ]; then
-            echo "::error::B4 checkout checkpoint 3 failed: unexpected trusted repository changes"
-            git status --porcelain --untracked-files=normal | sed -E 's@^(.{2}) .*@\\1 [path redacted]@' | sort -u
+          # Validate tracked files independently, then exclude the known nested checkout by
+          # Git pathspec (not by assuming a particular git-status output format).
+          if ! git diff --quiet HEAD -- .; then
+            echo "::error::B4 checkout checkpoint 3 failed: tracked trusted files differ from HEAD"
             exit 1
           fi
-          echo "B4 checkout checkpoint 3 OK: trusted repository unchanged"
+          if [ -n "$(git ls-files --others --exclude-standard -- . ':(exclude)release-data' ':(exclude)release-data/**')" ]; then
+            echo "::error::B4 checkout checkpoint 3 failed: unexpected untracked trusted files"
+            exit 1
+          fi
+          echo "B4 checkout checkpoint 3 OK: trusted tracked and untracked files clean"
       - name: Pinned readback SFTP dependency
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Observe OVH file hashes without writes
