@@ -32,13 +32,14 @@ require_test(!invitation_accept($pdo,$token5,'valid-password-123'),'existing ema
 // Simulate a new invitation issuance using the same UPSERT as the service,
 // without sending email from CI; the previously revoked token must remain dead.
 $replacement=bin2hex(random_bytes(32));
+$pdo->prepare('UPDATE admin_invitations SET revoked_at=UTC_TIMESTAMP(),token_hash=NULL WHERE email=? AND accepted_at IS NULL AND revoked_at IS NULL')
+ ->execute(['ci-invite-revoked@example.invalid']);
 $reissued=$pdo->prepare("INSERT INTO admin_invitations
  (name,email,role,token_hash,created_at,expires_at)
- VALUES ('CI reissued',?,'assistant',?,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR))
- ON DUPLICATE KEY UPDATE name=VALUES(name),role=VALUES(role),
- token_hash=VALUES(token_hash),created_at=UTC_TIMESTAMP(),
- expires_at=VALUES(expires_at),accepted_at=NULL,revoked_at=NULL");
+ VALUES ('CI reissued',?,'assistant',?,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR))");
 $reissued->execute(['ci-invite-revoked@example.invalid',hash('sha256',$replacement)]);
+$history=$pdo->query("SELECT COUNT(*) FROM admin_invitations WHERE email='ci-invite-revoked@example.invalid'")->fetchColumn();
+require_test((int)$history===2,'reissued invitation preserves prior history');
 require_test(!invitation_accept($pdo,$token2,'valid-password-123'),'old token rejected after reissue');
 require_test(invitation_accept($pdo,$replacement,'valid-password-123'),'replacement token accepted');
 require_test(!invitation_accept($pdo,$replacement,'valid-password-123'),'replacement replay denied');
