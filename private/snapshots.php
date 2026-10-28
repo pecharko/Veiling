@@ -165,6 +165,10 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_phase($journal,'photos_active');
   try{
    $pdo->beginTransaction();
+   // Reset tokens refer to pre-restore credentials: invalidate atomically with the restore.
+   // The table is not part of snapshot exports; older installations may lack it.
+   $resetTable = $pdo->query("SHOW TABLES LIKE 'admin_password_resets'")->fetchColumn();
+   if ($resetTable) $pdo->exec('DELETE FROM admin_password_resets');
    foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
    foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
     $columns=SNAP_INSERT[$table];
