@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/gebruikers.php",
+      "source_sha256": "6ed6b9fa7e3cd29b29415263a428b50bf6299c6a127c9022705740298cc6e4d9",
+      "remote_sha256": "eb7705551aa6ad91067594b842aaea23a3f9b49caef36c7ead94b4a1fd05e0e9"
+    },
+    {
+      "path": "catalogus-public/admin/login.php",
+      "source_sha256": "de2a285d804d7458663fd3a9fbff7c58c167741a0203003c548fb9ee87beeca4",
+      "remote_sha256": "d08d2a1bfbe1764752d78b149266305c95e4d95802e903181424a6835bb55b8e"
+    },
+    {
+      "path": "catalogus-public/admin/uitnodiging.php",
+      "source_sha256": "2dd938646cd9984657cac94fff1fb454ec1a1bda445a688844bec9e76dcf751a",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/admin_invitations.php",
+      "source_sha256": "8ceafd38620c781ec5475c3e3e8973376c13411d8d97f4627f9b2a64aa5e409a",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
