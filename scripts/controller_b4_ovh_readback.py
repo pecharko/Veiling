@@ -8,19 +8,34 @@ import argparse
 import json
 import posixpath
 import re
-from shared_ovh_release import connect, digest, load_manifest, read_remote
+import subprocess
+from shared_ovh_release import ROOT, connect, digest, load_manifest, read_remote
 
 SHA = re.compile(r"^[a-f0-9]{40}$")
 
 
-def verify(release_id, release_sha, run_id, *, read=None):
+def check_checkout():
+    """Fail closed unless the Git checkout is clean and points to one commit."""
+    head = subprocess.run(["git", "rev-parse", "--verify", "HEAD"],
+                          cwd=ROOT, check=True, capture_output=True,
+                          text=True, timeout=10).stdout.strip()
+    dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
+                           cwd=ROOT, check=True, capture_output=True,
+                           text=True, timeout=10).stdout
+    if not SHA.fullmatch(head) or dirty:
+        raise ValueError("OVH readback requires a clean pinned Git checkout")
+    return head
+
+
+def verify(release_id, release_sha, run_id, *, read=None, checkout_check=check_checkout):
     """Read bounded exact manifest paths; no acceptance verdict if incomplete."""
     if (not isinstance(release_sha, str) or not SHA.fullmatch(release_sha)
             or type(run_id) is not int or run_id <= 0):
         raise ValueError("Invalid immutable release identity")
+    # Check commit and working tree before opening an OVH connection.
+    if checkout_check() != release_sha:
+        raise ValueError("Refusing unpinned OVH manifest checkout")
     manifest, payload, _baselines = load_manifest(release_id)
-    # The manifest is loaded from a pinned checkout by the caller; this
-    # function cannot prove the checkout SHA and must not claim that it does.
     rows = []
     def check(reader):
         for entry in manifest["files"]:
@@ -48,6 +63,7 @@ def verify(release_id, release_sha, run_id, *, read=None):
             "release_id": release_id, "release_sha": release_sha, "run_id": run_id,
             "status": "OBSERVED_MATCH" if success else "MISMATCH",
             "files": rows, "writes_performed": False,
+            "checkout_sha_verified": True,
             "independent_execution_authenticated": False,
             "browser_acceptance": "PENDING"}
 

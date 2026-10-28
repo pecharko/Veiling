@@ -16,7 +16,7 @@ MANIFEST = {"schema": 1, "files": [
 class B4OVHReadbackTests(unittest.TestCase):
     def test_observation_is_not_acceptance(self):
         with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
-            result = module.verify("review-demo", SHA, 31, read=lambda _: DATA)
+            result = module.verify("review-demo", SHA, 31, read=lambda _: DATA, checkout_check=lambda: SHA)
         self.assertEqual(result["status"], "OBSERVED_MATCH")
         self.assertFalse(result["writes_performed"])
         self.assertFalse(result["independent_execution_authenticated"])
@@ -26,7 +26,7 @@ class B4OVHReadbackTests(unittest.TestCase):
         with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
             for raw in (b"different", None):
                 with self.subTest(raw=raw):
-                    result = module.verify("review-demo", SHA, 31, read=lambda _: raw)
+                    result = module.verify("review-demo", SHA, 31, read=lambda _: raw, checkout_check=lambda: SHA)
                     self.assertEqual(result["status"], "MISMATCH")
 
     def test_invalid_identity_skips_manifest(self):
@@ -34,13 +34,29 @@ class B4OVHReadbackTests(unittest.TestCase):
             with patch.object(module, "load_manifest",
                               side_effect=AssertionError("manifest accessed")):
                 with self.assertRaises(ValueError):
-                    module.verify("review-demo", sha, run, read=lambda _: DATA)
+                    module.verify("review-demo", sha, run, read=lambda _: DATA, checkout_check=lambda: SHA)
+
+    def test_wrong_checkout_blocks_before_manifest_or_ovh(self):
+        with patch.object(module, "load_manifest", side_effect=AssertionError("manifest accessed")):
+            with self.assertRaisesRegex(ValueError, "unpinned"):
+                module.verify("review-demo", SHA, 31,
+                              read=lambda _: self.fail("remote read started"),
+                              checkout_check=lambda: "b" * 40)
+
+    def test_checkout_requires_clean_tree(self):
+        from types import SimpleNamespace
+        with patch.object(module.subprocess, "run", side_effect=[
+            SimpleNamespace(stdout=SHA + "\\n"),
+            SimpleNamespace(stdout=" M releases/demo.json\\n")
+        ]):
+            with self.assertRaisesRegex(ValueError, "clean pinned"):
+                module.check_checkout()
 
     def test_reader_failure_does_not_report_success(self):
         with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
             with self.assertRaises(OSError):
                 module.verify("review-demo", SHA, 31,
-                              read=lambda _: (_ for _ in ()).throw(OSError("remote failed")))
+                              read=lambda _: (_ for _ in ()).throw(OSError("remote failed")), checkout_check=lambda: SHA)
 
 
 if __name__ == "__main__":
