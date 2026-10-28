@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "paths": [
+    "private/photo_delete_safety.php",
+    "private/catalog_reset.php",
+    "catalogus-public/admin/kavel.php",
+    "catalogus-public/admin/backup.php",
+    "catalogus-public/admin/gebruikers.php",
+    "catalogus-public/admin/veiling-organisatie.php"
+  ]
+}
