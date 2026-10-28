@@ -1,8 +1,6 @@
 name: "Bug of verbetering melden - 41 Lokeren"
 description: "Meld een fout of stel een verbetering voor."
-title: "[Bug] "
-labels:
-  - bug
+title: ""
 body:
   - type: markdown
     attributes:
