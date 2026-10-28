@@ -20,6 +20,21 @@ function snap_init(): void {
 }
 function snap_name(string $s): bool {return (bool)preg_match('/^snapshot-20[0-9]{6}-[0-9]{6}-[a-f0-9]{12}\.zip$/D',$s);}
 function snap_path(string $s): string {if(!snap_name($s))throw new RuntimeException('Ongeldige snapshotnaam.');return snap_dir().'/'.$s;}
+/** Delete only a regular snapshot file inside the real private backup directory.
+ * Caller must hold snap_lock(). Never follow symlinks for deletion.
+ */
+function snap_delete(string $name): void {
+ if(!snap_name($name))throw new RuntimeException('Ongeldige snapshotnaam.');
+ $dir=snap_dir();
+ if(is_link($dir)||!is_dir($dir))throw new RuntimeException('Ongeldige snapshotmap.');
+ $root=realpath($dir);
+ if($root===false||$root!==$dir)throw new RuntimeException('Snapshotmap kan niet veilig worden gevalideerd.');
+ $path=$root.DIRECTORY_SEPARATOR.$name;
+ clearstatcache(true,$path);
+ if(is_link($path)||!is_file($path)||realpath($path)!==$path)
+  throw new RuntimeException('Snapshot niet gevonden of onveilig bestand.');
+ if(!unlink($path))throw new RuntimeException('Kon snapshot niet verwijderen.');
+}
 function snap_listing(): array {
  $items=[]; if(!is_dir(snap_dir()))return [];
  foreach(new DirectoryIterator(snap_dir()) as $file){ if(!$file->isFile()||!snap_name($file->getFilename()))continue;$items[]=['name'=>$file->getFilename(),'size'=>$file->getSize(),'time'=>$file->getMTime()]; }
