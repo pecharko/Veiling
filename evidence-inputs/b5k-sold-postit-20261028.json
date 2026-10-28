@@ -1,0 +1,45 @@
+{
+  "release_id": "sold-postit-20261028",
+  "release_sha": "6b8860ec72785895d757db30512d2bfce012f667",
+  "release_run_id": 40646499593,
+  "expected_paths": [
+    "catalogus-public/index.php",
+    "catalogus-public/kavel.php",
+    "catalogus-public/assets/catalogus.css"
+  ],
+  "authorized_main_sha": "8ec47b9314096c8d67aa8b454a4f278b4e82014e",
+  "observation": {
+    "browser_acceptance": "PENDING",
+    "checkout_sha_verified": true,
+    "files": [
+      {
+        "expected_sha256": "f7b95ccd6b30a418a15c4ecd64bc18551953e6ebd065cba0213a8d29fa094860",
+        "match": true,
+        "observed_sha256": "f7b95ccd6b30a418a15c4ecd64bc18551953e6ebd065cba0213a8d29fa094860",
+        "path": "catalogus-public/index.php"
+      },
+      {
+        "expected_sha256": "cf88fef44d632de06fe8850d8de4546b53f15d1509e5ca2361246b2e512d6031",
+        "match": true,
+        "observed_sha256": "cf88fef44d632de06fe8850d8de4546b53f15d1509e5ca2361246b2e512d6031",
+        "path": "catalogus-public/kavel.php"
+      },
+      {
+        "expected_sha256": "ee5f890ec6535aa6e9d354c762fd3423599926a2a1339023119cde62ad7d1f0d",
+        "match": true,
+        "observed_sha256": "ee5f890ec6535aa6e9d354c762fd3423599926a2a1339023119cde62ad7d1f0d",
+        "path": "catalogus-public/assets/catalogus.css"
+      }
+    ],
+    "independent_execution_authenticated": false,
+    "release_id": "sold-postit-20261028",
+    "release_sha": "6b8860ec72785895d757db30512d2bfce012f667",
+    "run_id": 40646499593,
+    "schema": 1,
+    "source": "separate_read_only_ovh_sftp_session",
+    "status": "OBSERVED_MATCH",
+    "writes_performed": false
+  },
+  "b4_run_id": 40660372269,
+  "b4_execution_sha": "5bfaa86d2f25bf3bd7f9c8ff80c7435e5fc9ce94"
+}
