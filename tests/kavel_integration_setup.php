@@ -47,7 +47,7 @@ $ddl = [
     auction_only TINYINT(1) NOT NULL DEFAULT 0,
     market_price DECIMAL(12,2) DEFAULT NULL,
     starting_bid DECIMAL(12,2) DEFAULT NULL,
-    status ENUM('draft','published') NOT NULL DEFAULT 'draft',
+    status ENUM('draft','published','sold','canceled') NOT NULL DEFAULT 'draft',
     sale_location ENUM('markt','veiling') NOT NULL DEFAULT 'markt',
     auction_number INT UNSIGNED NULL DEFAULT NULL,
     UNIQUE KEY uq_lots_auction_number (auction_number),
