@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity, unify_offline_b5_evidence, collect_b4_github_metadata
+from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity, unify_offline_b5_evidence, collect_b4_github_metadata, collect_full_b5_report
 
 SHA = "a" * 40
 DIGEST = "b" * 64
@@ -215,6 +215,72 @@ class B5gGitHubMetadataTests(unittest.TestCase):
         self.assertNotIn("observation", run)
         self.assertNotIn("independent_ovh_readback", run)
         self.assertEqual(len(jobs), 1)
+
+
+class B5hSingleReportTests(unittest.TestCase):
+    def setUp(self):
+        self.calls = []
+        self.base = {"provenance": {"github_actions": {
+            "source": "github_api_run_jobs", "run_id": 12, "release_sha": SHA,
+            "reason": "actions_success_not_independent_remote_proof"}}}
+        self.obs = {"schema": 1,
+            "source": "separate_read_only_ovh_sftp_session",
+            "release_id": "demo", "release_sha": SHA, "run_id": 12,
+            "status": "OBSERVED_MATCH", "writes_performed": False,
+            "checkout_sha_verified": True,
+            "files": [{"path": PATH, "expected_sha256": DIGEST,
+                       "observed_sha256": DIGEST, "match": True}]}
+        self.b4run = {"id": 45, "head_sha": SHA, "head_branch": "main",
+                      "path": ".github/workflows/b4-ovh-verification.yml",
+                      "event": "workflow_dispatch", "status": "completed",
+                      "conclusion": "success"}
+        self.b4jobs = [{"name": "readback", "head_sha": SHA,
+                        "status": "completed", "conclusion": "success"}]
+
+    def release_collect(self, run_id, sha, paths, token):
+        self.calls.append(("release", run_id, sha, paths, token))
+        return self.base
+
+    def b4_collect(self, run_id, token):
+        self.calls.append(("b4", run_id, token))
+        return self.b4run, self.b4jobs
+
+    def check(self, **overrides):
+        params = dict(release_id="demo", release_sha=SHA, release_run_id=12,
+                      expected_paths=[PATH], authorized_main_sha=SHA,
+                      observation=self.obs, b4_run_id=45,
+                      b4_execution_sha=SHA, token="read-token",
+                      release_collector=self.release_collect,
+                      b4_collector=self.b4_collect)
+        params.update(overrides)
+        return collect_full_b5_report(**params)
+
+    def test_single_bounded_readonly_sequence_no_acceptance(self):
+        report = self.check()
+        self.assertEqual(report["status"], "VERIFIED")
+        self.assertEqual([c[0] for c in self.calls], ["release", "b4"])
+        self.assertFalse(report["fully_accepted"])
+        self.assertFalse(report["independent_provenance_authenticated"])
+        self.assertFalse(report["deployment_authorized"])
+        self.assertFalse(report["dispatch_started"])
+        self.assertEqual(report["browser_acceptance"], "PENDING")
+
+    def test_bad_pin_rejected_before_network(self):
+        with self.assertRaises(ValueError):
+            self.check(authorized_main_sha="bad")
+        self.assertEqual(self.calls, [])
+
+    def test_b4_commit_drift_fails_closed(self):
+        self.assertEqual(self.check(b4_execution_sha="c" * 40)["status"], "MISMATCH")
+
+    def test_missing_remote_observation_never_verifies(self):
+        self.assertEqual(self.check(observation=None)["status"], "INCOMPLETE")
+
+    def test_collector_failure_not_hidden(self):
+        def fail(*args):
+            raise ValueError("incomplete evidence")
+        with self.assertRaisesRegex(ValueError, "incomplete evidence"):
+            self.check(release_collector=fail)
 
 
 if __name__ == "__main__":
