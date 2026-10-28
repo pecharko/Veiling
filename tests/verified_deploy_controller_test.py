@@ -187,7 +187,7 @@ with TemporaryDirectory() as folder:
 # B3.3 GitHub-native cross-issue replay guard; all calls mocked, no API writes.
 from unittest.mock import patch as cross_patch
 prior = {"number": 27, "state": "closed"}
-approval_prior = "DEPLOY VERIFIED RELEASE\\nworkflow=sample-release.yml\\nrelease_sha=" + sha
+approval_prior = "DEPLOY VERIFIED RELEASE\nworkflow=sample-release.yml\nrelease_sha=" + sha
 def history(endpoint, *args, **kwargs):
     if endpoint.endswith("/issues?state=all&labels=approved-deploy-request&per_page=100"):
         return [prior]
