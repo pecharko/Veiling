@@ -1,0 +1,47 @@
+"""B4 read-only OVH observation tests; never initiate network."""
+import sys
+import unittest
+from pathlib import Path
+from unittest.mock import patch
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
+import controller_b4_ovh_readback as module
+
+SHA = "a" * 40
+DATA = b"checked content"
+MANIFEST = {"schema": 1, "files": [
+    {"path": "catalogus-public/admin/admin.css",
+     "source_sha256": module.digest(DATA), "remote_sha256": "ABSENT"}]}
+
+
+class B4OVHReadbackTests(unittest.TestCase):
+    def test_observation_is_not_acceptance(self):
+        with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
+            result = module.verify("review-demo", SHA, 31, read=lambda _: DATA)
+        self.assertEqual(result["status"], "OBSERVED_MATCH")
+        self.assertFalse(result["writes_performed"])
+        self.assertFalse(result["independent_execution_authenticated"])
+        self.assertEqual(result["browser_acceptance"], "PENDING")
+
+    def test_mismatch_fails(self):
+        with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
+            for raw in (b"different", None):
+                with self.subTest(raw=raw):
+                    result = module.verify("review-demo", SHA, 31, read=lambda _: raw)
+                    self.assertEqual(result["status"], "MISMATCH")
+
+    def test_invalid_identity_skips_manifest(self):
+        for sha, run in (("bad", 31), (SHA, 0), (SHA, True)):
+            with patch.object(module, "load_manifest",
+                              side_effect=AssertionError("manifest accessed")):
+                with self.assertRaises(ValueError):
+                    module.verify("review-demo", sha, run, read=lambda _: DATA)
+
+    def test_reader_failure_does_not_report_success(self):
+        with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
+            with self.assertRaises(OSError):
+                module.verify("review-demo", SHA, 31,
+                              read=lambda _: (_ for _ in ()).throw(OSError("remote failed")))
+
+
+if __name__ == "__main__":
+    unittest.main()
