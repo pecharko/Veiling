@@ -18,6 +18,13 @@ class ProtectedSnapshotTest(unittest.TestCase):
             with self.assertRaises(ValueError):
                 p.guarded_load(p.RELEASE_ID, source_root=Path(tmp))
 
+    def test_plan_entrypoint_initializes_engine_without_deployment(self):
+        # Regression: real main() initialization must not hide scripts_dir
+        # inside a comment or reach the production deploy implementation.
+        with patch("sys.argv", ["adapter", "plan"]), patch.object(p.engine, "run") as run:
+            p.main()
+            run.assert_called_once()
+
     def test_other_release_is_rejected(self):
         with self.assertRaises(ValueError):
             p.guarded_load("other")
