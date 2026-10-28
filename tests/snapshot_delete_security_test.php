@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__).'/private/snapshots.php';
+require_once dirname(__DIR__).'/private/snapshots.php';
 
 function assert_rejected(string $name): void {
  try { snap_delete($name); } catch (RuntimeException $e) { return; }

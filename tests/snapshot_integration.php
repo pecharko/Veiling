@@ -232,4 +232,6 @@ verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid
        && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null,
        'Legacy restore safely defaults unknown valuations, ownership and auction-only flag');
 if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
+// Exercise the security regression in the existing isolated snapshot CI suite.
+require __DIR__.'/snapshot_delete_security_test.php';
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
