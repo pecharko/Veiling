@@ -192,3 +192,9 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-cancel-dialog form{text-align:right}
 .lot-cancel-dialog button{min-width:110px}
 .lot-cancel-fallback[hidden]{display:none}
+
+/* GitHub issueformulier direct naast de actieve rol. */
+.admin-brand-row .admin-report-issue{display:inline-flex;align-items:center;flex:none;gap:5px;padding:6px 11px;border:1px solid #e9c77b;border-radius:7px;color:#fff3d5;background:rgba(0,0,0,.13);font-size:12px;font-weight:750;text-decoration:none;white-space:nowrap}
+.admin-brand-row .admin-report-issue:hover{text-decoration:underline;background:rgba(0,0,0,.24)}
+.admin-brand-row .admin-report-issue:focus-visible{outline:3px solid #e9c77b;outline-offset:3px}
+@media(max-width:650px){.admin-brand-row{flex-wrap:wrap}.admin-brand-row .admin-report-issue{font-size:11px;padding:5px 8px}}
