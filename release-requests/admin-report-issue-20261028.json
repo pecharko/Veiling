@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "paths": [
+    "private/bootstrap.php",
+    "catalogus-public/admin/admin.css"
+  ]
+}
