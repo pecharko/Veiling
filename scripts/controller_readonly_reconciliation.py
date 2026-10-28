@@ -99,3 +99,81 @@ def reconcile(run, jobs, document, artifacts, *, run_id, release_sha, expected_p
         },
     }
     return output
+
+
+def reconcile_independent_b4(base_report, observation, *, release_id, release_sha,
+                             run_id, expected_files, execution_run=None,
+                             authorized_main_sha=None):
+    """Offline, non-authorizing join of existing release and B4 observations.
+
+    The caller supplies independently retrieved GitHub metadata. This function
+    cannot authenticate that provenance and never upgrades browser acceptance.
+    """
+    from re import fullmatch
+    if (not isinstance(base_report, dict) or
+            not isinstance(release_id, str) or not release_id or
+            not isinstance(release_sha, str) or not fullmatch(r"[a-f0-9]{40}", release_sha) or
+            type(run_id) is not int or run_id <= 0 or
+            not isinstance(expected_files, list) or not expected_files or
+            len(set(expected_files)) != len(expected_files) or
+            any(not isinstance(p, str) or not p for p in expected_files)):
+        raise ValueError("Invalid trusted B5a identity or exact file list")
+    outcome = {"status": "INCOMPLETE", "reason": "independent_observation_missing",
+               "release_id": release_id, "release_sha": release_sha,
+               "release_run_id": run_id, "expected_paths": list(expected_files),
+               "browser_acceptance": "PENDING", "fully_accepted": False,
+               "deployment_authorized": False, "dispatch_started": False,
+               "independent_provenance_authenticated": False}
+    if not isinstance(observation, dict) or not isinstance(execution_run, dict):
+        return outcome
+    # The B4 Python verifier emits the observation; the GitHub metadata is
+    # a separate input, not an authorization to trigger any further work.
+    if (observation.get("release_id") != release_id or
+            observation.get("release_sha") != release_sha or
+            observation.get("run_id") != run_id):
+        outcome.update(status="MISMATCH", reason="release_identity_mismatch")
+        return outcome
+    if (execution_run.get("event") != "workflow_dispatch" or
+            execution_run.get("conclusion") != "success" or
+            execution_run.get("status") != "completed" or
+            not isinstance(execution_run.get("head_sha"), str) or
+            not fullmatch(r"[a-f0-9]{40}", execution_run["head_sha"])):
+        outcome["reason"] = "execution_metadata_not_successful"
+        return outcome
+    if authorized_main_sha is not None:
+        if not isinstance(authorized_main_sha, str) or not fullmatch(r"[a-f0-9]{40}", authorized_main_sha):
+            raise ValueError("Invalid authorized main SHA")
+        if execution_run["head_sha"] != authorized_main_sha:
+            outcome.update(status="MISMATCH", reason="execution_commit_outside_authorization",
+                           observed_main_sha=execution_run["head_sha"])
+            return outcome
+    rows = observation.get("files")
+    if (observation.get("source") != "separate_read_only_ovh_sftp_session" or
+            observation.get("writes_performed") is not False or
+            observation.get("checkout_sha_verified") is not True or
+            observation.get("schema") != 1 or
+            not isinstance(rows, list) or
+            len(rows) != len(expected_files)):
+        outcome["reason"] = "observation_contract_incomplete"
+        return outcome
+    if [r.get("path") if isinstance(r, dict) else None for r in rows] != expected_files:
+        outcome.update(status="MISMATCH", reason="file_allowlist_mismatch")
+        return outcome
+    for row in rows:
+        expected = row.get("expected_sha256")
+        observed = row.get("observed_sha256")
+        if not isinstance(expected, str) or not fullmatch(r"[a-f0-9]{64}", expected):
+            outcome["reason"] = "invalid_expected_digest"
+            return outcome
+        if observed != expected or row.get("match") is not True:
+            outcome.update(status="MISMATCH", reason="readback_digest_mismatch")
+            return outcome
+    if observation.get("status") != "OBSERVED_MATCH":
+        outcome.update(status="MISMATCH", reason="observation_status_mismatch")
+        return outcome
+    # Read-only evidence consistency is NOT attested provenance, browser
+    # acceptance, deployment authorization, or a decision to dispatch.
+    outcome.update(status="VERIFIED", reason="consistent_supplied_b4_evidence",
+                   observed_main_sha=execution_run["head_sha"],
+                   evidence_scope="offline_consistency_only")
+    return outcome
