@@ -222,7 +222,7 @@ def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha
     """
     if not re.fullmatch(r"[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+", repo):
         raise ValueError("Invalid repository")
-    if not re.fullmatch(r"[a-zA-Z0-9_-]+\\.yml", workflow_name):
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+\.yml", workflow_name):
         raise ValueError("Invalid workflow")
     if not re.fullmatch(r"[0-9a-f]{40}", release_sha):
         raise ValueError("Invalid release SHA")
@@ -243,7 +243,7 @@ def reject_prior_approved_release(repo, issue_number, workflow_name, release_sha
         for comment in comments:
             if not isinstance(comment, dict) or not isinstance(comment.get("body"), str):
                 raise ValueError("Invalid approval history")
-            lines = comment["body"].replace("\\r", "").strip().split("\\n")
+            lines = comment["body"].replace("\r", "").strip().split("\n")
             if not lines:
                 continue
             if lines[0] == "DEPLOY VERIFIED RELEASE":
