@@ -15,7 +15,7 @@ CREATE TABLE admin_invitations (
   accepted_at DATETIME NULL,
   revoked_at DATETIME NULL,
   created_by BIGINT UNSIGNED NULL,
-  INDEX idx_admin_invitation_email (email),
+  UNIQUE KEY uq_admin_invitation_email (email),
   INDEX idx_admin_invitation_pending (accepted_at, revoked_at, expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
