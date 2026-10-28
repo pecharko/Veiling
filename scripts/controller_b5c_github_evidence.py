@@ -55,3 +55,39 @@ def validate_b4_run_identity(run, jobs, *, expected_b4_run_id, expected_main_sha
         return {"status": "INCOMPLETE", "reason": "b4_readback_job_not_verified"}
     return {"status": "VERIFIED", "reason": "supplied_b4_run_job_consistent",
             "independent_provenance_authenticated": False}
+
+
+def unify_offline_b5_evidence(*, base_report, observation, b4_run, b4_jobs,
+                              release_id, release_sha, release_run_id,
+                              expected_paths, authorized_main_sha, b4_run_id,
+                              b4_execution_sha):
+    """Join B5b and B5d reports; neither caller inputs nor success grant authority."""
+    b4 = validate_b4_run_identity(
+        b4_run, b4_jobs, expected_b4_run_id=b4_run_id,
+        expected_main_sha=b4_execution_sha)
+    combined = render({
+        "base_report": base_report, "observation": observation,
+        "execution_run": b4_run, "release_id": release_id,
+        "release_sha": release_sha, "release_run_id": release_run_id,
+        "expected_paths": expected_paths,
+        "authorized_main_sha": authorized_main_sha,
+    })
+    # B4 verification was a separate run, not the deployment run.
+    # Require both checks positive before reporting offline consistency.
+    if b4["status"] == "MISMATCH" or combined["status"] == "MISMATCH":
+        status = "MISMATCH"
+    elif b4["status"] == "VERIFIED" and combined["status"] == "VERIFIED":
+        status = "VERIFIED"
+    else:
+        status = "INCOMPLETE"
+    return {
+        "schema": 1, "status": status,
+        "reason": ("both_offline_checks_consistent" if status == "VERIFIED"
+                   else "one_or_more_offline_checks_not_verified"),
+        "b4_run_identity": b4,
+        "readback_consistency": combined,
+        "evidence_scope": "offline_consistency_only",
+        "independent_provenance_authenticated": False,
+        "fully_accepted": False, "deployment_authorized": False,
+        "dispatch_started": False, "browser_acceptance": "PENDING",
+    }
