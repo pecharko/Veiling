@@ -26,14 +26,14 @@ function invitation_issue(PDO $pdo, string $name, string $address, string $role,
         $existing = $pdo->prepare('SELECT id FROM admins WHERE email=? LIMIT 1');
         $existing->execute([$email]);
         if ($existing->fetch()) throw new InvalidArgumentException('Dit e-mailadres heeft al een account.');
-        // The unique email constraint serializes concurrent invitations.
+        // Serialize same-email issuance across workers, while retaining history.
+        $lock = $pdo->prepare('SELECT id FROM admin_invitations WHERE email=? AND accepted_at IS NULL AND revoked_at IS NULL FOR UPDATE');
+        $lock->execute([$email]);
+        $pending = $lock->fetchAll();
+        $pdo->prepare('UPDATE admin_invitations SET revoked_at=UTC_TIMESTAMP(),token_hash=NULL WHERE email=? AND accepted_at IS NULL AND revoked_at IS NULL')->execute([$email]);
         $st = $pdo->prepare("INSERT INTO admin_invitations
           (name,email,role,token_hash,created_at,expires_at,created_by)
-          VALUES (?,?,?,?,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR),?)
-          ON DUPLICATE KEY UPDATE name=VALUES(name),role=VALUES(role),
-          token_hash=VALUES(token_hash),created_at=UTC_TIMESTAMP(),
-          expires_at=DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR),
-          accepted_at=NULL,revoked_at=NULL,created_by=VALUES(created_by)");
+          VALUES (?,?,?,?,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(), INTERVAL 48 HOUR),?)");
         $st->execute([$name,$email,$role,$hash,$creator]);
         $pdo->commit();
     } catch (Throwable $e) {
