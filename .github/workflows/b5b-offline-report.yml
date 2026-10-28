@@ -7,15 +7,26 @@ on:
       - '.github/workflows/b5b-offline-report.yml'
       - 'scripts/controller_b5b_offline_report.py'
       - 'tests/controller_b5b_offline_report_test.py'
+      - 'scripts/controller_b5i_readonly_cli.py'
+      - 'tests/controller_b5i_readonly_cli_test.py'
   workflow_dispatch:
     inputs:
       snapshot_path:
         description: 'Existing committed evidence-inputs/<name>.json (untrusted offline data)'
         required: true
         type: string
+      report_mode:
+        description: 'Offline snapshot or GitHub Actions:read metadata (still untrusted B4 observation)'
+        required: true
+        type: choice
+        options:
+          - offline
+          - github-readonly
+        default: offline
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   test-offline:
@@ -26,6 +37,8 @@ jobs:
           persist-credentials: false
       - name: Test offline B5b contract
         run: python3 -m unittest discover -s tests -p controller_b5b_offline_report_test.py -v
+      - name: Test B5i read-only CLI offline
+        run: python3 -m unittest discover -s tests -p controller_b5i_readonly_cli_test.py -v
       - name: Validate workflow syntax
         run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/b5b-offline-report.yml
 
@@ -38,11 +51,20 @@ jobs:
         with:
           persist-credentials: false
       - name: Generate local-only machine-readable consistency report
+        if: inputs.report_mode == 'offline'
         env:
           SNAPSHOT_PATH: ${{ inputs.snapshot_path }}
         run: |
           python3 -c 'import os,re; p=os.environ["SNAPSHOT_PATH"]; assert re.fullmatch(r"evidence-inputs/[A-Za-z0-9_-]+[.]json", p), "Invalid snapshot path"'
           python3 scripts/controller_b5b_offline_report.py --input "$SNAPSHOT_PATH" --output b5b-consistency-report.json
+      - name: Gather bounded GitHub read-only evidence and report
+        if: inputs.report_mode == 'github-readonly'
+        env:
+          SNAPSHOT_PATH: ${{ inputs.snapshot_path }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          python3 -c 'import os,re; p=os.environ["SNAPSHOT_PATH"]; assert re.fullmatch(r"evidence-inputs/[A-Za-z0-9_-]+[.]json", p), "Invalid snapshot path"'
+          python3 scripts/controller_b5i_readonly_cli.py --input "$SNAPSHOT_PATH" --output b5b-consistency-report.json
       - name: Preserve untrusted consistency report only
         uses: actions/upload-artifact@v4
         with:
