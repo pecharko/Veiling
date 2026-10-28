@@ -6,6 +6,7 @@ readback must be independently verified elsewhere. Does not accept releases.
 """
 from controller_evidence_collector import get_json
 from controller_b4_owner_evidence_binding import evaluate
+from controller_b4_registration_plan import plan
 
 MAX_COMMENTS = 100
 
@@ -51,3 +52,28 @@ def collect_comment_history(issue_number, token, *, read_json=get_json):
                 for c in comments)):
         raise ValueError("Incomplete or unbound issue comments")
     return comments
+
+
+def review_registration(*, issue_number, comment_id, token, expected_owner,
+                        evidence, ovh_attestation, run_id, release_sha, release_id,
+                        read_json=get_json):
+    """One read-only integration of owner proof and bounded replay scan.
+
+    NEVER authorizes a write. A caller-supplied OVH assertion is not trusted
+    provenance; this function only produces a manual-review proposal.
+    """
+    decision = review_owner_with_github(
+        issue_number=issue_number, comment_id=comment_id, token=token,
+        expected_owner=expected_owner, evidence=evidence,
+        ovh_attestation=ovh_attestation, run_id=run_id,
+        release_sha=release_sha, release_id=release_id, read_json=read_json)
+    if decision.get("status") != "READY_FOR_REVIEW":
+        return {"status": "BLOCKED", "reason": "owner_or_ovh_review_incomplete",
+                "write_permitted": False, "write_executed": False,
+                "proposed_body": None}
+    comments = collect_comment_history(issue_number, token, read_json=read_json)
+    result = plan(decision, issue_number=issue_number,
+                  existing_comments=comments)
+    # No output can ever grant annotation authority; trusted independent
+    # verification and serialized registration remain future work.
+    return result
