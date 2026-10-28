@@ -167,8 +167,34 @@ if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$
 $canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een eigen conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
-if($error)echo '<div class="alert error" role="alert">'.e($error).'</div>';
+$cancelAuctionWarning = 'Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
+if ($error === $cancelAuctionWarning) {
+  // Progressive enhancement: warning remains readable when JavaScript is disabled.
+  echo '<div class="alert error lot-cancel-fallback" role="alert">'.e($error).'</div>';
+} elseif ($error) {
+  echo '<div class="alert error" role="alert">'.e($error).'</div>';
+}
 ?>
+<?php if ($error === $cancelAuctionWarning): ?>
+<dialog id="lot-cancel-warning" class="lot-cancel-dialog" aria-labelledby="lot-cancel-title" aria-describedby="lot-cancel-description">
+  <div class="lot-cancel-dialog-content">
+    <div class="lot-cancel-dialog-icon" aria-hidden="true">!</div>
+    <h2 id="lot-cancel-title">Annuleren niet mogelijk</h2>
+    <p id="lot-cancel-description"><?=e($cancelAuctionWarning)?></p>
+    <form method="dialog"><button class="primary" type="submit">Begrepen</button></form>
+  </div>
+</dialog>
+<script>
+  (() => {
+    const dialog = document.getElementById('lot-cancel-warning');
+    if (dialog && typeof dialog.showModal === 'function') {
+      dialog.showModal();
+      const fallback = document.querySelector('.lot-cancel-fallback');
+      if (fallback) fallback.hidden = true;
+    }
+  })();
+</script>
+<?php endif; ?>
 <div class="lot-editor">
   <div class="lot-editor-toolbar">
     <div><a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a><p class="lot-editor-hint">Beheer gegevens, waardering, publicatie en foto's op één plek.</p></div>
