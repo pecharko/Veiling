@@ -29,7 +29,10 @@ function reset_catalog_lots(PDO $pdo): array {
 function reset_catalog_photo_files(array $paths, string $publicRoot): int {
   $failed = 0;
   foreach ($paths as $path) {
-    if (!is_string($path) || !catalog_safe_unlink_photo($path, $publicRoot)) $failed++;
+    if (!is_string($path) || !preg_match('~\\Auploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)\\z~D', $path)) continue;
+    $candidate = rtrim($publicRoot, '/').'/'.$path;
+    if (!is_file($candidate) && !is_link($candidate)) continue;
+    if (!catalog_safe_unlink_photo($path, $publicRoot)) $failed++;
   }
   return $failed;
 }
