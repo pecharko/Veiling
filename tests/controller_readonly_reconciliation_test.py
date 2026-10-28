@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from controller_readonly_reconciliation import reconcile
+from controller_b4_owner_evidence_binding_test import OwnerEvidenceTests  # B4 bounded owner/OVH proof tests
 from controller_b4_registration_plan_test import B4RegistrationPlanTests  # register offline B4 planner regressions
 from controller_b4_acceptance_contract_test import B4AcceptanceContractTests  # register B4 offline cases in existing CI suite
 from controller_b2_retention_test import RetentionTests  # include B2 tests in registered offline CI suite
