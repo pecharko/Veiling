@@ -60,5 +60,27 @@ class B5iCliTests(unittest.TestCase):
             self.assertFalse(output_path.exists())
 
 
+class B5jWorkflowContractTests(unittest.TestCase):
+    def setUp(self):
+        self.workflow = (Path(__file__).resolve().parents[1] /
+                         ".github/workflows/b5b-offline-report.yml").read_text()
+
+    def test_workflow_has_only_read_permissions(self):
+        self.assertIn("permissions:\\n  contents: read\\n  actions: read", self.workflow)
+        self.assertNotIn("environment: production", self.workflow)
+        self.assertNotIn("secrets.OVH", self.workflow)
+
+    def test_github_mode_is_explicit_opt_in_and_main_only(self):
+        self.assertIn("default: offline", self.workflow)
+        self.assertIn("if: inputs.report_mode == 'github-readonly'", self.workflow)
+        self.assertIn("github.ref == 'refs/heads/main'", self.workflow)
+        self.assertIn("controller_b5i_readonly_cli.py --input", self.workflow)
+
+    def test_existing_offline_mode_is_preserved(self):
+        self.assertIn("if: inputs.report_mode == 'offline'", self.workflow)
+        self.assertIn("controller_b5b_offline_report.py --input", self.workflow)
+        self.assertIn("persist-credentials: false", self.workflow)
+
+
 if __name__ == "__main__":
     unittest.main()
