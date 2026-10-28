@@ -1,14 +1,19 @@
 <?php
 declare(strict_types=1);
-// Issue #224: private CLI-only OVH cron script. NOT activated by this commit.
+// Private CLI-only cron. Logging must never change the archival transaction.
 if (PHP_SAPI !== 'cli') { http_response_code(403); exit(1); }
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/visitor_stats_archive_one_day_experimental.php';
+require_once __DIR__ . '/visitor_stats_cron_log.php';
+$started = gmdate('Y-m-d\TH:i:s\Z');
 $cutoff = gmdate('Y-m-d', strtotime('-7 days'));
 $maxDays = 14;
 $totalDays = 0;
 $totalRows = 0;
 $totalViews = 0;
+$status = 'ok';
+$errorType = null;
+$exitCode = 0;
 try {
     $pdo = db();
     $stmt = $pdo->prepare('SELECT GET_LOCK(?, 0)');
@@ -31,11 +36,29 @@ try {
     }
     fwrite(STDOUT, "archive_ok days=$totalDays rows=$totalRows views=$totalViews cutoff=$cutoff\n");
     if ($totalDays === $maxDays) {
+        $status = 'limit';
+        $exitCode = 2;
         fwrite(STDERR, "archive_catchup_limit_reached days=$totalDays cutoff=$cutoff\n");
-        exit(2);
     }
 } catch (Throwable $e) {
-    error_log('Archive cron failed; error type=' . get_class($e));
+    $status = 'error';
+    $exitCode = 1;
+    $errorType = get_class($e); // Do not persist DB exceptions, SQL, paths or visitor data.
+    error_log('Archive cron failed; error type=' . $errorType);
     fwrite(STDERR, "archive_failed days_completed=$totalDays\n");
-    exit(1);
 }
+$logged = visitor_stats_cron_log_append([
+    'started_utc' => $started,
+    'finished_utc' => gmdate('Y-m-d\TH:i:s\Z'),
+    'status' => $status,
+    'days_archived' => $totalDays,
+    'rows_deleted' => $totalRows,
+    'views_archived' => $totalViews,
+    'error_type' => $errorType,
+]);
+if (!$logged) {
+    error_log('Archive cron: unable to persist JSON execution log.');
+    fwrite(STDERR, "archive_log_write_failed\n");
+    if ($exitCode === 0) $exitCode = 1;
+}
+exit($exitCode);
