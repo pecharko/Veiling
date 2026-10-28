@@ -1,7 +1,7 @@
 name: "Verbetering voorstellen - 41 Lokeren"
 description: "Stel een verbetering of een nieuw idee voor."
 labels:
-  - idea
+  - "Idea"
 body:
   - type: markdown
     attributes:
@@ -28,8 +28,8 @@ body:
     id: probleem
     attributes:
       label: Welke verbetering stel je voor?
-      description: Beschrijf de fout of je verbeteringsidee zo concreet mogelijk.
-      placeholder: "De eerste kavel-foto verschijnt niet, of: ik wil kavels kunnen sorteren op categorie."
+      description: Beschrijf je melding zo concreet mogelijk.
+      placeholder: "Beschrijf wat je opmerkt of wilt verbeteren."
     validations:
       required: true
   - type: textarea
