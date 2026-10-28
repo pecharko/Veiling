@@ -17,7 +17,7 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
     }
   }
   $values['sale_location'] = ($values['sale_location'] ?? 'markt') === 'veiling' ? 'veiling' : 'markt';
-  $values['status'] = ($values['status'] ?? 'draft') === 'published' ? 'published' : 'draft';
+  $values['status'] = in_array(($values['status'] ?? 'draft'), ['draft', 'published', 'sold', 'canceled'], true) ? $values['status'] : 'draft';
   return $values;
 }
 
