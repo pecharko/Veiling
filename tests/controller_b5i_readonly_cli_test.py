@@ -66,7 +66,7 @@ class B5jWorkflowContractTests(unittest.TestCase):
                          ".github/workflows/b5b-offline-report.yml").read_text()
 
     def test_workflow_has_only_read_permissions(self):
-        self.assertIn("permissions:\\n  contents: read\\n  actions: read", self.workflow)
+        self.assertIn("permissions:\n  contents: read\n  actions: read", self.workflow)
         self.assertNotIn("environment: production", self.workflow)
         self.assertNotIn("secrets.OVH", self.workflow)
 
