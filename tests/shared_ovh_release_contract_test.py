@@ -57,6 +57,25 @@ class ManifestContract(unittest.TestCase):
             self.assertEqual(payload["catalogus-public/admin/admin.css"], content)
             self.assertEqual(baselines["catalogus-public/admin/admin.css"], "a" * 64)
 
+    def test_manifest_explicit_source_root_never_reads_trusted_checkout(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / "releases").mkdir()
+            (root / "catalogus-public" / "admin").mkdir(parents=True)
+            data = b"immutable source"
+            (root / "catalogus-public" / "admin" / "admin.css").write_bytes(data)
+            (root / "releases" / "abc.json").write_text(json.dumps({
+                "schema": 1, "files": [{
+                    "path": "catalogus-public/admin/admin.css",
+                    "source_sha256": module.digest(data),
+                    "remote_sha256": "ABSENT"
+                }]
+            }))
+            with patch.object(module, "ROOT", Path("/nonexistent/trusted-root")):
+                _manifest, payload, _remote = module.load_manifest(
+                    "abc", source_root=root)
+            self.assertEqual(payload["catalogus-public/admin/admin.css"], data)
+
     def test_no_unsafe_directories(self):
         with tempfile.TemporaryDirectory() as d:
             root = Path(d)
