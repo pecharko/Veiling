@@ -22,6 +22,25 @@ class B4OVHReadbackTests(unittest.TestCase):
         self.assertFalse(result["independent_execution_authenticated"])
         self.assertEqual(result["browser_acceptance"], "PENDING")
 
+    def test_separate_checkout_is_data_not_executed(self):
+        source_root = Path("/tmp/b4-test-release-data")
+        with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})) as loader:
+            result = module.verify(
+                "review-demo", SHA, 31, read=lambda _: DATA,
+                checkout_check=lambda root: SHA if root == source_root else "b" * 40,
+                source_root=source_root)
+        loader.assert_called_once_with("review-demo", source_root=source_root)
+        self.assertEqual(result["status"], "OBSERVED_MATCH")
+        self.assertFalse(result["writes_performed"])
+
+    def test_wrong_separate_checkout_prevents_remote(self):
+        with patch.object(module, "load_manifest", side_effect=AssertionError("manifest accessed")):
+            with self.assertRaisesRegex(ValueError, "unpinned"):
+                module.verify("review-demo", SHA, 31,
+                              read=lambda _: self.fail("remote contacted"),
+                              checkout_check=lambda root: "b" * 40,
+                              source_root=Path("/tmp/b4-untrusted-data"))
+
     def test_mismatch_fails(self):
         with patch.object(module, "load_manifest", return_value=(MANIFEST, {}, {})):
             for raw in (b"different", None):
