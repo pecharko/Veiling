@@ -116,3 +116,35 @@ def collect_b4_github_metadata(b4_run_id, token, *, read_json=None):
     if not isinstance(run, dict):
         raise ValueError("B4 run metadata missing")
     return run, page["jobs"]
+
+
+def collect_full_b5_report(*, release_id, release_sha, release_run_id,
+                           expected_paths, authorized_main_sha, observation,
+                           b4_run_id, b4_execution_sha, token,
+                           release_collector=collect, b4_collector=collect_b4_github_metadata):
+    """One opt-in read-only evidence composition using existing collectors.
+
+    Never starts a workflow, accesses OVH or authenticates the observation.
+    """
+    if not isinstance(token, str) or not token:
+        raise ValueError("Actions:read token required")
+    # Fail before any GitHub access for missing/potentially ambiguous identity.
+    import re
+    if (not isinstance(release_id, str) or not release_id or
+            type(release_run_id) is not int or release_run_id <= 0 or
+            type(b4_run_id) is not int or b4_run_id <= 0 or
+            not isinstance(expected_paths, list) or not expected_paths or
+            len(set(expected_paths)) != len(expected_paths) or
+            not all(isinstance(x, str) and x for x in expected_paths) or
+            not all(isinstance(x, str) and re.fullmatch(r"[a-f0-9]{40}", x)
+                        for x in (release_sha, authorized_main_sha, b4_execution_sha))):
+        raise ValueError("Invalid pinned B5h identity")
+    base = release_collector(release_run_id, release_sha, expected_paths, token)
+    b4_run, b4_jobs = b4_collector(b4_run_id, token)
+    return unify_offline_b5_evidence(
+        base_report=base, observation=observation,
+        b4_run=b4_run, b4_jobs=b4_jobs,
+        release_id=release_id, release_sha=release_sha,
+        release_run_id=release_run_id, expected_paths=expected_paths,
+        authorized_main_sha=authorized_main_sha, b4_run_id=b4_run_id,
+        b4_execution_sha=b4_execution_sha)
