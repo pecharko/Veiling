@@ -89,7 +89,8 @@ if(is_post()){
       try{
         $photos=photo_files($_FILES['photos']??[]);
       }catch(RuntimeException $ex){
-        $error='Foto-upload mislukt; het kavel is niet opgeslagen: '.$ex->getMessage();
+        error_log('[Kavel foto-upload] '.$ex->getMessage());
+        $error='Foto-upload mislukt; het kavel is niet opgeslagen.';
       }
       if(!$error){
         try{
@@ -117,7 +118,7 @@ if(is_post()){
           $failed=[];
           foreach($photos as $i=>$photo){
             try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
-            catch(Throwable $ex){$failed[]=$photo['name'].': '.$ex->getMessage();}
+            catch(Throwable $ex){error_log('[Kavel foto] '.$ex->getMessage());$failed[]=$photo['name'].': verwerking mislukt';}
           }
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
@@ -131,7 +132,7 @@ if(is_post()){
             else $error='Een unieke waarde bestaat al. Het kavel is niet opgeslagen.';
           }
           else{$error='Kon kavel niet opslaan. Controleer de invoer.';error_log($ex->getMessage());}
-        }catch(Throwable $ex){if ($pdo->inTransaction()) $pdo->rollBack();$error='Er ging iets mis met het bewaren: '.$ex->getMessage();}
+        }catch(Throwable $ex){if ($pdo->inTransaction()) $pdo->rollBack();error_log('[Kavel bewaren] '.$ex->getMessage());$error='Er ging iets mis met het bewaren.';}
       }
     }
   }
