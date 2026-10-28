@@ -4,6 +4,7 @@ require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_administrator();
 require_no_index();
 require_once dirname(__DIR__, 2) . '/private/admin_names.php';
+require_once dirname(__DIR__, 2) . '/private/admin_invitations.php';
 
 $pdo = db();
 $error = '';
@@ -23,19 +24,18 @@ if (is_post()) {
         try {
             if ($action === 'create') {
                 $name = admin_validated_name((string)($_POST['name'] ?? ''));
-                $email = mb_strtolower(trim((string)($_POST['email'] ?? '')));
-                $password = (string)($_POST['new_password'] ?? '');
-                if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
-                    throw new InvalidArgumentException('Vul een geldig e-mailadres in.');
+                $email = invitation_email((string)($_POST['email'] ?? ''));
+                $role = invitation_role((string)($_POST['role'] ?? ''));
+                if (!invitation_issue($pdo, $name, $email, $role, $currentId)) {
+                    throw new InvalidArgumentException('Uitnodiging kon niet worden verstuurd. Controleer de mailconfiguratie.');
                 }
-                if (strlen($password) < 12 || strlen($password) > 1024) {
-                    throw new InvalidArgumentException('Gebruik een wachtwoord van minimaal 12 tekens.');
+                flash('Uitnodiging verstuurd. Account actief na het instellen van een wachtwoord.');
+            } elseif ($action === 'revoke-invitation') {
+                $inviteId = filter_var($_POST['invitation_id'] ?? null, FILTER_VALIDATE_INT);
+                if (!$inviteId || !invitation_revoke($pdo, (int)$inviteId)) {
+                    throw new InvalidArgumentException('Uitnodiging is niet meer openstaand.');
                 }
-                $role = (string)($_POST['role'] ?? '');
-                if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) throw new InvalidArgumentException('Ongeldige rol.');
-                $stmt = $pdo->prepare('INSERT INTO admins (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
-                $stmt->execute([$name, $email, password_hash($password, PASSWORD_DEFAULT), $role]);
-                flash('Beheerder toegevoegd.');
+                flash('Uitnodiging ingetrokken.');
             } elseif ($action === 'update') {
                 $name = admin_validated_name((string)($_POST['name'] ?? ''));
                 $target = filter_var($_POST['user_id'] ?? null, FILTER_VALIDATE_INT);
@@ -125,7 +125,9 @@ if (is_post()) {
         }
     }
 }
-$users = $pdo->query('SELECT id,name,email,role,is_active FROM admins ORDER BY name,email')->fetchAll();
+$users = $pdo->query('SELECT id,name,email,role,is_active,last_login_at FROM admins ORDER BY name,email')->fetchAll();
+$invitations = $pdo->query('SELECT id,name,email,role,created_at,expires_at,accepted_at,revoked_at FROM admin_invitations ORDER BY created_at DESC')->fetchAll();
+$pendingCount = count(array_filter($invitations, static fn($i) => !$i['accepted_at'] && !$i['revoked_at'] && strtotime($i['expires_at'] . ' UTC') > time()));
 $selectedId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $selectedUser = null;
 foreach ($users as $candidate) {
@@ -224,7 +226,7 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
         <?php foreach ($users as $user): $id = (int)$user['id']; $isAdmin = $user['role'] === 'administrator'; $active = (int)$user['is_active'] === 1; ?>
           <a class="ua-user<?= $selectedId === $id ? ' selected' : '' ?>" data-search="<?= e(mb_strtolower(admin_name_label($user['name']) . ' ' . $user['email'])) ?>" data-status="<?= $isAdmin ? 'administrator' : ($active ? 'active' : 'off') ?>" href="<?= e(url('admin/gebruikers.php', ['id'=>$id])) ?>#ua-selected" <?= $selectedId === $id ? 'aria-current="true"' : '' ?>>
             <span class="ua-avatar" aria-hidden="true"><?= e(mb_strtoupper(mb_substr(admin_name_label($user['name']),0,2))) ?></span>
-            <span class="ua-user-info"><strong><?= e(admin_name_label($user['name'])) ?></strong><small><?= e($user['email']) ?> · <?= e($roleName($user['role'])) ?><?= $id === $currentId ? ' · Jij' : '' ?></small></span>
+            <span class="ua-user-info"><strong><?= e(admin_name_label($user['name'])) ?></strong><small><?= e($user['email']) ?> · <?= e($roleName($user['role'])) ?><?= $id === $currentId ? ' · Jij' : '' ?></small><small style="display:block">Laatste login: <?= e(invitation_brussels($user['last_login_at'])) ?> (Brussel)</small></span>
             <span class="ua-status<?= !$active ? ' off' : ($isAdmin ? ' admin' : '') ?>"><?= $isAdmin ? 'Altijd actief' : ($active ? 'Actief' : 'Inactief') ?></span><span class="ua-chev">›</span>
           </a>
         <?php endforeach; ?>
@@ -243,7 +245,7 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
         </nav>
         <div class="ua-detail-body">
         <?php if (!$accessTab): ?>
-          <h3>Accountgegevens</h3><p class="ua-hint">Pas naam, e-mailadres, rol en eventueel het wachtwoord aan.</p>
+          <h3>Accountgegevens</h3><p class="ua-hint">Laatste login: <?= e(invitation_brussels($selectedUser["last_login_at"])) ?> (Brussel)</p><p class="ua-hint">Pas naam, e-mailadres, rol en eventueel het wachtwoord aan.</p>
           <form method="post" class="ua-form" autocomplete="off">
             <?= csrf_field() ?><input type="hidden" name="action" value="update"><input type="hidden" name="user_id" value="<?= (int)$selectedUser['id'] ?>">
             <label class="ua-wide">Naam<input type="text" name="name" maxlength="120" required autocomplete="name" value="<?= e($selectedUser['name']) ?>" placeholder="Voor- en achternaam"></label>
@@ -275,15 +277,35 @@ $roleName = static fn(string $role): string => $role === 'administrator' ? 'Admi
       <?php endif; ?>
     </section>
   </div>
-  <dialog id="ua-new-dialog" aria-labelledby="ua-new-heading"><h2 id="ua-new-heading">Nieuwe gebruiker</h2><p class="ua-hint">Maak een account aan. Je huidige wachtwoord is verplicht.</p>
+  <section class="ua-panel" style="margin-top:20px" aria-label="Uitnodigingen">
+    <div class="ua-panel-head"><h2>Uitnodigingen</h2><p><?= $pendingCount ?> openstaand · Europe/Brussels</p></div>
+    <div class="ua-detail-body">
+    <?php if (!$invitations): ?><p class="ua-hint">Nog geen uitnodigingen.</p><?php endif; ?>
+    <?php foreach ($invitations as $invitation):
+      $pending = !$invitation['accepted_at'] && !$invitation['revoked_at'] && strtotime($invitation['expires_at'] . ' UTC') > time();
+      $status = $invitation['accepted_at'] ? 'Geaccepteerd' : ($invitation['revoked_at'] ? 'Ingetrokken' : ($pending ? 'Openstaand' : 'Verlopen'));
+    ?>
+      <div class="ua-access-card"><div><strong><?= e($invitation['name']) ?> · <?= e($invitation['email']) ?></strong>
+        <p><?= e($roleName($invitation['role'])) ?> · <?= e($status) ?></p>
+        <p>Verstuurd: <?= e(invitation_brussels($invitation['created_at'])) ?> · Vervalt: <?= e(invitation_brussels($invitation['expires_at'])) ?></p>
+      </div>
+      <?php if ($pending): ?><form method="post" class="ua-security-form" onsubmit="return confirm('Uitnodiging intrekken?')">
+        <?= csrf_field() ?><input type="hidden" name="action" value="revoke-invitation">
+        <input type="hidden" name="invitation_id" value="<?= (int)$invitation['id'] ?>">
+        <label>Jouw wachtwoord<input type="password" name="current_password" required autocomplete="current-password"></label>
+        <button class="ua-button danger" type="submit">Intrekken</button>
+      </form><?php endif; ?></div>
+    <?php endforeach; ?></div>
+  </section>
+  <dialog id="ua-new-dialog" aria-labelledby="ua-new-heading"><h2 id="ua-new-heading">Gebruiker uitnodigen</h2><p class="ua-hint">Maak een account aan. Je huidige wachtwoord is verplicht.</p>
     <form method="post" class="ua-form" autocomplete="off">
       <?= csrf_field() ?><input type="hidden" name="action" value="create">
       <label class="ua-wide">Naam<input type="text" name="name" maxlength="120" required autocomplete="name" placeholder="Voor- en achternaam"></label>
       <label class="ua-wide">E-mailadres<input type="email" name="email" maxlength="190" required autocomplete="off"></label>
       <label class="ua-wide">Rol<select name="role" required><option value="assistant">Assistent</option><option value="veilingmeester">Veilingmeester</option><option value="administrator">Administrator</option></select></label>
-      <label class="ua-wide">Nieuw wachtwoord (minimaal 12 tekens)<input type="password" name="new_password" minlength="12" required autocomplete="new-password"></label>
+      <p class="ua-hint ua-wide">Een uitnodigingslink wordt per e-mail verstuurd, 48 uur geldig.</p>
       <label class="ua-wide">Jouw huidige wachtwoord<input type="password" name="current_password" required autocomplete="current-password"></label>
-      <div class="ua-wide ua-actions"><button type="button" class="ua-button light" id="ua-close-new">Annuleren</button><button class="ua-button" type="submit">Gebruiker toevoegen</button></div>
+      <div class="ua-wide ua-actions"><button type="button" class="ua-button light" id="ua-close-new">Annuleren</button><button class="ua-button" type="submit">Uitnodiging versturen</button></div>
     </form>
   </dialog>
 </div>
