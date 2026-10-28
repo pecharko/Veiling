@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_auth();
+require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 $pdo = db();
 $s = settings();
 $total = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
@@ -13,7 +14,7 @@ $q = mb_substr(trim((string)($_GET['q'] ?? '')),0,100);
 $category = mb_substr(trim((string)($_GET['category'] ?? '')),0,100);
 $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
 if (!in_array($category,$categories,true)) $category='';
-$status = in_array($_GET['status'] ?? '', ['draft','published'], true) ? (string)$_GET['status'] : '';
+$status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'], true) ? (string)$_GET['status'] : '';
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $photoFilter = ($_GET['photos'] ?? '') === 'none' ? 'none' : '';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
@@ -49,7 +50,7 @@ admin_top('Kaveloverzicht');
     <form class="dashboard-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek kavel of titel</span><input type="search" name="q" placeholder="Zoek kavel of titel…" value="<?=e($q)?>"></label>
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
-      <label><span class="sr-only">Status</span><select name="status"><option value="">Alle statussen</option><option value="draft" <?=$status==='draft'?'selected':''?>>Concept</option><option value="published" <?=$status==='published'?'selected':''?>>Gepubliceerd</option></select></label>
+      <label><span class="sr-only">Status</span><select name="status"><option value="">Alle statussen</option><option value="draft" <?=$status==='draft'?'selected':''?>>Concept</option><option value="published" <?=$status==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$status==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$status==='canceled'?'selected':''?>>Canceled</option></select></label>
       <label><span class="sr-only">Verkoopplaats</span><select name="sale_location"><option value="">Alle verkoopplaatsen</option><option value="markt" <?=$saleLocation==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$saleLocation==='veiling'?'selected':''?>>Veiling</option></select></label>
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
@@ -62,8 +63,8 @@ admin_top('Kaveloverzicht');
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
       <td><?=($row['sale_location'] === 'veiling' && $row['auction_number'] !== null) ? e((string)$row['auction_number']) : ''?></td>
-      <td><span class="dashboard-badge <?=$row['status']==='published'?'is-live':'is-draft'?>"><?=$row['status']==='published'?'● Gepubliceerd':'● Concept'?></span></td>
-      <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a></td>
+      <td><span class="dashboard-badge <?=$row['status']==='published'?'is-live':'is-draft'?>"><?=e(['draft'=>'● Concept','published'=>'● Gepubliceerd','sold'=>'● Verkocht','canceled'=>'● Canceled'][$row['status']] ?? '● Onbekend')?></span></td>
+      <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row) ? '✎ Bewerken' : 'Bekijken'?></a></td>
     </tr><?php endforeach; ?>
     <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
