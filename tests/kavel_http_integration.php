@@ -232,6 +232,7 @@ try {
     'lot_number'=>'301', 'title'=>'Blocked cancel', 'sale_location'=>'veiling', 'status'=>'canceled'
   ]);
   claim($httpStatus===200 && str_contains($body,'eerst afzonderlijk over naar Markt') &&
+    str_contains($body, 'id="lot-cancel-warning"') && str_contains($body, 'Annuleren niet mogelijk') &&
     by_number(301)['status']==='sold' && by_number(301)['title']==='Auction one',
     'Auction lot cannot be canceled');
   [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
@@ -240,6 +241,7 @@ try {
     'lot_number'=>'301', 'title'=>'Blocked combined cancel', 'sale_location'=>'markt', 'status'=>'canceled'
   ]);
   claim($httpStatus===200 && str_contains($body,'eerst afzonderlijk over naar Markt') &&
+    str_contains($body, 'id="lot-cancel-warning"') && str_contains($body, 'Annuleren niet mogelijk') &&
     by_number(301)['sale_location']==='veiling' && by_number(301)['status']==='sold',
     'Cannot bypass two-step flow by combining transfer and cancel');
   [$httpStatus, $editor] = request_page('/admin/kavel.php?id='.$auctionId);
