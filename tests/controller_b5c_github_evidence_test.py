@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity
+from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity, unify_offline_b5_evidence
 
 SHA = "a" * 40
 DIGEST = "b" * 64
@@ -111,6 +111,66 @@ class B5dRunIdentityTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertEqual(self.check(run={**self.run, field: value})
                                  ["status"], "INCOMPLETE")
+
+
+
+class B5eUnifiedEvidenceTests(unittest.TestCase):
+    def setUp(self):
+        self.base = {"provenance": {"github_actions": {
+            "source": "github_api_run_jobs", "run_id": 12,
+            "release_sha": SHA,
+            "reason": "actions_success_not_independent_remote_proof"}}}
+        self.observation = {
+            "schema": 1, "source": "separate_read_only_ovh_sftp_session",
+            "release_id": "demo", "release_sha": SHA, "run_id": 12,
+            "status": "OBSERVED_MATCH", "writes_performed": False,
+            "checkout_sha_verified": True,
+            "files": [{"path": PATH, "expected_sha256": DIGEST,
+                       "observed_sha256": DIGEST, "match": True}]}
+        self.run = {"id": 45, "head_sha": SHA, "head_branch": "main",
+                    "path": ".github/workflows/b4-ovh-verification.yml",
+                    "event": "workflow_dispatch", "status": "completed",
+                    "conclusion": "success"}
+        self.jobs = [{"name": "readback", "head_sha": SHA,
+                      "status": "completed", "conclusion": "success"}]
+
+    def check(self, **changes):
+        data = dict(base_report=self.base, observation=self.observation,
+                    b4_run=self.run, b4_jobs=self.jobs,
+                    release_id="demo", release_sha=SHA,
+                    release_run_id=12, expected_paths=[PATH],
+                    authorized_main_sha=SHA,
+                    b4_run_id=45, b4_execution_sha=SHA)
+        data.update(changes)
+        return unify_offline_b5_evidence(**data)
+
+    def test_consistent_both_is_not_independent_acceptance(self):
+        result = self.check()
+        self.assertEqual(result["status"], "VERIFIED")
+        self.assertFalse(result["independent_provenance_authenticated"])
+        self.assertFalse(result["fully_accepted"])
+        self.assertFalse(result["deployment_authorized"])
+        self.assertFalse(result["dispatch_started"])
+        self.assertEqual(result["browser_acceptance"], "PENDING")
+
+    def test_mismatched_authorized_main_overrides_green_b4(self):
+        r = self.check(authorized_main_sha="c" * 40)
+        self.assertEqual(r["status"], "MISMATCH")
+
+    def test_invalid_b4_identity_overrides_matching_hashes(self):
+        r = self.check(b4_run={**self.run, "id": 46})
+        self.assertEqual(r["status"], "MISMATCH")
+
+    def test_missing_b4_job_is_incomplete(self):
+        self.assertEqual(self.check(b4_jobs=[])["status"], "INCOMPLETE")
+
+    def test_missing_observation_is_incomplete(self):
+        self.assertEqual(self.check(observation=None)["status"], "INCOMPLETE")
+
+    def test_hash_drift_is_mismatch(self):
+        obs = {**self.observation, "files": [
+            {**self.observation["files"][0], "observed_sha256": "c" * 64}]}
+        self.assertEqual(self.check(observation=obs)["status"], "MISMATCH")
 
 
 
