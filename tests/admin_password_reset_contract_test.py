@@ -25,6 +25,16 @@ class PasswordResetContractTest(unittest.TestCase):
         self.assertIn("Referrer-Policy: no-referrer", src)
         self.assertIn("password_hash($password, PASSWORD_DEFAULT)", helper)
         self.assertIn("token_hash=NULL", helper)
+    def test_snapshot_restore_invalidates_tokens_atomically(self):
+        src = (ROOT / "private/snapshots.php").read_text()
+        self.assertIn("SHOW TABLES LIKE 'admin_password_resets'", src)
+        self.assertIn("DELETE FROM admin_password_resets", src)
+        start = src.index("   $pdo->beginTransaction();", src.index("function snap_restore("))
+        invalidate = src.index("DELETE FROM admin_password_resets", start)
+        delete_admins = src.index("foreach(['lot_images','login_attempts','lots','settings','admins']", invalidate)
+        self.assertLess(start, invalidate)
+        self.assertLess(invalidate, delete_admins)
+
     def test_manual_migration(self):
         sql = (ROOT / "database/admin_password_reset_migration.sql").read_text()
         self.assertIn("CREATE TABLE admin_password_resets", sql)
