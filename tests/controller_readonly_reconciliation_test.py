@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from controller_readonly_reconciliation import reconcile, reconcile_independent_b4
-from controller_b5c_github_evidence_test import B5cTests  # offline B5c composition regressions
+from controller_b5c_github_evidence_test import B5dRunIdentityTests, B5cTests  # offline B5c composition regressions
 from controller_b4_ovh_readback_test import B4OVHReadbackTests  # no-network OVH readback regression
 from controller_b4_github_readonly_test import B4GitHubReadTests  # include B4 trusted GET tests in CI
 from controller_b4_owner_evidence_binding_test import OwnerEvidenceTests  # B4 bounded owner/OVH proof tests

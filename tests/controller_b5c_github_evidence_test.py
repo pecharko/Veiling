@@ -3,7 +3,7 @@ import sys
 import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
-from controller_b5c_github_evidence import collect_and_render
+from controller_b5c_github_evidence import collect_and_render, validate_b4_run_identity
 
 SHA = "a" * 40
 DIGEST = "b" * 64
@@ -69,6 +69,49 @@ class B5cTests(unittest.TestCase):
         args["collector"] = broken
         with self.assertRaisesRegex(ValueError, "Invalid GitHub provenance"):
             collect_and_render(**args)
+
+
+class B5dRunIdentityTests(unittest.TestCase):
+    def setUp(self):
+        self.run = {"id": 45, "head_sha": SHA, "head_branch": "main",
+                    "path": ".github/workflows/b4-ovh-verification.yml",
+                    "event": "workflow_dispatch", "status": "completed",
+                    "conclusion": "success"}
+        self.jobs = [{"name": "readback", "head_sha": SHA,
+                      "status": "completed", "conclusion": "success"}]
+
+    def check(self, run=None, jobs=None, sha=SHA):
+        return validate_b4_run_identity(
+            self.run if run is None else run,
+            self.jobs if jobs is None else jobs,
+            expected_b4_run_id=45, expected_main_sha=sha)
+
+    def test_success_never_authenticates_independent_provenance(self):
+        result = self.check()
+        self.assertEqual(result["status"], "VERIFIED")
+        self.assertFalse(result["independent_provenance_authenticated"])
+
+    def test_parallel_main_drift_is_mismatch(self):
+        self.assertEqual(self.check(sha="c" * 40)["status"], "MISMATCH")
+
+    def test_wrong_run_id_is_mismatch(self):
+        self.assertEqual(self.check(run={**self.run, "id": 46})["status"], "MISMATCH")
+
+    def test_missing_duplicate_or_failed_job_never_verifies(self):
+        for jobs in ([], self.jobs * 2,
+                     [{**self.jobs[0], "conclusion": "failure"}],
+                     [{**self.jobs[0], "head_sha": "c" * 40}]):
+            with self.subTest(jobs=jobs):
+                self.assertEqual(self.check(jobs=jobs)["status"], "INCOMPLETE")
+
+    def test_push_or_wrong_workflow_never_verifies(self):
+        for field, value in (("event", "push"),
+                             ("path", ".github/workflows/shared-ovh-release.yml"),
+                             ("conclusion", "failure")):
+            with self.subTest(field=field):
+                self.assertEqual(self.check(run={**self.run, field: value})
+                                 ["status"], "INCOMPLETE")
+
 
 
 if __name__ == "__main__":
