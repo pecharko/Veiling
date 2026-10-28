@@ -5,6 +5,7 @@ import unittest
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 from controller_readonly_reconciliation import reconcile
+from controller_b2_retention_test import RetentionTests  # include B2 tests in registered offline CI suite
 from controller_run_evidence_binding import REQUIRED_STEPS, WORKFLOW
 
 SHA = "a" * 40
