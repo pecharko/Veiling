@@ -17,6 +17,13 @@ must(lot_can_edit('assistant', 42, $ownDraft), 'assistent eigen concept');
 must(!lot_can_edit('assistant', 42, $otherDraft), 'assistent andermans concept');
 must(!lot_can_edit('assistant', 42, $noOwnerDraft), 'assistent onbekende maker');
 must(!lot_can_edit('assistant', 42, $ownPublished), 'assistent eigen gepubliceerd');
+foreach (['sold', 'canceled'] as $finalStatus) {
+  $ownFinal = ['status'=>$finalStatus, 'created_by_admin_id'=>42];
+  must(!lot_can_edit('assistant', 42, $ownFinal), "assistent kan eigen $finalStatus niet wijzigen");
+  foreach (['administrator', 'veilingmeester'] as $privilegedRole) {
+    must(lot_can_edit($privilegedRole, 12, $ownFinal), "$privilegedRole kan $finalStatus beheren");
+  }
+}
 must(!lot_can_edit('assistant', 0, $ownDraft), 'assistent zonder account');
 must(!lot_can_edit('unknown', 42, $ownDraft), 'onbekende rol');
 foreach (['administrator', 'veilingmeester'] as $role) {
