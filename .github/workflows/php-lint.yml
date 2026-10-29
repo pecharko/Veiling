@@ -122,6 +122,8 @@ jobs:
           python3 -m unittest discover -s tests -p phase_c_atomic_ref_reconciliation_test.py -v
           python3 -m unittest discover -s tests -p phase_c_two_stage_contract_test.py -v
           python3 -m unittest discover -s tests -p phase_c_complete_readonly_audit_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_readonly_static_gate_test.py -v
+          python3 scripts/phase_c_readonly_static_gate.py
 
       - name: Test B5 controller advisory integration offline
         run: |
