@@ -1,0 +1,22 @@
+name: Phase C inert transport contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_inert_transport.py'
+      - 'tests/phase_c_inert_transport_test.py'
+      - '.github/workflows/phase-c-inert-transport-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inert-transport:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify inert transport contract offline
+        run: python3 -m unittest discover -s tests -p phase_c_inert_transport_test.py -v
