@@ -1,0 +1,18 @@
+name: Phase C2 trusted executor offline
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_trusted_executor.py'
+      - 'tests/phase_c_c2_trusted_executor_test.py'
+      - '.github/workflows/phase-c-c2-trusted-executor-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline-trusted:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_trusted_executor_test.py -v
