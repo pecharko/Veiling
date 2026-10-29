@@ -101,6 +101,83 @@ class PhaseCStaticGateTests(unittest.TestCase):
             with self.subTest(injection=injection):
                 self.assertTrue(review_module(CLIENT, source + "\n" + injection + "\n"))
 
+    def test_client_get_allowlist_and_fixed_names_cannot_expand(self):
+        source = self.sources[CLIENT]
+        cases = (
+            (
+                '    re.escape(ROOT) + r"/git/ref/heads/main",',
+                '    re.escape(ROOT) + r"/git/ref/heads/main",\n'
+                '    re.escape(ROOT) + r"/actions/runs",',
+            ),
+            ('ROOT = "/repos/pecharko/Veiling"',
+             'ROOT = "/repos/attacker/repo"'),
+            ('TARGET = "tests/phase_c_sandbox_test.php"',
+             'TARGET = "private/config.php"'),
+            ('ID = r"[1-9][0-9]*"', 'ID = r".*"'),
+            ('SHA = r"[a-f0-9]{40}"', 'SHA = r".*"'),
+            ('BRANCH = r"test/phase-c-[a-z0-9-]{1,40}"',
+             'BRANCH = r".*"'),
+            (
+                'NONCE_PATTERN = re.compile(\n'
+                '    re.escape(ROOT) + r"/git/ref/tags/phase-c-once-issue-" + ID\n'
+                ')',
+                'NONCE_PATTERN = re.compile(r".*")',
+            ),
+            (
+                'API = "https://api.github.com"',
+                'API = "https://api.github.com"\n'
+                'API = "https://attacker.invalid"',
+            ),
+        )
+        for old, new in cases:
+            with self.subTest(old=old[:45]):
+                self.assertIn(old, source)
+                altered = source.replace(old, new, 1)
+                errors = review_module(CLIENT, altered)
+                self.assertTrue(
+                    any("allowlist" in item or "constant drift" in item
+                        or "nonce endpoint" in item for item in errors),
+                    errors,
+                )
+
+    def test_ci_checkout_token_and_job_permission_escalation_denied(self):
+        checkout_marker = '          persist-credentials: false'
+        self.assertIn(checkout_marker, self.workflow)
+        cases = (
+            self.workflow.replace(
+                '    runs-on: ubuntu-latest',
+                '    permissions:\n      contents: write\n'
+                '    runs-on: ubuntu-latest',
+                1,
+            ),
+            self.workflow.replace(
+                checkout_marker, '          persist-credentials: true', 1
+            ),
+            self.workflow.replace(checkout_marker + '\n', '', 1),
+            self.workflow.replace(
+                checkout_marker,
+                checkout_marker + '\n          token: fake-secret',
+                1,
+            ),
+            self.workflow.replace(
+                checkout_marker,
+                checkout_marker + '\n          persist-credentials: true',
+                1,
+            ),
+            self.workflow.replace(
+                '      - name: Set up PHP 8.2',
+                '      - name: Extra checkout\n'
+                '        uses: actions/checkout@v4\n\n'
+                '      - name: Set up PHP 8.2',
+                1,
+            ),
+            self.workflow + '\npermissions:\n  contents: read\n',
+        )
+        for index, workflow in enumerate(cases):
+            with self.subTest(index=index):
+                issues = review_workflow(workflow)
+                self.assertTrue(issues, "Privilege drift was not detected")
+
     def test_invalid_syntax_and_missing_files_fail_closed(self):
         path = "scripts/phase_c_atomic_refs_plan.py"
         self.assertTrue(review_module(path, "def broken("))
