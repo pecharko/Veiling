@@ -34,7 +34,7 @@ class TransportTests(unittest.TestCase):
             r = read_endpoint(path, "fake", enabled=True, opener=fake)
             self.assertFalse(r["write_allowed"])
             self.assertEqual(r["read_only_payload"], {"name": "fake"})
-        self.assertEqual([x[0] for x in observed], ["GET", "GET"])
+        self.assertEqual([x[0] for x in observed], ["GET"])
         self.assertTrue(all(x[1].startswith("https://api.github.com/") for x in observed))
 
     def test_rejects_scope_elevation_even_when_enabled(self):
