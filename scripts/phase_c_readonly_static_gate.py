@@ -46,7 +46,7 @@ SAFE_WORKFLOW_PERMISSIONS = {"contents: read"}
 # Pin the *structure* of the dedicated GET path allowlist. Equivalent
 # whitespace changes are fine; new endpoints require an explicit security
 # review and a change to this independent policy snapshot.
-CLIENT_PATH_EXPRESSION = """
+CLIENT_PATH_EXPRESSION = r"""
 tuple(re.compile(p) for p in (
     re.escape(ROOT),
     re.escape(ROOT) + r"/pulls/" + ID,
