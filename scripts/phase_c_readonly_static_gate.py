@@ -216,25 +216,25 @@ def review_workflow(content):
         errors.append("CI: unexpected job or token permissions")
     # A job-level override can silently supersede a read-only top-level token.
     permission_declarations = re.findall(
-        r"(?m)^([ \\t]*)permissions\\s*:", content
+        r"(?m)^([ \t]*)permissions\s*:", content
     )
     if permission_declarations != [""]:
         errors.append("CI: duplicate or job-level permissions override")
     checkout = re.search(
-        r"(?ms)^      - name: Checkout source[ \\t]*\\n"
-        r"(?P<body>.*?)(?=^      - name: |\\Z)",
+        r"(?ms)^      - name: Checkout source[ \t]*\n"
+        r"(?P<body>.*?)(?=^      - name: |\Z)",
         content,
     )
     if checkout is None:
         errors.append("CI: expected source checkout missing")
     else:
         block = checkout.group("body")
-        if not re.search(r"(?m)^        uses: actions/checkout@v4\\s*$", block):
+        if not re.search(r"(?m)^        uses: actions/checkout@v4\s*$", block):
             errors.append("CI: checkout action changed")
-        if not re.search(r"(?m)^          persist-credentials: false\\s*$", block):
+        if not re.search(r"(?m)^          persist-credentials: false\s*$", block):
             errors.append("CI: checkout credentials may persist")
     if len(re.findall(
-        r"(?m)^\\s*uses: actions/checkout@", content
+        r"(?m)^\s*uses: actions/checkout@", content
     )) != 1:
         errors.append("CI: additional or missing checkout action")
     if CI_MARKER not in content:
