@@ -114,6 +114,7 @@ jobs:
           python3 -m unittest discover -s tests -p phase_c_one_shot_preflight_test.py -v
           python3 -m unittest discover -s tests -p phase_c_offline_nonce_store_test.py -v
           python3 -m unittest discover -s tests -p phase_c_cas_offline_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_cas_adversarial_test.py -v
 
       - name: Test B5 controller advisory integration offline
         run: |
