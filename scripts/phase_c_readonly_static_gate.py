@@ -43,6 +43,57 @@ ALLOWED_IMPORTS = {
 }
 SAFE_WORKFLOW_PERMISSIONS = {"contents: read"}
 
+# Pin the *structure* of the dedicated GET path allowlist. Equivalent
+# whitespace changes are fine; new endpoints require an explicit security
+# review and a change to this independent policy snapshot.
+CLIENT_PATH_EXPRESSION = r"""
+tuple(re.compile(p) for p in (
+    re.escape(ROOT),
+    re.escape(ROOT) + r"/pulls/" + ID,
+    re.escape(ROOT) + r"/issues/" + ID,
+    re.escape(ROOT) + r"/issues/comments/" + ID,
+    re.escape(ROOT + "/contents/" + TARGET) + r"\?ref=" + SHA,
+    re.escape(ROOT) + r"/git/commits/" + SHA,
+    re.escape(ROOT) + r"/git/trees/" + SHA + r"\?recursive=1",
+    re.escape(ROOT) + r"/git/blobs/" + SHA,
+    re.escape(ROOT) + r"/git/ref/heads/main",
+    re.escape(ROOT) + r"/git/ref/heads/" + BRANCH,
+    re.escape(ROOT) + r"/git/ref/tags/phase-c-once-issue-" + ID,
+))
+"""
+CLIENT_NONCE_EXPRESSION = """
+re.compile(re.escape(ROOT) + r"/git/ref/tags/phase-c-once-issue-" + ID)
+"""
+EXPECTED_CLIENT_CONSTANTS = {
+    "API": "https://api.github.com",
+    "ROOT": "/repos/pecharko/Veiling",
+    "TARGET": "tests/phase_c_sandbox_test.php",
+    "ID": r"[1-9][0-9]*",
+    "SHA": r"[a-f0-9]{40}",
+    "BRANCH": r"test/phase-c-[a-z0-9-]{1,40}",
+}
+
+
+def _assignment_node(tree, name):
+    matches = [
+        node.value for node in tree.body
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == name
+            for target in node.targets
+        )
+    ]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _same_expression(node, expression):
+    return node is not None and ast.dump(
+        node, include_attributes=False
+    ) == ast.dump(
+        ast.parse(expression, mode="eval").body,
+        include_attributes=False,
+    )
+
+
 
 def _call_name(node):
     if isinstance(node, ast.Name):
@@ -53,12 +104,8 @@ def _call_name(node):
 
 
 def _assignment_str(tree, name):
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id == name for t in node.targets
-        ) and isinstance(node.value, ast.Constant):
-            return node.value.value
-    return None
+    value = _assignment_node(tree, name)
+    return value.value if isinstance(value, ast.Constant) else None
 
 
 def review_module(path, source):
@@ -120,8 +167,17 @@ def review_module(path, source):
     if path == CLIENT:
         if len(requests) != 1 or len(opens) != 1:
             errors.append(path + ": GET transport shape changed")
-        if _assignment_str(tree, "API") != "https://api.github.com":
-            errors.append(path + ": GitHub API host changed")
+        for name, expected in EXPECTED_CLIENT_CONSTANTS.items():
+            if _assignment_str(tree, name) != expected:
+                errors.append(path + ": pinned GitHub client constant drift: " + name)
+        if not _same_expression(
+            _assignment_node(tree, "PATH_PATTERNS"), CLIENT_PATH_EXPRESSION
+        ):
+            errors.append(path + ": GET endpoint allowlist changed")
+        if not _same_expression(
+            _assignment_node(tree, "NONCE_PATTERN"), CLIENT_NONCE_EXPRESSION
+        ):
+            errors.append(path + ": nonce endpoint pattern changed")
         if opens:
             op = opens[0]
             target = op.func
@@ -154,6 +210,33 @@ def review_workflow(content):
     errors = []
     if permissions != SAFE_WORKFLOW_PERMISSIONS:
         errors.append("CI: unexpected job or token permissions")
+    # A job-level override can silently supersede a read-only top-level token.
+    permission_declarations = re.findall(
+        r"(?m)^([ \t]*)permissions\s*:", content
+    )
+    if permission_declarations != [""]:
+        errors.append("CI: duplicate or job-level permissions override")
+    checkout = re.search(
+        r"(?ms)^      - name: Checkout source[ \t]*\n"
+        r"(?P<body>.*?)(?=^      - name: |\Z)",
+        content,
+    )
+    if checkout is None:
+        errors.append("CI: expected source checkout missing")
+    else:
+        block = checkout.group("body")
+        if not re.search(r"(?m)^        uses: actions/checkout@v4\s*$", block):
+            errors.append("CI: checkout action changed")
+        if not re.search(r"(?m)^          persist-credentials: false\s*$", block):
+            errors.append("CI: checkout credentials may persist")
+        if len(re.findall(r"(?m)^          persist-credentials:", block)) != 1:
+            errors.append("CI: duplicate or missing checkout credential setting")
+        if re.search(r"(?m)^          token\s*:", block):
+            errors.append("CI: explicit checkout token override")
+    if len(re.findall(
+        r"(?m)^\s*uses: actions/checkout@", content
+    )) != 1:
+        errors.append("CI: additional or missing checkout action")
     if CI_MARKER not in content:
         errors.append("CI: Phase C static guard not executed")
     if "python3 -m unittest discover -s tests -p phase_c_readonly_static_gate_test.py -v" not in content:
