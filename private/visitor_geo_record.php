@@ -27,7 +27,7 @@ function visitor_geo_record_view(PDO $pdo, string $day, string $visitorId, array
     $city = $geo['city_name'] ?? null;
     if (!is_string($country) || !preg_match('/^[A-Z]{2}$/D', $country)
         || !is_string($region) || ($region !== '' && !preg_match('/^[A-Z0-9-]{1,16}$/D', $region))
-        || !is_string($city) || strlen($city) > 480 || !mb_check_encoding($city, 'UTF-8')) {
+        || !is_string($city) || mb_strlen($city, 'UTF-8') > 120 || !mb_check_encoding($city, 'UTF-8')) {
         throw new InvalidArgumentException('Invalid coarse geo bucket');
     }
     if ($country !== 'BE' && $city !== '') {
