@@ -1,0 +1,18 @@
+name: Phase C2 inert GraphQL response gate tests
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_graphql_response_gate.py'
+      - 'tests/phase_c_c2_graphql_response_gate_test.py'
+      - '.github/workflows/phase-c-c2-response-gate-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline-response:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_graphql_response_gate_test.py -v
