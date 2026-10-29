@@ -104,12 +104,8 @@ def _call_name(node):
 
 
 def _assignment_str(tree, name):
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(t, ast.Name) and t.id == name for t in node.targets
-        ) and isinstance(node.value, ast.Constant):
-            return node.value.value
-    return None
+    value = _assignment_node(tree, name)
+    return value.value if isinstance(value, ast.Constant) else None
 
 
 def review_module(path, source):
