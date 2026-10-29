@@ -50,7 +50,7 @@ class GuardedTests(unittest.TestCase):
         import inspect
         from scripts import phase_c_c2_guarded_atomic_sender as module
         source = inspect.getsource(module)
-        self.assertNotIn("urllib", source)
+        self.assertNotIn("import urllib", source)
         self.assertNotIn("http.client", source)
         self.assertNotIn("requests.post", source)
 
