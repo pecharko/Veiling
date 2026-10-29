@@ -1,0 +1,43 @@
+name: Phase C isolated sandbox dry run (read-only)
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/phase-c-sandbox-dryrun.yml'
+      - 'scripts/development_ci_write_gate.py'
+      - 'tests/development_ci_write_gate_test.py'
+  workflow_dispatch:
+    inputs:
+      expected_sha:
+        description: 'Exact immutable SHA of the sandbox branch under review'
+        type: string
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: phase-c-sandbox-dryrun
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out code without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate immutable SHA on manual run
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          ACTUAL_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$EXPECTED_SHA" = "$ACTUAL_SHA"
+      - name: Execute offline deny-by-default contract tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -p development_ci_write_gate_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_repair_prototype_test.py -v
+      - name: Explicitly confirm no GitHub write or deployment
+        run: |
+          echo "Dry run only: no GitHub write token, no patch, no commit, no merge, no dispatch." >> "$GITHUB_STEP_SUMMARY"
