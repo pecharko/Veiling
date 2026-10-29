@@ -29,6 +29,7 @@ PATH_PATTERNS = tuple(re.compile(p) for p in (
     re.escape(ROOT) + r"/git/commits/" + SHA,
     re.escape(ROOT) + r"/git/trees/" + SHA + r"\?recursive=1",
     re.escape(ROOT) + r"/git/blobs/" + SHA,
+    re.escape(ROOT) + r"/git/ref/heads/main",
     re.escape(ROOT) + r"/git/ref/heads/" + BRANCH,
     re.escape(ROOT) + r"/git/ref/tags/phase-c-once-issue-" + ID,
 ))
