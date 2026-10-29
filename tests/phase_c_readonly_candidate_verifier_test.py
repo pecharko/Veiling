@@ -54,6 +54,7 @@ def fixture():
         ROOT: {
             "full_name": "pecharko/Veiling",
             "node_id": "R_kgDOVNLxvg", "archived": False,
+            "default_branch": "main",
         },
         ROOT + "/git/commits/" + HEAD: {
             "sha": HEAD, "parents": [{"sha": "d" * 40}],
@@ -116,7 +117,7 @@ class ReadonlyCandidateTests(unittest.TestCase):
         self.assertEqual(updates[1]["afterOid"], CANDIDATE)
 
     def test_owner_and_parent_guard(self):
-        for bad in ("owner", "parent", "multi-parent", "node", "archive", "digest"):
+        for bad in ("owner", "parent", "multi-parent", "node", "archive", "default", "digest"):
             with self.subTest(bad=bad):
                 r, a = fixture()
                 if bad == "owner":
@@ -131,6 +132,8 @@ class ReadonlyCandidateTests(unittest.TestCase):
                     r[ROOT]["node_id"] = "R_kgDODifferent"
                 elif bad == "archive":
                     r[ROOT]["archived"] = True
+                elif bad == "default":
+                    r[ROOT]["default_branch"] = "feature/unsafe"
                 elif bad == "digest":
                     a["new_sha256"] = "f" * 64
                 self.assertEqual(verdict(r, a)["decision"], "DENY")
