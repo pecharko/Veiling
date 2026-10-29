@@ -38,7 +38,7 @@ NONCE_PATTERN = re.compile(
 )
 
 
-class GitHubReadError(Exception):
+class GitHubReadError(OSError):
     """A failed, untrusted or unsupported read; caller must fail closed."""
 
 
