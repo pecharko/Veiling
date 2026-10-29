@@ -37,3 +37,5 @@ The preparation in `scripts/phase_c_atomic_refs_plan.py` only constructs an iner
 **Before activation:** confirm whether repository rule sets permit the two conditional ref updates on the sandbox and tag namespace. If GitHub refuses or its semantics differ, fail closed; do not fall back to separate non-atomic writes. Require a separate scoped approval for the workflow, token privileges, immutable source commit and a single sandbox attempt. An ambiguous response must trigger read-only reconciliation and manual review, never blind retry.
 
 API reference: https://docs.github.com/en/graphql/reference/git#updaterefs
+
+Read-only repository metadata on 2026-10-29 confirmed the GitHub GraphQL repository node ID `R_kgDOVNLxvg`, now pinned by the offline planner. The active GitHub integration could list repository rulesets but received HTTP 403 from the branch-protection endpoint. **This is not proof that protections are absent.** A separately authorized trusted activation must verify all relevant branch and tag rules, and fail closed on missing read access.
