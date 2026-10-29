@@ -1,0 +1,22 @@
+name: Phase C2 offline attempt state
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_attempt_state.py'
+      - 'tests/phase_c_c2_attempt_state_test.py'
+      - '.github/workflows/phase-c-c2-attempt-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-attempt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test offline nonce and no-retry state transitions
+        run: python3 -m unittest discover -s tests -p phase_c_c2_attempt_state_test.py -v
