@@ -5,7 +5,7 @@ if (!is_string($source)) throw new RuntimeException('Admin statistics missing');
 foreach ([
  '$cronSuccessful = array_slice',
  '$cronAlerts = array_slice',
- "($run['status'] ?? '') === 'ok'",
+ '($run[\'status\'] ?? \'\') === \'ok\'',
  "['error', 'limit']",
  'Geen geslaagde uitvoeringen in de beschikbare loghistoriek.',
  'Geen fouten of waarschuwingen in de beschikbare loghistoriek.',
