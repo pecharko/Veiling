@@ -1,0 +1,22 @@
+name: Phase C identity evidence offline
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_identity_evidence.py'
+      - 'tests/phase_c_identity_evidence_test.py'
+      - '.github/workflows/phase-c-identity-evidence-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  identity-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Adversarial actor separation
+        run: python3 -m unittest discover -s tests -p phase_c_identity_evidence_test.py -v
