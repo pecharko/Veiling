@@ -21,6 +21,10 @@ class OfflineRepairPrototypeTest(unittest.TestCase):
                 proposal = propose_fixture_fix(path, "return flase;", "phase-c-fixture-expected-true")
                 self.assertEqual(proposal.status, "HUMAN_REVIEW")
 
+    def test_non_php_fixture_rejected(self):
+        self.assertEqual(propose_fixture_fix("tests/fixtures/phase_c_typo.php",
+            "return flase;", "phase-c-fixture-expected-true").status, "HUMAN_REVIEW")
+
     def test_no_ambiguous_or_unknown_error(self):
         self.assertEqual(propose_fixture_fix("tests/fixtures/phase_c_typo.php",
             "return flase; return flase;", "phase-c-fixture-expected-true").status, "HUMAN_REVIEW")
