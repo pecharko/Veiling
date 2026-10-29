@@ -1,0 +1,25 @@
+name: Phase C offline writer simulation tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_offline_writer_simulation.py'
+      - 'tests/phase_c_offline_writer_simulation_test.py'
+      - '.github/workflows/phase-c-offline-writer-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source (read-only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile offline model and tests
+        run: python3 -m py_compile scripts/phase_c_offline_writer_simulation.py tests/phase_c_offline_writer_simulation_test.py
+      - name: Execute offline adversarial tests (no GitHub writes)
+        run: python3 -m unittest discover -s tests -p phase_c_offline_writer_simulation_test.py -v
