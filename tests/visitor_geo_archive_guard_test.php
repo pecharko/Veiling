@@ -44,5 +44,15 @@ try {
 } catch (RuntimeException $expected) {
     if ($expected->getMessage() !== 'Geo and visitor-statistics day totals disagree; archive blocked') throw $expected;
 }
+// Same daily total, but views swapped between two visitors: must fail.
+$db->prepare('INSERT INTO visitor_stats_daily VALUES (?,?,?)')->execute([$day, str_repeat('z',32), 1]);
+$db->prepare('INSERT INTO visitor_geo_daily VALUES (?,?,?)')->execute([$day, str_repeat('z',32), 2]);
+$db->prepare('UPDATE visitor_geo_daily SET views=1 WHERE visitor_id=?')->execute([$visitor]);
+try {
+    visitor_geo_assert_day_consistent($db,$day);
+    throw new RuntimeException('Swapped per-visitor views accepted');
+} catch (RuntimeException $expected) {
+    if ($expected->getMessage() !== 'Geo per-visitor views disagree; archive blocked') throw $expected;
+}
 $db->rollBack();
 echo "Geo archive consistency guard OK\n";
