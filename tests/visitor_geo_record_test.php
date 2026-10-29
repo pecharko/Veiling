@@ -3,6 +3,10 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/private/visitor_geo_record.php';
 
 /** Offline input/transaction guards; actual MySQL upsert requires MySQL integration. */
+if (!in_array('sqlite', PDO::getAvailableDrivers(), true)) {
+    echo "SKIP: PDO SQLite unavailable (MySQL integration pending)\n";
+    exit(0);
+}
 $pdo = new PDO('sqlite::memory:');
 $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $id = str_repeat('x', 32);
