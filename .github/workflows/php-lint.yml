@@ -102,6 +102,11 @@ jobs:
           php -l catalogus-public/admin/login.php
           php tests/admin_invitation_contract_test.php
 
+      - name: Test phase C CI advisory offline (no execution permissions)
+        run: |
+          python3 -m unittest discover -s tests -p development_ci_advisor_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_repair_prototype_test.py -v
+
       - name: Test B5 controller advisory integration offline
         run: |
           python3 -m py_compile scripts/verified_deploy_controller.py tests/controller_b5_advisory_integration_test.py
