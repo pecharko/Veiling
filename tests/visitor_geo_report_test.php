@@ -32,4 +32,20 @@ $unknownCities = visitor_geo_group($withUnknown, 'city');
 if (!in_array('ZZ/?/?', array_column($unknownCities, 'label'), true)) {
  throw new RuntimeException('Unknown city bucket missing');
 }
+
+$percentages = visitor_geo_percentages(visitor_geo_group($withUnknown, 'country'));
+$byLabel = array_column($percentages, 'percentage', 'label');
+if (count($percentages) !== 3 || $byLabel['BE'] !== 50.0 || $byLabel['ZZ'] !== 40.0 || $byLabel['NL'] !== 10.0) {
+ throw new RuntimeException('Country percentage distribution incorrect');
+}
+if (abs(array_sum(array_column($percentages, 'percentage')) - 100.0) > 0.11) {
+ throw new RuntimeException('Percentages must sum to 100 within rounding');
+}
+if (array_keys($percentages[0]) !== ['label', 'percentage']) {
+ throw new RuntimeException('Absolute counts leaked into report presentation');
+}
+if (visitor_geo_percentages([]) !== []) throw new RuntimeException('Empty percentage report incorrect');
+if (visitor_geo_percentages([['label'=>'ZZ','visitor_days'=>0]]) !== []) {
+ throw new RuntimeException('Zero denominator must not divide by zero');
+}
 echo "Geographic report grouping OK\n";
