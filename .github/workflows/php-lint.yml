@@ -117,6 +117,7 @@ jobs:
           python3 -m unittest discover -s tests -p phase_c_cas_adversarial_test.py -v
           python3 -m unittest discover -s tests -p phase_c_integrated_readonly_preflight_test.py -v
           python3 -m unittest discover -s tests -p phase_c_atomic_refs_plan_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_readonly_candidate_verifier_test.py -v
 
       - name: Test B5 controller advisory integration offline
         run: |
