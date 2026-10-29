@@ -4,5 +4,5 @@ declare(strict_types=1);
 // Never merge this draft PR or route this file into the application.
 function phase_c_sandbox_example(): bool
 {
-    return flase;
+    return false;
 }
