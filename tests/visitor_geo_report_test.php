@@ -48,4 +48,14 @@ if (visitor_geo_percentages([]) !== []) throw new RuntimeException('Empty percen
 if (visitor_geo_percentages([['label'=>'ZZ','visitor_days'=>0]]) !== []) {
  throw new RuntimeException('Zero denominator must not divide by zero');
 }
+
+$beRegions = visitor_geo_belgian_percentages($withUnknown, 'region');
+if (count($beRegions) !== 1 || $beRegions[0]['label'] !== 'BE/VOV' || $beRegions[0]['percentage'] !== 100.0) {
+ throw new RuntimeException('Belgian province denominator incorrectly includes foreign/unknown visitors');
+}
+$beCities = visitor_geo_belgian_percentages($withUnknown, 'city');
+$beShares = array_column($beCities, 'percentage', 'label');
+if (($beShares['BE/VOV/Lokeren'] ?? null) !== 60.0 || ($beShares['BE/VOV/Gent'] ?? null) !== 40.0) {
+ throw new RuntimeException('Belgian city shares incorrect');
+}
 echo "Geographic report grouping OK\n";
