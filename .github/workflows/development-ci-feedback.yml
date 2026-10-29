@@ -1,0 +1,31 @@
+name: Development CI feedback (read-only)
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+      - Kaveleditor integratietests (geisoleerd)
+      - Snapshot en herstel — geisoleerde tests
+    types: [completed]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  diagnose:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Explain CI outcome without changing a PR or release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          echo "CI outcome: $RUN_CONCLUSION for immutable SHA $RUN_SHA" >> "$GITHUB_STEP_SUMMARY"
+          gh api "repos/$GH_REPOSITORY/actions/runs/$RUN_ID/jobs?per_page=100" \
+            --jq '.jobs[] | select(.conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "cancelled") | "Failed job: " + .name + " (" + (.conclusion // "unknown") + ")"' \
+            >> "$GITHUB_STEP_SUMMARY"
+          echo "Read-only feedback: no commits, merges, deployment, release approvals or auto-retry." >> "$GITHUB_STEP_SUMMARY"
