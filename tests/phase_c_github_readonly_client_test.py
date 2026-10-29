@@ -58,6 +58,7 @@ class ReadOnlyClientTests(unittest.TestCase):
             ROOT + "/git/commits/" + "a" * 40,
             ROOT + "/git/trees/" + "b" * 40 + "?recursive=1",
             ROOT + "/git/blobs/" + "c" * 40,
+            ROOT + "/git/ref/heads/main",
             ROOT + "/git/ref/heads/test/phase-c-sandbox-20261029",
             ROOT + "/git/ref/tags/phase-c-once-issue-900",
         )
@@ -77,7 +78,7 @@ class ReadOnlyClientTests(unittest.TestCase):
             ROOT + "/actions/workflows/verified-deploy-controller.yml/dispatches",
             ROOT + "/contents/private/config.php?ref=" + "a" * 40,
             ROOT + "/git/refs/heads/main",
-            ROOT + "/git/ref/heads/main",
+            ROOT + "/git/ref/heads/feature/unsafe",
             ROOT + "/git/ref/heads/test/phase-c-../main",
             ROOT + "/git/ref/tags/phase-c-once-issue-0",
             ROOT + "/git/ref/tags/phase-c-once-issue-123?x=y",
