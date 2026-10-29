@@ -31,11 +31,13 @@ def _decode_blob(blob, expected_sha):
     if type(blob.get("size")) is not int or not 0 <= blob["size"] <= 2048:
         raise ValueError("Invalid blob size")
     encoded = "".join(blob["content"].split())
+    if len(encoded) > 3000:
+        raise ValueError("Oversized encoded blob")
     content = base64.b64decode(encoded, validate=True)
     if len(content) != blob["size"]:
         raise ValueError("Blob size mismatch")
     git_sha = hashlib.sha1(b"blob " + str(len(content)).encode("ascii") +
-                           b"\\0" + content).hexdigest()
+                           b"\0" + content).hexdigest()
     if git_sha != expected_sha:
         raise ValueError("Git blob hash mismatch")
     return content.decode("utf-8")
