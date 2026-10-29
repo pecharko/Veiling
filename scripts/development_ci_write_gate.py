@@ -39,7 +39,7 @@ def assess_repair_write(request):
     replacement = request["replacement"]
     if not isinstance(replacement, str) or len(replacement.encode("utf-8")) > 2048 or not replacement.startswith("<?php"):
         return dict(refusal, reason="Replacement invalid")
-    if request["attempts"] != 0 or not isinstance(request["attempts"], int):
+    if type(request["attempts"]) is not int or request["attempts"] != 0:
         return dict(refusal, reason="One-shot only")
     if request["author_approved"] is not True:
         return dict(refusal, reason="Separate explicit owner authorization required")
