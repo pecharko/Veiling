@@ -6,6 +6,7 @@ on:
       - 'scripts/phase_c_c2_attempt_state.py'
       - 'tests/phase_c_c2_attempt_state_test.py'
       - 'tests/phase_c_c2_reconciliation_invariants_test.py'
+      - 'tests/phase_c_c2_two_stage_plan_invariants_test.py'
       - '.github/workflows/phase-c-c2-attempt-tests.yml'
 
 permissions:
@@ -23,3 +24,4 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p phase_c_c2_attempt_state_test.py -v
           python3 -m unittest discover -s tests -p phase_c_c2_reconciliation_invariants_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_c2_two_stage_plan_invariants_test.py -v
