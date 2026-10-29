@@ -108,13 +108,18 @@ class ReadonlyCandidateTests(unittest.TestCase):
         for flag in ("write_allowed", "merge_allowed", "dispatch_allowed",
                      "production_authorized"):
             self.assertIs(result[flag], False)
-        updates = result["variables"]["input"]["refUpdates"]
-        self.assertEqual(len(updates), 2)
-        self.assertEqual(updates[0]["name"], "refs/tags/phase-c-once-issue-100")
-        self.assertEqual(updates[1]["name"],
+        reserve = result["reservation"]["variables"]["input"]["refUpdates"]
+        advance = result["branch_update"]["variables"]["input"]["refUpdates"]
+        self.assertEqual(len(reserve), 1)
+        self.assertEqual(len(advance), 1)
+        self.assertEqual(reserve[0]["name"], "refs/tags/phase-c-once-issue-100")
+        self.assertEqual(reserve[0]["beforeOid"], "0" * 40)
+        self.assertEqual(reserve[0]["afterOid"], HEAD)
+        self.assertEqual(advance[0]["name"],
                          "refs/heads/test/phase-c-sandbox-20261029")
-        self.assertEqual(updates[1]["beforeOid"], HEAD)
-        self.assertEqual(updates[1]["afterOid"], CANDIDATE)
+        self.assertEqual(advance[0]["beforeOid"], HEAD)
+        self.assertEqual(advance[0]["afterOid"], CANDIDATE)
+        self.assertTrue(result["reservation_before_branch"])
 
     def test_owner_and_parent_guard(self):
         for bad in ("owner", "parent", "multi-parent", "node", "archive", "default", "digest"):

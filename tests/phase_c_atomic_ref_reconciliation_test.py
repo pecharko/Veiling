@@ -64,18 +64,24 @@ class AtomicRefReconciliationTests(unittest.TestCase):
                      "dispatch_allowed", "production_authorized"):
             self.assertIs(result[flag], False)
 
-    def test_matching_tag_and_branch_is_readback_only(self):
-        reader = RefReader(ref(TAG_NAME, CANDIDATE), ref(HEAD_NAME, CANDIDATE))
+    def test_reservation_and_branch_result_is_readback_only(self):
+        reader = RefReader(ref(TAG_NAME, OLD), ref(HEAD_NAME, CANDIDATE))
         result = reconcile(reader)
-        self.assertEqual(result["decision"], "MATCHING_REFS_OBSERVED")
+        self.assertEqual(result["decision"], "SPENT_NONCE_CANDIDATE_OBSERVED")
         self.assertNoMutatingAuthority(result)
         self.assertEqual(reader.calls, [ROOT, TAG_PATH, HEAD_PATH,
                                         TAG_PATH, HEAD_PATH])
 
+    def test_consumed_nonce_survives_failed_branch_update(self):
+        reader = RefReader(ref(TAG_NAME, OLD), ref(HEAD_NAME, OLD))
+        result = reconcile(reader)
+        self.assertEqual(result["decision"], "SPENT_NONCE_BRANCH_UNCHANGED")
+        self.assertNoMutatingAuthority(result)
+
     def test_404_and_unchanged_branch_does_not_enable_retry(self):
         reader = RefReader("404", ref(HEAD_NAME, OLD))
         result = reconcile(reader)
-        self.assertEqual(result["decision"], "UNCHANGED_REPORTED_NO_RETRY")
+        self.assertEqual(result["decision"], "NONCE_NOT_OBSERVED_NO_RETRY")
         self.assertNoMutatingAuthority(result)
 
     def test_split_brain_denied(self):
@@ -83,7 +89,7 @@ class AtomicRefReconciliationTests(unittest.TestCase):
             (ref(TAG_NAME, CANDIDATE), ref(HEAD_NAME, OLD)),
             ("404", ref(HEAD_NAME, CANDIDATE)),
             (ref(TAG_NAME, "f" * 40), ref(HEAD_NAME, CANDIDATE)),
-            (ref(TAG_NAME, CANDIDATE), ref(HEAD_NAME, "f" * 40)),
+            (ref(TAG_NAME, OLD), ref(HEAD_NAME, "f" * 40)),
         )
         for tag, head in combinations:
             with self.subTest(tag=tag, head=head):
@@ -95,7 +101,7 @@ class AtomicRefReconciliationTests(unittest.TestCase):
     def test_change_between_readbacks_denied(self):
         reader = RefReader(
             "404", ref(HEAD_NAME, OLD),
-            second_tag=ref(TAG_NAME, CANDIDATE),
+            second_tag=ref(TAG_NAME, OLD),
             second_head=ref(HEAD_NAME, CANDIDATE),
         )
         result = reconcile(reader)

@@ -1,4 +1,4 @@
-"""Read-only reconciliation after an uncertain Phase C updateRefs outcome.
+"""Read-only reconciliation after an uncertain two-stage Phase C ref attempt.
 
 An ambiguous network result is NEVER retried. Two bounded rounds of GitHub
 ref GETs can provide advisory evidence only; they do not prove write authority,
@@ -70,12 +70,19 @@ def reconcile_atomic_refs_readonly(api_get, issue_id, branch, original_head,
             return dict(refused, reason="Refs changed between readbacks",
                         observed=rounds)
         nonce, head = rounds[0]
-        if nonce == candidate_head and head == candidate_head:
-            return dict(refused, decision="MATCHING_REFS_OBSERVED",
-                        reason="Two matching readbacks; advisory only, no retry",
+        # A successfully reserved nonce tag always points to the original
+        # head. In the two-stage protocol it remains even if the branch CAS
+        # was denied, timed out or the runner stopped before the second step.
+        if nonce == original_head and head == candidate_head:
+            return dict(refused, decision="SPENT_NONCE_CANDIDATE_OBSERVED",
+                        reason="Reservation and branch result seen; advisory only",
+                        observed=rounds)
+        if nonce == original_head and head == original_head:
+            return dict(refused, decision="SPENT_NONCE_BRANCH_UNCHANGED",
+                        reason="Reservation spent; branch update may have failed",
                         observed=rounds)
         if nonce is None and head == original_head:
-            return dict(refused, decision="UNCHANGED_REPORTED_NO_RETRY",
+            return dict(refused, decision="NONCE_NOT_OBSERVED_NO_RETRY",
                         reason="Nonce returned 404; ambiguity remains, never retry",
                         observed=rounds)
         return dict(refused, reason="Partial, conflicting or unexpected ref state",
