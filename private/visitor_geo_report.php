@@ -53,3 +53,31 @@ function visitor_geo_group(array $rows, string $level): array
         ($b['visitor_days'] <=> $a['visitor_days']) ?: strcmp($a['label'], $b['label']));
     return array_values($groups);
 }
+
+/**
+ * Presentation-only geographic distribution. The denominator is the total
+ * number of visitor-days across ALL buckets for the selected grouping,
+ * including unknown ('ZZ'). This is not a percentage of unique people.
+ * Internal counts remain available for consistency checking, but UI must
+ * render only the 'percentage' and 'label' fields.
+ */
+function visitor_geo_percentages(array $groupedRows): array
+{
+    $total = 0;
+    foreach ($groupedRows as $row) {
+        $count = $row['visitor_days'] ?? null;
+        if (!is_int($count) || $count < 0) {
+            throw new InvalidArgumentException('Invalid geographic visitor-days count');
+        }
+        $total += $count;
+    }
+    if ($total === 0) return [];
+    $percentages = [];
+    foreach ($groupedRows as $row) {
+        $percentages[] = [
+            'label' => (string)$row['label'],
+            'percentage' => round(100 * $row['visitor_days'] / $total, 1),
+        ];
+    }
+    return $percentages;
+}
