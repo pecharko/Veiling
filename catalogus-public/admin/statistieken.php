@@ -35,7 +35,7 @@ if (is_post()) {
     } elseif ($action === 'preview_archive') {
         unset($_SESSION['analytics_archive_pending']);
         try {
-            $cutoff = gmdate('Y-m-d', strtotime('-7 days'));
+            $cutoff = gmdate('Y-m-d', strtotime('-3 days'));
             $stmt = db()->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
             $stmt->execute([$cutoff]);
             $count = (int)$stmt->fetchColumn();
@@ -254,7 +254,7 @@ admin_top('Bezoekersstatistieken');
   </section>
   <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
     <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
-    <p>Na jouw bevestiging wordt maximaal één afgesloten UTC-dag ouder dan 30 dagen samengevat. De bijbehorende bezoekerscodes worden alleen na succesvolle opslag van die dag verwijderd. Start deze actie opnieuw voor de volgende dag. Er is geen automatische opschoning.</p>
+    <p>Na jouw bevestiging wordt maximaal één afgesloten UTC-dag ouder dan 3 dagen samengevat. De bijbehorende bezoekerscodes worden alleen na succesvolle opslag van die dag verwijderd. Start deze actie opnieuw voor de volgende dag. Er is geen automatische opschoning.</p>
     <?php if ($archivePreview !== null): ?>
       <p><strong><?=e((string)$archivePreview['count'])?></strong> historische detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in totaal in aanmerking. Per bevestiging wordt slechts de oudste dag verwerkt (maximaal 20.000 records op die dag).</p>
       <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Archiveren en detailcodes definitief wissen?');">

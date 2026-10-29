@@ -6,7 +6,7 @@ require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/visitor_stats_archive_one_day_experimental.php';
 require_once __DIR__ . '/visitor_stats_cron_log.php';
 $started = gmdate('Y-m-d\TH:i:s\Z');
-$cutoff = gmdate('Y-m-d', strtotime('-7 days'));
+$cutoff = gmdate('Y-m-d', strtotime('-3 days'));
 $maxDays = 14;
 $totalDays = 0;
 $totalRows = 0;

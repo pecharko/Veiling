@@ -596,29 +596,29 @@ $capTotal = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_day_totals WHERE v
 $capTotal->execute([$capDay]);
 check((int)$capTotal->fetchColumn() === 0, 'Oversized one-day archive wrote daily aggregates');
 $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$capDay]);
-// Issue #224: new 7-full-UTC-day retention boundary, with actual SQL writes.
-$sevenDayCutoff = gmdate('Y-m-d', strtotime('-7 days'));
-$eligibleEight = gmdate('Y-m-d', strtotime('-8 days'));
-$protectedSeven = gmdate('Y-m-d', strtotime('-7 days'));
-$add->execute([$eligibleEight, $a, 'home', 0, 3]);
-$add->execute([$protectedSeven, $b, 'lot', 90, 7]);
-$boundaryArchived = archive_visitor_stats_one_day($pdo, $sevenDayCutoff);
+// Issue #224: three full UTC days remain detailed; day four is eligible.
+$threeDayCutoff = gmdate('Y-m-d', strtotime('-3 days'));
+$eligibleFour = gmdate('Y-m-d', strtotime('-4 days'));
+$protectedThree = gmdate('Y-m-d', strtotime('-3 days'));
+$add->execute([$eligibleFour, $a, 'home', 0, 3]);
+$add->execute([$protectedThree, $b, 'lot', 90, 7]);
+$boundaryArchived = archive_visitor_stats_one_day($pdo, $threeDayCutoff);
 check($boundaryArchived['days'] === 1 && $boundaryArchived['rows'] === 1 && $boundaryArchived['views'] === 3,
-    'Seven-day archive failed to aggregate day eight');
+    'Three-day archive failed to aggregate day four');
 $boundaryProtected = $pdo->prepare('SELECT views FROM visitor_stats_daily WHERE visit_date=?');
-$boundaryProtected->execute([$protectedSeven]);
-check((int)$boundaryProtected->fetchColumn() === 7, 'Seven-day archive deleted a retained day');
+$boundaryProtected->execute([$protectedThree]);
+check((int)$boundaryProtected->fetchColumn() === 7, 'Three-day archive deleted a retained day');
 $boundaryTotal = $pdo->prepare('SELECT views FROM visitor_stats_day_totals WHERE visit_date=?');
-$boundaryTotal->execute([$eligibleEight]);
+$boundaryTotal->execute([$eligibleFour]);
 check((int)$boundaryTotal->fetchColumn() === 3, 'Eligible-day aggregate not persisted');
-check(archive_visitor_stats_one_day($pdo, $sevenDayCutoff)['days'] === 0,
-    'Seven-day archive must not consume exactly seven-day-old records');
+check(archive_visitor_stats_one_day($pdo, $threeDayCutoff)['days'] === 0,
+    'Three-day archive must not consume exactly three-day-old records');
 $tooRecentCutoffRejected = false;
-try { archive_visitor_stats_one_day($pdo, gmdate('Y-m-d', strtotime('-6 days'))); }
+try { archive_visitor_stats_one_day($pdo, gmdate('Y-m-d', strtotime('-2 days'))); }
 catch (InvalidArgumentException $e) { $tooRecentCutoffRejected = true; }
-check($tooRecentCutoffRejected, 'Seven-day retention gate allowed shorter cutoff');
-$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$protectedSeven]);
-fwrite(STDOUT, "Seven-day UTC boundary integration passed: day eight aggregated, day seven retained\\n");
+check($tooRecentCutoffRejected, 'Three-day retention gate allowed shorter cutoff');
+$pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$protectedThree]);
+fwrite(STDOUT, "Three-day UTC boundary integration passed: day four aggregated, day three retained\\n");
 check(archive_visitor_stats_one_day($pdo, $cutoff)['days'] === 0, 'Empty admin archive should be a no-op');
 fwrite(STDOUT, "One-day 20001-row fail-closed and empty archive integration passed\\n");
 fwrite(STDOUT, "Late insert on archived day safely rejected without data loss; unresolved progress blocker\\n");

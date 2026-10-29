@@ -9,9 +9,9 @@ CRON = (ROOT / "private/visitor_stats_daily_cron.php").read_text()
 ADMIN = (ROOT / "catalogus-public/admin/statistieken.php").read_text()
 
 class DailyArchiveContract(unittest.TestCase):
-    def test_seven_full_days_are_retained(self):
+    def test_three_full_days_are_retained(self):
         for text in (ARCH, CRON, ADMIN):
-            self.assertIn("strtotime('-7 days')", text)
+            self.assertIn("strtotime('-3 days')", text)
         self.assertIn("WHERE visit_date < ?", ARCH)
 
     def test_cli_only_and_bounded_catchup(self):
