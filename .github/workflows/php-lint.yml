@@ -102,6 +102,15 @@ jobs:
           php -l catalogus-public/admin/login.php
           php tests/admin_invitation_contract_test.php
 
+      - name: Test staged geographic analytics offline (no DB migration)
+        run: |
+          php tests/visitor_geo_lookup_test.php
+          php tests/visitor_geo_report_test.php
+          php tests/visitor_geo_render_test.php
+          php tests/visitor_geo_record_test.php
+          php tests/visitor_geo_archive_guard_test.php
+          php tests/visitor_geo_archive_contract_test.php
+
       - name: Test B5 controller advisory integration offline
         run: |
           python3 -m py_compile scripts/verified_deploy_controller.py tests/controller_b5_advisory_integration_test.py
