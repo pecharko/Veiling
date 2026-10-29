@@ -12,7 +12,7 @@ NEW = OLD.replace("return flase;", "return false;", 1)
 def evidence():
     return {
         "repo": "pecharko/Veiling",
-        "repository_node_id": "R_kgDOExample123",
+        "repository_node_id": "R_kgDOVNLxvg",
         "owner_verified": True, "pr_open": True, "from_fork": False,
         "pr_number": 901, "issue_id": 903, "comment_id": 904,
         "branch": "test/phase-c-sandbox-20261029",
@@ -40,7 +40,7 @@ class AtomicRefsPlanTests(unittest.TestCase):
         self.assertIn("updateRefs", result["query"])
 
         data = result["variables"]["input"]
-        self.assertEqual(data["repositoryId"], "R_kgDOExample123")
+        self.assertEqual(data["repositoryId"], "R_kgDOVNLxvg")
         self.assertEqual(len(data["refUpdates"]), 2)
         nonce, branch = data["refUpdates"]
         self.assertEqual(nonce, {
@@ -79,6 +79,7 @@ class AtomicRefsPlanTests(unittest.TestCase):
             ("issue_id", 0),
             ("comment_id", "904"),
             ("repository_node_id", "bad!"),
+            ("repository_node_id", "R_kgDOOtherRepoId"),
             ("branch", "main"),
             ("branch", "test/phase-c-../../main"),
             ("target_path", ".github/workflows/php-lint.yml"),
