@@ -235,7 +235,7 @@ def review_workflow(content):
             errors.append("CI: checkout credentials may persist")
         if len(re.findall(r"(?m)^          persist-credentials:", block)) != 1:
             errors.append("CI: duplicate or missing checkout credential setting")
-        if re.search(r"(?m)^          token\\s*:", block):
+        if re.search(r"(?m)^          token\s*:", block):
             errors.append("CI: explicit checkout token override")
     if len(re.findall(
         r"(?m)^\s*uses: actions/checkout@", content
