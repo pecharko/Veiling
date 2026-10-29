@@ -17,6 +17,7 @@ MODULES = (
     "scripts/phase_c_github_readonly_client.py",
     "scripts/phase_c_atomic_ref_reconciliation.py",
     "scripts/phase_c_complete_readonly_audit.py",
+    "scripts/phase_c_readonly_get_session.py",
 )
 WORKFLOW = ".github/workflows/php-lint.yml"
 CLIENT = "scripts/phase_c_github_readonly_client.py"
