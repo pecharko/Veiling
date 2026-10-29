@@ -1,0 +1,18 @@
+name: Phase C inert GraphQL envelope checks
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_inert_graphql_envelope.py'
+      - 'tests/phase_c_c2_inert_graphql_envelope_test.py'
+      - '.github/workflows/phase-c-c2-inert-graphql.yml'
+permissions:
+  contents: read
+jobs:
+  inert-graphql:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_inert_graphql_envelope_test.py -v
