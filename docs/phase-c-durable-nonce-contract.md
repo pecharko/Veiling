@@ -39,3 +39,11 @@ The preparation in `scripts/phase_c_atomic_refs_plan.py` only constructs an iner
 API reference: https://docs.github.com/en/graphql/reference/git#updaterefs
 
 Read-only repository metadata on 2026-10-29 confirmed the GitHub GraphQL repository node ID `R_kgDOVNLxvg`, now pinned by the offline planner. The active GitHub integration could list repository rulesets but received HTTP 403 from the branch-protection endpoint. **This is not proof that protections are absent.** A separately authorized trusted activation must verify all relevant branch and tag rules, and fail closed on missing read access.
+
+## Authenticated read-only candidate verification (inactive)
+
+The inert `scripts/phase_c_readonly_candidate_verifier.py` combines the existing owner/issue/comment verification with read-only GitHub REST evidence for the proposed sandbox commit. It verifies repository identity, candidate's one exact parent, complete untruncated recursive original/candidate trees, a single modified regular-file blob at `tests/phase_c_sandbox_test.php`, Git SHA-1 for the old and new base64 blob bytes, deterministic `return flase;` -> `return false;` correction, and expected SHA-256. Negative tests include impersonation, wrong parent, additional paths, changed modes, truncated trees, forged blobs and missing API responses.
+
+**Trust boundary:** its injected `api_get` is only a testable read interface, not proof of a GitHub-authenticated token or response provenance. The output remains `REVIEW_ONLY` with `write_allowed=false` even when all mock checks succeed. The trustable executor must independently authenticate REST/GraphQL requests, enforce permission scopes, check branch and tag rules, verify exact owner authorization and implement durable one-shot atomic mutation/reconciliation. Never derive write authority from caller-provided flags or from this module alone. GraphQL and Git Database APIs can create objects or refs; this module only reads existing data.
+
+The exact live credentials, proposed commit creation, mutation dispatch, ambiguous-success reconciliation, audit evidence and failure recovery have **not** been enabled, tested against production GitHub branches or authorized. No OVH deployment is involved.
