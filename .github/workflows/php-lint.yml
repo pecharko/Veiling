@@ -111,6 +111,7 @@ jobs:
           python3 -m unittest discover -s tests -p phase_c_sandbox_writer_prepare_test.py -v
           python3 -m unittest discover -s tests -p phase_c_owner_evidence_test.py -v
           python3 -m unittest discover -s tests -p phase_c_github_evidence_reader_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_one_shot_preflight_test.py -v
 
       - name: Test B5 controller advisory integration offline
         run: |
