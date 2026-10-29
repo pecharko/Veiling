@@ -55,6 +55,17 @@ class DisabledWriterTests(unittest.TestCase):
                 self.assertEqual(result["operations"], [])
                 self.assertEqual(fake.calls, [])
 
+    def test_invalid_transaction_types_always_denied(self):
+        for value in (None, {}, "approved", 427, True, object()):
+            with self.subTest(type=type(value).__name__):
+                prepared = prepare_transaction(value)
+                self.assertEqual(prepared["decision"], "DENY")
+                self.assertFalse(prepared["write_allowed"])
+                transport = HostileTransport()
+                executed = execute_transaction(transport=transport, transaction=value)
+                self.assertEqual(executed["decision"], "DENY")
+                self.assertEqual(transport.calls, [])
+
     def test_no_transport_even_if_object_has_write_methods(self):
         class Evil:
             def __getattribute__(self, key):
