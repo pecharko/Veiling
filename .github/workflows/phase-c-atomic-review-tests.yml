@@ -1,0 +1,19 @@
+name: Phase C atomic updateRefs offline review
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_atomic_combined_review.py'
+      - 'tests/phase_c_atomic_combined_review_test.py'
+      - 'docs/phase-c-atomic-update-refs-review.md'
+      - '.github/workflows/phase-c-atomic-review-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline-atomic-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_atomic_combined_review_test.py -v
