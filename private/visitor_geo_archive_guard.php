@@ -40,6 +40,18 @@ function visitor_geo_assert_day_consistent(PDO $pdo, string $day): void
     if ((int)$missingGeo->fetchColumn() !== 0 || (int)$missingStats->fetchColumn() !== 0) {
         throw new RuntimeException('Geo visitor identifiers disagree; archive blocked');
     }
+    // Matching overall views can still conceal a swap between two visitors.
+    // Compare each visitor's summed normal page views against its geo count.
+    $mismatch = $pdo->prepare('SELECT COUNT(*) FROM (
+        SELECT visitor_id, SUM(views) AS views
+        FROM visitor_stats_daily WHERE visit_date=? GROUP BY visitor_id
+    ) s INNER JOIN visitor_geo_daily g
+       ON g.visitor_id=s.visitor_id AND g.visit_date=?
+       WHERE s.views <> g.views');
+    $mismatch->execute([$day, $day]);
+    if ((int)$mismatch->fetchColumn() !== 0) {
+        throw new RuntimeException('Geo per-visitor views disagree; archive blocked');
+    }
     if ((int)$expected['visitor_days'] !== (int)$actual['visitor_days']
         || (int)$expected['views'] !== (int)$actual['views']) {
         throw new RuntimeException('Geo and visitor-statistics day totals disagree; archive blocked');
