@@ -15,7 +15,7 @@ TARGET = "tests/phase_c_sandbox_test.php"
 SHA = re.compile(r"^[a-f0-9]{40}$")
 DIGEST = re.compile(r"^[a-f0-9]{64}$")
 BRANCH = re.compile(r"^test/phase-c-[a-z0-9-]{1,40}$")
-REPO_NODE_ID = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
+REPO_NODE_ID = "R_kgDOVNLxvg"  # Read from canonical repository metadata
 
 # Query is inert data. No code in this file can submit it.
 MUTATION = (
@@ -39,7 +39,7 @@ def propose_atomic_update_refs(evidence):
             evidence.get("from_fork") is not False):
         return dict(denied, reason="Owner, repo or PR not verified")
     node_id = evidence.get("repository_node_id")
-    if not isinstance(node_id, str) or not REPO_NODE_ID.fullmatch(node_id):
+    if node_id != REPO_NODE_ID:
         return dict(denied, reason="Invalid repository node ID")
     branch = evidence.get("branch")
     if not isinstance(branch, str) or not BRANCH.fullmatch(branch):
