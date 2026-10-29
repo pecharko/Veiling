@@ -105,6 +105,7 @@ jobs:
       - name: Test phase C CI advisory offline (no execution permissions)
         run: |
           python3 -m unittest discover -s tests -p development_ci_advisor_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_repair_prototype_test.py -v
 
       - name: Test B5 controller advisory integration offline
         run: |
