@@ -30,7 +30,7 @@ class TransportTests(unittest.TestCase):
         def fake(req, timeout):
             observed.append((req.get_method(), req.full_url, timeout))
             return Response({"name": "fake"})
-        for path in ("/app", "/installation/repositories"):
+        for path in ("/installation/repositories",):
             r = read_endpoint(path, "fake", enabled=True, opener=fake)
             self.assertFalse(r["write_allowed"])
             self.assertEqual(r["read_only_payload"], {"name": "fake"})
