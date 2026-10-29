@@ -22,3 +22,18 @@ This file is a design-only gate. It grants no GitHub permissions.
 6. Successful one-file sandbox correction: exact parent and diff verified; no merge or production action.
 
 Current `phase_c_one_shot_preflight.py` accepts simulated reservation state and always returns `can_write=false`. It is not a durable reservation and cannot be used as proof for activation.
+
+## Preferred GitHub-native atomic strategy (review-only, not active)
+
+GitHub GraphQL documents `updateRefs` as an **atomic** mutation of multiple Git refs. The next implementation should use exactly two conditional updates in the *same* mutation:
+
+1. Create `refs/tags/phase-c-once-issue-<immutable issue ID>` with `beforeOid` equal to forty zeroes and `afterOid` equal to the independently verified candidate commit. This is the durable one-shot marker (never delete it on success, conflict or failure).
+2. Update only `refs/heads/test/phase-c-...` with `beforeOid` equal to the owner-approved original head and `afterOid` equal to the same candidate commit. Both updates must set `force=false`.
+
+If the nonce exists **or** the branch head has changed, the entire mutation is rejected; no partial branch write or new nonce marker should be committed. This is preferable to an uncoordinated two-request GitHub REST reservation plus branch update. A second owner comment on the same issue does not create a new nonce.
+
+The preparation in `scripts/phase_c_atomic_refs_plan.py` only constructs an inert GraphQL variable preview; it cannot submit a mutation. The values `owner_verified` and `proposed_commit_verified` remain advisory **unless a future trusted process independently verifies signed-in API provenance, proposed commit parent/tree, one-file diff and content SHA-256**. There is currently no authenticated live writer, no write permission, no actual nonce ref and no deployed controller.
+
+**Before activation:** confirm whether repository rule sets permit the two conditional ref updates on the sandbox and tag namespace. If GitHub refuses or its semantics differ, fail closed; do not fall back to separate non-atomic writes. Require a separate scoped approval for the workflow, token privileges, immutable source commit and a single sandbox attempt. An ambiguous response must trigger read-only reconciliation and manual review, never blind retry.
+
+API reference: https://docs.github.com/en/graphql/reference/git#updaterefs
