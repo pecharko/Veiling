@@ -120,7 +120,7 @@ try{
        &&$plan['target_snapshot']===$target
        &&$plan['run_id']===$journalData['run_id']
        &&$plan['will_modify_data']===false,
-       'read-only plan binds target, safety ZIP, run ID and preservation operation');
+       'read-only plan binds target, safety ZIP, run ID and preservation operation: '.json_encode(['ready'=>$plan['ready']??null,'reason'=>$plan['reason']??null,'preservation_plan'=>$plan['preservation_plan']??null,'target_matches'=>($plan['target_snapshot']??null)===$target,'run_id_matches'=>($plan['run_id']??null)===$journalData['run_id'],'will_modify_data'=>$plan['will_modify_data']??null],JSON_UNESCAPED_SLASHES));
 
     $report=restore_recovery_diagnose($pdo);
     finalize_test($report['status']==='target_verified_pending_review'
