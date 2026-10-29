@@ -98,7 +98,7 @@ class PhaseCStaticGateTests(unittest.TestCase):
             "from urllib.error import HTTPError as AliasError",
         ):
             with self.subTest(injection=injection):
-                self.assertTrue(review_module(CLIENT, source + "\\n" + injection + "\\n"))
+                self.assertTrue(review_module(CLIENT, source + "\n" + injection + "\n"))
 
     def test_invalid_syntax_and_missing_files_fail_closed(self):
         path = "scripts/phase_c_atomic_refs_plan.py"
