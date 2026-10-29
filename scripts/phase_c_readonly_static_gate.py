@@ -81,6 +81,17 @@ def review_module(path, source):
                     errors.append(path + ": unapproved dependency " + module)
                 if module.startswith("urllib.") and path != CLIENT and module != "urllib.parse":
                     errors.append(path + ": urllib transport outside dedicated reader")
+                if isinstance(node, ast.ImportFrom) and module.startswith("urllib."):
+                    approved_names = {
+                        "urllib.request": {"Request", "build_opener", "HTTPRedirectHandler"},
+                        "urllib.error": {"HTTPError", "URLError"},
+                        "urllib.parse": {"quote"},
+                    }.get(module, set())
+                    for imported in node.names:
+                        if (imported.name not in approved_names or imported.asname is not None):
+                            errors.append(path + ": unreviewed urllib import or alias")
+                if isinstance(node, ast.Import) and module.startswith("urllib."):
+                    errors.append(path + ": use only explicit urllib imports")
         elif isinstance(node, ast.Call):
             name = _call_name(node.func)
             if name == "Request":
