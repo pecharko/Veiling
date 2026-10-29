@@ -40,7 +40,7 @@ class TransportTests(unittest.TestCase):
     def test_rejects_scope_elevation_even_when_enabled(self):
         def hostile(*args, **kwargs):
             raise AssertionError("Invalid path touched transport")
-        for path in ("/repos/pecharko/Veiling", "/app/installations/176547610",
+        for path in ("/repos/pecharko/Veiling", "/app", "/app/installations/176547610",
                      "/app/../repos", "/app?foo=bar", None):
             self.assertFalse(read_endpoint(path, "fake", enabled=True,
                                            opener=hostile)["write_allowed"])
