@@ -48,7 +48,7 @@ class TransportTests(unittest.TestCase):
     def test_token_never_in_error_result(self):
         def failing(*args, **kwargs):
             raise OSError("token-secret")
-        result = read_endpoint("/app", "token-secret", enabled=True, opener=failing)
+        result = read_endpoint("/installation/repositories", "token-secret", enabled=True, opener=failing)
         self.assertNotIn("token-secret", str(result))
         self.assertNotIn("read_only_payload", result)
 
