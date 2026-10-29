@@ -11,3 +11,9 @@ This is an **unexecuted migration proposal**. Running this schema alone will not
 - Database quota, geo data file placement, backup size and privacy implications need read-only preflight.
 - User decided that legacy snapshots need not be restorable *after* migration, but new snapshots must be restorable.
 - Explicit scoped permission is mandatory before executing SQL or uploading runtime PHP.
+
+## Stage-only transaction-bound collection seam
+
+`private/visitor_geo_record.php` provides `visitor_geo_record_view()` but is not called by the live visitor tracker. Its 32-byte daily identifier must be exactly the existing tracker identifier; the duplicate-key update increments page views while preserving one geographic visitor-day. The eventual tracker must write existing and geographic counters in the **same** transaction, so a failed geo write cannot skew totals. An approved migration, geolocation reader installation, privacy update, snapshot/restore verification and archive/cron integration are prerequisites to enabling collection.
+
+The proposed geo archive helper is not yet connected to either the manual archive or issue224 cron; **do not activate geo collection or deploy these files** until both archive paths preserve geo totals and the deployment order is validated. `tests/visitor_geo_record_test.php` exercises isolated SQLite transaction/deduplication guards; MySQL integration is still required before activation.
