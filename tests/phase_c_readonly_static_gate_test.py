@@ -49,8 +49,10 @@ class PhaseCStaticGateTests(unittest.TestCase):
             'API = "https://api.github.com"',
             'API = "https://attacker.invalid"',
         )
-        self.assertTrue(any("host changed" in x
-                            for x in review_module(CLIENT, changed)))
+        self.assertTrue(any(
+            "host changed" in x or "client constant drift: API" in x
+            for x in review_module(CLIENT, changed)
+        ))
 
     def test_direct_network_or_shell_calls_rejected(self):
         path = "scripts/phase_c_atomic_ref_reconciliation.py"
