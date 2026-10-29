@@ -81,3 +81,18 @@ function visitor_geo_percentages(array $groupedRows): array
     }
     return $percentages;
 }
+
+/**
+ * Belgian province/city distribution is conditional on Belgian visitor-days.
+ * Unknown Belgian region or city stays in the Belgian denominator; foreign
+ * visitors must not dilute provincial percentages.
+ */
+function visitor_geo_belgian_percentages(array $rows, string $level): array
+{
+    if (!in_array($level, ['region', 'city'], true)) {
+        throw new InvalidArgumentException('Belgian geographic level must be region or city');
+    }
+    $belgian = array_values(array_filter($rows, static fn(array $row): bool =>
+        ($row['country_code'] ?? '') === 'BE'));
+    return visitor_geo_percentages(visitor_geo_group($belgian, $level));
+}
