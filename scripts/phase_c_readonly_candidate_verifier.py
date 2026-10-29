@@ -106,7 +106,8 @@ def verify_candidate_readonly(api_get, pr_number, issue_number, comment_id,
             raise ValueError("Candidate equals approved branch head")
         repo = api_get(ROOT)
         if (not isinstance(repo, dict) or repo.get("full_name") != "pecharko/Veiling"
-                or repo.get("node_id") != NODE_ID or repo.get("archived") is True):
+                or repo.get("node_id") != NODE_ID or repo.get("archived") is not False or
+                repo.get("default_branch") != "main"):
             raise ValueError("Wrong repository metadata")
 
         old_commit = api_get(ROOT + "/git/commits/" + original_sha)
