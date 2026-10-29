@@ -1,0 +1,19 @@
+name: Phase C2 adversarial readback offline
+on:
+  pull_request:
+    paths:
+      - 'tests/phase_c_c2_readback_adversarial_test.py'
+      - '.github/workflows/phase-c-c2-readback-adversarial-tests.yml'
+      - 'scripts/phase_c_c2_postwrite_readback.py'
+      - 'scripts/phase_c_c2_trusted_executor.py'
+permissions:
+  contents: read
+jobs:
+  adversarial-readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_readback_adversarial_test.py -v
