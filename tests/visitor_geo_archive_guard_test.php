@@ -28,6 +28,15 @@ try {
 }
 $db->prepare('INSERT INTO visitor_geo_daily VALUES (?,?,?)')->execute([$day,$visitor,2]);
 visitor_geo_assert_day_consistent($db,$day);
+// Equal totals with a different visitor identifier must still block archival.
+$db->prepare('UPDATE visitor_geo_daily SET visitor_id=? WHERE visit_date=?')->execute([str_repeat('y', 32), $day]);
+try {
+    visitor_geo_assert_day_consistent($db,$day);
+    throw new RuntimeException('Mismatched visitor IDs accepted');
+} catch (RuntimeException $expected) {
+    if ($expected->getMessage() !== 'Geo visitor identifiers disagree; archive blocked') throw $expected;
+}
+$db->prepare('UPDATE visitor_geo_daily SET visitor_id=? WHERE visit_date=?')->execute([$visitor, $day]);
 $db->prepare('UPDATE visitor_geo_daily SET views=1 WHERE visit_date=?')->execute([$day]);
 try {
     visitor_geo_assert_day_consistent($db,$day);
