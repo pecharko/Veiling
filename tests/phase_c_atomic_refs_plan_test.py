@@ -36,17 +36,23 @@ class AtomicRefsPlanTests(unittest.TestCase):
         self.assertIs(result["merge_allowed"], False)
         self.assertIs(result["dispatch_allowed"], False)
         self.assertIs(result["production_authorized"], False)
-        self.assertEqual(result["query"], MUTATION)
-        self.assertIn("updateRefs", result["query"])
-
-        data = result["variables"]["input"]
-        self.assertEqual(data["repositoryId"], "R_kgDOVNLxvg")
-        self.assertEqual(len(data["refUpdates"]), 2)
-        nonce, branch = data["refUpdates"]
+        self.assertTrue(result["reservation_before_branch"])
+        self.assertTrue(result["never_retry_same_issue"])
+        self.assertTrue(result["never_delete_nonce"])
+        self.assertEqual(result["reservation"]["query"], MUTATION)
+        self.assertEqual(result["branch_update"]["query"], MUTATION)
+        reserve = result["reservation"]["variables"]["input"]
+        advance = result["branch_update"]["variables"]["input"]
+        self.assertEqual(reserve["repositoryId"], "R_kgDOVNLxvg")
+        self.assertEqual(advance["repositoryId"], "R_kgDOVNLxvg")
+        self.assertEqual(len(reserve["refUpdates"]), 1)
+        self.assertEqual(len(advance["refUpdates"]), 1)
+        nonce = reserve["refUpdates"][0]
+        branch = advance["refUpdates"][0]
         self.assertEqual(nonce, {
             "name": "refs/tags/phase-c-once-issue-903",
             "beforeOid": ZERO_SHA,
-            "afterOid": "c" * 40,
+            "afterOid": "a" * 40,  # Original existing commit, not candidate.
             "force": False,
         })
         self.assertEqual(branch, {
@@ -55,6 +61,9 @@ class AtomicRefsPlanTests(unittest.TestCase):
             "afterOid": "c" * 40,
             "force": False,
         })
+        self.assertNotEqual(
+            reserve["clientMutationId"], advance["clientMutationId"]
+        )
         self.assertEqual(result["expected_changed_paths"], [TARGET])
 
     def test_second_comment_does_not_reset_issue_nonce(self):
@@ -65,8 +74,8 @@ class AtomicRefsPlanTests(unittest.TestCase):
         b = propose_atomic_update_refs(second)
         self.assertEqual(a["nonce_ref"], b["nonce_ref"])
         self.assertNotEqual(
-            a["variables"]["input"]["clientMutationId"],
-            b["variables"]["input"]["clientMutationId"],
+            a["reservation"]["variables"]["input"]["clientMutationId"],
+            b["reservation"]["variables"]["input"]["clientMutationId"],
         )
 
     def test_untrusted_evidence_denied(self):
