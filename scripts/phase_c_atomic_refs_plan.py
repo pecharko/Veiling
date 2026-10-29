@@ -1,10 +1,11 @@
-"""Advisory GitHub GraphQL updateRefs plan for a single sandbox repair.
+"""Advisory two-stage, issue-scoped one-shot GitHub GraphQL ref plan.
 
-The GraphQL updateRefs mutation can check a nonexistent nonce tag and the
-exact old sandbox branch head in ONE atomic transaction. This module only
-builds a reviewable plan; it has no HTTP client, token or execution method.
-Inputs MUST be independently verified against authenticated GitHub API data
-by a future trusted writer. Untrusted dict booleans are never authorization.
+The nonce creation is an atomic conditional single-ref operation that MUST
+be committed before a separate, branch-head compare-and-swap. Unlike a
+single two-ref atomic update, this leaves the nonce spent if a later branch
+update fails. No calls are made here; planning is never authorization.
+The future trusted worker must authenticate GitHub and never retry after
+an ambiguous or failed first attempt.
 """
 import hashlib
 import re
@@ -82,25 +83,48 @@ def propose_atomic_update_refs(evidence):
     # approving a second comment must NOT reset the single-use issue budget.
     nonce_ref = "refs/tags/phase-c-once-issue-" + str(issue_id)
     sandbox_ref = "refs/heads/" + branch
-    updates = [
-        {"name": nonce_ref, "beforeOid": ZERO_SHA, "afterOid": candidate,
-         "force": False},
-        {"name": sandbox_ref, "beforeOid": head, "afterOid": candidate,
-         "force": False},
-    ]
+    # The issue ID, not the comment ID, is the once-only budget.
+    # Step 1: atomically create a tag pointing at the original, known commit.
+    # Step 2: ONLY IF step 1 was confirmed by a future trusted writer, CAS
+    # the sandbox head to the candidate. Never delete/reuse the tag, even when
+    # the branch update fails or times out. This module never executes steps.
+    reservation_update = {
+        "name": nonce_ref, "beforeOid": ZERO_SHA, "afterOid": head,
+        "force": False,
+    }
+    branch_update = {
+        "name": sandbox_ref, "beforeOid": head, "afterOid": candidate,
+        "force": False,
+    }
+    reserve = {
+        "query": MUTATION,
+        "variables": {"input": {
+            "repositoryId": node_id,
+            "clientMutationId": "phase-c-reserve-" + str(issue_id) + "-" +
+                                str(comment_id) + "-" + head[:12],
+            "refUpdates": [reservation_update],
+        }},
+    }
+    advance = {
+        "query": MUTATION,
+        "variables": {"input": {
+            "repositoryId": node_id,
+            "clientMutationId": "phase-c-advance-" + str(issue_id) + "-" +
+                                str(comment_id) + "-" + head[:12],
+            "refUpdates": [branch_update],
+        }},
+    }
     return {
         "decision": "REVIEW_ONLY", "write_allowed": False,
         "merge_allowed": False, "dispatch_allowed": False,
         "production_authorized": False,
-        "reason": "Plan only: no trusted executor or write permission",
+        "reason": "Two conditional plans only; no trusted writer or permission",
         "nonce_ref": nonce_ref, "sandbox_ref": sandbox_ref,
-        "query": MUTATION,
-        "variables": {"input": {
-            "repositoryId": node_id,
-            "clientMutationId": "phase-c-" + str(issue_id) + "-" +
-                                str(comment_id) + "-" + head[:12],
-            "refUpdates": updates,
-        }},
+        "reservation": reserve,
+        "branch_update": advance,
+        "reservation_before_branch": True,
+        "never_retry_same_issue": True,
+        "never_delete_nonce": True,
         "expected_parent": head,
         "expected_target_sha256": expected,
         "expected_changed_paths": [TARGET],
