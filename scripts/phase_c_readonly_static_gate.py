@@ -26,7 +26,7 @@ DANGEROUS_IMPORTS = {
     "ftplib", "paramiko", "shutil", "ctypes", "importlib",
 }
 DANGEROUS_CALLS = {
-    "exec", "eval", "compile", "getattr", "setattr", "delattr", "__import__",
+    "exec", "eval", "getattr", "setattr", "delattr", "__import__",
     "open", "execfile", "input", "urlopen", "Popen", "run", "system",
     "post", "put", "patch", "delete", "request", "graphql",
     "dispatch_workflow", "merge_pull_request", "create_file", "update_file",
@@ -103,6 +103,8 @@ def review_module(path, source):
                         kw["method"].value != "GET" or "data" in kw or
                         node.args and len(node.args) != 1):
                     errors.append(path + ": request not strict GET")
+            if name == "compile" and isinstance(node.func, ast.Name):
+                errors.append(path + ": prohibited builtin compile")
             if name in DANGEROUS_CALLS:
                 # Dedicated client has one reviewed self._opener.open call.
                 if name == "open" and path == CLIENT:
