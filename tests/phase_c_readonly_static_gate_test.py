@@ -89,6 +89,17 @@ class PhaseCStaticGateTests(unittest.TestCase):
         self.assertTrue(any("public methods" in x
                             for x in review_module(CLIENT, changed)))
 
+    def test_hidden_urllib_transport_import_aliases_rejected(self):
+        source = self.sources[CLIENT]
+        for injection in (
+            "from urllib.request import Request as HiddenRequest",
+            "from urllib.request import urlopen",
+            "import urllib.request as unsafe_transport",
+            "from urllib.error import HTTPError as AliasError",
+        ):
+            with self.subTest(injection=injection):
+                self.assertTrue(review_module(CLIENT, source + "\\n" + injection + "\\n"))
+
     def test_invalid_syntax_and_missing_files_fail_closed(self):
         path = "scripts/phase_c_atomic_refs_plan.py"
         self.assertTrue(review_module(path, "def broken("))
