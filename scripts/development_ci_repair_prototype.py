@@ -22,6 +22,8 @@ def propose_fixture_fix(path: str, source: str, failing_test: str) -> Proposal:
     old = "return flase;"
     if source.count(old) != 1 or len(source) > 1024:
         return Proposal("HUMAN_REVIEW", "Unexpected fixture content")
+    if not source.lstrip().startswith("<?php"):
+        return Proposal("HUMAN_REVIEW", "Not a PHP fixture")
     return Proposal("PROPOSED_ONLY", "Deterministic typo correction", old, "return false;")
 
 
