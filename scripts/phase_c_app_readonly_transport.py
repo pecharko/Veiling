@@ -12,7 +12,6 @@ from scripts.phase_c_app_receipt import inspect_receipt
 BASE = "https://api.github.com"
 INSTALLATION_ID = 176547610
 ALLOWED_PATHS = (
-    "/app",
     "/installation/repositories",
 )
 
