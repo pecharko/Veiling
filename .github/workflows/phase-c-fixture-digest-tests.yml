@@ -1,0 +1,22 @@
+name: Phase C fixture digest verification
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_fixture_digest_verifier.py'
+      - 'tests/phase_c_fixture_digest_verifier_test.py'
+      - '.github/workflows/phase-c-fixture-digest-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  digest-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify immutable fixture digest offline
+        run: python3 -m unittest discover -s tests -p phase_c_fixture_digest_verifier_test.py -v
