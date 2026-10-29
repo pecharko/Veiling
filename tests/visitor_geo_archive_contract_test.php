@@ -6,8 +6,8 @@ $path = dirname(__DIR__) . '/private/visitor_geo_archive.php';
 $source = file_get_contents($path);
 if (!is_string($source)) throw new RuntimeException('Geo archive helper missing');
 $required = [
-    "function visitor_geo_archive_day(PDO $pdo, string $day)",
-    "if (!$pdo->inTransaction())",
+    "function visitor_geo_archive_day(PDO \$pdo, string \$day)",
+    "if (!\$pdo->inTransaction())",
     "SELECT COUNT(*) FROM visitor_geo_day_totals WHERE visit_date=?",
     "INSERT INTO visitor_geo_day_totals",
     "Geo aggregate verification failed",
