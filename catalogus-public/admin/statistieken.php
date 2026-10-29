@@ -181,6 +181,8 @@ try {
     $available = false;
 }
 $cronRuns = visitor_stats_cron_log_read();
+$cronSuccessful = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => ($run['status'] ?? '') === 'ok')), 0, 3);
+$cronAlerts = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => in_array($run['status'] ?? '', ['error', 'limit'], true))), 0, 3);
 $collectionEnabled = analytics_collection_enabled();
 admin_top('Bezoekersstatistieken');
 ?>
@@ -228,28 +230,45 @@ admin_top('Bezoekersstatistieken');
   <?php endif; ?>
   <section class="dashboard-panel" aria-labelledby="analytics-cron-title">
     <h2 id="analytics-cron-title">Automatische archivering — cronlog</h2>
-    <p>De laatste 30 geregistreerde uitvoeringen, in UTC. Het aantal verwijderde records betreft uitsluitend <code>visitor_stats_daily</code>. Een ontbrekend log bewijst niet dat de cronjob niet actief is.</p>
+    <p>De drie recentste geslaagde uitvoeringen en maximaal drie uitvoeringen met een fout of waarschuwing, uit de laatste 30 geregistreerde runs (UTC). Een waarschuwing betekent dat de inhaallimiet van 14 dagen bereikt is. Een ontbrekend log bewijst niet dat de cronjob niet actief is.</p>
     <?php if (!$cronRuns): ?>
       <p>Nog geen geregistreerde cronuitvoeringen. Controleer of de geplande taak actief is en of de private map schrijfbaar is.</p>
     <?php else: ?>
-      <?php $lastCron = $cronRuns[0]; ?>
-      <p><strong>Laatste uitvoering:</strong> <?=e((string)$lastCron['finished_utc'])?> ·
-        <strong>Status:</strong> <?=e(['ok' => 'Geslaagd', 'error' => 'Fout', 'limit' => 'Inhaallimiet bereikt'][$lastCron['status']])?> ·
-        <strong>Verwijderd:</strong> <?=e((string)$lastCron['rows_deleted'])?> records.</p>
+      <h3>Laatste 3 geslaagde uitvoeringen</h3>
       <div class="dashboard-table-scroll"><table class="dashboard-table">
-        <thead><tr><th>Uitgevoerd (UTC)</th><th>Resultaat</th><th>Verwijderde records</th><th>Gearchiveerde dagen</th><th>Foutcategorie</th></tr></thead>
+        <thead><tr><th>Uitgevoerd (UTC)</th><th>Resultaat</th><th>Verwijderde records</th><th>Gearchiveerde dagen</th><th>Paginaweergaven</th></tr></thead>
         <tbody>
-        <?php foreach ($cronRuns as $run): ?>
+        <?php foreach ($cronSuccessful as $run): ?>
           <tr>
             <td><?=e((string)$run['finished_utc'])?></td>
-            <td><?=e(['ok' => 'Geslaagd', 'error' => 'Fout', 'limit' => 'Inhaallimiet bereikt'][$run['status']])?></td>
+            <td>Geslaagd</td>
             <td><?=e((string)$run['rows_deleted'])?></td>
             <td><?=e((string)($run['days_archived'] ?? 0))?></td>
-            <td><?=e((string)($run['error_type'] ?? '—'))?></td>
+            <td><?=e((string)($run['views_archived'] ?? 0))?></td>
           </tr>
         <?php endforeach; ?>
+        <?php if (!$cronSuccessful): ?><tr><td colspan="5">Geen geslaagde uitvoeringen in de beschikbare loghistoriek.</td></tr><?php endif; ?>
         </tbody>
       </table></div>
+      <h3>Laatste 3 fouten of waarschuwingen</h3>
+      <?php if (!$cronAlerts): ?>
+        <p>Geen fouten of waarschuwingen in de beschikbare loghistoriek.</p>
+      <?php else: ?>
+        <div class="dashboard-table-scroll"><table class="dashboard-table">
+          <thead><tr><th>Uitgevoerd (UTC)</th><th>Resultaat</th><th>Verwijderde records</th><th>Gearchiveerde dagen</th><th>Foutcategorie</th></tr></thead>
+          <tbody>
+          <?php foreach ($cronAlerts as $run): ?>
+            <tr>
+              <td><?=e((string)$run['finished_utc'])?></td>
+              <td><?=e($run['status'] === 'limit' ? 'Waarschuwing: inhaallimiet bereikt' : 'Fout')?></td>
+              <td><?=e((string)$run['rows_deleted'])?></td>
+              <td><?=e((string)($run['days_archived'] ?? 0))?></td>
+              <td><?=e((string)($run['error_type'] ?? '—'))?></td>
+            </tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table></div>
+      <?php endif; ?>
     <?php endif; ?>
   </section>
   <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
