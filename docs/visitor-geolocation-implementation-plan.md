@@ -2,6 +2,9 @@
 
 Status: **voorbereiding; geen runtimecode, geen migratie, geen productieautorisatie**.
 
+## Besluit opdrachtgever: compatibiliteit oude snapshots
+**NEE (29 oktober 2026).** Bestaande snapshots van vóór de geografische database-upgrade hoeven na die upgrade niet herstelbaar te blijven. Dit is uitdrukkelijk geen toestemming om snapshots te verwijderen, databasewijzigingen uit te voeren, of backup/restore-veiligheidscontroles over te slaan. Nieuwe snapshots na de upgrade moeten wel correct werken; voor de migratie blijft een herstel-/rollbackplan vereist.
+
 ## Doel
 Voeg aan de bestaande `admin/statistieken.php` geaggregeerde rapporten per land, Belgische provincie/regio en (indicatief) stad toe. Toon de onbekende/niet-bepaalbare categorie expliciet. Land, regio en stad zijn onnauwkeurige IP-schattingen, geen GPS-locaties. Bestaande tellers en hun definities behouden.
 
@@ -26,7 +29,7 @@ Voeg aan de bestaande `admin/statistieken.php` geaggregeerde rapporten per land,
 - Meet GeoLite2 City bestandsgrootte, reader-vereisten en OVH vrije schijfruimte / PHP-extensies read-only.
 - Test: één bezoek, herhaald bezoek, gelijktijdige bezoeken, DNT/bot, ongeldige/private IP, ontbrekende/verouderde MMDB, geolocation onbekend, overgang daggrens UTC, SQL failure, archivering en herstel, privacyweergave.
 - Release splitsen: code + optionele infrastructuur, daarna afzonderlijk geautoriseerde DB-migratie, MaxMind-database/secret-configuratie, activering. Geen productieactie zonder exacte autorisatie.
-- Database-backupcompatibiliteit moet vooraf expliciet worden beslist (oude snapshots na upgrade herstelbaar ja/nee/onbekend).
+- Besluit vastgelegd: oude snapshots hoeven na de upgrade niet herstelbaar te blijven. Verifieer wel nieuwe snapshot/restore en een veilige upgradeprocedure.
 
 ## Niet doen
 - Geen exacte bezoeklocaties of ongehashte IP's opslaan.
