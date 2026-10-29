@@ -61,6 +61,7 @@ class PhaseCStaticGateTests(unittest.TestCase):
             "\nimport requests\n",
             "\ndef unsafe():\n    return requests.post('https://example.com')\n",
             "\ndef unsafe():\n    return eval('1+1')\n",
+            "\ndef unsafe():\n    return compile('1+1', 'sandbox', 'eval')\n",
             "\ndef unsafe():\n    return urllib.request.urlopen('https://example.com')\n",
         ):
             with self.subTest(payload=payload.strip()[:60]):
