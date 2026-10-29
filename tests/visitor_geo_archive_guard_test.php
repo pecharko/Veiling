@@ -24,7 +24,7 @@ try {
     visitor_geo_assert_day_consistent($db,$day);
     throw new RuntimeException('Missing geo detail accepted');
 } catch (RuntimeException $expected) {
-    if ($expected->getMessage() !== 'Geo and visitor-statistics day totals disagree; archive blocked') throw $expected;
+    if ($expected->getMessage() !== 'Geo visitor identifiers disagree; archive blocked') throw $expected;
 }
 $db->prepare('INSERT INTO visitor_geo_daily VALUES (?,?,?)')->execute([$day,$visitor,2]);
 visitor_geo_assert_day_consistent($db,$day);
