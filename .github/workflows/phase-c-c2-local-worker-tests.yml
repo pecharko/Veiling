@@ -1,0 +1,25 @@
+name: Phase C2 local one-shot worker offline tests
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_local_one_shot_worker.py'
+      - 'tests/phase_c_c2_local_one_shot_worker_test.py'
+      - '.github/workflows/phase-c-c2-local-worker-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  local-worker-negative-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile and test without any GitHub credentials or mutation
+        run: |
+          python3 -m py_compile scripts/phase_c_c2_local_one_shot_worker.py
+          python3 -m unittest discover -s tests -p phase_c_c2_local_one_shot_worker_test.py -v
