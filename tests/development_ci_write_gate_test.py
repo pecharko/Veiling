@@ -357,5 +357,167 @@ class OfflineRepairGETSessionTests(unittest.TestCase):
 
 
 
+from scripts.development_ci_c7_activation_review import (
+    review_activation_boundary, NO_AUTHORITY,
+)
+
+
+def c7_fixture():
+    req, paths = get_review_fixture()
+    packet = review_get_session(req, lambda key: copy.deepcopy(paths[key]))
+    assert packet["decision"] == "READ_ONLY_REVIEW"
+    number = 588
+    url = "https://api.github.com/repos/pecharko/Veiling/issues/" + str(number)
+    nonce = "refs/tags/phase-c-once-issue-" + str(number)
+    issue = {
+        "number": number, "state": "open", "pull_request": None,
+        "repository_url": "https://api.github.com/repos/pecharko/Veiling",
+        "url": url, "user": {"id": 343879284},
+    }
+    body = (
+        "PHASE-C-REPAIR-REVIEW-ONLY"
+        + " pr=" + str(packet["pr"])
+        + " head=" + packet["head_sha"]
+        + " path=" + packet["path"]
+        + " blob=" + packet["original_blob_sha"]
+        + " candidate=" + packet["candidate_blob_sha"]
+        + " review=" + packet["review_sha256"]
+        + " nonce=" + nonce
+    )
+    comment = {"id": 987654321, "issue_url": url,
+               "user": {"id": 343879284}, "body": body}
+    app = {"id": 5526516, "slug": "41lokeren-phase-c-writer"}
+    installation = {
+        "id": 176547610, "app_slug": app["slug"],
+        "repository_selection": "selected",
+        "permissions": {"contents": "write", "metadata": "read"},
+    }
+    repositories = {
+        "total_count": 1,
+        "repositories": [{"full_name": "pecharko/Veiling"}],
+    }
+    branch_rule = {
+        "id": 26113993, "target": "branch", "enforcement": "active",
+        "bypass_actors": [],
+        "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+    }
+    tag_rule = {
+        "id": 26113833, "target": "tag", "enforcement": "active",
+        "bypass_actors": [],
+        "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+    }
+    return [packet, issue, comment, app, installation, repositories,
+            branch_rule, tag_rule, "NOT_PROVEN_ABSENT"]
+
+
+class PhaseC7ActivationBoundaryTests(unittest.TestCase):
+    def test_complete_review_is_explicitly_non_authorizing(self):
+        params = c7_fixture()
+        output = review_activation_boundary(*params)
+        self.assertEqual(output["decision"], "READ_ONLY_SECURITY_REVIEW")
+        self.assertTrue(output["review_records_structurally_consistent"])
+        self.assertEqual(output["pr"], 42)
+        self.assertEqual(len(output["report_sha256"]), 64)
+        self.assertFalse(output["nonce_absence_proven"])
+        self.assertFalse(output["effective_ruleset_coverage_proven"])
+        self.assertEqual(output["git_ref_updates_executed"], 0)
+        for field in NO_AUTHORITY:
+            self.assertEqual(output[field], NO_AUTHORITY[field], field)
+        self.assertEqual(output, review_activation_boundary(*params))
+        self.assertNotIn("<?php", str(output))
+        self.assertNotIn("contents", str(output))
+
+    def test_stale_or_forged_source_packet_denied(self):
+        for mutation in (
+            lambda d: d[0].update(head_sha="f" * 40),
+            lambda d: d[0].update(pr=43),
+            lambda d: d[0].update(get_request_count=5),
+            lambda d: d[0].update(can_write=True),
+            lambda d: d[0].update(decision="APPROVED"),
+            lambda d: d[0].update(report_sha256="0" * 64),
+            lambda d: d[0].update(candidate_blob_sha="f" * 40),
+            lambda d: d[0].update(path="private/secrets.php"),
+        ):
+            with self.subTest(mutation=repr(mutation)):
+                params = c7_fixture()
+                mutation(params)
+                result = review_activation_boundary(*params)
+                self.assertEqual(result["decision"], "DENY")
+                self.assertFalse(result["activation_allowed"])
+                self.assertFalse(result["can_write"])
+
+    def test_owner_and_comment_approvals_must_match_exact_review_packet(self):
+        for mutation in (
+            lambda d: d[1].update(number=427),
+            lambda d: d[1].update(number=42),
+            lambda d: d[1].update(state="closed"),
+            lambda d: d[1]["user"].update(id=1),
+            lambda d: d[2]["user"].update(id=1),
+            lambda d: d[2].update(body="go"),
+            lambda d: d[2].update(body=d[2]["body"] + "\nACTIVATE"),
+            lambda d: d[2].update(issue_url="https://example.org"),
+            lambda d: d[1].update(pull_request={"url": "fork"}),
+            lambda d: d[2].update(id=True),
+        ):
+            params = c7_fixture()
+            mutation(params)
+            with self.subTest(mutation=repr(mutation)):
+                self.assertEqual(review_activation_boundary(*params)["decision"], "DENY")
+
+    def test_app_identity_scope_and_permissions_denied_on_drift(self):
+        for mutation in (
+            lambda d: d[3].update(id=2),
+            lambda d: d[3].update(slug="other-app"),
+            lambda d: d[4].update(id=2),
+            lambda d: d[4].update(repository_selection="all"),
+            lambda d: d[4].update(permissions={"contents": "read", "metadata": "read"}),
+            lambda d: d[4].update(permissions={"contents": "write", "actions": "write"}),
+            lambda d: d[5].update(total_count=2),
+            lambda d: d[5]["repositories"][0].update(full_name="other/repo"),
+            lambda d: d[5]["repositories"].append({"full_name": "other/repo"}),
+        ):
+            params = c7_fixture()
+            mutation(params)
+            with self.subTest(mutation=repr(mutation)):
+                self.assertEqual(review_activation_boundary(*params)["decision"], "DENY")
+
+    def test_ruleset_disabled_bypass_and_missing_protection_denied(self):
+        for mutation in (
+            lambda d: d[6].update(enforcement="disabled"),
+            lambda d: d[6].update(id=1),
+            lambda d: d[6].update(bypass_actors=[{"actor_id": 5}]),
+            lambda d: d[6].update(rules=[{"type": "deletion"}]),
+            lambda d: d[7].update(enforcement="evaluate"),
+            lambda d: d[7].update(target="branch"),
+            lambda d: d[7].update(bypass_actors=[{"actor_id": 1}]),
+            lambda d: d[7].update(rules=[]),
+        ):
+            params = c7_fixture()
+            mutation(params)
+            with self.subTest(mutation=repr(mutation)):
+                self.assertEqual(review_activation_boundary(*params)["decision"], "DENY")
+
+    def test_existing_or_unknown_nonce_does_not_grant_approval(self):
+        for nonce in ("PRESENT", "PROVEN_ABSENT", None, {}, True):
+            params = c7_fixture()
+            params[-1] = nonce
+            with self.subTest(nonce=repr(nonce)):
+                output = review_activation_boundary(*params)
+                self.assertEqual(output["decision"], "DENY")
+                self.assertFalse(output["nonce_reserved"])
+        params = c7_fixture()
+        output = review_activation_boundary(*params)
+        self.assertEqual(output["decision"], "READ_ONLY_SECURITY_REVIEW")
+        self.assertFalse(output["nonce_reserved"])
+
+    def test_missing_or_malformed_payloads_fail_closed(self):
+        for position in range(8):
+            params = c7_fixture()
+            params[position] = []
+            with self.subTest(position=position):
+                self.assertEqual(review_activation_boundary(*params)["decision"], "DENY")
+
+
+
 if __name__ == "__main__":
     unittest.main()
