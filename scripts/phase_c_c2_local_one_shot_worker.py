@@ -189,7 +189,7 @@ def verify_fresh_approval(owner_token, comment_id, checked_out_sha):
             "New independent owner comment required after review")
     comment = get(owner_token, BASE + "/issues/comments/" + str(comment_id))
     require(owner_verified(comment) and comment.get("body") == approval_phrase(checked_out_sha)
-            and comment.get("issue_url", "").endswith("/issues/427"),
+            and comment.get("issue_url") == "https://api.github.com" + BASE + "/issues/427",
             "Exact fresh owner approval missing")
 
 
