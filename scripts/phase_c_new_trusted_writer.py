@@ -181,7 +181,11 @@ def simulate_atomic(packet, refs, *, fault=None):
         return refused, copy.deepcopy(refs)
     if fault not in (None, "conflict", "timeout"):
         return refused, copy.deepcopy(refs)
-    inp = packet.get("payload", {}).get("variables", {}).get("input", {})
+    payload = packet.get("payload")
+    variables = payload.get("variables") if type(payload) is dict else None
+    inp = variables.get("input") if type(variables) is dict else None
+    if type(inp) is not dict:
+        return refused, copy.deepcopy(refs)
     updates = inp.get("refUpdates")
     nonce, cand = packet.get("nonce_ref"), packet.get("candidate_oid")
     valid = (
@@ -216,7 +220,7 @@ def execute_one_shot(*_args, **_kwargs):
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv
     print(json.dumps(execute_one_shot(), sort_keys=True))
-    return 2 if args else 0
+    return 2  # DENY is never a successful CLI action, including default invocation.
 
 
 if __name__ == "__main__":
