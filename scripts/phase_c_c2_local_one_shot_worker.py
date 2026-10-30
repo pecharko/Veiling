@@ -240,20 +240,27 @@ def run(app_jwt, owner_token, execute=False, comment_id=None):
     verify_ref_states(writer)
     request = mutation(comment_id)
     # One and only one GraphQL mutation request. No network retries on any error.
-    result_status, response = _api(writer, "/graphql", "POST", request)
+    # Any connection failure after an attempted POST has an ambiguous outcome.
+    # Investigate read-only, NEVER retry even if a response was not received.
+    try:
+        result_status, response = _api(writer, "/graphql", "POST", request)
+    except (OSError, ValueError, Refused, http.client.HTTPException):
+        result_status, response = 0, {}
     success = (result_status == 200 and not response.get("errors")
                and type(response.get("data")) is dict
                and type(response["data"].get("updateRefs")) is dict
                and response["data"]["updateRefs"].get("clientMutationId")
                == request["variables"]["input"]["clientMutationId"])
-    # Independent readback; failure is ambiguous, NEVER a license to retry.
-    branch_status, branch_read = _api(owner_token, BASE + "/git/ref/"
-                                      + BRANCH.removeprefix("refs/"))
-    nonce_status, nonce_read = _api(owner_token, BASE + "/git/ref/"
-                                    + NONCE.removeprefix("refs/"))
-    confirmed = (branch_status == 200 and nonce_status == 200
-                 and branch_read.get("object", {}).get("sha") == CANDIDATE
-                 and nonce_read.get("object", {}).get("sha") == HEAD)
+    try:
+        branch_status, branch_read = _api(owner_token, BASE + "/git/ref/"
+                                          + BRANCH.removeprefix("refs/"))
+        nonce_status, nonce_read = _api(owner_token, BASE + "/git/ref/"
+                                        + NONCE.removeprefix("refs/"))
+        confirmed = (branch_status == 200 and nonce_status == 200
+                     and branch_read.get("object", {}).get("sha") == CANDIDATE
+                     and nonce_read.get("object", {}).get("sha") == HEAD)
+    except (OSError, ValueError, Refused, http.client.HTTPException):
+        confirmed = False
     return {"decision": "READBACK_CONFIRMED" if success and confirmed
             else "AMBIGUOUS_STOP_NO_RETRY", "executed": True,
             "retry_allowed": False, "readback_confirmed": confirmed}
