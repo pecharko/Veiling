@@ -11,6 +11,13 @@ change GitHub permissions, secrets, or repository settings.
 - Independently establish the existing GitHub App ID **5526516**, slug
   `41lokeren-phase-c-writer`, installation ID **176547610**, selected-only
   repository `pecharko/Veiling`, and exact contents:write / metadata:read.
+  The local read-only probe now requires three authenticated GitHub App JWT
+  GETs: `/app`, `/app/installations/176547610`, and
+  `/repos/pecharko/Veiling/installation`. The third endpoint proves that
+  this installation belongs to the specific repository. It also checks
+  the owner and that the installation is not suspended. This does not
+  establish the total count of selected repositories; the future token
+  must still be restricted and independently verified.
 - The owner must locally supply a **short-lived signed App JWT** in
   `PHASE_C_APP_JWT` and an **existing owner read token** in
   `PHASE_C_OWNER_READ_TOKEN`, exclusively as local environment variables.

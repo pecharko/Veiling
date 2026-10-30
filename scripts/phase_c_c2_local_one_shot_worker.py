@@ -92,16 +92,35 @@ def approval_phrase(adapter_sha):
             + " nonce=" + NONCE + " adapter=" + adapter_sha)
 
 
+def _exact_installation(value):
+    """Validate GitHub-identified App, owner, selection and permissions."""
+    return (type(value) is dict
+            and type(value.get("id")) is int and value["id"] == INSTALLATION
+            and type(value.get("app_id")) is int and value["app_id"] == APP_ID
+            and value.get("app_slug") == SLUG
+            and value.get("repository_selection") == "selected"
+            and value.get("permissions") == EXPECTED_PERMISSIONS
+            and value.get("target_type") == "User"
+            and type(value.get("target_id")) is int
+            and value["target_id"] == OWNER_ID
+            and type(value.get("account")) is dict
+            and value["account"].get("id") == OWNER_ID
+            and value["account"].get("login") == "pecharko"
+            and "suspended_at" in value and value["suspended_at"] is None)
+
+
 def verify_app(app_jwt):
+    """Three authenticated GETs, no token minting, on the intended App."""
     app = get(app_jwt, "/app")
     require(type(app.get("id")) is int and app["id"] == APP_ID
             and app.get("slug") == SLUG, "Unexpected authenticated GitHub App")
     inst = get(app_jwt, "/app/installations/" + str(INSTALLATION))
-    require(inst.get("id") == INSTALLATION and inst.get("app_id") == APP_ID
-            and inst.get("app_slug") == SLUG
-            and inst.get("repository_selection") == "selected"
-            and inst.get("permissions") == EXPECTED_PERMISSIONS,
-            "Writer installation identity or permissions mismatch")
+    require(_exact_installation(inst), "Writer installation identity or scope mismatch")
+    # A selected-repositories installation need not include this repository.
+    # The GitHub App JWT must independently prove its installation on Veiling.
+    repo_installation = get(app_jwt, BASE + "/installation")
+    require(_exact_installation(repo_installation),
+            "Authenticated App is not installed on the exact repository")
     return inst
 
 
