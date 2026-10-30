@@ -153,9 +153,14 @@ def review_activation_boundary(
             or type(repositories["repositories"][0]) is not dict
             or repositories["repositories"][0].get("full_name") != REPOSITORY):
         return finish()
-    for config, rule_id, target in (
-        (branch_rules, BRANCH_RULESET, "branch"),
-        (tag_rules, TAG_RULESET, "tag"),
+    # Branch protection and tag protection use different GitHub rules:
+    # a branch denies non-fast-forward and deletion, while an immutable
+    # nonce tag denies update and deletion. Do NOT weaken either contract.
+    for config, rule_id, target, required in (
+        (branch_rules, BRANCH_RULESET, "branch",
+         {"deletion", "non_fast_forward"}),
+        (tag_rules, TAG_RULESET, "tag",
+         {"deletion", "update"}),
     ):
         entries = config.get("rules")
         if (type(config.get("id")) is not int
@@ -165,7 +170,7 @@ def review_activation_boundary(
                 or type(config.get("bypass_actors")) is not list
                 or config["bypass_actors"] != []
                 or type(entries) is not list
-                or not {"deletion", "non_fast_forward"}.issubset(
+                or not required.issubset(
                     {x.get("type") for x in entries if type(x) is dict})):
             return finish()
 
