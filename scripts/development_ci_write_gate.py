@@ -122,3 +122,93 @@ def prepare_repair_review(request, original_source):
         "reason": "Deterministic candidate content verified offline; new authenticated owner approval and trusted writer still required",
         "review_sha256": hashlib.sha256(canonical).hexdigest(),
     }
+
+
+def review_github_readbacks(request, pr_payload, branch_payload, file_payload):
+    """Verify structural consistency of separately supplied REST readbacks.
+
+    Every payload is UNTRUSTED. This function does not fetch from GitHub, verify
+    caller credentials, confirm a contemporaneous atomic snapshot, check CI,
+    authenticate the owner, reserve a nonce, or send a mutation. The resulting
+    packet remains PROPOSED_ONLY regardless of its matching fields.
+    """
+    import base64
+    import binascii
+
+    denied = {
+        "decision": "DENY",
+        "reason": "Invalid or stale PR, branch, or GitHub file readback",
+        "can_write": False,
+        "can_merge": False,
+        "can_dispatch": False,
+        "production_authorized": False,
+        "owner_identity_verified": False,
+        "nonce_reserved": False,
+        "source_provenance_authenticated": False,
+        "readback_structurally_consistent": False,
+    }
+    if assess_repair_write(request).get("decision") != "ELIGIBLE_FOR_SEPARATE_WRITE_APPROVAL":
+        return denied
+    if any(type(value) is not dict for value in (pr_payload, branch_payload, file_payload)):
+        return denied
+    try:
+        head = pr_payload["head"]
+        base = pr_payload["base"]
+        if (type(head) is not dict or type(base) is not dict
+                or type(head.get("repo")) is not dict
+                or type(base.get("repo")) is not dict
+                or pr_payload.get("number") != request["pr"]
+                or type(pr_payload.get("number")) is not int
+                or pr_payload.get("state") != "open"
+                or pr_payload.get("draft") is not True
+                or pr_payload.get("merged_at") is not None
+                or head.get("repo", {}).get("full_name") != "pecharko/Veiling"
+                or base.get("repo", {}).get("full_name") != "pecharko/Veiling"
+                or head.get("ref") != request["branch"]
+                or head.get("sha") != request["expected_head_sha"]
+                or base.get("sha") == request["expected_head_sha"]
+                or type(base.get("sha")) is not str
+                or not re.fullmatch(r"[0-9a-f]{40}", base["sha"])):
+            return denied
+
+        obj = branch_payload.get("object")
+        if (branch_payload.get("ref") != "refs/heads/" + request["branch"]
+                or type(obj) is not dict or obj.get("type") != "commit"
+                or obj.get("sha") != request["expected_head_sha"]):
+            return denied
+
+        raw = file_payload.get("content")
+        if (file_payload.get("path") != request["path"]
+                or file_payload.get("type") != "file"
+                or file_payload.get("sha") != request["base_blob_sha"]
+                or file_payload.get("encoding") != "base64"
+                or type(raw) is not str or len(raw) > 8192
+                or type(file_payload.get("size")) is not int
+                or not 0 < file_payload["size"] <= 2048):
+            return denied
+        # GitHub Contents API wraps base64 with newlines; reject all other
+        # whitespace or non-base64 input and never execute decoded PHP.
+        stripped = raw.replace("\n", "")
+        data = base64.b64decode(stripped, validate=True)
+        if len(data) != file_payload["size"] or len(data) > 2048:
+            return denied
+        original = data.decode("utf-8", errors="strict")
+        if _git_blob_sha(original) != request["base_blob_sha"]:
+            return denied
+        report = prepare_repair_review(request, original)
+        if report.get("decision") != "PROPOSED_ONLY":
+            return denied
+        return {
+            **report,
+            "readback_structurally_consistent": True,
+            "readback_evidence_scope": "supplied_rest_payloads_only",
+            "source_provenance_authenticated": False,
+            "owner_identity_verified": False,
+            "nonce_reserved": False,
+            "can_write": False,
+            "can_merge": False,
+            "can_dispatch": False,
+            "production_authorized": False,
+        }
+    except (KeyError, TypeError, ValueError, UnicodeError, binascii.Error):
+        return denied

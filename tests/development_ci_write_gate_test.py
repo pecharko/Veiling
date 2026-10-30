@@ -1,6 +1,7 @@
 import unittest
-from scripts.development_ci_write_gate import assess_repair_write, prepare_repair_review, _git_blob_sha
+from scripts.development_ci_write_gate import assess_repair_write, prepare_repair_review, review_github_readbacks, _git_blob_sha
 import copy
+import base64
 
 
 def request():
@@ -129,6 +130,106 @@ class OfflineRepairReviewTest(unittest.TestCase):
             with self.subTest(content=repr(content)[:30]):
                 self.assertEqual(prepare_repair_review(proposal, content)["decision"],
                                  "DENY")
+
+
+
+def source_readbacks():
+    proposed, original = valid_review_input()
+    head = proposed["expected_head_sha"]
+    repo = {"full_name": "pecharko/Veiling"}
+    pr = {
+        "number": proposed["pr"], "state": "open", "draft": True,
+        "merged_at": None,
+        "head": {"sha": head, "ref": proposed["branch"], "repo": repo},
+        "base": {"sha": "c" * 40, "repo": repo},
+    }
+    branch = {
+        "ref": "refs/heads/" + proposed["branch"],
+        "object": {"sha": head, "type": "commit"},
+    }
+    blob = {
+        "type": "file", "path": proposed["path"],
+        "sha": proposed["base_blob_sha"], "encoding": "base64",
+        "size": len(original.encode("utf-8")),
+        "content": base64.b64encode(original.encode("utf-8")).decode("ascii"),
+    }
+    return proposed, pr, branch, blob
+
+
+class PhaseC5OfflineReadbackTests(unittest.TestCase):
+    def test_bound_gitHub_shaped_reads_remain_proposed_only(self):
+        proposed, pr, branch, blob = source_readbacks()
+        result = review_github_readbacks(proposed, pr, branch, blob)
+        self.assertEqual(result["decision"], "PROPOSED_ONLY")
+        self.assertTrue(result["readback_structurally_consistent"])
+        self.assertEqual(result["readback_evidence_scope"], "supplied_rest_payloads_only")
+        self.assertEqual(result["original_blob_sha"], proposed["base_blob_sha"])
+        for field in ("can_write", "can_merge", "can_dispatch",
+                      "production_authorized", "nonce_reserved",
+                      "owner_identity_verified", "source_provenance_authenticated"):
+            self.assertFalse(result[field], field)
+
+    def test_pr_identity_draft_status_repo_and_sha_drift_denied(self):
+        actions = (
+            lambda p, h, b: p.update(number=999),
+            lambda p, h, b: p.update(state="closed"),
+            lambda p, h, b: p.update(draft=False),
+            lambda p, h, b: p.update(merged_at="2026-10-30T00:00:00Z"),
+            lambda p, h, b: p["head"].update(sha="d" * 40),
+            lambda p, h, b: p["head"].update(ref="main"),
+            lambda p, h, b: p["head"]["repo"].update(full_name="attacker/fork"),
+            lambda p, h, b: p["base"]["repo"].update(full_name="attacker/fork"),
+            lambda p, h, b: p["base"].update(sha="a" * 40),
+            lambda p, h, b: p["base"].update(sha="bad"),
+        )
+        for action in actions:
+            proposed, pr, branch, blob = source_readbacks()
+            action(pr, branch, blob)
+            with self.subTest(action=repr(action)):
+                self.assertEqual(review_github_readbacks(
+                    proposed, pr, branch, blob)["decision"], "DENY")
+
+    def test_ref_and_content_drift_or_unsupported_encoding_denied(self):
+        actions = (
+            lambda h, b: h.update(ref="refs/heads/main"),
+            lambda h, b: h["object"].update(sha="d" * 40),
+            lambda h, b: h["object"].update(type="tag"),
+            lambda h, b: b.update(sha="0" * 40),
+            lambda h, b: b.update(path="private/secret.php"),
+            lambda h, b: b.update(type="dir"),
+            lambda h, b: b.update(encoding="none"),
+            lambda h, b: b.update(content="**not base64**"),
+            lambda h, b: b.update(content=base64.b64encode(
+                b"<?php\nreturn flase;\n// inserted").decode("ascii")),
+            lambda h, b: b.update(size=2049),
+            lambda h, b: b.update(size=True),
+        )
+        for action in actions:
+            proposed, pr, branch, blob = source_readbacks()
+            action(branch, blob)
+            with self.subTest(action=repr(action)):
+                result = review_github_readbacks(proposed, pr, branch, blob)
+                self.assertEqual(result["decision"], "DENY")
+                self.assertFalse(result["can_write"])
+
+    def test_base64_newline_wrapping_accepted_but_not_whitespace_injection(self):
+        proposed, pr, branch, blob = source_readbacks()
+        raw = blob["content"]
+        blob["content"] = raw[:24] + "\n" + raw[24:]
+        self.assertEqual(review_github_readbacks(
+            proposed, pr, branch, blob)["decision"], "PROPOSED_ONLY")
+        blob["content"] = raw[:24] + " " + raw[24:]
+        self.assertEqual(review_github_readbacks(
+            proposed, pr, branch, blob)["decision"], "DENY")
+
+    def test_malformed_or_unapproved_packet_cannot_grant_authority(self):
+        proposed, pr, branch, blob = source_readbacks()
+        for broken in (None, [], {}, {"number": proposed["pr"]}):
+            self.assertEqual(review_github_readbacks(
+                proposed, broken, branch, blob)["decision"], "DENY")
+        proposed["author_approved"] = False
+        self.assertEqual(review_github_readbacks(
+            proposed, pr, branch, blob)["decision"], "DENY")
 
 
 

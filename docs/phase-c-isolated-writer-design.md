@@ -51,3 +51,31 @@ via atomische niet-force CAS wijzigen en onafhankelijk readback doen.
 Dat mag niet via `development-ci-feedback.yml`, de bestaande
 productiecontroller of een onbetrouwbare PR-codecheckout. Een generieke
 automatische bugfixer of productiedeployment is niet geïmplementeerd.
+
+
+## Fase C5: verifiëren van aangeleverde GitHub-readbacks (read-only)
+
+De bestaande write-gate kan met
+\`review_github_readbacks(request, pr_payload, branch_payload, file_payload)\`
+de exacte PR-, branch- en oorspronkelijke bestandsgegevens vergelijken met
+het C4-correctievoorstel. Het contract vereist een open, ongemergde
+**draft** sandbox-PR binnen dezelfde repository, een exacte head-SHA,
+een overeenkomende branch-ref, het toegestane testpad en een correct
+Base64-gecodeerd Git-blob met de verwachte inhoud en grootte.
+Bij mismatches, verdwenen/gewijzigde refs, onverwacht bestandstype,
+inhoudsdrift, vreemde repository of ongeldige encodering: \`DENY\`.
+
+De invoerpakketten zijn **aangeleverde data, geen geauthenticeerd bewijs**.
+Deze functie zelf doet geen GitHub-aanroep, bewaart geen tokens, voert geen
+code uit en verifieert geen ononderbroken/atomisch momentopname. Ook bij een
+geldig voorstel blijft \`source_provenance_authenticated=false\`,
+\`owner_identity_verified=false\`, \`nonce_reserved=false\`,
+\`can_write=false\`, \`can_merge=false\` en \`can_dispatch=false\`.
+
+Voor een toekomstig live proces zijn nog nodig: onafhankelijke
+GitHub-identiteits-/bevoegdheidsverificatie van alle GETs, bindende en
+eenmalige eigenaarautorisatie, afzonderlijke vertrouwde uitvoeringsomgeving,
+actieve effectieve branch/tagbescherming, vers controleerbaar CAS,
+atomische nonceconsumptie en onafhankelijke readback. Geen onderdeel
+van C5 geeft toestemming om de verlopen C2-sandboxnonce te hergebruiken,
+de fixture-PR #426 te mergen of de productiecontroller aan te passen.
