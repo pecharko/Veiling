@@ -251,5 +251,80 @@ class DevelopmentCIFeedbackSummaryTests(unittest.TestCase):
 
 
 
+class DevelopmentCIAllFailedJobTests(unittest.TestCase):
+    def test_single_failed_job_yields_actionable_advice(self):
+        event, replies = ci_fixture()
+        jobs = replies[ROOT + "/actions/runs/1234/jobs?per_page=100"]
+        jobs["total_count"] = 1
+        jobs["jobs"] = [jobs["jobs"][1]]
+        result = feedback.evaluate(event, replies.__getitem__)
+        self.assertEqual(result["status"], "FIX_CANDIDATE")
+        self.assertEqual(result["failed_jobs"], ["php-lint"])
+        self.assertEqual(result["evidence_scope"], "single_workflow_read_only")
+        self.assertFalse(result["write_allowed"])
+        self.assertFalse(result["automatic_code_changes"])
+        self.assertFalse(result["overall_pr_ci_verified"])
+        self.assertIn("php-lint", feedback.format_summary(result))
+
+    def test_all_failed_jobs_report_without_a_successful_job(self):
+        event, replies = ci_fixture()
+        jobs = replies[ROOT + "/actions/runs/1234/jobs?per_page=100"]
+        jobs["jobs"][0]["conclusion"] = "failure"
+        result = feedback.evaluate(event, replies.__getitem__)
+        self.assertEqual(result["status"], "FIX_CANDIDATE")
+        self.assertEqual(result["failed_jobs"], ["impact", "php-lint"])
+        self.assertFalse(result["deployment_authorized"])
+        self.assertFalse(result["dispatch_allowed"])
+
+    def test_three_failed_jobs_require_human_review_not_silent_loss(self):
+        event, replies = ci_fixture()
+        jobs = replies[ROOT + "/actions/runs/1234/jobs?per_page=100"]
+        jobs["jobs"].append({
+            "name": "snapshot", "status": "completed", "conclusion": "failure"
+        })
+        jobs["total_count"] = 3
+        jobs["jobs"][0]["conclusion"] = "failure"
+        result = feedback.evaluate(event, replies.__getitem__)
+        self.assertEqual(result["status"], "HUMAN_REVIEW")
+        self.assertEqual(result["failed_jobs"], ["impact", "php-lint", "snapshot"])
+        self.assertIn("snapshot", feedback.format_summary(result))
+        self.assertFalse(result["write_allowed"])
+
+    def test_contradictory_workflow_conclusion_fails_closed(self):
+        event, replies = ci_fixture()
+        jobs = replies[ROOT + "/actions/runs/1234/jobs?per_page=100"]
+        # Failure without any failed job is not an actionable verified failure.
+        jobs["jobs"][1]["conclusion"] = "success"
+        self.assertEqual(feedback.evaluate(event, replies.__getitem__)["status"],
+                         "HUMAN_REVIEW")
+        jobs["jobs"][1]["conclusion"] = "skipped"
+        self.assertEqual(feedback.evaluate(event, replies.__getitem__)["status"],
+                         "HUMAN_REVIEW")
+        # A claimed successful workflow cannot have failed jobs.
+        event["workflow_run"]["conclusion"] = "success"
+        replies[ROOT + "/actions/runs/1234"]["conclusion"] = "success"
+        jobs["jobs"][1]["conclusion"] = "failure"
+        self.assertEqual(feedback.evaluate(event, replies.__getitem__)["status"],
+                         "HUMAN_REVIEW")
+
+    def test_cancelled_and_timed_out_jobs_are_advisory_only(self):
+        for outcome in ("cancelled", "timed_out"):
+            with self.subTest(outcome=outcome):
+                event, replies = ci_fixture()
+                event["workflow_run"]["conclusion"] = outcome
+                replies[ROOT + "/actions/runs/1234"]["conclusion"] = outcome
+                jobs = replies[ROOT + "/actions/runs/1234/jobs?per_page=100"]
+                jobs["total_count"] = 1
+                jobs["jobs"] = [{
+                    "name": "interrupted", "status": "completed",
+                    "conclusion": outcome
+                }]
+                result = feedback.evaluate(event, replies.__getitem__)
+                self.assertEqual(result["status"], "FIX_CANDIDATE")
+                self.assertEqual(result["failed_jobs"], ["interrupted"])
+                self.assertFalse(result["write_allowed"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
