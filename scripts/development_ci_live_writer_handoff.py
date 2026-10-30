@@ -82,6 +82,7 @@ def _rule_matches(record, rule_id, target, include, required):
         and type(record.get("bypass_actors")) is list
         and record["bypass_actors"] == []
         and type(ref_name.get("include")) is list
+        and all(type(ref) is str for ref in ref_name["include"])
         # Preserve the spent C2 fixture's existing protection while
         # additionally covering the one new branch. No wildcard or extras.
         and set(ref_name["include"]) == (
