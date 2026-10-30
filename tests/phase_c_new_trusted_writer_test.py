@@ -193,6 +193,18 @@ class NewSandboxTrustedWriterTests(unittest.TestCase):
             answer, _ = w.simulate_atomic(p, {w.BRANCH: w.HEAD})
             self.assertEqual(answer["decision"], "DENY")
 
+    def test_malformed_review_packet_cannot_crash_or_mutate(self):
+        for payload in (None, 9, {}, {"variables": None},
+                        {"variables": {"input": None}},
+                        {"variables": {"input": "invalid"}}):
+            p = review()
+            p["payload"] = payload
+            original = {w.BRANCH: w.HEAD}
+            answer, unchanged = w.simulate_atomic(p, original)
+            self.assertEqual(answer["decision"], "DENY")
+            self.assertFalse(answer["retry_allowed"])
+            self.assertEqual(unchanged, original)
+
     def test_no_network_credentials_or_executable_path(self):
         class Hostile:
             def __getattr__(self, name):
@@ -203,7 +215,7 @@ class NewSandboxTrustedWriterTests(unittest.TestCase):
         for forbidden in ("urllib", "requests", "http.client", "subprocess",
                           "os.environ", "urlopen(", "HTTPSConnection("):
             self.assertNotIn(forbidden, inspect.getsource(w))
-        self.assertEqual(w.main([]), 0)
+        self.assertEqual(w.main([]), 2)
         self.assertEqual(w.main(["--execute"]), 2)
 
 
