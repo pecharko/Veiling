@@ -208,5 +208,48 @@ class DevelopmentCIFeedbackIntegrationTests(unittest.TestCase):
 
 
 
+class DevelopmentCIFeedbackSummaryTests(unittest.TestCase):
+    def test_failure_summary_reports_exact_jobs_without_authority(self):
+        result = {
+            "status": "FIX_CANDIDATE",
+            "reason": "Review job logs and propose a separate narrow fix",
+            "run_id": 1234,
+            "pr": 321,
+            "head_sha": SHA,
+            "failed_jobs": ["php-lint", "test_job"],
+        }
+        summary = feedback.format_summary(result)
+        self.assertIn("- Failed jobs in this workflow:", summary)
+        self.assertIn("  - php-lint", summary)
+        self.assertIn("  - test_job", summary)
+        self.assertIn("- No automatic code changes, merge, retry, workflow dispatch or deployment.", summary)
+        self.assertNotIn("write allowed", summary.lower())
+
+    def test_untrusted_job_names_cannot_inject_markdown_or_newlines(self):
+        result = {
+            "status": "FIX_CANDIDATE",
+            "reason": "Review job logs and propose a separate narrow fix",
+            "failed_jobs": ["php" + chr(10) + "### fake green", "](javascript:alert(1))", "<script>"],
+        }
+        text = feedback.format_summary(result)
+        self.assertNotIn(chr(10) + "### fake green", text)
+        self.assertNotIn("javascript:", text)
+        self.assertNotIn("<script>", text)
+        self.assertIn("- Scope: this workflow only", text)
+
+    def test_no_failures_is_not_falsely_reported_as_green(self):
+        review = feedback.format_summary({
+            "status": "HUMAN_REVIEW", "reason": "Incomplete evidence",
+        })
+        self.assertIn("not independently established", review)
+        green = feedback.format_summary({
+            "status": "CI_GREEN_ADVISORY", "reason": "All reported jobs successful",
+            "failed_jobs": [],
+        })
+        self.assertIn("none reported in this workflow", green)
+        self.assertIn("other PR checks require independent review", green)
+
+
+
 if __name__ == "__main__":
     unittest.main()
