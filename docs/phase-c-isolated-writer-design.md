@@ -105,3 +105,7 @@ Writeractivatie, PR #426-merging en noncehergebruik zijn uitgesloten.
 Een toekomstige echte writer vereist een afzonderlijk beveiligingsontwerp,
 onafhankelijk geauthenticeerde owner-/App-/GitHub-bewijzen, nieuwe eenmalige
 autorisatie, atomische niet-force CAS en onafhankelijke post-write readback.
+
+## Fase C7: geïntegreerde offline veiligheidsreview
+
+De niet-uitvoerbare C7-beoordeling in `scripts/development_ci_c7_activation_review.py` controleert de samenhang tussen C6-reviewhash, eigenaar-issue/comment, bestaande App-installatie en branch-/tagregelstructuur. Ook een volledig passende fixture levert uitsluitend `READ_ONLY_SECURITY_REVIEW`, nooit schrijfrechten. Zie [C7 activeringsgrens](phase-c7-final-activation-boundary.md) voor het resterende werk en de afzonderlijke eigenaarautorisatie voor een toekomstige trusted writer.
