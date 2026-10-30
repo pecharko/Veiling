@@ -1,5 +1,13 @@
 # Phase C2 — local one-shot GitHub App worker (not activated)
 
+> **CLOSED SANDBOX EXERCISE (2026-10-30):** The one-use nonce for issue #427 is now
+> spent, the isolated branch is at candidate `11ead85e1a3d0086166da665a1a6d4bdf25477d7`,
+> and the sandbox PR CI succeeded. **Do not rerun the worker, recreate the
+> nonce, or merge PR #426.** See
+> [the independent closeout record](phase-c-c2-sandbox-closeout-20261030.md).
+> The pre-activation details below are retained for historical review only,
+> not as instructions to repeat the sandbox transaction.
+
 This file documents a **manual, isolated sandbox-only** tool. It is not
 connected to Actions, the general release controller or OVH, and it does not
 change GitHub permissions, secrets, or repository settings.
