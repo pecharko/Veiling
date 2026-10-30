@@ -122,12 +122,16 @@ def evaluate(event, api_get):
                         "success", "failure", "cancelled", "timed_out", "skipped")):
                 raise ValueError("Unfinished or invalid CI job")
             safe_jobs.append({"name": job["name"], "conclusion": job["conclusion"]})
-        if not any(j["conclusion"] == "success" for j in safe_jobs):
-            raise ValueError("No successful jobs for reliable advisory")
-        if (run["conclusion"] == "success" and
-                any(j["conclusion"] in ("failure", "cancelled", "timed_out")
-                    for j in safe_jobs)):
-            raise ValueError("Workflow success contradicts job failure")
+        # A failed workflow may have zero successful jobs. Rejecting it
+        # obscures the most actionable failures; the completed and bounded
+        # job list itself is the trustworthy advisory evidence.
+        failed = any(j["conclusion"] in ("failure", "cancelled", "timed_out")
+                     for j in safe_jobs)
+        if run["conclusion"] == "success":
+            if failed or not any(j["conclusion"] == "success" for j in safe_jobs):
+                raise ValueError("Workflow success contradicts job conclusions")
+        elif not failed:
+            raise ValueError("Workflow failure lacks any failed or interrupted job")
 
         compare = _get(api_get, root + "/compare/" + base + "..." + sha, dict)
         files = compare.get("files")
