@@ -34,18 +34,40 @@ class LocalWorkerTests(unittest.TestCase):
         installation = {
             "id": worker.INSTALLATION, "app_id": worker.APP_ID,
             "app_slug": worker.SLUG, "repository_selection": "selected",
-            "permissions": dict(worker.EXPECTED_PERMISSIONS)}
-        with patch.object(worker, "get", side_effect=[app, installation]):
+            "permissions": dict(worker.EXPECTED_PERMISSIONS),
+            "target_type": "User", "target_id": worker.OWNER_ID,
+            "account": {"id": worker.OWNER_ID, "login": "pecharko"},
+            "suspended_at": None}
+        expected_paths = ["/app", "/app/installations/" + str(worker.INSTALLATION),
+                          worker.BASE + "/installation"]
+        calls = []
+        def authenticated_get(token, path):
+            calls.append(path)
+            return [app, installation, installation][len(calls) - 1]
+        with patch.object(worker, "get", side_effect=authenticated_get):
             worker.verify_app("jwt")
+        self.assertEqual(calls, expected_paths)
         for key, wrong in (("id", 172331568), ("repository_selection", "all"),
+                           ("target_id", 888), ("suspended_at", "2026-10-29T00:00:00Z"),
                            ("permissions", {"contents": "write", "issues": "write"})):
             incorrect = dict(installation, **{key: wrong})
-            with self.subTest(key=key), patch.object(worker, "get",
-                                                     side_effect=[app, incorrect]):
+            with self.subTest(key=key, source="installation"), patch.object(
+                    worker, "get", side_effect=[app, incorrect]):
                 with self.assertRaises(worker.Refused):
                     worker.verify_app("jwt")
-        with patch.object(worker, "get",
-                          return_value={"id": 123, "slug": worker.SLUG}):
+            with self.subTest(key=key, source="repository"), patch.object(
+                    worker, "get", side_effect=[app, installation, incorrect]):
+                with self.assertRaises(worker.Refused):
+                    worker.verify_app("jwt")
+        for bad_account in ({"id": worker.OWNER_ID, "login": "another"},
+                            {"id": 12, "login": "pecharko"}, None):
+            with self.subTest(account=bad_account), patch.object(
+                    worker, "get", side_effect=[
+                        app, installation, dict(installation, account=bad_account)]):
+                with self.assertRaises(worker.Refused):
+                    worker.verify_app("jwt")
+        with patch.object(worker, "get", return_value={
+                "id": 123, "slug": worker.SLUG}):
             with self.assertRaises(worker.Refused):
                 worker.verify_app("jwt")
 
