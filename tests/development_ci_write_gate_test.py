@@ -643,5 +643,143 @@ class C8InertExecutionClosureTests(unittest.TestCase):
 
 
 
+import hashlib
+from scripts.development_ci_live_writer_handoff import (
+    inspect_target_rule_coverage, inspect_future_postwrite_readback,
+    execute_one_shot as future_execute, NO_AUTHORITY as FUTURE_DENIED,
+)
+
+
+def future_payload():
+    contents = b"<?php\nreturn false;\n"
+    candidate = hashlib.sha1(
+        b"blob " + str(len(contents)).encode("ascii") + b"\0" + contents
+    ).hexdigest()
+    p = {
+        "repository": "pecharko/Veiling", "pr": 678,
+        "branch_ref": "refs/heads/test/phase-c-new-isolated-20261030",
+        "nonce_ref": "refs/tags/phase-c-once-issue-678",
+        "path": "tests/future_repair_test.php",
+        "before_sha": "a" * 40, "after_sha": "b" * 40,
+        "original_blob_sha": "c" * 40, "candidate_blob_sha": candidate,
+        "candidate_sha256": hashlib.sha256(contents).hexdigest(),
+    }
+    branch_rules = {
+        "id": 26113993, "source": "pecharko/Veiling",
+        "target": "branch", "enforcement": "active", "bypass_actors": [],
+        "conditions": {"ref_name": {"include": [p["branch_ref"]], "exclude": []}},
+        "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+    }
+    tag_rules = {
+        "id": 26113833, "source": "pecharko/Veiling",
+        "target": "tag", "enforcement": "active", "bypass_actors": [],
+        "conditions": {"ref_name": {
+            "include": ["refs/tags/phase-c-once-issue-*"], "exclude": []}},
+        "rules": [{"type": "update"}, {"type": "deletion"}],
+    }
+    branch = {"ref": p["branch_ref"],
+              "object": {"type": "commit", "sha": p["after_sha"]}}
+    nonce = {"ref": p["nonce_ref"],
+             "object": {"type": "commit", "sha": p["before_sha"]}}
+    commit = {"sha": p["after_sha"], "parents": [{"sha": p["before_sha"]}],
+              "files": [{"filename": p["path"], "status": "modified",
+                         "sha": candidate}]}
+    file = {"path": p["path"], "type": "file", "encoding": "base64",
+            "sha": candidate, "size": len(contents),
+            "content": base64.b64encode(contents).decode("ascii")}
+    return p, branch_rules, tag_rules, branch, nonce, commit, file
+
+
+class FutureWriterHandoffTests(unittest.TestCase):
+    def assertDeniedRights(self, report):
+        for field, value in FUTURE_DENIED.items():
+            self.assertEqual(report[field], value, field)
+
+    def test_exact_branch_and_nonce_rules_are_non_authorizing(self):
+        p, b, t, *_ = future_payload()
+        report = inspect_target_rule_coverage(p, b, t)
+        self.assertEqual(report["decision"], "RULE_SHAPES_MATCH_REVIEW_ONLY")
+        self.assertFalse(report["effective_ruleset_coverage_authenticated"])
+        self.assertDeniedRights(report)
+
+    def test_current_old_fixture_ruleset_does_not_cover_new_branch(self):
+        p, b, t, *_ = future_payload()
+        b["conditions"]["ref_name"]["include"] = [
+            "refs/heads/test/phase-c-writer-fixture-20261029"]
+        report = inspect_target_rule_coverage(p, b, t)
+        self.assertEqual(report["decision"], "DENY")
+        self.assertEqual(report["reason_code"],
+                         "NEW_BRANCH_RULE_COVERAGE_NOT_ESTABLISHED")
+        self.assertDeniedRights(report)
+
+    def test_scope_protection_and_nonce_negative_cases(self):
+        for key, value in (
+            ("branch_ref", "refs/heads/main"),
+            ("branch_ref", "refs/heads/test/phase-c-writer-fixture-20261029"),
+            ("nonce_ref", "refs/tags/phase-c-once-issue-427"),
+            ("nonce_ref", "refs/tags/phase-c-once-issue-42"),
+            ("path", "private/config.php"),
+            ("path", "tests/nested/test_test.php"),
+            ("repository", "attacker/repo"),
+            ("pr", True),
+            ("candidate_sha256", "not-sha"),
+        ):
+            p, b, t, *_ = future_payload()
+            p[key] = value
+            with self.subTest(key=key):
+                r = inspect_target_rule_coverage(p, b, t)
+                self.assertEqual(r["decision"], "DENY")
+                self.assertDeniedRights(r)
+
+    def test_rule_drift_and_unapproved_bypass_denied(self):
+        for key, value, index in (
+            ("enforcement", "disabled", 1),
+            ("bypass_actors", [{"actor_id": 1}], 1),
+            ("rules", [{"type": "deletion"}], 1),
+            ("enforcement", "disabled", 2),
+            ("bypass_actors", [{"actor_id": 1}], 2),
+            ("rules", [{"type": "deletion"}], 2),
+        ):
+            p, b, t, *_ = future_payload()
+            [None, b, t][index][key] = value
+            with self.subTest(key=key, index=index):
+                r = inspect_target_rule_coverage(p, b, t)
+                self.assertEqual(r["decision"], "DENY")
+                self.assertDeniedRights(r)
+
+    def test_postwrite_readback_only_not_execution(self):
+        p, _, _, b, n, c, f = future_payload()
+        r = inspect_future_postwrite_readback(p, b, n, c, f)
+        self.assertEqual(r["decision"], "READBACK_SHAPE_MATCH_ONLY")
+        self.assertFalse(r["postwrite_readback_authenticated"])
+        self.assertDeniedRights(r)
+        self.assertNotIn("<?php", str(r))
+
+    def test_postwrite_drift_and_extra_files_denied(self):
+        for target, mutation in (
+            ("branch", lambda z: z["object"].update(sha="0" * 40)),
+            ("nonce", lambda z: z["object"].update(sha="0" * 40)),
+            ("commit", lambda z: z["parents"].append({"sha": "0" * 40})),
+            ("commit", lambda z: z["files"].append({"filename": "private/config.php"})),
+            ("file", lambda z: z.update(sha="0" * 40)),
+            ("file", lambda z: z.update(content="not base64")),
+            ("file", lambda z: z.update(size=True)),
+        ):
+            p, _, _, b, n, c, f = future_payload()
+            obj = {"branch": b, "nonce": n, "commit": c, "file": f}[target]
+            mutation(obj)
+            with self.subTest(target=target):
+                r = inspect_future_postwrite_readback(p, b, n, c, f)
+                self.assertEqual(r["decision"], "DENY")
+                self.assertDeniedRights(r)
+
+    def test_unconditional_disabled_live_entrypoint(self):
+        result = future_execute("fake-token", enabled=True, retry=True)
+        self.assertEqual(result["decision"], "DENY")
+        self.assertEqual(result["operations"], [])
+        self.assertDeniedRights(result)
+
+
+
 if __name__ == "__main__":
     unittest.main()
