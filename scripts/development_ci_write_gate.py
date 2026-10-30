@@ -50,3 +50,75 @@ def assess_repair_write(request):
 
 if __name__ == "__main__":
     raise SystemExit("Offline policy only; no write entrypoint")
+
+
+def _git_blob_sha(content):
+    """Calculate the standard Git blob OID without invoking Git or writing."""
+    import hashlib
+    body = content.encode("utf-8")
+    return hashlib.sha1(b"blob " + str(len(body)).encode("ascii") + b"\0" + body).hexdigest()
+
+
+def prepare_repair_review(request, original_source):
+    """Build immutable, OFFLINE review evidence for one deterministic test typo.
+
+    Reuses the existing write gate, but NEVER grants authority. The supplied
+    source and request are untrusted until independently obtained from GitHub;
+    a matching digest is not owner authentication, a consumed nonce, or a
+    branch-head CAS. No API, file, Git, credentials or mutation are used.
+    """
+    import hashlib
+    import json
+
+    denied = {
+        "decision": "DENY",
+        "can_write": False,
+        "can_merge": False,
+        "can_dispatch": False,
+        "production_authorized": False,
+        "owner_identity_verified": False,
+        "nonce_reserved": False,
+        "source_provenance_authenticated": False,
+        "reason": "Ineligible or unverifiable offline repair evidence",
+    }
+
+    eligibility = assess_repair_write(request)
+    if eligibility.get("decision") != "ELIGIBLE_FOR_SEPARATE_WRITE_APPROVAL":
+        return denied
+    if (type(original_source) is not str or
+            len(original_source.encode("utf-8")) > 2048 or
+            not original_source.startswith("<?php") or
+            "\x00" in original_source):
+        return denied
+
+    # This exact, well-understood correction is the only supported offline
+    # proposal. No generic text edits or source executing are permitted.
+    old, new = "return flase;", "return false;"
+    if original_source.count(old) != 1:
+        return denied
+    if _git_blob_sha(original_source) != request["base_blob_sha"]:
+        return denied
+    expected = original_source.replace(old, new, 1)
+    if request["replacement"] != expected:
+        return denied
+
+    candidate = expected.encode("utf-8")
+    base = {
+        "repository": "pecharko/Veiling",
+        "pr": request["pr"],
+        "branch": request["branch"],
+        "head_sha": request["expected_head_sha"],
+        "path": request["path"],
+        "original_blob_sha": request["base_blob_sha"],
+        "candidate_blob_sha": _git_blob_sha(expected),
+        "candidate_sha256": hashlib.sha256(candidate).hexdigest(),
+        "change": "exactly-one:return flase;->return false;",
+    }
+    canonical = json.dumps(base, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return {
+        **denied,
+        **base,
+        "decision": "PROPOSED_ONLY",
+        "reason": "Deterministic candidate content verified offline; new authenticated owner approval and trusted writer still required",
+        "review_sha256": hashlib.sha256(canonical).hexdigest(),
+    }

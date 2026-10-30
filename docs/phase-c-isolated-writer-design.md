@@ -18,3 +18,36 @@ De bestaande `development-ci-feedback.yml` leest alleen GitHub-runstatus. `devel
 4. Bevestig één beperkte wijziging, nieuwe CI, nul ongeautoriseerde wijzigingen, geen merge of deployment.
 
 De contractstatus `ELIGIBLE_FOR_SEPARATE_WRITE_APPROVAL` is **geen toestemming** en heeft expliciet `can_write=false`.
+
+
+## Fase C4: kandidaatbewijs voor herbruikbaar herstel (offline)
+
+De bestaande module `scripts/development_ci_write_gate.py` levert nu met
+`prepare_repair_review(request, original_source)` een deterministisch
+**voorstel**, uitsluitend voor de exact herkende PHP-testcorrectie
+`return flase;` naar `return false;` (één voorkomen).
+
+De functie controleert het toegestane testpad, de geïsoleerde branch,
+de exacte PR-head, het originele Git-blob-OID en de **volledige**
+vervangende inhoud. De uitvoer bevat het nieuwe Git-blob-OID,
+een SHA-256 van de nieuwe inhoud en een SHA-256 over de gesorteerde,
+onveranderlijke reviewvelden (PR, branch, head, pad, oud/nieuw blob).
+Onverwachte wijzigingen, extra matches en conflicten worden geweigerd.
+
+Dit is **geen betrouwbare herkomstverificatie**: de aanroeper moet de
+input nog via onafhankelijk geauthenticeerde GitHub-reads ophalen. Het
+booleaanse veld `author_approved` in het bestaande offline contract
+is geen bewijs van echte eigenaarstoestemming. De uitvoer houdt daarom
+`can_write=false`, `can_merge=false`, `can_dispatch=false`,
+`owner_identity_verified=false` en `nonce_reserved=false`.
+Er wordt geen GitHub-token ingelezen of API-call, commit of workflow
+gestart. De bestaande live C2-sandboxnonce blijft verbruikt.
+
+**Volgende beveiligingsgrens:** een afzonderlijk gereviewde, herbruikbare
+trusted writer moet pas na exacte nieuwe eigenaarautorisatie de herkomst
+van de immutable bewijzen verifiëren, een uniek eenmalig nonce beschermen,
+de echte GitHub App-installatie en effectieve regels controleren, de branch
+via atomische niet-force CAS wijzigen en onafhankelijk readback doen.
+Dat mag niet via `development-ci-feedback.yml`, de bestaande
+productiecontroller of een onbetrouwbare PR-codecheckout. Een generieke
+automatische bugfixer of productiedeployment is niet geïmplementeerd.
