@@ -12,7 +12,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from development_ci_advisor import assess
+if __package__:
+    from .development_ci_advisor import assess
+else:
+    from development_ci_advisor import assess
 
 REPOSITORY = "pecharko/Veiling"
 SHA = re.compile(r"^[0-9a-f]{40}$")
