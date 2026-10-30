@@ -68,3 +68,23 @@ gescheiden van deze toekomstige writer.
 Deze PR bereidt uitsluitend de lokale toestandstest en de
 documentatie voor. **Mergegoedkeuring van C8 is geen toestemming
 voor het activeren, testen of uitvoeren van een live writer.**
+
+## Onafhankelijke ruleset-readback op 30 oktober 2026
+
+GitHub ruleset #26113993 is actief en beperkt tot
+`refs/heads/test/phase-c-writer-fixture-20261029`. Deze regel beschermt
+tegen `deletion` en `non_fast_forward`, maar dekt **geen nieuwe
+testbranch** automatisch.
+
+GitHub ruleset #26113833 is actief voor
+`refs/tags/phase-c-once-issue-*` en beschermt tegen `update` en
+`deletion`; niet met `non_fast_forward` (dat is een branchregel).
+De C7-shapecontrole en regressietests zijn in deze PR met deze
+werkelijke gescheiden types in overeenstemming gebracht.
+
+De huidige rulesetconfiguratie mag niet door C8 worden gewijzigd.
+Vóór een nieuwe live proef moet de **effectieve bescherming van de
+exacte nieuwe branch** afzonderlijk worden aangetoond. Dat kan een
+nieuwe expliciet goedgekeurde beveiligingsinstelling vereisen.
+Een oud ruleset-ID of een positieve offline review vervangt die
+bescherming niet.
