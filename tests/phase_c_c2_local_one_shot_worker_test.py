@@ -86,6 +86,17 @@ class LocalWorkerTests(unittest.TestCase):
                 worker.run("jwt", "owner", execute=True, comment_id=worker.OLD_COMMENT + 1)
             mint.assert_not_called()
 
+    def test_main_drift_prevents_writer_token_mint(self):
+        with patch.object(worker, "verify_app"), \
+             patch.object(worker, "verify_static_evidence"), \
+             patch.object(worker, "verify_checkout", return_value="a" * 40), \
+             patch.object(worker, "verify_fresh_approval"), \
+             patch.object(worker, "get", return_value={"object": {"sha": "b" * 40}}), \
+             patch.object(worker, "mint_exact_writer_token") as mint:
+            with self.assertRaises(worker.Refused):
+                worker.run("jwt", "owner", execute=True, comment_id=worker.OLD_COMMENT + 1)
+            mint.assert_not_called()
+
     def test_one_mutation_call_and_independent_readback(self):
         calls = []
         def transport(token, path, method="GET", payload=None):
