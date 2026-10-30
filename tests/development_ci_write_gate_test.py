@@ -786,7 +786,8 @@ from scripts.development_ci_live_writer_handoff import propose_inert_atomic_pack
 
 def inert_packet_fixture():
     p, branch, tag, *_ = future_payload()
-    issue = 678
+    issue = 679
+    p["nonce_ref"] = "refs/tags/phase-c-once-issue-679"
     worker_sha = "d" * 40
     comment = {
         "issue_number": issue,
@@ -867,6 +868,7 @@ class FutureInertAtomicPacketTests(unittest.TestCase):
             lambda p, o: o.update(github_owner_id=1),
             lambda p, o: o.update(github_owner_id=True),
             lambda p, o: o.update(issue_number=427),
+            lambda p, o: o.update(issue_number=p["pr"]),
             lambda p, o: o.update(issue_number=True),
             lambda p, o: o.update(comment_id=0),
             lambda p, o: o.update(comment_body="go"),
