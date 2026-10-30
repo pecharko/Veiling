@@ -183,6 +183,36 @@ def github_get(path):
     return json.loads(result.stdout)
 
 
+def format_summary(output):
+    """Present bounded job names without letting remote text inject Markdown."""
+    lines = [
+        "### Phase C3 development CI feedback (read-only)",
+        "- Decision: " + output["status"],
+        "- Reason: " + output["reason"],
+    ]
+    if output.get("run_id"):
+        lines.append("- Workflow run: " + str(output["run_id"]))
+    if output.get("pr"):
+        lines.append("- PR: " + str(output["pr"]))
+    if output.get("head_sha"):
+        lines.append("- Commit: " + output["head_sha"])
+    failed = output.get("failed_jobs")
+    if isinstance(failed, list) and failed:
+        lines.append("- Failed jobs in this workflow:")
+        for name in failed[:MAX_ITEMS]:
+            clean = re.sub(r"[^A-Za-z0-9 ._()-]", "_", str(name)[:100]).strip()
+            lines.append("  - " + (clean or "(unavailable)"))
+    elif output["status"] == "CI_GREEN_ADVISORY":
+        lines.append("- Failed jobs: none reported in this workflow")
+    else:
+        lines.append("- Failed jobs: not independently established; inspect run logs")
+    lines += [
+        "- Scope: this workflow only; other PR checks require independent review",
+        "- No automatic code changes, merge, retry, workflow dispatch or deployment.",
+    ]
+    return "\n".join(lines)
+
+
 def main():
     if os.environ.get("GH_REPOSITORY") != REPOSITORY:
         output = _denied()
@@ -196,17 +226,7 @@ def main():
         except (KeyError, OSError, ValueError, subprocess.SubprocessError):
             output = _denied()
     # GitHub step summary is only an observation; it can never dispatch.
-    print("### Phase C3 development CI feedback (read-only)")
-    print("- Decision:", output["status"])
-    print("- Reason:", output["reason"])
-    if output.get("run_id"):
-        print("- Workflow run:", output["run_id"])
-    if output.get("pr"):
-        print("- PR:", output["pr"])
-    if output.get("head_sha"):
-        print("- Commit:", output["head_sha"])
-    print("- Scope: this workflow only; other PR checks require independent review")
-    print("- No automatic code changes, merge, retry, workflow dispatch or deployment.")
+    print(format_summary(output))
     return 0
 
 
