@@ -667,7 +667,7 @@ def future_payload():
     branch_rules = {
         "id": 26113993, "source": "pecharko/Veiling",
         "target": "branch", "enforcement": "active", "bypass_actors": [],
-        "conditions": {"ref_name": {"include": [p["branch_ref"]], "exclude": []}},
+        "conditions": {"ref_name": {"include": ["refs/heads/test/phase-c-writer-fixture-20261029", p["branch_ref"]], "exclude": []}},
         "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
     }
     tag_rules = {
@@ -778,6 +778,120 @@ class FutureWriterHandoffTests(unittest.TestCase):
         self.assertEqual(result["decision"], "DENY")
         self.assertEqual(result["operations"], [])
         self.assertDeniedRights(result)
+
+
+
+from scripts.development_ci_live_writer_handoff import propose_inert_atomic_packet
+
+
+def inert_packet_fixture():
+    p, branch, tag, *_ = future_payload()
+    issue = 679
+    p["nonce_ref"] = "refs/tags/phase-c-once-issue-679"
+    worker_sha = "d" * 40
+    comment = {
+        "issue_number": issue,
+        "comment_id": 98765,
+        "github_owner_id": 343879284,
+        "worker_sha": worker_sha,
+    }
+    comment["comment_body"] = (
+        "PHASE-C-LIVE-REVIEW-ONLY"
+        + " repo=pecharko/Veiling"
+        + " pr=" + str(p["pr"])
+        + " issue=" + str(issue)
+        + " old=" + p["before_sha"]
+        + " new=" + p["after_sha"]
+        + " oldblob=" + p["original_blob_sha"]
+        + " newblob=" + p["candidate_blob_sha"]
+        + " path=" + p["path"]
+        + " branch=" + p["branch_ref"]
+        + " nonce=" + p["nonce_ref"]
+        + " worker=" + worker_sha
+    )
+    return p, branch, tag, comment
+
+
+class FutureInertAtomicPacketTests(unittest.TestCase):
+    def test_exact_dual_ref_cas_is_review_data_only(self):
+        p, b, t, owner = inert_packet_fixture()
+        report = propose_inert_atomic_packet(p, b, t, owner)
+        self.assertEqual(report["decision"], "INERT_ATOMIC_PLAN_REVIEW_ONLY")
+        updates = report["ref_update_plan"]["refUpdates"]
+        self.assertEqual(len(updates), 2)
+        self.assertEqual(updates[0], {
+            "name": p["nonce_ref"], "beforeOid": "0" * 40,
+            "afterOid": p["before_sha"], "force": False})
+        self.assertEqual(updates[1], {
+            "name": p["branch_ref"], "beforeOid": p["before_sha"],
+            "afterOid": p["after_sha"], "force": False})
+        self.assertEqual(report["ref_update_plan"]["repositoryId"], "R_kgDOVNLxvg")
+        self.assertEqual(len(report["packet_sha256"]), 64)
+        self.assertFalse(report["owner_review_only_not_live_approval"] is False)
+        for k, v in FUTURE_DENIED.items():
+            self.assertEqual(report[k], v, k)
+        self.assertFalse(report["network_allowed"])
+        self.assertFalse(report["mutation_submitted"])
+        self.assertFalse(report["rulesets_authenticated"])
+        self.assertFalse(report["nonce_absence_proven"])
+        self.assertEqual(report, propose_inert_atomic_packet(p, b, t, owner))
+
+    def test_current_ruleset_only_old_branch_does_not_pass(self):
+        p, b, t, owner = inert_packet_fixture()
+        b["conditions"]["ref_name"]["include"] = [
+            "refs/heads/test/phase-c-writer-fixture-20261029"]
+        self.assertEqual(propose_inert_atomic_packet(
+            p, b, t, owner)["decision"], "DENY")
+
+    def test_disabling_old_fixture_protection_fails(self):
+        p, b, t, owner = inert_packet_fixture()
+        b["conditions"]["ref_name"]["include"] = [p["branch_ref"]]
+        self.assertEqual(propose_inert_atomic_packet(
+            p, b, t, owner)["decision"], "DENY")
+
+    def test_no_wildcard_bypass_or_unhashable_include(self):
+        for include in (
+            ["refs/heads/test/phase-c-*"],
+            ["refs/heads/test/phase-c-writer-fixture-20261029", "main"],
+            ["refs/heads/test/phase-c-writer-fixture-20261029",
+             "refs/heads/test/phase-c-new-isolated-20261030", "main"],
+            [{"not": "str"}, "x"],
+        ):
+            p, b, t, owner = inert_packet_fixture()
+            b["conditions"]["ref_name"]["include"] = include
+            with self.subTest(include=include):
+                self.assertEqual(propose_inert_atomic_packet(
+                    p, b, t, owner)["decision"], "DENY")
+
+    def test_fake_owner_and_changed_context_rejected(self):
+        mutations = (
+            lambda p, o: o.update(github_owner_id=1),
+            lambda p, o: o.update(github_owner_id=True),
+            lambda p, o: o.update(issue_number=427),
+            lambda p, o: o.update(issue_number=p["pr"]),
+            lambda p, o: o.update(issue_number=True),
+            lambda p, o: o.update(comment_id=0),
+            lambda p, o: o.update(comment_body="go"),
+            lambda p, o: o.update(comment_body=o["comment_body"] + "\nACTIVATE"),
+            lambda p, o: o.update(worker_sha="f" * 40),
+            lambda p, o: p.update(before_sha="e" * 40),
+            lambda p, o: p.update(nonce_ref="refs/tags/phase-c-once-issue-427"),
+            lambda p, o: p.update(pr=426),
+        )
+        for mutate in mutations:
+            with self.subTest(case=repr(mutate)):
+                p, b, t, owner = inert_packet_fixture()
+                mutate(p, owner)
+                output = propose_inert_atomic_packet(p, b, t, owner)
+                self.assertEqual(output["decision"], "DENY")
+                self.assertFalse(output["can_write"])
+                self.assertFalse(output["network_allowed"])
+
+    def test_schema_extras_denied(self):
+        p, b, t, owner = inert_packet_fixture()
+        owner["approved"] = True
+        self.assertEqual(propose_inert_atomic_packet(
+            p, b, t, owner)["decision"], "DENY")
 
 
 
