@@ -227,6 +227,7 @@ def propose_inert_atomic_packet(proposal, branch_rule, tag_rule, owner):
     comment_id = owner["comment_id"]
     worker_sha = owner["worker_sha"]
     if (type(issue) is not int or issue <= 427
+            or issue == proposal["pr"]
             or proposal["nonce_ref"] !=
                "refs/tags/phase-c-once-issue-" + str(issue)
             or type(comment_id) is not int or comment_id <= 0
