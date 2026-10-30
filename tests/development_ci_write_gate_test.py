@@ -519,5 +519,106 @@ class PhaseC7ActivationBoundaryTests(unittest.TestCase):
 
 
 
+from scripts.development_ci_c8_execution_closure import (
+    closure_dry_run, execute_one_shot, SAFE, BLOCKERS,
+)
+
+
+class C8InertExecutionClosureTests(unittest.TestCase):
+    def assertNoLiveAuthority(self, record):
+        for key, expected in SAFE.items():
+            self.assertEqual(record[key], expected, key)
+        self.assertEqual(record["git_ref_updates_executed"], 0) if (
+            "git_ref_updates_executed" in record) else None
+
+    def test_three_step_one_shot_rehearsal_cannot_write_or_authorize(self):
+        params = c7_fixture()
+        states = (
+            (["reserve_confirmed"], "NONCE_RESERVED", 0),
+            (["reserve_confirmed", "submit_ref_update"],
+             "REF_UPDATE_ATTEMPTED", 1),
+            (["reserve_confirmed", "submit_ref_update", "verified_exact"],
+             "VERIFIED", 1),
+        )
+        for events, state, attempts in states:
+            with self.subTest(state=state):
+                report = closure_dry_run(*params, events)
+                self.assertEqual(report["decision"], "OFFLINE_REHEARSAL_ONLY")
+                self.assertEqual(report["simulated_state"], state)
+                self.assertEqual(report["simulated_ref_update_attempts"], attempts)
+                self.assertTrue(report["simulated_nonce_spent"])
+                self.assertTrue(report["simulated_only"])
+                self.assertEqual(report["remaining_live_gates"], BLOCKERS)
+                self.assertNoLiveAuthority(report)
+                self.assertEqual(report, closure_dry_run(*params, events))
+                self.assertEqual(len(report["report_sha256"]), 64)
+                self.assertNotIn("PHASE-C-REPAIR-REVIEW-ONLY", str(report))
+                self.assertNotIn("return flase;", str(report))
+
+    def test_replay_and_out_of_order_events_are_rejected(self):
+        invalid = [
+            [],
+            ["submit_ref_update"],
+            ["verified_exact"],
+            ["reserve_confirmed", "reserve_confirmed"],
+            ["reserve_confirmed", "verified_exact"],
+            ["reserve_confirmed", "submit_ref_update", "submit_ref_update"],
+            ["reserve_confirmed", "submit_ref_update", "verified_exact",
+             "verified_exact"],
+            ["reserve_confirmed", "submit_ref_update", "unknown"],
+            [True], "reserve_confirmed", None, {},
+        ]
+        for events in invalid:
+            with self.subTest(events=repr(events)):
+                report = closure_dry_run(*c7_fixture(), events)
+                self.assertEqual(report["decision"], "DENY")
+                self.assertEqual(report["simulated_ref_update_attempts"], 0)
+                self.assertFalse(report["simulated_nonce_spent"])
+                self.assertNoLiveAuthority(report)
+
+    def test_forged_review_and_spent_nonce_reject_preflight(self):
+        changes = (
+            lambda d: d[0].update(decision="ACTIVATE"),
+            lambda d: d[0].update(can_write=True),
+            lambda d: d[0].update(review_sha256="0" * 64),
+            lambda d: d[1].update(number=427),
+            lambda d: d[2].update(body="go"),
+            lambda d: d[3].update(slug="other-app"),
+            lambda d: d[4].update(permissions={"contents": "read"}),
+            lambda d: d[6].update(bypass_actors=[{"actor_id": 9}]),
+            lambda d: d[7].update(enforcement="disabled"),
+            lambda d: d.__setitem__(8, "PRESENT"),
+            lambda d: d.__setitem__(8, "PROVEN_ABSENT"),
+        )
+        for change in changes:
+            params = c7_fixture()
+            change(params)
+            with self.subTest(change=repr(change)):
+                report = closure_dry_run(
+                    *params, ["reserve_confirmed", "submit_ref_update"])
+                self.assertEqual(report["decision"], "DENY")
+                self.assertNoLiveAuthority(report)
+
+    def test_mutation_entrypoint_is_unconditionally_disabled(self):
+        for args in ((), ("fake-token",), ({"enabled": True},)):
+            result = execute_one_shot(*args, enabled=True, retry=True)
+            self.assertEqual(result["decision"], "DENY")
+            self.assertEqual(result["operations"], [])
+            self.assertNoLiveAuthority(result)
+
+    def test_caller_input_and_model_data_are_never_executable_authority(self):
+        from unittest.mock import patch
+        params = c7_fixture()
+        with patch("scripts.phase_c_c2_attempt_state.transition") as forbidden:
+            # The simulation imports transition by name; no external POST,
+            # commit or token processing occurs in any allowed path.
+            report = closure_dry_run(*params, ["reserve_confirmed"])
+            self.assertEqual(report["decision"], "OFFLINE_REHEARSAL_ONLY")
+            forbidden.assert_not_called()
+        self.assertFalse(report["activation_allowed"])
+        self.assertFalse(report["owner_live_write_approved"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
