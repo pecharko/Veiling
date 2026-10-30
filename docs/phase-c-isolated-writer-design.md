@@ -79,3 +79,31 @@ actieve effectieve branch/tagbescherming, vers controleerbaar CAS,
 atomische nonceconsumptie en onafhankelijke readback. Geen onderdeel
 van C5 geeft toestemming om de verlopen C2-sandboxnonce te hergebruiken,
 de fixture-PR #426 te mergen of de productiecontroller aan te passen.
+
+
+## Fase C6: read-only GET-sessie voor bronbewijzen
+
+De bestaande Phase-C GitHubReadOnlyClient kan nu uitsluitend vlakke
+tests/*_test.php-bestanden ophalen, en alleen op een exacte commit-SHA.
+Het bestaande maximum op responsgrootte, vaste API-host, vaste HTTP-GET,
+redirectverbod en verbod op automatisch opnieuw proberen blijven actief.
+
+De functie audit_repair_get_session in phase_c_readonly_get_session.py
+verzamelt twee opeenvolgende reeksen van PR-, branch- en file-readbacks
+(maximaal zes GET-verzoeken) en voert het C5-contract uit. Alleen twee
+inhoudelijk gelijke, geldige voorstellen geven READ_ONLY_REVIEW.
+Een 404, drift, ongeldige input of ontbrekend bestand geeft DENY.
+
+De uitvoer bevat slechts cryptografische digests, SHA's, pad en PR-nummer.
+Er wordt geen PHP-inhoud, token, eigenaarcommentaar of API-payload
+gekopieerd naar het rapport. De aangeleverde credentials blijven bij
+de expliciete, afzonderlijke aanroeper; GitHub Actions activeert deze
+functie niet en er is geen nieuwe workflow toegevoegd.
+
+Ook een passende HTTPS-GET is geen bewijs van de identiteit van de
+aanroeper, effectieve App-rechten of echte eigenaarautorisatie.
+Een geinjecteerde HTTP-opener kan testgegevens aanbieden. Twee lezingen
+zijn geen atomische momentopname en vormen geen garantie tegen race.
+Alle can_write/can_merge/can_dispatch-vlaggen en nonce-/owner-verificatie
+blijven daarom expliciet false. Dit contract mag nooit direct als
+writeractivatie of productieautorisatie worden gebruikt.
