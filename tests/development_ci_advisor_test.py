@@ -229,10 +229,10 @@ class DevelopmentCIFeedbackSummaryTests(unittest.TestCase):
         result = {
             "status": "FIX_CANDIDATE",
             "reason": "Review job logs and propose a separate narrow fix",
-            "failed_jobs": ["php\\n### fake green", "](javascript:alert(1))", "<script>"],
+            "failed_jobs": ["php" + chr(10) + "### fake green", "](javascript:alert(1))", "<script>"],
         }
         text = feedback.format_summary(result)
-        self.assertNotIn("\\n### fake green", text)
+        self.assertNotIn(chr(10) + "### fake green", text)
         self.assertNotIn("javascript:", text)
         self.assertNotIn("<script>", text)
         self.assertIn("- Scope: this workflow only", text)
