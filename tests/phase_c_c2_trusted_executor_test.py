@@ -30,5 +30,8 @@ class TrustedExecutorTests(unittest.TestCase):
         self.assertEqual(review_transaction(record, {}, {}, {})["decision"], "DENY")
 
 
+from tests.phase_c_new_trusted_writer_test import NewSandboxTrustedWriterTests  # offline CI discovery bridge
+
+
 if __name__ == "__main__":
     unittest.main()
