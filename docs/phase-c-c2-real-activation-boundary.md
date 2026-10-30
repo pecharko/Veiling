@@ -1,5 +1,13 @@
 # C2 write activation boundary — owner decision contract
 
+> **CLOSED SANDBOX EXERCISE (2026-10-30):** The one-use nonce for issue #427 is now
+> spent, the isolated branch is at candidate `11ead85e1a3d0086166da665a1a6d4bdf25477d7`,
+> and the sandbox PR CI succeeded. **Do not rerun the worker, recreate the
+> nonce, or merge PR #426.** See
+> [the independent closeout record](phase-c-c2-sandbox-closeout-20261030.md).
+> The pre-activation details below are retained for historical review only,
+> not as instructions to repeat the sandbox transaction.
+
 This PR adds only an offline shape validator for a future exact owner
 authorization record. **Matching fields are NOT owner authentication.** The
 report is always non-executable REVIEW_ONLY (or DENY). It must not be
