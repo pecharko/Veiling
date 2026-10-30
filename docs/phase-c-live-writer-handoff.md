@@ -79,3 +79,55 @@ en deze aanvullende read-only controles zijn technische voorbereiding.
 code-/beveiligingsreview van de aparte writer, een expliciete nieuwe
 activeringsautorisatie en een nieuw, succesvol geverifieerd éénmalig
 sandboxexperiment. Niet eerder.
+
+
+
+## Laatste C9-voorbereiding: één exact atomisch plan (geen writer)
+
+De offline functie \`propose_inert_atomic_packet\` in de bestaande
+\`development_ci_live_writer_handoff.py\` bouwt voor een **toekomstige**
+nieuwe PR een strikt afgebakende \`updateRefs\`-envelop met:
+
+- Eén nooit eerder gebruikte nonce-tag met \`beforeOid=000…000\`,
+  \`afterOid=\` de oorspronkelijke commit en \`force=false\`.
+- Eén sandboxbranch met \`beforeOid=\` de oorspronkelijke commit,
+  \`afterOid=\` de exacte vooraf berekende kandidaat en \`force=false\`.
+- Een vast repository-node-ID, gescheiden van productie en zonder
+  automatische merge. De envelop wordt alleen als **gegevens** teruggegeven.
+- Exacte koppeling aan een toekomstig owner-issue, comment-ID, de
+  reviewertekst \`PHASE-C-LIVE-REVIEW-ONLY\`, de head/blob/candidate-SHA,
+  de doelbranch, het testpad en de vastgepinde worker-SHA.
+
+Deze reviewertekst mag **nooit als live-write autorisatie dienen**.
+Een passende fixture is geen verificatie van commentaarauteur,
+GitHub App-rechten, aanwezigheid van echte bescherming, ontbreken van
+de nonce of atomische uitvoering. Er is geen token-, netwerk- of
+mutatiepad in dit onderdeel.
+
+### Veilige doelbranchbescherming zonder terugval
+
+De op GitHub gecontroleerde ruleset #26113993 heeft momenteel uitsluitend
+\`refs/heads/test/phase-c-writer-fixture-20261029\` als include.
+De **vooraf te autoriseren wijziging** moet die oude include behouden
+en exact één nieuwe beschermde sandboxbranch als tweede include toevoegen.
+De offline checker aanvaardt alleen die twee exacte refs, geen wildcard
+en geen wegvallen van de bescherming van de oude C2-branch.
+Ruleset #26113833 met \`refs/tags/phase-c-once-issue-*\`,
+\`update\` en \`deletion\` blijft ongewijzigd.
+
+De wijziging van de GitHub-ruleset, het maken van een nieuwe testbranch,
+het aanmaken van een nieuw owner-issue, het uitgeven van een nieuw token
+en de live-transactie vragen **afzonderlijke, exacte toestemming**.
+De huidige PR wijzigt géén ruleset en creëert géén sandbox.
+
+### Echte live-writerautorisatiegrens
+
+Een nieuwe, onafhankelijke trusted uitvoerder moet de toekomstige
+\`updateRefs\`-envelop zelf opnieuw opbouwen uit verse,
+geauthenticeerde GitHub- en App-GETs, een afzonderlijke **live-only**
+ownerautorisatie verifiëren en pas na alle checks een enkele mutation
+uitvoeren. De huidige lokale C2-worker is hardgecodeerd voor de al
+verbruikte #427-nonce en mag niet hergebruikt worden. Bij timeout of
+onduidelijke uitkomst blijft een tweede poging verboden. Daarna volgt
+onafhankelijke readback inclusief wijzigingen op precies één PHP-testpad,
+nonce-status en nieuwe CI. Geen OVH of productie.
