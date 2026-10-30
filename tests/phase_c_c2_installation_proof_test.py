@@ -6,7 +6,7 @@ from scripts.phase_c_c2_installation_proof import review_installation, execute
 
 def fixture():
     return ({"slug": "41lokeren-phase-c-writer"},
-            {"id": 5526516, "app_slug": "41lokeren-phase-c-writer",
+            {"id": 176547610, "app_slug": "41lokeren-phase-c-writer",
              "repository_selection": "selected",
              "permissions": {"contents": "write", "metadata": "read"}},
             {"repositories": [{"full_name": "pecharko/Veiling"}]})
@@ -24,7 +24,8 @@ class InstallationProofTests(unittest.TestCase):
         mutations = [
             (0, "slug", "other-app"),
             (1, "id", 172331568),
-            (1, "id", "5526516"),
+            (1, "id", "176547610"),
+            (1, "id", 5526516),
             (1, "app_slug", "other-app"),
             (1, "repository_selection", "all"),
             (1, "permissions", {"contents": "write", "metadata": "read", "issues": "write"}),

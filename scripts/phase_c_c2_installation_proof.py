@@ -4,7 +4,7 @@ Only accepts independently acquired trusted REST payloads. A successful result
 means configuration review, never permission to issue a GitHub mutation.
 """
 REPO = "pecharko/Veiling"
-INSTALLATION = 5526516
+INSTALLATION = 176547610
 APP_SLUG = "41lokeren-phase-c-writer"
 EXPECTED = {"contents": "write", "metadata": "read"}
 
