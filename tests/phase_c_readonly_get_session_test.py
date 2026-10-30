@@ -13,7 +13,11 @@ from scripts.phase_c_github_readonly_client import (
 )
 from scripts.phase_c_readonly_get_session import (
     MAX_GET_REQUESTS, NO_AUTHORITY, audit_phase_c_get_session,
+    audit_repair_get_session,
 )
+from scripts.development_ci_write_gate import _git_blob_sha
+import base64
+import copy
 
 TEST_TOKEN = "test-token-NOT-A-LIVE-SECRET"
 
@@ -178,6 +182,161 @@ class GETOnlyPhaseCSessionTests(unittest.TestCase):
         right = audit(cb, fb.auth)
         self.assertEqual(left, right)
         self.assertNoAuthority(left)
+
+
+def repair_fixture():
+    original = "<?php\nfunction phase_c(): bool {\n    return flase;\n}\n"
+    head = "a" * 40
+    req = {
+        "pr": 42,
+        "expected_head_sha": head,
+        "actual_head_sha": head,
+        "branch": "test/phase-c-freshfixture",
+        "path": "tests/phase_c_fresh_test.php",
+        "base_blob_sha": _git_blob_sha(original),
+        "replacement": original.replace("return flase;", "return false;"),
+        "attempts": 0,
+        "author_approved": True,
+    }
+    repo = {"full_name": "pecharko/Veiling"}
+    pr = {
+        "number": 42, "state": "open", "draft": True, "merged_at": None,
+        "head": {"repo": repo, "sha": head, "ref": req["branch"]},
+        "base": {"repo": repo, "sha": "b" * 40},
+    }
+    branch = {
+        "ref": "refs/heads/" + req["branch"],
+        "object": {"type": "commit", "sha": head},
+    }
+    blob = {
+        "type": "file", "path": req["path"], "sha": req["base_blob_sha"],
+        "encoding": "base64", "size": len(original.encode("utf-8")),
+        "content": base64.b64encode(original.encode("utf-8")).decode("ascii"),
+    }
+    paths = {
+        ROOT + "/pulls/42": pr,
+        ROOT + "/git/ref/heads/" + req["branch"]: branch,
+        ROOT + "/contents/" + req["path"] + "?ref=" + head: blob,
+    }
+    return req, paths
+
+
+class RepairHTTP:
+    def __init__(self, paths, drift=None):
+        self.paths = paths
+        self.drift = drift
+        self.calls = []
+        self.count = {}
+
+    def open(self, request, timeout):
+        assert request.get_method() == "GET"
+        assert request.full_url.startswith(API + ROOT)
+        assert request.get_header("Authorization") == "Bearer " + TEST_TOKEN
+        assert timeout == 10
+        path = request.full_url[len(API):]
+        self.calls.append(path)
+        self.count[path] = self.count.get(path, 0) + 1
+        if path not in self.paths:
+            raise HTTPError(request.full_url, 404, "unavailable", {}, None)
+        data = copy.deepcopy(self.paths[path])
+        if self.drift and self.count[path] == 2 and path.endswith(
+                "/git/ref/heads/test/phase-c-freshfixture"):
+            data["object"]["sha"] = "f" * 40
+        return FakeResponse(data)
+
+
+class RepairGETOnlySessionTests(unittest.TestCase):
+    def test_six_gets_and_no_authorization_even_when_all_sources_match(self):
+        request, data = repair_fixture()
+        transport = RepairHTTP(data)
+        client = GitHubReadOnlyClient(TEST_TOKEN, opener=transport)
+        report = audit_repair_get_session(client, request)
+        self.assertEqual(report["decision"], "READ_ONLY_REVIEW")
+        self.assertTrue(report["readback_structurally_consistent"])
+        self.assertEqual(report["get_request_count"], 6)
+        self.assertEqual(report["head_sha"], request["expected_head_sha"])
+        self.assertEqual(len(report["review_sha256"]), 64)
+        self.assertEqual(len(report["report_sha256"]), 64)
+        self.assertEqual(report["git_ref_updates_executed"], 0)
+        self.assertEqual(len(transport.calls), 6)
+        self.assertTrue(all(x in data for x in transport.calls))
+        for key in ("can_write", "can_merge", "can_dispatch",
+                    "production_authorized", "owner_identity_verified",
+                    "nonce_reserved", "source_provenance_authenticated",
+                    "write_allowed", "retry_allowed"):
+            self.assertFalse(report[key])
+        self.assertNotIn(TEST_TOKEN, json.dumps(report))
+        self.assertNotIn("return flase;", json.dumps(report))
+        self.assertEqual(report, audit_repair_get_session(
+            GitHubReadOnlyClient(TEST_TOKEN, opener=RepairHTTP(data)), request))
+
+    def test_drift_second_pass_denied_no_retry(self):
+        request, data = repair_fixture()
+        transport = RepairHTTP(data, drift=True)
+        report = audit_repair_get_session(
+            GitHubReadOnlyClient(TEST_TOKEN, opener=transport), request)
+        self.assertEqual(report["decision"], "DENY")
+        self.assertFalse(report["readback_structurally_consistent"])
+        self.assertEqual(report["get_request_count"], 6)
+        self.assertEqual(len(transport.calls), 6)
+        self.assertFalse(report["retry_allowed"])
+
+    def test_missing_or_unavailable_source_is_denied(self):
+        request, data = repair_fixture()
+        del data[ROOT + "/contents/" + request["path"] +
+                 "?ref=" + request["expected_head_sha"]]
+        transport = RepairHTTP(data)
+        outcome = audit_repair_get_session(
+            GitHubReadOnlyClient(TEST_TOKEN, opener=transport), request)
+        self.assertEqual(outcome["decision"], "DENY")
+        self.assertEqual(outcome["get_request_count"], 3)
+        self.assertEqual(len(transport.calls), 3)
+
+    def test_invalid_scope_denied_before_network(self):
+        cases = (
+            ("path", "private/admin.php"),
+            ("path", "tests/folder/phase_c_test.php"),
+            ("branch", "main"),
+            ("actual_head_sha", "f" * 40),
+            ("attempts", 1),
+            ("author_approved", False),
+        )
+        for key, value in cases:
+            with self.subTest(key=key):
+                request, data = repair_fixture()
+                request[key] = value
+                transport = RepairHTTP(data)
+                verdict = audit_repair_get_session(
+                    GitHubReadOnlyClient(TEST_TOKEN, opener=transport), request)
+                self.assertEqual(verdict["decision"], "DENY")
+                self.assertEqual(verdict["get_request_count"], 0)
+                self.assertEqual(transport.calls, [])
+
+    def test_forged_readback_denied(self):
+        for path_selector, mutation in (
+            ("pr", lambda x: x["head"]["repo"].update(full_name="wrong/repo")),
+            ("pr", lambda x: x.update(draft=False)),
+            ("branch", lambda x: x["object"].update(sha="f" * 40)),
+            ("blob", lambda x: x.update(sha="0" * 40)),
+        ):
+            request, paths = repair_fixture()
+            selected = [p for p in paths if
+                        ("/pulls/" in p if path_selector == "pr" else
+                         "/git/ref/" in p if path_selector == "branch" else
+                         "/contents/" in p)][0]
+            mutation(paths[selected])
+            transport = RepairHTTP(paths)
+            verdict = audit_repair_get_session(
+                GitHubReadOnlyClient(TEST_TOKEN, opener=transport), request)
+            self.assertEqual(verdict["decision"], "DENY")
+            self.assertFalse(verdict["can_write"])
+
+    def test_unknown_client_never_reads(self):
+        request, _ = repair_fixture()
+        result = audit_repair_get_session(object(), request)
+        self.assertEqual(result["decision"], "DENY")
+        self.assertEqual(result["get_request_count"], 0)
+
 
 
 if __name__ == "__main__":
