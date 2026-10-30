@@ -1,5 +1,7 @@
 """No-network adversarial tests for the dormant local Phase C2 GitHub App worker."""
 import unittest
+import base64
+import copy
 from unittest.mock import patch
 from scripts import phase_c_c2_local_one_shot_worker as worker
 
@@ -85,6 +87,74 @@ class LocalWorkerTests(unittest.TestCase):
             with self.assertRaises(worker.Refused):
                 worker.run("jwt", "owner", execute=True, comment_id=worker.OLD_COMMENT + 1)
             mint.assert_not_called()
+
+    def test_authenticated_evidence_binds_exact_tree_blob_and_rules(self):
+        original = (b"<?php\\ndeclare(strict_types=1);\\n"
+                    b"// Isolated Phase C exercise ONLY: intentionally unresolved typo.\\n"
+                    b"// Never merge this draft PR or route this file into the application.\\n"
+                    b"function phase_c_sandbox_example(): bool\\n"
+                    b"{\\n    return flase;\\n}\\n")
+        fixed = original.replace(b"return flase;", b"return false;")
+        owner = {"login": "pecharko", "id": worker.OWNER_ID}
+        issue_body = ("PHASE-C-SANDBOX-ONCE pr=426 head=" + worker.HEAD
+                      + " blob=" + worker.ORIGINAL_BLOB)
+        repo_info = {"full_name": worker.REPO, "node_id": worker.REPO_NODE}
+        paths = {
+            worker.BASE: repo_info,
+            worker.BASE + "/pulls/426": {
+                "state": "open", "draft": True,
+                "head": {"sha": worker.HEAD, "repo": repo_info},
+                "base": {"repo": repo_info}},
+            worker.BASE + "/issues/427": {"user": owner, "state": "open", "body": issue_body},
+            worker.BASE + "/issues/comments/" + str(worker.OLD_COMMENT):
+                {"user": owner, "body": issue_body},
+            worker.BASE + "/rulesets/26113993": {
+                "enforcement": "active", "target": "branch", "source": worker.REPO,
+                "bypass_actors": [], "conditions": {"ref_name": {
+                    "include": [worker.BRANCH], "exclude": []}},
+                "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}]},
+            worker.BASE + "/rulesets/26113833": {
+                "enforcement": "active", "target": "tag", "source": worker.REPO,
+                "bypass_actors": [], "conditions": {"ref_name": {
+                    "include": ["refs/tags/phase-c-once-issue-*"], "exclude": []}},
+                "rules": [{"type": "update"}, {"type": "deletion"}]},
+            worker.BASE + "/compare/" + worker.HEAD + "..." + worker.CANDIDATE: {
+                "status": "ahead", "ahead_by": 1, "behind_by": 0,
+                "files": [{"filename": worker.TARGET, "status": "modified",
+                           "sha": worker.NEW_BLOB, "additions": 1, "deletions": 1}]},
+            worker.BASE + "/git/commits/" + worker.CANDIDATE: {
+                "parents": [{"sha": worker.HEAD}]},
+            worker.BASE + "/git/blobs/" + worker.ORIGINAL_BLOB: {
+                "sha": worker.ORIGINAL_BLOB, "encoding": "base64",
+                "content": base64.b64encode(original).decode()},
+            worker.BASE + "/git/blobs/" + worker.NEW_BLOB: {
+                "sha": worker.NEW_BLOB, "encoding": "base64",
+                "content": base64.b64encode(fixed).decode()},
+            worker.BASE + "/git/ref/" + worker.BRANCH.removeprefix("refs/"): {
+                "ref": worker.BRANCH, "object": {"sha": worker.HEAD}},
+        }
+
+        def check(data):
+            with patch.object(worker, "get", side_effect=lambda token, path: data[path]), \
+                 patch.object(worker, "_api", return_value=(404, {})):
+                worker.verify_static_evidence("owner-read-token")
+
+        check(paths)
+        for key, edit in (
+            (worker.BASE + "/compare/" + worker.HEAD + "..." + worker.CANDIDATE,
+             lambda x: x["files"][0].update(sha="f" * 40)),
+            (worker.BASE + "/rulesets/26113993",
+             lambda x: x["conditions"]["ref_name"].update(exclude=[worker.BRANCH])),
+            (worker.BASE + "/rulesets/26113833",
+             lambda x: x.update(bypass_actors=[{"actor_id": 1}])),
+            (worker.BASE + "/issues/427",
+             lambda x: x["user"].update(id=999)),
+        ):
+            with self.subTest(key=key):
+                bad = copy.deepcopy(paths)
+                edit(bad[key])
+                with self.assertRaises(worker.Refused):
+                    check(bad)
 
     def test_main_drift_prevents_writer_token_mint(self):
         with patch.object(worker, "verify_app"), \
