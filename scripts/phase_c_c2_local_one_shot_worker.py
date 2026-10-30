@@ -176,6 +176,9 @@ def verify_checkout():
     proc = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                           text=True, check=True)
     sha = proc.stdout.strip()
+    active = subprocess.run(["git", "branch", "--show-current"], capture_output=True,
+                            text=True, check=True)
+    require(active.stdout.strip() == "main", "Execution only from reviewed main branch")
     require(len(sha) == 40 and all(c in "0123456789abcdef" for c in sha),
             "Invalid local revision")
     dirty = subprocess.run(["git", "status", "--porcelain", "--untracked-files=all"],
@@ -235,6 +238,9 @@ def run(app_jwt, owner_token, execute=False, comment_id=None):
                 "retry_allowed": False}
     checkout_sha = verify_checkout()
     verify_fresh_approval(owner_token, comment_id, checkout_sha)
+    main_ref = get(owner_token, BASE + "/git/ref/heads/main")
+    require(main_ref.get("object", {}).get("sha") == checkout_sha,
+            "Remote main no longer equals the reviewed local worker revision")
     writer = mint_exact_writer_token(app_jwt)
     # Last authenticated readback with the actual writer credential.
     verify_ref_states(writer)
