@@ -136,9 +136,11 @@ def verify_static_evidence(owner_token):
         (26113833, "tag", "refs/tags/phase-c-once-issue-*", {"update", "deletion"}),
     ):
         rule = get(owner_token, BASE + "/rulesets/" + str(rule_id))
+        ref_condition = rule.get("conditions", {}).get("ref_name", {})
         require(rule.get("enforcement") == "active" and rule.get("target") == target
-                and rule.get("bypass_actors") == []
-                and rule.get("conditions", {}).get("ref_name", {}).get("include") == [ref]
+                and rule.get("source") == REPO and rule.get("bypass_actors") == []
+                and ref_condition.get("include") == [ref]
+                and ref_condition.get("exclude") == []
                 and {r.get("type") for r in rule.get("rules", [])} == types,
                 "Ruleset protection unverified")
     comp = get(owner_token, BASE + "/compare/" + HEAD + "..." + CANDIDATE)
