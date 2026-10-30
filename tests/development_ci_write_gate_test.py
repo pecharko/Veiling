@@ -404,7 +404,7 @@ def c7_fixture():
     tag_rule = {
         "id": 26113833, "target": "tag", "enforcement": "active",
         "bypass_actors": [],
-        "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+        "rules": [{"type": "deletion"}, {"type": "update"}],
     }
     return [packet, issue, comment, app, installation, repositories,
             branch_rule, tag_rule, "NOT_PROVEN_ABSENT"]
@@ -496,6 +496,29 @@ class PhaseC7ActivationBoundaryTests(unittest.TestCase):
             mutation(params)
             with self.subTest(mutation=repr(mutation)):
                 self.assertEqual(review_activation_boundary(*params)["decision"], "DENY")
+
+
+    def test_actual_distinct_branch_and_tag_rule_types(self):
+        params = c7_fixture()
+        branch = params[6]
+        tag = params[7]
+        self.assertEqual([r["type"] for r in branch["rules"]],
+                         ["deletion", "non_fast_forward"])
+        self.assertEqual([r["type"] for r in tag["rules"]],
+                         ["deletion", "update"])
+        self.assertEqual(review_activation_boundary(*params)["decision"],
+                         "READ_ONLY_SECURITY_REVIEW")
+        for mutation in (
+            lambda d: d[6].update(rules=[
+                {"type": "deletion"}, {"type": "update"}]),
+            lambda d: d[7].update(rules=[
+                {"type": "deletion"}, {"type": "non_fast_forward"}]),
+        ):
+            denied = c7_fixture()
+            mutation(denied)
+            with self.subTest(mutation=repr(mutation)):
+                self.assertEqual(review_activation_boundary(*denied)["decision"],
+                                 "DENY")
 
     def test_existing_or_unknown_nonce_does_not_grant_approval(self):
         for nonce in ("PRESENT", "PROVEN_ABSENT", None, {}, True):
