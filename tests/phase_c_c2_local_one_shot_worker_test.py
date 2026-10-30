@@ -89,11 +89,11 @@ class LocalWorkerTests(unittest.TestCase):
             mint.assert_not_called()
 
     def test_authenticated_evidence_binds_exact_tree_blob_and_rules(self):
-        original = (b"<?php\\ndeclare(strict_types=1);\\n"
-                    b"// Isolated Phase C exercise ONLY: intentionally unresolved typo.\\n"
-                    b"// Never merge this draft PR or route this file into the application.\\n"
-                    b"function phase_c_sandbox_example(): bool\\n"
-                    b"{\\n    return flase;\\n}\\n")
+        original = (b"<?php\ndeclare(strict_types=1);\n"
+                    b"// Isolated Phase C exercise ONLY: intentionally unresolved typo.\n"
+                    b"// Never merge this draft PR or route this file into the application.\n"
+                    b"function phase_c_sandbox_example(): bool\n"
+                    b"{\n    return flase;\n}\n")
         fixed = original.replace(b"return flase;", b"return false;")
         owner = {"login": "pecharko", "id": worker.OWNER_ID}
         issue_body = ("PHASE-C-SANDBOX-ONCE pr=426 head=" + worker.HEAD
