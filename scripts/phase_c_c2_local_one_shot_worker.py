@@ -149,6 +149,7 @@ def verify_static_evidence(owner_token):
             and len(comp.get("files", [])) == 1, "Candidate comparison drift")
     file = comp["files"][0]
     require(file.get("filename") == TARGET and file.get("status") == "modified"
+            and file.get("sha") == NEW_BLOB
             and file.get("additions") == 1 and file.get("deletions") == 1,
             "Candidate changes unexpected file")
     commit = get(owner_token, BASE + "/git/commits/" + CANDIDATE)
