@@ -26,6 +26,7 @@ PATH_PATTERNS = tuple(re.compile(p) for p in (
     re.escape(ROOT) + r"/issues/" + ID,
     re.escape(ROOT) + r"/issues/comments/" + ID,
     re.escape(ROOT + "/contents/" + TARGET) + r"\?ref=" + SHA,
+    re.escape(ROOT + "/contents/tests/") + r"[A-Za-z0-9_-]+_test\.php\?ref=" + SHA,
     re.escape(ROOT) + r"/git/commits/" + SHA,
     re.escape(ROOT) + r"/git/trees/" + SHA + r"\?recursive=1",
     re.escape(ROOT) + r"/git/blobs/" + SHA,
