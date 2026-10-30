@@ -82,7 +82,14 @@ def _rule_matches(record, rule_id, target, include, required):
         and type(record.get("bypass_actors")) is list
         and record["bypass_actors"] == []
         and type(ref_name.get("include")) is list
-        and ref_name["include"] == [include]
+        # Preserve the spent C2 fixture's existing protection while
+        # additionally covering the one new branch. No wildcard or extras.
+        and set(ref_name["include"]) == (
+            {OLD_FIXTURE, include} if target == "branch" else {include}
+        )
+        and len(ref_name["include"]) == (
+            2 if target == "branch" else 1
+        )
         and type(ref_name.get("exclude")) is list
         and ref_name["exclude"] == []
         and type(rules) is list
@@ -192,3 +199,87 @@ def execute_one_shot(*_args, **_kwargs):
 
 if __name__ == "__main__":
     raise SystemExit("Import-only read-only checks; live writer not implemented")
+
+
+def propose_inert_atomic_packet(proposal, branch_rule, tag_rule, owner):
+    """Create a REVIEW-ONLY atomic nonce+head-CAS envelope, never execute it.
+
+    All arguments are UNAUTHENTICATED caller input. In particular, a matching
+    owner comment body, GitHub-shaped ruleset, digest or nonce cannot grant
+    write authority. A separate protected trusted executor must authenticate
+    everything anew and obtain exact one-shot owner consent.
+    """
+    import json
+
+    denied = dict(_denied("ATOMIC_REVIEW_REFUSED"),
+                  network_allowed=False, mutation_submitted=False)
+    if (inspect_target_rule_coverage(
+            proposal, branch_rule, tag_rule).get("decision")
+            != "RULE_SHAPES_MATCH_REVIEW_ONLY"):
+        return denied
+    if type(owner) is not dict or set(owner) != {
+        "issue_number", "comment_id", "github_owner_id",
+        "worker_sha", "comment_body",
+    }:
+        return denied
+    issue = owner["issue_number"]
+    comment_id = owner["comment_id"]
+    worker_sha = owner["worker_sha"]
+    if (type(issue) is not int or issue <= 427
+            or proposal["nonce_ref"] !=
+               "refs/tags/phase-c-once-issue-" + str(issue)
+            or type(comment_id) is not int or comment_id <= 0
+            or type(owner["github_owner_id"]) is not int
+            or owner["github_owner_id"] != 343879284
+            or type(worker_sha) is not str
+            or not SHA.fullmatch(worker_sha)):
+        return denied
+    body = (
+        "PHASE-C-LIVE-REVIEW-ONLY"
+        + " repo=" + REPOSITORY
+        + " pr=" + str(proposal["pr"])
+        + " issue=" + str(issue)
+        + " old=" + proposal["before_sha"]
+        + " new=" + proposal["after_sha"]
+        + " oldblob=" + proposal["original_blob_sha"]
+        + " newblob=" + proposal["candidate_blob_sha"]
+        + " path=" + proposal["path"]
+        + " branch=" + proposal["branch_ref"]
+        + " nonce=" + proposal["nonce_ref"]
+        + " worker=" + worker_sha
+    )
+    if type(owner["comment_body"]) is not str or owner["comment_body"] != body:
+        return denied
+    updates = [
+        {"name": proposal["nonce_ref"], "beforeOid": "0" * 40,
+         "afterOid": proposal["before_sha"], "force": False},
+        {"name": proposal["branch_ref"],
+         "beforeOid": proposal["before_sha"],
+         "afterOid": proposal["after_sha"], "force": False},
+    ]
+    envelope = {
+        "repositoryId": "R_kgDOVNLxvg",
+        "clientMutationId": (
+            "phase-c-new-once-" + str(issue) + "-" + str(comment_id)
+            + "-" + proposal["before_sha"][:12]),
+        "refUpdates": updates,
+    }
+    packet = {
+        "decision": "INERT_ATOMIC_PLAN_REVIEW_ONLY",
+        "owner_review_comment_id": comment_id,
+        "owner_review_issue": issue,
+        "worker_sha": worker_sha,
+        "branch_ref": proposal["branch_ref"],
+        "nonce_ref": proposal["nonce_ref"],
+        "ref_update_plan": envelope,
+        "network_allowed": False,
+        "mutation_submitted": False,
+        "owner_review_only_not_live_approval": True,
+        "rulesets_authenticated": False,
+        "atomicity_authenticated": False,
+        "nonce_absence_proven": False,
+        "reason_code": "FULLY_UNTRUSTED_OFFLINE_PLAN_NOT_EXECUTION_AUTHORITY",
+    }
+    encoded = json.dumps(packet, sort_keys=True, separators=(",", ":")).encode()
+    packet["packet_sha256"] = hashlib.sha256(encoded).hexdigest()
+    return dict(NO_AUTHORITY, **packet)
