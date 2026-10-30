@@ -100,6 +100,7 @@ class LocalWorkerTests(unittest.TestCase):
              patch.object(worker, "verify_static_evidence"), \
              patch.object(worker, "verify_checkout", return_value="a" * 40), \
              patch.object(worker, "verify_fresh_approval"), \
+             patch.object(worker, "get", return_value={"object": {"sha": "a" * 40}}), \
              patch.object(worker, "mint_exact_writer_token", return_value="minted"), \
              patch.object(worker, "verify_ref_states"), \
              patch.object(worker, "_api", side_effect=transport):
@@ -119,6 +120,7 @@ class LocalWorkerTests(unittest.TestCase):
              patch.object(worker, "verify_static_evidence"), \
              patch.object(worker, "verify_checkout", return_value="a" * 40), \
              patch.object(worker, "verify_fresh_approval"), \
+             patch.object(worker, "get", return_value={"object": {"sha": "a" * 40}}), \
              patch.object(worker, "mint_exact_writer_token", return_value="minted"), \
              patch.object(worker, "verify_ref_states"), \
              patch.object(worker, "_api", side_effect=transport):
