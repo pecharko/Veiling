@@ -131,12 +131,12 @@ def audit_repair_get_session(client, request):
     reports = []
     try:
         for _ in range(2):
+            observed += 1
             pr = client.get(pr_path)
             observed += 1
             branch = client.get(branch_path)
             observed += 1
             blob = client.get(file_path)
-            observed += 1
             review = review_github_readbacks(request, pr, branch, blob)
             if (review.get("decision") != "PROPOSED_ONLY"
                     or review.get("readback_structurally_consistent") is not True
