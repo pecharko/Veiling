@@ -79,3 +79,29 @@ actieve effectieve branch/tagbescherming, vers controleerbaar CAS,
 atomische nonceconsumptie en onafhankelijke readback. Geen onderdeel
 van C5 geeft toestemming om de verlopen C2-sandboxnonce te hergebruiken,
 de fixture-PR #426 te mergen of de productiecontroller aan te passen.
+
+## Fase C6: begrensde GET-controle zonder wijziging van beschermde modules
+
+De bestaande ontwikkeladapter development_ci_feedback_adapter.github_get
+verzorgt uitsluitend API-verzoeken met HTTP GET naar pecharko/Veiling.
+De nieuwe niet-geactiveerde functie review_get_session in
+scripts/development_ci_repair_evidence_get.py leest exact tweemaal een
+PR, een geisoleerde branch en een PHP-testbestand gepind op de head-SHA.
+Na zes leesverzoeken of bij ontbrekend/tegenstrijdig bewijs volgt DENY.
+
+Het bestaande Phase-C GET-transport en zijn statische beveiligingsgate
+blijven volledig ongewijzigd. De nieuwe helper hergebruikt het reeds
+toegelaten GitHub-CLI GET-pad, zonder uitbreiding van die streng bewaakte
+allowlist, zonder POST en zonder retries.
+
+De uitvoer bevat enkel afgeleide hashes, PR-nummer, pad en head-SHA.
+Een aangeleverde test-getter kan verzonnen gegevens teruggeven; een
+matchende readback is daarom niet automatisch een betrouwbare bron,
+geen atomische momentopname en geen bewijs van eigenaarstoestemming.
+Alle schrijf-, merge-, dispatch-, productie-, nonce- en identiteitsvelden
+blijven expliciet false. De helper wordt door geen workflow aangeroepen.
+Writeractivatie, PR #426-merging en noncehergebruik zijn uitgesloten.
+
+Een toekomstige echte writer vereist een afzonderlijk beveiligingsontwerp,
+onafhankelijk geauthenticeerde owner-/App-/GitHub-bewijzen, nieuwe eenmalige
+autorisatie, atomische niet-force CAS en onafhankelijke post-write readback.

@@ -2,6 +2,9 @@ import unittest
 from scripts.development_ci_write_gate import assess_repair_write, prepare_repair_review, review_github_readbacks, _git_blob_sha
 import copy
 import base64
+from unittest.mock import patch
+from scripts.development_ci_repair_evidence_get import review_get_session, review_using_existing_get
+import base64
 
 
 def request():
@@ -230,6 +233,127 @@ class PhaseC5OfflineReadbackTests(unittest.TestCase):
         proposed["author_approved"] = False
         self.assertEqual(review_github_readbacks(
             proposed, pr, branch, blob)["decision"], "DENY")
+
+
+
+def get_review_fixture():
+    request, original = valid_review_input()
+    repo = {"full_name": "pecharko/Veiling"}
+    head = request["expected_head_sha"]
+    paths = {
+        "repos/pecharko/Veiling/pulls/42": {
+            "number": 42, "state": "open", "draft": True, "merged_at": None,
+            "head": {"ref": request["branch"], "sha": head, "repo": repo},
+            "base": {"repo": repo, "sha": "c" * 40},
+        },
+        "repos/pecharko/Veiling/git/ref/heads/" + request["branch"]: {
+            "ref": "refs/heads/" + request["branch"],
+            "object": {"type": "commit", "sha": head},
+        },
+        "repos/pecharko/Veiling/contents/" + request["path"] + "?ref=" + head: {
+            "type": "file", "path": request["path"],
+            "sha": request["base_blob_sha"], "encoding": "base64",
+            "size": len(original.encode("utf-8")),
+            "content": base64.b64encode(original.encode("utf-8")).decode("ascii"),
+        },
+    }
+    return request, paths
+
+
+class OfflineRepairGETSessionTests(unittest.TestCase):
+    def test_six_exact_gets_produce_redacted_proposal_only(self):
+        req, paths = get_review_fixture()
+        calls = []
+        def reader(path):
+            calls.append(path)
+            return copy.deepcopy(paths[path])
+        result = review_get_session(req, reader)
+        self.assertEqual(result["decision"], "READ_ONLY_REVIEW")
+        self.assertTrue(result["readback_structurally_consistent"])
+        self.assertEqual(result["get_request_count"], 6)
+        self.assertEqual(result["git_ref_updates_executed"], 0)
+        self.assertEqual(calls, list(paths) * 2)
+        self.assertEqual(len(result["review_sha256"]), 64)
+        digest = result.copy()
+        self.assertEqual(digest.pop("report_sha256"),
+                         __import__("hashlib").sha256(
+                             __import__("json").dumps(
+                                 digest, sort_keys=True, separators=(",", ":"),
+                                 ensure_ascii=True).encode("ascii")
+                         ).hexdigest())
+        self.assertNotIn(req["replacement"], str(result))
+        for key in ("can_write", "can_merge", "can_dispatch",
+                    "production_authorized", "write_allowed", "retry_allowed",
+                    "owner_identity_verified", "nonce_reserved",
+                    "source_provenance_authenticated"):
+            self.assertIs(result[key], False)
+
+    def test_second_pass_ref_drift_denied_without_retry(self):
+        req, paths = get_review_fixture()
+        seen = {}
+        def reader(path):
+            seen[path] = seen.get(path, 0) + 1
+            data = copy.deepcopy(paths[path])
+            if "/git/ref/heads/" in path and seen[path] == 2:
+                data["object"]["sha"] = "d" * 40
+            return data
+        result = review_get_session(req, reader)
+        self.assertEqual(result["decision"], "DENY")
+        self.assertFalse(result["readback_structurally_consistent"])
+        self.assertFalse(result["retry_allowed"])
+        self.assertEqual(result["get_request_count"], 6)
+
+    def test_invalid_policy_input_makes_zero_requests(self):
+        for key, wrong in (
+            ("path", "private/secrets.php"),
+            ("path", "tests/nested/a_test.php"),
+            ("branch", "main"),
+            ("actual_head_sha", "f" * 40),
+            ("attempts", 1),
+            ("author_approved", False),
+        ):
+            req, _ = get_review_fixture()
+            req[key] = wrong
+            def forbid(_):
+                self.fail("Must not request network for invalid input")
+            with self.subTest(key=key):
+                result = review_get_session(req, forbid)
+                self.assertEqual(result["decision"], "DENY")
+                self.assertEqual(result["get_request_count"], 0)
+                self.assertFalse(result["write_allowed"])
+
+    def test_api_failure_and_forged_payloads_denied(self):
+        for kind in ("404", "fork", "blob", "no-draft"):
+            req, paths = get_review_fixture()
+            if kind == "404":
+                del paths[next(k for k in paths if "/contents/" in k)]
+            elif kind == "fork":
+                paths[next(k for k in paths if "/pulls/" in k)][
+                    "head"]["repo"]["full_name"] = "other/fork"
+            elif kind == "blob":
+                paths[next(k for k in paths if "/contents/" in k)]["sha"] = "0" * 40
+            else:
+                paths[next(k for k in paths if "/pulls/" in k)]["draft"] = False
+            def reader(path):
+                if path not in paths:
+                    raise OSError("API unavailable")
+                return copy.deepcopy(paths[path])
+            with self.subTest(kind=kind):
+                result = review_get_session(req, reader)
+                self.assertEqual(result["decision"], "DENY")
+                self.assertFalse(result["can_write"])
+
+    def test_existing_get_wrapper_is_only_external_transport(self):
+        req, paths = get_review_fixture()
+        calls = []
+        def safe_get(path):
+            calls.append(path)
+            return copy.deepcopy(paths[path])
+        with patch("scripts.development_ci_feedback_adapter.github_get",
+                   side_effect=safe_get):
+            result = review_using_existing_get(req)
+        self.assertEqual(result["decision"], "READ_ONLY_REVIEW")
+        self.assertEqual(calls, list(paths) * 2)
 
 
 
