@@ -44,6 +44,18 @@ function geo_view(PDO $pdo, string $day, string $id, array $geo, int $lot = 0): 
         throw $e;
     }
 }
+// Fault injection stays within the same real DB transaction, without triggers
+// or SUPER privileges on a binary-logged MySQL server.
+class GeoCorruptAggregateStatement extends PDOStatement {
+    protected function __construct(private PDO $connection) {}
+    public function execute(?array $params = null): bool {
+        $result = parent::execute($params);
+        if (str_starts_with($this->queryString, 'INSERT INTO visitor_geo_day_totals ')) {
+            $this->connection->exec('UPDATE visitor_geo_day_totals SET views=views+1');
+        }
+        return $result;
+    }
+}
 $pdo = geo_connection();
 $other = geo_connection();
 geo_check(str_starts_with((string)$pdo->query('SELECT VERSION()')->fetchColumn(), '8.4.'), 'Requires MySQL 8.4');
@@ -70,9 +82,9 @@ geo_check((int)$pdo->query('SELECT SUM(views) FROM visitor_stats_daily')->fetchC
 
 // Roll back the normal insert as well when the geo write fails.
 $before = $pdo->query('SELECT SUM(views) FROM visitor_stats_daily')->fetchColumn();
-$pdo->exec("CREATE TRIGGER geo_test_reject BEFORE INSERT ON visitor_geo_daily FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='injected geo failure'");
+$pdo->exec('ALTER TABLE visitor_geo_daily ADD CONSTRAINT geo_test_reject CHECK (views <= 3)');
 try { geo_refuses(fn()=>geo_view($pdo,$day,$a,$be), 'SQL failure must propagate', PDOException::class); }
-finally { $pdo->exec('DROP TRIGGER geo_test_reject'); }
+finally { $pdo->exec('ALTER TABLE visitor_geo_daily DROP CHECK geo_test_reject'); }
 geo_check($pdo->query('SELECT SUM(views) FROM visitor_stats_daily')->fetchColumn()===$before, 'Normal write rolled back with failed geo write');
 geo_check((int)$pdo->query('SELECT SUM(views) FROM visitor_geo_daily')->fetchColumn()===4, 'Failed geo write left no partial count');
 
@@ -125,11 +137,12 @@ try {
     geo_check((int)$pdo->query('SELECT SUM(views) FROM visitor_geo_day_totals')->fetchColumn()===99, 'Conflicting aggregate preserved');
     $pdo->exec('DELETE FROM visitor_geo_day_totals');
 
-    // A trigger corrupting aggregate counts must prevent deletion of detail.
-    $pdo->exec('CREATE TRIGGER geo_test_corrupt BEFORE INSERT ON visitor_geo_day_totals FOR EACH ROW SET NEW.views=NEW.views+1');
+    // Corrupt actual aggregate rows after INSERT; verification must block DELETE.
+    $statementClass = $pdo->getAttribute(PDO::ATTR_STATEMENT_CLASS);
+    $pdo->setAttribute(PDO::ATTR_STATEMENT_CLASS, [GeoCorruptAggregateStatement::class, [$pdo]]);
     $pdo->beginTransaction();
     try { geo_refuses(fn()=>visitor_geo_archive_day($pdo,$day), 'Aggregate verification precedes deletion', RuntimeException::class); }
-    finally { $pdo->rollBack(); $pdo->exec('DROP TRIGGER geo_test_corrupt'); }
+    finally { $pdo->rollBack(); $pdo->setAttribute(PDO::ATTR_STATEMENT_CLASS, $statementClass); }
     geo_check((int)$pdo->query('SELECT COUNT(*) FROM visitor_geo_daily')->fetchColumn()===2, 'Bad aggregation preserves all detail');
 
     $beforeReport = visitor_geo_report($pdo);
