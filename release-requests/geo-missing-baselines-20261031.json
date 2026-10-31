@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "paths": [
+    "private/restore_diagnosis.php",
+    "private/restore_mixed_diagnosis.php",
+    "private/visitor_geo_archive.php",
+    "private/visitor_geo_archive_guard.php",
+    "private/visitor_geo_dashboard.php",
+    "private/visitor_geo_delete.php",
+    "private/visitor_geo_lookup.php",
+    "private/visitor_geo_record.php",
+    "private/visitor_geo_render.php",
+    "private/visitor_geo_report.php",
+    "private/visitor_geo_snapshot.php",
+    "private/visitor_geo_state.php",
+    "private/visitor_stats.php",
+    "private/visitor_stats_archive.php"
+  ]
+}
