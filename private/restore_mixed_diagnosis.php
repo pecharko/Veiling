@@ -60,6 +60,15 @@ function recovery_mixed_db_view(PDO $pdo, array $safety, array $target): array {
             $fingerprints[$table] = $current;
             $counts[$table] = count($rows);
         }
+        $analytics=visitor_geo_snapshot_export($pdo);
+        if($analytics!==null || isset($safety['analytics']) || isset($target['analytics'])) {
+            $current=visitor_geo_snapshot_digest($analytics);
+            $safetyMatch=hash_equals($current,visitor_geo_snapshot_digest($safety['analytics']??null));
+            $targetMatch=hash_equals($current,visitor_geo_snapshot_digest($target['analytics']??null));
+            $labels['analytics']=$safetyMatch&&$targetMatch?'both':($safetyMatch?'safety_only':($targetMatch?'target_only':'neither'));
+            $fingerprints['analytics']=$current;
+            $counts['analytics']=$analytics===null?0:array_sum(array_map('count',$analytics['tables']));
+        }
         if (!$pdo->commit()) {
             throw new RuntimeException('Kan consistente leestranactie niet afsluiten.');
         }

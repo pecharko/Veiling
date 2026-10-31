@@ -1,5 +1,27 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/catalog_mutex.php';
+require_once __DIR__ . '/restore_journal.php';
+require_once __DIR__ . '/visitor_geo_state.php';
+require_once __DIR__ . '/visitor_geo_archive.php';
+
+function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
+{
+    if ($pdo->inTransaction()) throw new LogicException('Archive requires a new transaction');
+    catalog_data_lock($pdo, 0);
+    $acquired = false;
+    try {
+        restore_journal_require_clear();
+        $st = $pdo->query("SELECT GET_LOCK('visitor_stats_one_day_archive',0)");
+        $acquired = (int)$st->fetchColumn() === 1;
+        $st->closeCursor();
+        if (!$acquired) throw new RuntimeException('Another visitor-statistics archive is already running');
+        return visitor_stats_archive_before_locked($pdo, $cutoff);
+    } finally {
+        if ($acquired) $pdo->query("SELECT RELEASE_LOCK('visitor_stats_one_day_archive')")->closeCursor();
+        catalog_data_unlock($pdo);
+    }
+}
 
 /**
  * Manual, admin-only archive. Database aggregates identifiers per UTC day,
@@ -7,13 +29,14 @@ declare(strict_types=1);
  * every selected date, so any failure rolls back all days.
  * No cron or automatic cleanup.
  */
-function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
+function visitor_stats_archive_before_locked(PDO $pdo, string $cutoff): array
 {
     $limit = gmdate('Y-m-d', strtotime('-30 days'));
     $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
     if (!$parsed || $parsed->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Grensdatum moet ten minste 30 UTC-dagen geleden zijn.');
     }
+    $geoState = visitor_geo_state($pdo);
     // Repeatable-read next-key locks protect historical date ranges.
     $pdo->exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
     $pdo->beginTransaction();
@@ -84,6 +107,10 @@ function archive_visitor_stats_before(PDO $pdo, string $cutoff): array
                 $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, $originalBuffering);
             }
             if ($n === 0) continue;
+            if ($geoState !== null) {
+                if (visitor_geo_covers_day($geoState, $day)) visitor_geo_archive_day($pdo, $day);
+                else visitor_geo_require_empty_legacy_day($pdo, $day);
+            }
             // SQL-side aggregation; no visitor ID values materialized in PHP.
             $insertDay->execute([$day]);
             if ($insertDay->rowCount() !== 1) throw new RuntimeException('Archive daily aggregate missing');

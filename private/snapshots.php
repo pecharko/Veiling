@@ -3,6 +3,7 @@ declare(strict_types=1);
 /** 41 Lokeren snapshot engine; lives outside the public document root. */
 require_once __DIR__ . '/catalog_mutex.php';
 require_once __DIR__ . '/restore_journal.php';
+require_once __DIR__ . '/visitor_geo_snapshot.php';
 const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','updated_at'],
@@ -75,6 +76,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $pdo->beginTransaction();
   try{
    $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
+   $analytics=visitor_geo_snapshot_export($pdo);
    $pdo->commit();
   }catch(Throwable $e){
    if($pdo->inTransaction())$pdo->rollBack();
@@ -83,7 +85,11 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $assets=snap_assets(); $bytes=0;foreach($assets as $path)$bytes+=(int)filesize($path);
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
-  $data=json_encode(['format'=>'41lokeren-v1','created_at'=>gmdate('c'),'tables'=>$rows],JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
+  $format=$analytics===null?'41lokeren-v1':'41lokeren-v2-geo';
+  $payload=['format'=>$format,'created_at'=>gmdate('c'),'tables'=>$rows];
+  if($analytics!==null)$payload['analytics']=$analytics;
+  $data=json_encode($payload,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
+  if(strlen($data)>30*1024*1024)throw new RuntimeException('Snapshotdatabase te groot.');
   $space=snap_storage_stats($quotaBytes);
   if($space['warnings'])throw new RuntimeException('Opslaggebruik kan niet volledig worden bepaald; snapshot uit voorzorg geweigerd.');
   if(!snap_has_estimated_capacity($space,$bytes,strlen($data)))
@@ -95,7 +101,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
    $zip->addFromString('database.json',$data);$hashes['database.json']=hash('sha256',$data);
    foreach($assets as $relative=>$file){$entry='uploads/'.$relative;if(!$zip->addFile($file,$entry))throw new RuntimeException('Kon foto niet toevoegen: '.$relative);$hashes[$entry]=hash_file('sha256',$file);}
    snap_require_referenced_photos($rows,$hashes);
-   $manifest=json_encode(['format'=>'41lokeren-v1','sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
+   $manifest=json_encode(['format'=>$format,'sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
    $zip->addFromString('manifest.json',$manifest);
   }finally{$zip->close();}
   if(!rename($tmp,snap_path($name)))throw new RuntimeException('Kon snapshot niet afronden.');$tmp=null;
@@ -113,10 +119,12 @@ function snap_verified(string $name): array {
   $m=$zip->getFromName('manifest.json');$d=$zip->getFromName('database.json');
   if($m===false||$d===false||strlen($d)>30*1024*1024)throw new RuntimeException('Ongeldige snapshotinhoud.');
   $manifest=json_decode($m,true,512,JSON_THROW_ON_ERROR);$database=json_decode($d,true,512,JSON_THROW_ON_ERROR);
-  if(($manifest['format']??null)!=='41lokeren-v1'||($database['format']??null)!=='41lokeren-v1')throw new RuntimeException('Niet-ondersteund snapshotformaat.');
+  if(!in_array($database['format']??null,['41lokeren-v1','41lokeren-v2-geo'],true)||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
   if(!isset($database['tables'])||array_keys($database['tables'])!==SNAP_TABLES)throw new RuntimeException('Onvolledige databasetabellen.');
   $hashes=$manifest['sha256']??null;if(!is_array($hashes)||count($hashes)>20000||!isset($hashes['database.json']))throw new RuntimeException('Ongeldige bestandslijst.');
   if(!hash_equals($hashes['database.json'],hash('sha256',$d)))throw new RuntimeException('Database checksum ongeldig.');
+  if($database['format']==='41lokeren-v2-geo')visitor_geo_snapshot_validate($database['analytics']??null);
+  elseif(array_key_exists('analytics',$database))throw new RuntimeException('Onverwachte geografische snapshotinhoud.');
   $size=0;
   foreach($hashes as $entry=>$hash){
    if($entry==='database.json')continue;
@@ -138,6 +146,8 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_require_clear();
   catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
+  $geoInstalled=visitor_geo_state($pdo)!==null;
+  if($geoInstalled!==($database['format']==='41lokeren-v2-geo'))throw new RuntimeException('Snapshot past niet bij het geografische schema. Oude snapshots kunnen na de upgrade niet worden hersteld.');
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
   if(!mkdir($stage,0700))throw new RuntimeException('Kan tijdelijke fotomap niet maken.');
   $zip=new ZipArchive();if($zip->open(snap_path($name))!==true)throw new RuntimeException('Kan snapshot niet openen.');
@@ -201,6 +211,7 @@ function snap_restore(PDO $pdo,string $name): void {
    // A restore may reintroduce lots deleted after the snapshot was taken.
    // Never clear the registry here: only the administrator's explicit full reset can.
    $pdo->exec('INSERT IGNORE INTO issued_lot_numbers (lot_number) SELECT lot_number FROM lots');
+   if($geoInstalled)visitor_geo_snapshot_restore($pdo,$database['analytics']);
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
    if(!$pdo->commit())throw new RuntimeException('Databasecommit kon niet worden bevestigd.');

@@ -6,6 +6,9 @@ require_no_index();
 require_once dirname(__DIR__, 2) . '/private/analytics_control.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive_one_day_experimental.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_cron_log.php';
+require_once dirname(__DIR__, 2) . '/private/visitor_geo_dashboard.php';
+require_once dirname(__DIR__, 2) . '/private/visitor_geo_delete.php';
+require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
@@ -91,6 +94,13 @@ if (is_post()) {
                     $count = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
                     $count += (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_day_totals')->fetchColumn();
                 }
+                if (visitor_geo_state($pdo)!==null) {
+                    foreach (['visitor_geo_daily','visitor_geo_day_totals'] as $table) {
+                        $geoCount=$pdo->prepare('SELECT COUNT(*) FROM '.$table.($scope==='before'?' WHERE visit_date < ?':''));
+                        $geoCount->execute($scope==='before'?[$cutoff]:[]);
+                        $count+=(int)$geoCount->fetchColumn();$geoCount->closeCursor();
+                    }
+                }
                 $token = bin2hex(random_bytes(24));
                 $_SESSION['analytics_delete_pending'] = [
                     'token' => $token, 'scope' => $scope,
@@ -122,6 +132,9 @@ if (is_post()) {
                 $pdo = db();
                 // Delete both detailed and aggregated analytics atomically.
                 // No TRUNCATE, no dynamic table names, no changes to lots/accounts.
+                $analyticsLocked=false;
+                catalog_data_lock($pdo,0);$analyticsLocked=true;
+                restore_journal_require_clear();
                 $pdo->beginTransaction();
                 if ($pending['scope'] === 'before') {
                     $cutoff = (string)($pending['cutoff'] ?? '');
@@ -131,6 +144,7 @@ if (is_post()) {
                         || $cutoff > gmdate('Y-m-d')) {
                         throw new RuntimeException('Ongeldige opgeslagen grensdatum.');
                     }
+                    $geoDeleted=visitor_geo_delete_rows($pdo,$cutoff);
                     $stmt = $pdo->prepare('DELETE FROM visitor_stats_lot_totals WHERE visit_date < ?');
                     $stmt->execute([$cutoff]);
                     $stmt = $pdo->prepare('DELETE FROM visitor_stats_day_totals WHERE visit_date < ?');
@@ -140,17 +154,22 @@ if (is_post()) {
                     $stmt->execute([$cutoff]);
                     $deleted += $stmt->rowCount();
                 } else {
+                    $geoDeleted=visitor_geo_delete_rows($pdo,null);
                     $pdo->exec('DELETE FROM visitor_stats_lot_totals');
                     $deleted = $pdo->exec('DELETE FROM visitor_stats_day_totals');
                     $deleted += $pdo->exec('DELETE FROM visitor_stats_daily');
                 }
                 $pdo->commit();
+                $analyticsLocked=false;catalog_data_unlock($pdo);
+                $deleted+=$geoDeleted;
                 flash((string)$deleted . ' statistiekrecords definitief verwijderd.');
                 redirect('admin/statistieken.php');
             } catch (Throwable $exception) {
                 if ($pdo->inTransaction()) $pdo->rollBack();
                 error_log('Analytics deletion failed (no sensitive details logged).');
                 $deleteError = 'Verwijderen mislukt. Controleer de statistieken en probeer alleen na onderzoek opnieuw.';
+            } finally {
+                if ($analyticsLocked??false) catalog_data_unlock($pdo);
             }
         }
     } else {
@@ -184,6 +203,11 @@ $cronRuns = visitor_stats_cron_log_read();
 $cronSuccessful = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => ($run['status'] ?? '') === 'ok')), 0, 3);
 $cronAlerts = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => in_array($run['status'] ?? '', ['error', 'limit'], true))), 0, 3);
 $collectionEnabled = analytics_collection_enabled();
+$geoReports=[];
+foreach (['Laatste 30 dagen'=>30,'Veilingcampagne sinds geografische registratie'=>null] as $title=>$days) {
+    try { $geoReports[$title]=visitor_geo_dashboard(db(),$days); }
+    catch (Throwable $e) { $geoReports[$title]=['status'=>'error']; }
+}
 admin_top('Bezoekersstatistieken');
 ?>
 <div class="dashboard-modern">
@@ -228,6 +252,7 @@ admin_top('Bezoekersstatistieken');
       </tbody></table></div>
     </section>
   <?php endif; ?>
+  <?=visitor_geo_render_dashboard($geoReports)?>
   <section class="dashboard-panel" aria-labelledby="analytics-cron-title">
     <h2 id="analytics-cron-title">Automatische archivering — cronlog</h2>
     <p>De drie recentste geslaagde uitvoeringen en maximaal drie uitvoeringen met een fout of waarschuwing, uit de laatste 30 geregistreerde runs (UTC). Een waarschuwing betekent dat de inhaallimiet van 14 dagen bereikt is. Een ontbrekend log bewijst niet dat de cronjob niet actief is.</p>

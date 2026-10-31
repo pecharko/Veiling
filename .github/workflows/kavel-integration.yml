@@ -131,6 +131,7 @@ jobs:
             sleep 1
           done
           php tests/kavel_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
+          php tests/visitor_geo_admin_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
 
       - name: Test full catalog reset in disposable MySQL database
         if: needs.impact.outputs.run == 'true'

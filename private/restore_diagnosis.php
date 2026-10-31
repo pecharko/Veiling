@@ -66,6 +66,8 @@ function recovery_compare_database(PDO $pdo,array $target): array {
                 $differences[]=$table;
             }
         }
+        $analytics=visitor_geo_snapshot_export($pdo);
+        if(!hash_equals(visitor_geo_snapshot_digest($target['analytics']??null),visitor_geo_snapshot_digest($analytics)))$differences[]='analytics';
         if(!$pdo->commit())throw new RuntimeException('Read transaction commit failed.');
         return ['matches_target'=>!$differences,'different_tables'=>$differences];
     }catch(Throwable $error){
