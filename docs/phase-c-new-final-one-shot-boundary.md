@@ -1,5 +1,12 @@
 # Phase C NEW — final one-shot sandbox worker boundary (2026-10-31)
 
+> **Security correction under review (2026-10-31):** Owner issue #480 and
+> its approval comment #6539747796 have already been used in an attempted
+> local execution that returned DENY. Independent GitHub readback showed the
+> sandbox branch unchanged and nonce #480 absent, but the failing step was not
+> conclusively identified. Do not repeat that transaction, reuse its approval,
+> or use this development PR as authorization for a new attempt.
+>
 ## Current status: implementation ready for security review, NOT activated
 
 The existing [PR #475](https://github.com/pecharko/Veiling/pull/475) remains **draft, unmerged, and unchanged**. This PR adds only local worker code, offline tests and this security contract. It does not run the worker, create an owner issue/comment, mint a token, create a nonce, move a sandbox ref, dispatch Actions, change permissions or write production.
@@ -47,3 +54,32 @@ The old sandbox PR #426 was already tested and its issue #427 nonce is **spent**
 4. One local write attempt only; independently validate results and sandbox PR-CI, and publish an evidence-only closeout. Never retry after an attempted mutation, even after timeouts or conflicting results.
 
 **Never perform OVH, database, deployment, workflowdispatch, ruleset edits, secrets changes, rights changes or any release operation as part of this exercise.**
+
+
+### GitHub ruleset REST field redaction — fail-closed offline fix
+
+GitHub's REST "Get a repository ruleset" endpoint explicitly omits
+`bypass_actors` for requesters without ruleset write access:
+https://docs.github.com/en/rest/repos/rules#get-a-repository-ruleset .
+The selected-repository writer App deliberately has only `contents:write`
+and `metadata:read`, never administration permission.
+
+This correction **does not treat an omitted field as evidence of an empty
+bypass list**. Before any write, the owner-token must re-read BOTH full
+rulesets with explicit `bypass_actors: []` and all existing exact
+enforcement, target, source, ref-pattern, type and no-effective-bypass
+checks. Only after that independent fresh owner attestation may the actual
+minimal writer installation token omit `bypass_actors` while independently
+confirming every other invariant, including `current_user_can_bypass:
+"never"`. If the writer sees `bypass_actors`, it MUST be exactly `[]`.
+Missing owner visibility, writer `null`/nonempty bypass, missing effective
+bypass proof, 403, changed rules or ref drift still DENY. No fallback,
+permissions upgrade, retries, workflow dispatch or GraphQL calls are
+introduced by this PR.
+
+This resolves a documented validation mismatch **in offline code only**;
+it does not prove the cause of the prior DENY. Token issuance and
+protected-ref writes remain untested live. Changing the reviewed worker
+commit invalidates the historical issue #480 approval. A new owner-created
+issue, fresh comment bound to a newly reviewed main SHA, and separate
+one-shot authorization would be mandatory before any future live test.
