@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/admin/statistieken.php",
+    "catalogus-public/privacy.php",
+    "private/visitor_stats_archive_one_day_experimental.php"
+  ]
+}
