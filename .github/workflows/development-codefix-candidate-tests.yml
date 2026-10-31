@@ -1,0 +1,26 @@
+name: Development codefix candidate tests (offline only)
+on:
+  pull_request:
+    paths:
+      - scripts/development_codefix_candidate.py
+      - tests/development_codefix_candidate_test.py
+      - docs/development-codefix-d1.md
+      - .github/workflows/development-codefix-candidate-tests.yml
+permissions:
+  contents: read
+jobs:
+  offline-codefix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Run isolated offline codefix tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python3 -B -m unittest discover -s tests -p development_codefix_candidate_test.py -v
+      - name: Verify no whitespace errors
+        run: git diff --check
