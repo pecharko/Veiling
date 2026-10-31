@@ -147,6 +147,24 @@ class ImpactTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     impact.classify([path])
 
+    def test_repository_skills_run_both_suites_without_relaxing_path_guards(self):
+        valid = ".agents/skills/veiling-deploy-manager/SKILL.md"
+        self.assertEqual(impact.classify([valid]), (True, True))
+        self.assertEqual(impact.classify([
+            "docs/example.md", valid,
+            ".agents/skills/veiling-deploy-manager/references/codex-development.md",
+        ]), (True, True))
+        for unsafe in (
+                ".agents/skills/../secret", ".agents/skills//x.md",
+                ".agents/skills/a/.env", ".agents/skills/a/\nfile.md",
+                ".agents/skills/a/\\file.md", ".agents/other/file.md"):
+            with self.subTest(path=unsafe):
+                with self.assertRaises(ValueError):
+                    impact.classify([unsafe])
+                # A valid skill path must not short-circuit later validation.
+                with self.assertRaises(ValueError):
+                    impact.classify([valid, unsafe])
+
     def test_duplicate_empty_or_excessive_path_inputs_fail(self):
         for paths in ([], ["docs/a.md", "docs/a.md"],
                       ["docs/a.md"] * (impact.MAX_PATHS + 1), [""]):
