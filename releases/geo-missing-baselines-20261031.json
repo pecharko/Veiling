@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/restore_diagnosis.php",
+      "source_sha256": "bc9765bcb2a8fdc1d489b2a0d18f898957c65e848b2af0adb91aa635ead588ec",
+      "remote_sha256": "3beeae2be5639bdca7945af541ac65ca27f8c0ed211420b3db3c3da5b1fe4a41"
+    },
+    {
+      "path": "private/restore_mixed_diagnosis.php",
+      "source_sha256": "f14c765f0e709b4103a6fe154d21f6c4195f960c36e0e393b21d3baa155e5817",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_archive.php",
+      "source_sha256": "ee89c3aff88acb2edf73439a5ea82ad98d3a26d82c078d6344ec6864a4d68f1d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_archive_guard.php",
+      "source_sha256": "0db9efda5c4c33d9722a797100fb118b49580e3d65cfca7555d2ac06296be63d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_dashboard.php",
+      "source_sha256": "440a7abe265c2e738e033d1aa4d80156867b4e01af93d97a694cf649bb4730af",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_delete.php",
+      "source_sha256": "c2cc491d95118615472f391c45567afc99b57bd88fe9d7b2698638edf1622abf",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_lookup.php",
+      "source_sha256": "5d27cb271ed96943db9f66ce85bef0a24469c8bfb0fd71eaa38e2d369f0e7f54",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_record.php",
+      "source_sha256": "a5e79c00d2ecf58e19a9fea02e106af6ebb38da24331c37e428a7466e96d1120",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_render.php",
+      "source_sha256": "55ae74b2e56e6ad23e6f521a070223bbf3fc67c26e3955748ff8be341cd29aa0",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_report.php",
+      "source_sha256": "8a29d6820890434e48fd28bf5cac12279c3492a6e075d3a68e7924d8976fa642",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_snapshot.php",
+      "source_sha256": "e196f5f4122604adbe97aa13c51c55a5977b69d971f79d7e615268873b64dea9",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_geo_state.php",
+      "source_sha256": "2afabcd7066175ffa6716ef2dfc4281624b60b3e28e1255d00d09fd6fe6acb85",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "7367ebe9ce9a21604e0abd0faad2065e4975f80ea2991fb3322cc63df42444d6",
+      "remote_sha256": "cc854ee0fcb309006ad919f9a6293ad949259765b94e65705040e2d11f7dd82f"
+    },
+    {
+      "path": "private/visitor_stats_archive.php",
+      "source_sha256": "5691563ee3553153ab2dff15c2c774a5ac62478a8ebcf11aed6e9161b8986354",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
