@@ -85,6 +85,131 @@ class PhaseCNewWorkerTests(unittest.TestCase):
                     with self.assertRaises(worker.Refused):
                         worker.verify_rules("writer")
 
+    def test_writer_rules_allow_redacted_bypass_only_after_full_owner_attestation(self):
+        """Only an absent writer field is redacted; owner still proves empty arrays."""
+        branch = {
+            "enforcement": "active", "source": worker.REPO, "target": "branch",
+            "bypass_actors": [], "current_user_can_bypass": "never",
+            "conditions": {"ref_name": {
+                "include": worker.BRANCH_RULE_INCLUDES, "exclude": []}},
+            "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+        }
+        tag = copy.deepcopy(branch)
+        tag["target"] = "tag"
+        tag["conditions"]["ref_name"]["include"] = [
+            "refs/tags/phase-c-once-issue-*"]
+        tag["rules"] = [{"type": "update"}, {"type": "deletion"}]
+
+        calls = []
+        def safe_get(token, path):
+            calls.append((token, path))
+            item = copy.deepcopy(branch if path.endswith("/26113993") else tag)
+            if token == "writer":
+                item.pop("bypass_actors")
+            return item
+
+        with patch.object(worker, "get", side_effect=safe_get):
+            worker.verify_writer_rules("owner", "writer")
+        self.assertEqual([token for token, _ in calls],
+                         ["owner", "owner", "writer", "writer"])
+        self.assertTrue(all(path.startswith(worker.BASE + "/rulesets/")
+                            for _, path in calls))
+
+        # An unredacted, explicitly empty writer array is also acceptable.
+        with patch.object(worker, "get", side_effect=[
+                copy.deepcopy(branch), copy.deepcopy(tag),
+                copy.deepcopy(branch), copy.deepcopy(tag)]):
+            worker.verify_writer_rules("owner", "writer")
+
+    def test_writer_redaction_fail_closed_for_missing_owner_or_visible_bypass(self):
+        good = {
+            "enforcement": "active", "source": worker.REPO,
+            "target": "branch", "bypass_actors": [],
+            "current_user_can_bypass": "never",
+            "conditions": {"ref_name": {
+                "include": worker.BRANCH_RULE_INCLUDES, "exclude": []}},
+            "rules": [{"type": "deletion"}, {"type": "non_fast_forward"}],
+        }
+        tag = copy.deepcopy(good)
+        tag["target"] = "tag"
+        tag["conditions"]["ref_name"]["include"] = [
+            "refs/tags/phase-c-once-issue-*"]
+        tag["rules"] = [{"type": "update"}, {"type": "deletion"}]
+
+        def probe(owner_branch, writer_branch):
+            calls = []
+            def mock_get(token, path):
+                calls.append(token)
+                source = (owner_branch if token == "owner" else writer_branch)
+                item = copy.deepcopy(source if path.endswith("/26113993")
+                                     else tag)
+                if token == "writer":
+                    item.pop("bypass_actors", None)
+                    if path.endswith("/26113993"):
+                        item = copy.deepcopy(writer_branch)
+                return item
+            with patch.object(worker, "get", side_effect=mock_get):
+                with self.assertRaises(worker.Refused):
+                    worker.verify_writer_rules("owner", "writer")
+            return calls
+
+        # Owner cannot 'prove no bypass' when GitHub redacts the owner reply.
+        for missing in (None, [{"actor_id": 9}]):
+            wrong = copy.deepcopy(good)
+            if missing is None:
+                wrong.pop("bypass_actors")
+            else:
+                wrong["bypass_actors"] = missing
+            with self.subTest(owner_bypass=missing):
+                calls = probe(wrong, {k:v for k,v in good.items()
+                                      if k != "bypass_actors"})
+                self.assertEqual(calls, ["owner"])
+
+        writer = copy.deepcopy(good)
+        writer.pop("bypass_actors")
+        for key, wrong in (
+            ("bypass_actors", [{"actor_id": 11}]),
+            ("bypass_actors", None),
+            ("current_user_can_bypass", "always"),
+            ("current_user_can_bypass", None),
+            ("enforcement", "disabled"),
+            ("rules", [{"type": "deletion"}]),
+            ("conditions", {"ref_name": {
+                "include": ["refs/heads/main"], "exclude": []}}),
+        ):
+            with self.subTest(writer_key=key, writer_value=wrong):
+                bad_writer = copy.deepcopy(writer)
+                bad_writer[key] = wrong
+                calls = probe(good, bad_writer)
+                self.assertEqual(calls, ["owner", "owner", "writer"])
+
+        # REST 403 or other failed writer read never upgrades to success.
+        def forbidden(token, path):
+            if token == "writer":
+                raise worker.Refused("status=403")
+            return copy.deepcopy(good if path.endswith("/26113993") else tag)
+        with patch.object(worker, "get", side_effect=forbidden):
+            with self.assertRaises(worker.Refused):
+                worker.verify_writer_rules("owner", "writer")
+
+    def test_execute_path_requires_owner_and_writer_rules_before_mutation(self):
+        """Offline-only: a redacted writer must not bypass the owner proof."""
+        with patch.object(worker, "verify_app"), \
+             patch.object(worker, "verify_static_evidence"), \
+             patch.object(worker, "verify_checkout", return_value="b" * 40), \
+             patch.object(worker, "verify_fresh_approval"), \
+             patch.object(worker, "get", return_value={
+                 "object": {"sha": "b" * 40}}), \
+             patch.object(worker, "mint_exact_writer_token",
+                          return_value="writer"), \
+             patch.object(worker, "verify_writer_rules",
+                          side_effect=worker.Refused("owner proof missing")) as gate, \
+             patch.object(worker, "_api") as transport:
+            with self.assertRaises(worker.Refused):
+                worker.run("jwt", "owner", execute=True, comment_id=600)
+            gate.assert_called_once_with("owner", "writer")
+            transport.assert_not_called()
+
     def test_absent_nonce_required_before_write(self):
         head = {"ref": worker.BRANCH, "object": {"sha": worker.HEAD}}
         for code in (200, 403, 409, 500):
