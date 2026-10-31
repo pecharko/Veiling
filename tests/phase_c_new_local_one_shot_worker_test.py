@@ -216,6 +216,40 @@ class PhaseCNewWorkerTests(unittest.TestCase):
             with self.assertRaises(worker.Refused):
                 worker.verify_full_readback("owner")
 
+    def test_exact_approved_graphql_envelope_passes_transport_gate(self):
+        """Mock transport only; no real HTTP or nonce creation."""
+        payload = worker.mutation(600)
+        cid = payload["variables"]["input"]["clientMutationId"]
+        self.assertEqual(cid, "phase-c-new-9013-600-" + worker.HEAD[:12])
+        with patch.object(worker.http.client, "HTTPSConnection") as conn:
+            response = conn.return_value.getresponse.return_value
+            response.status = 200
+            response.read.return_value = b'{}'
+            status, _ = worker._api("fake-token-long", "/graphql", "POST", payload)
+            self.assertEqual(status, 200)
+            conn.return_value.request.assert_called_once()
+            sent = conn.return_value.request.call_args
+            self.assertEqual(sent.args[:2], ("POST", "/graphql"))
+        # A packet tied to another issue, even with the right two refs, must fail.
+        for wrong in ("phase-c-new-9014-600-" + worker.HEAD[:12],
+                      "phase-c-new-600-" + worker.HEAD[:12],
+                      "phase-c-new-9013-0-" + worker.HEAD[:12]):
+            tampered = copy.deepcopy(payload)
+            tampered["variables"]["input"]["clientMutationId"] = wrong
+            with patch.object(worker.http.client, "HTTPSConnection") as conn:
+                with self.assertRaises(worker.Refused):
+                    worker._api("fake-token-long", "/graphql", "POST", tampered)
+                conn.assert_not_called()
+
+    def test_mutation_requires_new_issue_and_numeric_comment(self):
+        with self.assertRaises(worker.Refused):
+            worker.mutation(0)
+        with self.assertRaises(worker.Refused):
+            worker.mutation("600")
+        with patch.object(worker, "ISSUE", None):
+            with self.assertRaises(worker.Refused):
+                worker.mutation(600)
+
     def test_raw_transport_rejects_extra_posts_before_opening_connection(self):
         with patch.object(worker.http.client, "HTTPSConnection") as conn:
             for path, payload in (

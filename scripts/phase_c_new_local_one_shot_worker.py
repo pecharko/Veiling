@@ -288,11 +288,17 @@ def mint_exact_writer_token(app_jwt):
 
 
 def mutation(comment_id):
+    """Build only the exact issue-and-comment-bound one-shot request."""
+    require(type(ISSUE) is int and ISSUE > 477 and NONCE ==
+            "refs/tags/phase-c-once-issue-" + str(ISSUE),
+            "No new owner-created issue has been configured")
+    require(type(comment_id) is int and comment_id > 0,
+            "Authenticated owner comment ID required")
     return {"query": "mutation PhaseCAtomicRefs($input: UpdateRefsInput!) { "
             "updateRefs(input: $input) { clientMutationId } }",
             "variables": {"input": {
                 "repositoryId": REPO_NODE,
-                "clientMutationId": "phase-c-new-" + str(comment_id)
+                "clientMutationId": "phase-c-new-" + str(ISSUE) + "-" + str(comment_id)
                                     + "-" + HEAD[:12],
                 "refUpdates": [
                     {"name": NONCE, "beforeOid": "0" * 40, "afterOid": HEAD,

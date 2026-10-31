@@ -34,6 +34,26 @@ from tests.phase_c_new_trusted_writer_test import NewSandboxTrustedWriterTests  
 from tests.phase_c_new_offline_receipt_test import OfflineReceiptTests  # offline-only regression
 from tests.phase_c_new_local_one_shot_worker_test import PhaseCNewWorkerTests  # offline mock-only
 
+from scripts import phase_c_new_local_one_shot_worker as new_worker
+from unittest.mock import patch as new_patch
+
+
+class PhaseCNewIssueBoundWireContractTests(unittest.TestCase):
+    def test_new_issue_and_owner_comment_bind_the_exact_graphql_packet(self):
+        with new_patch.object(new_worker, "ISSUE", 9013), new_patch.object(
+            new_worker, "NONCE", "refs/tags/phase-c-once-issue-9013"
+        ):
+            packet = new_worker.mutation(600)
+            self.assertEqual(
+                packet["variables"]["input"]["clientMutationId"],
+                "phase-c-new-9013-600-" + new_worker.HEAD[:12],
+            )
+            self.assertEqual(
+                [ref["name"] for ref in packet["variables"]["input"]["refUpdates"]],
+                ["refs/tags/phase-c-once-issue-9013", new_worker.BRANCH],
+            )
+
+
 
 if __name__ == "__main__":
     unittest.main()
