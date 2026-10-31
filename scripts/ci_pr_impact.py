@@ -60,6 +60,14 @@ def classify(paths):
                 or any(ord(c) < 32 or ord(c) == 127 for c in path)):
             # Dotted paths such as .github MUST be treated as high-impact
             # rather than treated as a missing entry.
+            # Repository skills are valid hidden metadata, but remain unknown
+            # impact: run BOTH suites. Do not add a documentation skip rule.
+            if (path.startswith(".agents/skills/")
+                    and "\\" not in path
+                    and not any(ord(c) < 32 or ord(c) == 127 for c in path)
+                    and all(part and not part.startswith(".")
+                            for part in path.split("/")[1:])):
+                continue
             if path.startswith(".github/") and all(
                 part not in (".", "..", "") for part in path.split("/")
             ):

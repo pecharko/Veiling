@@ -18,4 +18,4 @@ Dit pakket is een bijgewerkt voorstel voor de bestaande persoonlijke skill veili
 - Nieuwe references/codex-development.md; gerichte verduidelijkingen in automation-lanes, doorlopende-release-uitvoering en security-and-approvals.
 - De overige zeven oorspronkelijke referentiedocumenten zijn inhoudelijk ongewijzigd.
 
-Deze wijziging betreft uitsluitend skilldocumentatie. De geografische feature-PR #396 en productie worden niet gewijzigd.
+Naast dit documentatiepakket bevat de repository-PR een kleine CI-padherkenningsfix: geldige .agents/skills/-paden voeren beide bestaande integratiesuites uit. Er wordt geen skipregel toegevoegd en onveilige paden blijven geweigerd. De geografische feature-PR #396, productie en workflows worden niet gewijzigd.
