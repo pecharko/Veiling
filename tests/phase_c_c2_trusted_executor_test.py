@@ -32,6 +32,7 @@ class TrustedExecutorTests(unittest.TestCase):
 
 from tests.phase_c_new_trusted_writer_test import NewSandboxTrustedWriterTests  # offline CI discovery bridge
 from tests.phase_c_new_offline_receipt_test import OfflineReceiptTests  # offline-only regression
+from tests.phase_c_new_local_one_shot_worker_test import PhaseCNewWorkerTests  # offline mock-only
 
 
 if __name__ == "__main__":
