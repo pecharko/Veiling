@@ -53,7 +53,8 @@ owner and is not an acceptable test environment.
 - veiling-deploy-manager owns GitHub owner gates, SHA/drift checks,
   deployment, rollback and acceptance; Codex is only the coding engine.
 - Read docs/codex-controlled-development.md for a task-to-PR example.
-- Draft PR #483 contains the first offline codefix candidate, not yet merged
-  into main. Do not modify or merge it unless separately asked.
+- The first offline codefix workstream is tracked in PR #483. Verify its
+  current status directly; never treat a historical draft description as
+  permission to modify or merge that PR.
 - This AGENTS.md is advisory guidance. It cannot enforce authorization:
   actual GitHub permissions, sandbox controls and human approvals do that.
