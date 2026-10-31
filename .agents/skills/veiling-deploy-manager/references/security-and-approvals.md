@@ -6,7 +6,7 @@ Deze referentie bevat bestaande instructies en casussen, zonder nieuwe autorisat
 
 ## Single-deployer productieprofiel (27 oktober 2026)
 
-**Feitelijke aanname:** de gebruiker is de enige persoon die bewust naar productie op OVH deployt. Gebruik dit om het proces eenvoudiger te maken, **niet** als bewijs dat de server nooit verandert. GitHub workflows, hostingproviders, vorige releases, noodherstel, handmatige SFTP-handelingen en een ondertussen gewijzigde `main` kunnen nog altijd drift veroorzaken.
+**Vaste gebruikersinstructie, bevestigd op 31 oktober 2026:** de gebruiker is de enige persoon die naar productie op OVH deployt en draait nooit twee deploys parallel. Ga hier altijd van uit en vraag dit niet opnieuw. Plan de rollout als één seriële keten. Hergebruik bewezen baselines; extra afstemming of preflights voor veronderstelde parallelle menselijke deployments zijn niet nodig. De bestaande exacte autorisatie-, SHA-, drift-, back-up-, rollback- en readbackgates blijven gelden.
 
 ### Lichte release en single-deployer optimalisatie
 
@@ -20,7 +20,7 @@ Deze referentie bevat bestaande instructies en casussen, zonder nieuwe autorisat
 
 ### Beslisregel over conflictcontrole
 
-Single-deployer verlaagt de kans op **gelijktijdige menselijke deployments**. Daarom zijn extra afstemmingsrondes, extra handmatige preflights en opnieuw opgevraagde toestemming zonder verandering van scope meestal overbodig. Het elimineert **geen** serverdrift of race tussen preflight en upload: de geautomatiseerde serverdrift-gate, immutable SHA, pinned SSH hostkey, per-file allowlist, beperkte rechten, codeback-up, rollback, post-upload hashcontrole en aparte productieautorisatie zijn nooit optioneel.
+Parallelle menselijke deployments zijn volgens de gebruikersinstructie uitgesloten. Voeg daarvoor geen extra afstemmingsrondes, handmatige preflights of herhaalde toestemmingen voor dezelfde ongewijzigde actie toe. Gebruik één seriële keten en de bestaande geautomatiseerde gates. Alleen een feitelijk gewijzigde SHA, scope, remote baseline of mislukte controle vraagt een gerichte herbeoordeling; de bestaande productieautorisatie en beveiligingscontroles blijven intact.
 
 
 ## Harde productie- en datagrenzen

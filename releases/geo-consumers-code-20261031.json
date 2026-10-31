@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/restore_diagnosis.php",
+      "source_sha256": "bc9765bcb2a8fdc1d489b2a0d18f898957c65e848b2af0adb91aa635ead588ec",
+      "remote_sha256": "3beeae2be5639bdca7945af541ac65ca27f8c0ed211420b3db3c3da5b1fe4a41"
+    },
+    {
+      "path": "private/restore_mixed_diagnosis.php",
+      "source_sha256": "f14c765f0e709b4103a6fe154d21f6c4195f960c36e0e393b21d3baa155e5817",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_stats_archive.php",
+      "source_sha256": "5691563ee3553153ab2dff15c2c774a5ac62478a8ebcf11aed6e9161b8986354",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_stats_archive_one_day_experimental.php",
+      "source_sha256": "7f1724eccfcb392a95bba57e284f180dd1cb98c4ba0c0c79c64139e01e0d3879",
+      "remote_sha256": "a2a535d18d6f2e58c1e4deaf4f42bbb60757df12858f2ae8efea2ad0a5cb3c57"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "7367ebe9ce9a21604e0abd0faad2065e4975f80ea2991fb3322cc63df42444d6",
+      "remote_sha256": "cc854ee0fcb309006ad919f9a6293ad949259765b94e65705040e2d11f7dd82f"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "7747a6b1c4a114fa47038c38864d204c27769137bbb671bb88ec1d1855be04d6",
+      "remote_sha256": "93e782d3626891ddaf64d57f218a0369de84fffb43529aeb1c6785c6b27da543"
+    },
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "9bce7b4a9188661962ece6019ae5e2867297bee8ec865164ccae60962631d70c",
+      "remote_sha256": "1c79ecc62faa175ccf2a690fce20715434af92db42fc54a939a0ca3552ebd128"
+    }
+  ]
+}
