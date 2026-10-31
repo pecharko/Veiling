@@ -1,0 +1,18 @@
+name: Phase C2 independent readback offline
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_c2_postwrite_readback.py'
+      - 'tests/phase_c_c2_postwrite_readback_test.py'
+      - '.github/workflows/phase-c-c2-postwrite-readback-tests.yml'
+permissions:
+  contents: read
+jobs:
+  readback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_postwrite_readback_test.py -v

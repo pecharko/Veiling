@@ -3,6 +3,9 @@ on:
   pull_request:
     paths:
       - "private/visitor_stats_archive.php"
+      - "private/visitor_geo_*.php"
+      - "tests/visitor_geo_*.php"
+      - "database/migrations/20261029_visitor_geo_analytics.sql"
       - "catalogus-public/privacy.php"
       - "database/visitor_stats_aggregates.sql"
       - "tests/visitor_stats_mysql_integration.php"
@@ -38,7 +41,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.2"
-          extensions: pdo_mysql
+          extensions: pdo_mysql, pdo_sqlite, mbstring
           coverage: none
       - name: PHP syntax and isolated database integration
         env:
@@ -54,3 +57,5 @@ jobs:
           php -l private/visitor_stats.php
           php -l tests/visitor_stats_tracking_mysql_integration.php
           php tests/visitor_stats_tracking_mysql_integration.php
+          for test in tests/visitor_geo_*test.php; do php "$test"; done
+          php tests/visitor_geo_mysql_integration.php

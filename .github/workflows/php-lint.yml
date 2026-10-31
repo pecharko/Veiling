@@ -17,6 +17,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up PHP 8.2
         uses: shivammathur/setup-php@v2
@@ -102,14 +103,29 @@ jobs:
           php -l catalogus-public/admin/login.php
           php tests/admin_invitation_contract_test.php
 
-      - name: Test staged geographic analytics offline (no DB migration)
+      - name: Test phase C CI advisory offline (no execution permissions)
         run: |
-          php tests/visitor_geo_lookup_test.php
-          php tests/visitor_geo_report_test.php
-          php tests/visitor_geo_render_test.php
-          php tests/visitor_geo_record_test.php
-          php tests/visitor_geo_archive_guard_test.php
-          php tests/visitor_geo_archive_contract_test.php
+          python3 -m unittest discover -s tests -p development_ci_advisor_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_repair_prototype_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_write_gate_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_sandbox_transaction_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_sandbox_writer_prepare_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_owner_evidence_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_github_evidence_reader_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_one_shot_preflight_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_offline_nonce_store_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_cas_offline_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_cas_adversarial_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_integrated_readonly_preflight_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_atomic_refs_plan_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_readonly_candidate_verifier_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_github_readonly_client_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_atomic_ref_reconciliation_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_two_stage_contract_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_complete_readonly_audit_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_readonly_static_gate_test.py -v
+          python3 -m unittest discover -s tests -p phase_c_readonly_get_session_test.py -v
+          python3 scripts/phase_c_readonly_static_gate.py
 
       - name: Test B5 controller advisory integration offline
         run: |
@@ -252,7 +268,7 @@ jobs:
           php -l private/bootstrap.php
           php tests/user_disable_contract_test.php
 
-      - name: Verify daily visitor archive contract (7-day cutoff, CLI-only, rollback)
+      - name: Verify daily visitor archive contract (3-day cutoff, CLI-only, rollback)
         run: python3 tests/visitor_stats_daily_cron_contract_test.py
 
       - name: Detect whitespace errors

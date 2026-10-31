@@ -21,6 +21,8 @@ foreach ([
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'NL','region_code'=>'','city_name'=>'Gent']],
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>str_repeat('A', 121)]],
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>"\xFF"]],
+    ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>"Gent\n"]],
+    ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'ZZ','region_code'=>'VOV','city_name'=>'']],
 ] as $invalid) {
     $pdo->beginTransaction();
     try {
@@ -35,4 +37,4 @@ if (!is_string($source) || !str_contains($source, 'ON DUPLICATE KEY UPDATE views
     || !str_contains($source, 'PRIMARY') && !str_contains($source, 'visitor_geo_daily')) {
     throw new RuntimeException('MySQL daily upsert contract missing');
 }
-echo "Geographic daily input and transaction guards OK (MySQL upsert integration pending)\n";
+echo "Geographic daily input and transaction guards OK; see separate MySQL integration suite\n";

@@ -46,3 +46,7 @@ error_log
 .netrc
 .ftpconfig
 .ftppass
+
+# Local licensed geolocation data; never commit a MaxMind database or license.
+*.mmdb
+private/geoip/

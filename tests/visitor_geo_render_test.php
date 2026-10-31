@@ -17,3 +17,9 @@ try {
     throw new RuntimeException('Absolute geo values unexpectedly accepted');
 } catch (InvalidArgumentException $expected) {}
 echo "Geographic percentage-only HTML rendering OK\n";
+foreach ([NAN, INF, -INF, '50', -1.0, 101.0] as $invalid) {
+    try {
+        visitor_geo_render_percentage_table([['label'=>'BE','percentage'=>$invalid]], 'Landen');
+        throw new RuntimeException('Invalid percentage accepted');
+    } catch (InvalidArgumentException $expected) {}
+}

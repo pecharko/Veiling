@@ -8,7 +8,8 @@ if (!is_string($source)) throw new RuntimeException('Geo archive helper missing'
 $required = [
     "function visitor_geo_archive_day(PDO \$pdo, string \$day)",
     "if (!\$pdo->inTransaction())",
-    "SELECT COUNT(*) FROM visitor_geo_day_totals WHERE visit_date=?",
+    "visitor_geo_assert_day_consistent(\$pdo, \$day)",
+    "visitor_geo_lock_day(\$pdo, 'visitor_geo_day_totals', \$day)",
     "INSERT INTO visitor_geo_day_totals",
     "Geo aggregate verification failed",
     "DELETE FROM visitor_geo_daily WHERE visit_date=?",

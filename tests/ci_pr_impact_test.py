@@ -10,6 +10,24 @@ import ci_pr_impact as impact
 
 
 class ImpactTests(unittest.TestCase):
+    def test_phase_c_installation_proof_skips_unrelated_mysql_http_suites(self):
+        self.assertEqual(impact.classify([
+            "scripts/phase_c_c2_installation_proof.py",
+            "tests/phase_c_c2_installation_proof_test.py",
+        ]), (False, False))
+
+    def test_phase_c_mixed_with_php_or_infrastructure_runs_both(self):
+        for path in ("catalogus-public/admin/kavel.php",
+                     "private/snapshots.php",
+                     "scripts/ci_pr_impact.py",
+                     ".github/workflows/kavel-integration.yml",
+                     ".github/workflows/php-lint.yml"):
+            with self.subTest(path=path):
+                self.assertEqual(impact.classify([
+                    "scripts/phase_c_c2_installation_proof.py",
+                    path,
+                ]), (True, True))
+
     def test_readonly_python_script_only_skips_heavy_integrations(self):
         self.assertEqual(impact.classify([
             "scripts/shared_ovh_controller_evidence.py",

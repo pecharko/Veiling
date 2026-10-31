@@ -1,0 +1,30 @@
+name: Development CI feedback (read-only)
+on:
+  workflow_run:
+    workflows:
+      - PHP syntax and repository checks
+      - Kaveleditor integratietests (geisoleerd)
+      - Snapshot en herstel — geisoleerde tests
+    types: [completed]
+permissions:
+  actions: read
+  contents: read
+jobs:
+  diagnose:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted main (never PR code, never persist token)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Classify immutable PR CI evidence using existing advisor
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 scripts/development_ci_feedback_adapter.py >> "$GITHUB_STEP_SUMMARY"

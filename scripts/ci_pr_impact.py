@@ -12,6 +12,10 @@ MAX_PATHS = 5000
 MAX_INPUT = 1024 * 1024
 
 READONLY_CONTROLLER_FILES = {
+    # GitHub App installation proof is offline-only, with dedicated security CI.
+    # Its changes cannot affect the PHP/MySQL website integration suites.
+    "scripts/phase_c_c2_installation_proof.py",
+    "tests/phase_c_c2_installation_proof_test.py",
     # GitHub-only verified authorization controller; unrelated to PHP/MySQL suites.
     # Its dedicated security regression suite remains in php-lint CI.
     "scripts/verified_deploy_controller.py",

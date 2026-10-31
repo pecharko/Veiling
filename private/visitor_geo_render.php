@@ -13,7 +13,9 @@ function visitor_geo_render_percentage_table(array $rows, string $title): string
         . '<thead><tr><th>Herkomst</th><th>Aandeel</th></tr></thead><tbody>';
     foreach ($rows as $row) {
         if (!is_array($row) || !is_string($row['label'] ?? null)
-            || !is_numeric($row['percentage'] ?? null)
+            || array_keys($row) !== ['label', 'percentage']
+            || !(is_int($row['percentage']) || is_float($row['percentage']))
+            || !is_finite((float)$row['percentage'])
             || (float)$row['percentage'] < 0 || (float)$row['percentage'] > 100
             || array_key_exists('visitor_days', $row) || array_key_exists('views', $row)) {
             throw new InvalidArgumentException('Expected percentage-only geographic report');

@@ -1,6 +1,37 @@
 <?php
 declare(strict_types=1);
 
+/** Current reads avoid a stale InnoDB snapshot during archival verification. */
+function visitor_geo_lock_day(PDO $pdo, string $table, string $day): array
+{
+    if (!in_array($table, ['visitor_stats_daily', 'visitor_geo_daily', 'visitor_geo_day_totals'], true)) {
+        throw new InvalidArgumentException('Invalid geo archive table');
+    }
+    if (!$pdo->inTransaction()) {
+        throw new LogicException('Geo archive verification requires a transaction');
+    }
+    $mysql = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'mysql';
+    if ($mysql) {
+        $owner = $pdo->query("SELECT IS_USED_LOCK('visitor_stats_one_day_archive') = CONNECTION_ID()")->fetchColumn();
+        if ((int)$owner !== 1) throw new LogicException('Geo archive requires the parent archive lock');
+        // Equality ranges must also block new inserts, including on empty days.
+        $isolation = $pdo->query('SELECT @@transaction_isolation')->fetchColumn();
+        if ($isolation !== 'REPEATABLE-READ') throw new LogicException('Geo archive requires REPEATABLE READ');
+    }
+    $stmt = $pdo->prepare('SELECT * FROM ' . $table . ' WHERE visit_date=? LIMIT 20001' . ($mysql ? ' FOR UPDATE' : ''));
+    $stmt->execute([$day]);
+    try {
+        $rows = [];
+        while (($row = $stmt->fetch(PDO::FETCH_ASSOC)) !== false) {
+            if (count($rows) >= 20000) throw new RuntimeException('Geo archive day exceeds safety limit (20000)');
+            $rows[] = $row;
+        }
+        return $rows;
+    } finally {
+        $stmt->closeCursor();
+    }
+}
+
 /**
  * Fail-closed pre-archive consistency check for a single UTC day.
  *
@@ -21,39 +52,23 @@ function visitor_geo_assert_day_consistent(PDO $pdo, string $day): void
     if (!$pdo->inTransaction()) {
         throw new LogicException('Geo archive verification requires a transaction');
     }
-    $stats = $pdo->prepare('SELECT COUNT(DISTINCT visitor_id) AS visitor_days, COALESCE(SUM(views),0) AS views FROM visitor_stats_daily WHERE visit_date=?');
-    $stats->execute([$day]);
-    $expected = $stats->fetch(PDO::FETCH_ASSOC);
-    $geo = $pdo->prepare('SELECT COUNT(*) AS visitor_days, COALESCE(SUM(views),0) AS views FROM visitor_geo_daily WHERE visit_date=?');
-    $geo->execute([$day]);
-    $actual = $geo->fetch(PDO::FETCH_ASSOC);
-    // Aggregate equality alone is insufficient: two different visitor IDs can
-    // produce the same counts and views. Check both directions before deletion.
-    $missingGeo = $pdo->prepare('SELECT COUNT(*) FROM visitor_stats_daily s
-        LEFT JOIN visitor_geo_daily g ON g.visit_date=s.visit_date AND g.visitor_id=s.visitor_id
-        WHERE s.visit_date=? AND g.visitor_id IS NULL');
-    $missingGeo->execute([$day]);
-    $missingStats = $pdo->prepare('SELECT COUNT(*) FROM visitor_geo_daily g
-        LEFT JOIN visitor_stats_daily s ON s.visit_date=g.visit_date AND s.visitor_id=g.visitor_id
-        WHERE g.visit_date=? AND s.visitor_id IS NULL');
-    $missingStats->execute([$day]);
-    if ((int)$missingGeo->fetchColumn() !== 0 || (int)$missingStats->fetchColumn() !== 0) {
+    $expected = [];
+    foreach (visitor_geo_lock_day($pdo, 'visitor_stats_daily', $day) as $row) {
+        $key = bin2hex($row['visitor_id']);
+        if ((int)$row['views'] < 1) throw new RuntimeException('Invalid geo archive source views');
+        $expected[$key] = ($expected[$key] ?? 0) + (int)$row['views'];
+    }
+    $actual = [];
+    foreach (visitor_geo_lock_day($pdo, 'visitor_geo_daily', $day) as $row) {
+        if ((int)$row['views'] < 1) throw new RuntimeException('Invalid geo archive source views');
+        $actual[bin2hex($row['visitor_id'])] = (int)$row['views'];
+    }
+    if (array_diff_key($expected, $actual) || array_diff_key($actual, $expected)) {
         throw new RuntimeException('Geo visitor identifiers disagree; archive blocked');
     }
-    // Matching overall views can still conceal a swap between two visitors.
-    // Compare each visitor's summed normal page views against its geo count.
-    $mismatch = $pdo->prepare('SELECT COUNT(*) FROM (
-        SELECT visitor_id, SUM(views) AS views
-        FROM visitor_stats_daily WHERE visit_date=? GROUP BY visitor_id
-    ) s INNER JOIN visitor_geo_daily g
-       ON g.visitor_id=s.visitor_id AND g.visit_date=?
-       WHERE s.views <> g.views');
-    $mismatch->execute([$day, $day]);
-    if ((int)$mismatch->fetchColumn() !== 0) {
-        throw new RuntimeException('Geo per-visitor views disagree; archive blocked');
-    }
-    if ((int)$expected['visitor_days'] !== (int)$actual['visitor_days']
-        || (int)$expected['views'] !== (int)$actual['views']) {
-        throw new RuntimeException('Geo and visitor-statistics day totals disagree; archive blocked');
+    foreach ($expected as $id => $views) {
+        if ($actual[$id] !== $views) {
+            throw new RuntimeException('Geo per-visitor views disagree; archive blocked');
+        }
     }
 }

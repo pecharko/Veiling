@@ -27,11 +27,15 @@ function visitor_geo_record_view(PDO $pdo, string $day, string $visitorId, array
     $city = $geo['city_name'] ?? null;
     if (!is_string($country) || !preg_match('/^[A-Z]{2}$/D', $country)
         || !is_string($region) || ($region !== '' && !preg_match('/^[A-Z0-9-]{1,16}$/D', $region))
-        || !is_string($city) || !mb_check_encoding($city, 'UTF-8') || mb_strlen($city, 'UTF-8') > 120) {
+        || !is_string($city) || !mb_check_encoding($city, 'UTF-8') || mb_strlen($city, 'UTF-8') > 120
+        || preg_match('/[\x00-\x1F\x7F]/u', $city)) {
         throw new InvalidArgumentException('Invalid coarse geo bucket');
     }
     if ($country !== 'BE' && $city !== '') {
         throw new InvalidArgumentException('City-level geo is restricted to Belgium');
+    }
+    if ($country === 'ZZ' && ($region !== '' || $city !== '')) {
+        throw new InvalidArgumentException('Unknown country cannot have a region or city');
     }
     $stmt = $pdo->prepare('INSERT INTO visitor_geo_daily
         (visit_date,visitor_id,country_code,region_code,city_name,views)

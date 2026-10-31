@@ -1,0 +1,18 @@
+name: Phase C trusted writer offline simulator
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_trusted_writer_simulator.py'
+      - 'tests/phase_c_trusted_writer_simulator_test.py'
+      - '.github/workflows/phase-c-trusted-writer-simulation.yml'
+permissions:
+  contents: read
+jobs:
+  offline-simulation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_trusted_writer_simulator_test.py -v

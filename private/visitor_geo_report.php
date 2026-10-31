@@ -11,23 +11,25 @@ function visitor_geo_report(PDO $pdo, int $days = 30): array
     if ($days < 1 || $days > 3660) {
         throw new InvalidArgumentException('Invalid report range');
     }
-    $start = gmdate('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+    $today = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+    $start = $today->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+    $end = $today->format('Y-m-d');
     $sql = "SELECT country_code,region_code,city_name,
                    SUM(visitor_days) AS visitor_days,SUM(views) AS views
             FROM (
               SELECT country_code,region_code,city_name,
                      COUNT(*) AS visitor_days,SUM(views) AS views
-              FROM visitor_geo_daily WHERE visit_date >= ?
+              FROM visitor_geo_daily WHERE visit_date BETWEEN ? AND ?
               GROUP BY country_code,region_code,city_name
               UNION ALL
               SELECT country_code,region_code,city_name,
                      SUM(visitor_days) AS visitor_days,SUM(views) AS views
-              FROM visitor_geo_day_totals WHERE visit_date >= ?
+              FROM visitor_geo_day_totals WHERE visit_date BETWEEN ? AND ?
               GROUP BY country_code,region_code,city_name
             ) geo GROUP BY country_code,region_code,city_name
             ORDER BY visitor_days DESC,views DESC,country_code,region_code,city_name";
     $stmt = $pdo->prepare($sql);
-    $stmt->execute([$start, $start]);
+    $stmt->execute([$start, $end, $start, $end]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 

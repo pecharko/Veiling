@@ -1,0 +1,24 @@
+name: Phase C disabled writer contract
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_disabled_writer.py'
+      - 'tests/phase_c_disabled_writer_test.py'
+      - '.github/workflows/phase-c-disabled-writer-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  deny-by-default:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compile inactive writer and offline tests
+        run: python3 -m py_compile scripts/phase_c_disabled_writer.py tests/phase_c_disabled_writer_test.py
+      - name: Reject writer activation attempts
+        run: python3 -m unittest discover -s tests -p phase_c_disabled_writer_test.py -v

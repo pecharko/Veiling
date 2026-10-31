@@ -1,0 +1,22 @@
+name: Phase C app receipt offline
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/phase_c_app_receipt.py'
+      - 'tests/phase_c_app_receipt_test.py'
+      - '.github/workflows/phase-c-app-receipt-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  app-receipt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test offline app receipt validation
+        run: python3 -m unittest discover -s tests -p phase_c_app_receipt_test.py -v

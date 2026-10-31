@@ -1,0 +1,19 @@
+name: Phase C2 offline integration safety
+on:
+  pull_request:
+    paths:
+      - 'tests/phase_c_c2_offline_integration_test.py'
+      - '.github/workflows/phase-c-c2-offline-integration-tests.yml'
+      - 'scripts/phase_c_c2_trusted_executor.py'
+      - 'scripts/phase_c_c2_postwrite_readback.py'
+permissions:
+  contents: read
+jobs:
+  offline-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p phase_c_c2_offline_integration_test.py -v

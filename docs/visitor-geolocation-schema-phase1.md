@@ -1,5 +1,26 @@
 # Geographic analytics phase 1: proposed database contract
 
+## Continuation on 31 October 2026 — staged foundation, not activated
+
+The notes below describe the original staged design. Actual MySQL integration evidence now supersedes the earlier statements that MySQL testing is pending. Public tracking, admin dashboard, manual/cron integration and snapshot/restore are still not connected.
+
+Acceptance criteria implemented in this continuation:
+- Normal and geo counters share one caller-owned transaction, preserve the first location of a visitor-day across home/lot, and roll back together on SQL failure.
+- The archive helper checks normal/geo identifiers and per-visitor views itself. On MySQL, it requires the parent's connection-scoped `visitor_stats_one_day_archive` lock and REPEATABLE READ. It uses bounded current reads with `FOR UPDATE`, locking normal detail before geo detail. This avoids accepting stale read snapshots and blocks concurrent date-range insertions. Days above 20,000 rows fail closed.
+- Existing aggregates and failed aggregate verification block deletion. The helper never commits or rolls back the caller's transaction. Its parent must roll back errors and archive/delete normal detail in that same transaction. Partial/legacy coverage must never be silently treated as unknown geography.
+- Reports use explicit UTC bounds, include today, exclude future dates, and preserve their distribution after archive. Country percentages include unknown; Belgian region/city percentages use only Belgian visitor-days.
+- Only finite numeric percentages and labels reach the escaped renderer. Stored city names reject control characters; unknown country cannot carry a region/city.
+- Local lookup rejects MMDB metadata buildEpoch older than 30 days or in the future, handles missing/corrupt input and closes the reader. Reader tests use a contract fixture, not a real licensed database. MMDB files are excluded from Git.
+- Tests run in the existing isolated visitor-statistics MySQL workflow alongside existing analytics regressions. No production release gate is changed.
+
+Local evidence: seven PHP fixture suites and 28 MySQL 8.4 checks passed. Actual PR CI must be checked separately on the updated immutable head. This is not production acceptance.
+
+Before activation: pinned official reader/autoloader and licensed private MMDB provisioning; OVH disk/runtime preflight; reviewed schema and coverage start date; live tracker integration preserving DNT/bot/off controls; manual plus issue224 cron integration; snapshot/export/restore/reset/retention coverage; privacy text and dashboard integration with unknown/empty/partial coverage states and small-group privacy review. Retention ends on 31 October 2027. Old snapshots need not remain restorable after upgrade, as previously agreed; new snapshots must round-trip all statistics. Migration, dependency provisioning, deployment and cron activation retain their existing separate approval gates.
+
+The original plan is in PR #395 (`docs/visitor-geolocation-implementation-plan.md`); that separate design PR is not merged by this continuation.
+
+## Original phase-1 notes (29 October)
+
 This is an **unexecuted migration proposal**. Running this schema alone will not enable geographic tracking; no collection, dashboard, or archive changes ship in this phase.
 
 - `visitor_geo_daily`: at most one row per (UTC day, pseudonymous visitor id). Repeated visits increment views. One daily visitor is assigned one geo bucket. Never store raw IP or browser agent.

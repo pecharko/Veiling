@@ -19,11 +19,16 @@ function visitor_geo_resolve(string $ip, ?string $databasePath = null): array
     try {
         $reader = new GeoIp2\Database\Reader($path);
         try {
+            // File mtime can change on upload; use the database build epoch.
+            $built = $reader->metadata()->buildEpoch;
+            if (!is_int($built) || $built <= 0 || $built > time() || $built < time() - 30 * 86400) {
+                return $unknown;
+            }
             $record = $reader->city($ip);
             $country = strtoupper((string)($record->country->isoCode ?? ''));
             $region = strtoupper((string)($record->mostSpecificSubdivision->isoCode ?? ''));
             $city = (string)($record->city->name ?? '');
-            if (!preg_match('/^[A-Z]{2}$/D', $country)) return $unknown;
+            if (!preg_match('/^[A-Z]{2}$/D', $country) || $country === 'ZZ') return $unknown;
             if (!preg_match('/^[A-Z0-9-]{1,16}$/D', $region)) $region = '';
             // Store city only for Belgium, avoid publishing misleading precision abroad.
             if ($country !== 'BE') $city = '';
