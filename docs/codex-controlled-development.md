@@ -66,10 +66,10 @@ The repository is at /Users/chrisdemol/Code/GitHub/Veiling.
 
 ## Existing workstream and acceptance criteria
 
-- Draft PR #483 is developing a deterministic, strictly OFFLINE PHP/CSS
-  suggestion engine. It is separate from Codex and MUST NOT be silently
-  merged or rewritten to connect Codex. Its security and test review stays
-  independent.
+- PR #483 tracks a deterministic, strictly OFFLINE PHP/CSS suggestion
+  engine. Check its current status independently. It is separate from Codex
+  and MUST NOT be silently merged or rewritten to connect Codex. Its
+  security and test review stays independent.
 - The completed Phase-C sandbox proof is recorded in closed issue #482.
   The local ambiguous worker receipt and independently proven remote state
   must remain separately documented. No replay.
