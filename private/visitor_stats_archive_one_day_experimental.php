@@ -1,5 +1,20 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/catalog_mutex.php';
+require_once __DIR__ . '/restore_journal.php';
+require_once __DIR__ . '/visitor_geo_state.php';
+require_once __DIR__ . '/visitor_geo_archive.php';
+
+/** Both manual and issue224 cron use this same guarded transaction path. */
+function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
+{
+    if ($pdo->inTransaction()) throw new LogicException('Archive requires a new transaction');
+    catalog_data_lock($pdo, 0);
+    try {
+        restore_journal_require_clear();
+        return visitor_stats_archive_one_day_locked($pdo, $cutoff, $afterDiscoveryForTest);
+    } finally { catalog_data_unlock($pdo); }
+}
 
 /**
  * One UTC-day per explicit manual call, connected to the admin confirmation flow.
@@ -7,7 +22,7 @@ declare(strict_types=1);
  * Prior successfully committed days are not rolled back by a later invocation.
  * No scheduler, retry loop or automatic cleanup.
  */
-function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
+function visitor_stats_archive_one_day_locked(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
 {
     $limit = gmdate('Y-m-d', strtotime('-3 days'));
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
@@ -24,6 +39,7 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $after
     }
     $lockStmt->closeCursor();
     try {
+    $geoState = visitor_geo_state($pdo);
     // Advisory discovery only: the chosen exact day is re-read under a lock.
     $first = $pdo->prepare('SELECT MIN(visit_date) FROM visitor_stats_daily WHERE visit_date < ?');
     $first->execute([$cutoff]);
@@ -60,6 +76,10 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $after
         if ($count === 0) {
             $pdo->commit();
             return ['rows'=>0, 'days'=>0, 'views'=>0];
+        }
+        if ($geoState !== null) {
+            if (visitor_geo_covers_day($geoState, $day)) visitor_geo_archive_day($pdo, $day);
+            else visitor_geo_require_empty_legacy_day($pdo, $day);
         }
         $daily = $pdo->prepare("INSERT INTO visitor_stats_day_totals (visit_date, visitor_days, views, lot_views)
             SELECT visit_date, COUNT(DISTINCT visitor_id), SUM(views),

@@ -4,7 +4,7 @@ declare(strict_types=1);
 /**
  * Optional local GeoLite2 City lookup. No remote network call is made.
  * Returns only coarse, validated location fields, never the IP address.
- * Not wired into live collection until archive, schema and privacy gates pass.
+ * Collection remains OFF until its separately approved complete UTC start day.
  */
 function visitor_geo_resolve(string $ip, ?string $databasePath = null): array
 {
@@ -13,10 +13,14 @@ function visitor_geo_resolve(string $ip, ?string $databasePath = null): array
         return $unknown;
     }
     $path = $databasePath ?? __DIR__ . '/geoip/GeoLite2-City.mmdb';
-    if (!is_file($path) || !is_readable($path) || !class_exists('GeoIp2\\Database\\Reader')) {
-        return $unknown;
-    }
     try {
+        $autoload = __DIR__ . '/geoip/vendor/autoload.php';
+        if (!class_exists('GeoIp2\\Database\\Reader') && is_file($autoload)) {
+            require_once $autoload;
+        }
+        if (!is_file($path) || !is_readable($path) || !class_exists('GeoIp2\\Database\\Reader')) {
+            return $unknown;
+        }
         $reader = new GeoIp2\Database\Reader($path);
         try {
             // File mtime can change on upload; use the database build epoch.

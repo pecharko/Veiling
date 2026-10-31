@@ -1,0 +1,14 @@
+{
+  "name": "41lokeren/local-geolocation",
+  "description": "Private local GeoLite2 reader; no remote lookup per visitor",
+  "type": "project",
+  "require": {
+    "php": ">=8.2",
+    "geoip2/geoip2": "3.2.0"
+  },
+  "config": {
+    "vendor-dir": "../../private/geoip/vendor",
+    "allow-plugins": false,
+    "sort-packages": true
+  }
+}

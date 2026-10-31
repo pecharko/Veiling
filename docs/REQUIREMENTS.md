@@ -4,7 +4,7 @@
 
 Per UTC-dag telt elke bestaande pseudonieme bezoeker eenmaal geografisch; herhaalde home-/kavelbezoeken verhogen alleen de paginaweergaven. De eerste locatie van die bezoekersdag blijft behouden. Landen tonen percentages inclusief onbekend; Belgische provincie/stad gebruiken uitsluitend Belgische bezoekersdagen als noemer. Toon geen absolute geografische aantallen. Locaties zijn indicatieve IP-schattingen. Een ontbrekende, corrupte of meer dan 30 dagen oude lokale GeoLite2-database levert onbekend op, zonder externe aanvraag per bezoek.
 
-De bestaande tracker blijft ongewijzigd. Geografische activering vereist eerst samenhangende archivering (handmatig en cron), snapshot/herstel/reset/retentie, privacytekst, geo-dekking in het dashboard en gecontroleerde migratie. Oude snapshots hoeven na de upgrade niet herstelbaar te blijven; nieuwe snapshots wel. Zie `visitor-geolocation-schema-phase1.md`. Dit is geen productieactivering.
+De tracker wordt atomair gekoppeld aan geografie, met behoud van DNT/botfilters en de algemene uitknop. De migratie laat de startdatum NULL (UIT); een toekomstige volledige UTC-startdag vereist afzonderlijke activering. Handmatige en cronarchivering, dashboard, privacy, de bevestigde verwijderroute en snapshot/herstel zijn samen geïntegreerd. Kleine groepen worden samengevoegd en onvolledige geodekking toont geen percentages. Na migratie bevatten v2-geo-snapshots alle normale en geografische statistieken; oude snapshots worden vóór herstel geweigerd, conform de eerdere keuze. Zie `visitor-geolocation-schema-phase1.md`. Dit is geen productieactivering.
 
 ## 2026-10-23 — Hoge-resolutiefoto's: productierelease geaccepteerd
 

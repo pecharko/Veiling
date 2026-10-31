@@ -17,6 +17,7 @@ require_public_site_online();
 <main class="shell" style="max-width:780px;padding:48px 20px 72px">
   <p><a href="<?=e(url('index.php'))?>">← Terug naar de catalogus</a></p>
   <h1>Privacy en bezoekersstatistieken</h1>
+  <p>Bij ingeschakelde geografische statistieken gebruiken we het IP-adres alleen tijdens het bezoek voor een lokale schatting van land, provincie/regio en, voor België, stad. Er wordt geen locatieaanvraag naar een externe dienst gestuurd. Dit is geen exacte locatie of GPS-positie. We bewaren uitsluitend de geschatte herkomst bij de dagelijkse gepseudonimiseerde bezoekerscode en tonen percentages aan bevoegde beheerders; kleine groepen worden samengevoegd. Onbekende herkomst blijft onbekend. Deze gegevens volgen dezelfde archivering, verwijdering en uiterste bewaartermijn als de andere bezoekersstatistieken.</p>
   <p><strong>Verantwoordelijke organisatie:</strong> 41 Lokeren.</p>
   <p>De veilingwebsite van 41 Lokeren gebruikt eigen, cookievrije bezoekersstatistieken om paginaweergaven en belangstelling voor kavels te meten. Er worden hiervoor geen externe advertentie- of statistiekdiensten gebruikt.</p>
   <p>Bij een bezoek worden het IP-adres en de browserinformatie kort verwerkt om met een geheime sleutel een per UTC-dag wisselende, gepseudonimiseerde bezoekerscode te berekenen. De oorspronkelijke IP-adressen en browserinformatie worden niet in de statistiekentabel opgeslagen. Pseudonieme gegevens kunnen nog persoonsgegevens zijn.</p>

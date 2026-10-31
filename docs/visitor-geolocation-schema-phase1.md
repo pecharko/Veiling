@@ -1,52 +1,37 @@
-# Geographic analytics phase 1: proposed database contract
+# Geografische bezoekersstatistieken — geïntegreerd voorstel
 
-## Continuation on 31 October 2026 — staged foundation, not activated
+Status: ontwikkeling in PR #396; standaard UIT; geen productiemigratie, installatie of activering uitgevoerd.
 
-The notes below describe the original staged design. Actual MySQL integration evidence now supersedes the earlier statements that MySQL testing is pending. Public tracking, admin dashboard, manual/cron integration and snapshot/restore are still not connected.
+## Gedrag en acceptatiecriteria
 
-Acceptance criteria implemented in this continuation:
-- Normal and geo counters share one caller-owned transaction, preserve the first location of a visitor-day across home/lot, and roll back together on SQL failure.
-- The archive helper checks normal/geo identifiers and per-visitor views itself. On MySQL, it requires the parent's connection-scoped `visitor_stats_one_day_archive` lock and REPEATABLE READ. It uses bounded current reads with `FOR UPDATE`, locking normal detail before geo detail. This avoids accepting stale read snapshots and blocks concurrent date-range insertions. Days above 20,000 rows fail closed.
-- Existing aggregates and failed aggregate verification block deletion. The helper never commits or rolls back the caller's transaction. Its parent must roll back errors and archive/delete normal detail in that same transaction. Partial/legacy coverage must never be silently treated as unknown geography.
-- Reports use explicit UTC bounds, include today, exclude future dates, and preserve their distribution after archive. Country percentages include unknown; Belgian region/city percentages use only Belgian visitor-days.
-- Only finite numeric percentages and labels reach the escaped renderer. Stored city names reject control characters; unknown country cannot carry a region/city.
-- Local lookup rejects MMDB metadata buildEpoch older than 30 days or in the future, handles missing/corrupt input and closes the reader. Reader tests use a contract fixture, not a real licensed database. MMDB files are excluded from Git.
-- Tests run in the existing isolated visitor-statistics MySQL workflow alongside existing analytics regressions. No production release gate is changed.
+- De bestaande publieke GET-tracker behoudt DNT, botfilter, geheime dag-HMAC en de algemene aan/uit-schakelaar. Normalen geo-tellers worden in één eigen transactie opgeslagen; een fout rolt beide terug en blokkeert de publieke pagina niet. Het bestaande catalogusmutex voorkomt schrijven tijdens snapshot/herstel; een caller-transactie wordt nooit overgenomen.
+- De migratie voegt geografische detail-/dagtabellen en één `visitor_geo_state`-rij toe. `start_date=NULL` betekent UIT. Alleen vanaf een afzonderlijk goedgekeurde volledige UTC-startdag wordt geografisch geteld. Geen terugwerkende locatiebepaling of aanvulling van oude bezoekerscodes.
+- Eén geografische bezoekersdag per dag/HMAC over home en kavels, met behoud van de eerste locatie en optellende paginaweergaven. Geen raw IP of user-agent in de database. Alleen lokale GeoLite2, uitsluitend REMOTE_ADDR; geen externe lookup per bezoek. Ontbrekende/corrupte/verouderde (>30 dagen buildEpoch) gegevens geven onbekend.
+- Dashboard in de bestaande adminpagina: laatste 30 dagen en campagne sinds de geo-start, landen inclusief onbekend en provincies/steden binnen België. Uitsluitend percentages. Groepen onder vijf bezoekersdagen worden zonder naam samengevoegd; onbekend blijft herkenbaar. Percentages verdwijnen bij onvolledige dekking; lege, uitgeschakelde en fouttoestand zijn expliciet.
+- Handmatig en issue224-cron gebruiken dezelfde geo-bewuste een-dagroute; ook de oudere bulkroute is beschermd. Voor de startdag wordt alleen normale historie verwerkt en moet geo ontbreken. Vanaf de start moeten IDs en views per bezoeker overeenkomen. Zelfde transactie, parent-lock en bounded current reads; geen delete vóór gecontroleerde aggregaten. Bestaande archieven worden niet overschreven.
+- De bestaande twee-POST/CSRF-verwijdering neemt geo-detail én geo-aggregaten mee en houdt de geselecteerde datum zelf. Preview telt de geo-rijen mee. De startconfiguratie blijft behouden. De bestaande catalogusreset bewaart campagnes; de test bewijst dat daarbij beide soorten statistieken behouden blijven.
+- Na de geomigratie bevat snapshotformaat `41lokeren-v2-geo` alle drie normale analytictabellen, beide geotabellen en startconfiguratie in hetzelfde consistente leesmoment als de core-tabellen. Binaire identifiers worden lossless als hex32 opgeslagen en bij restore teruggezet. Extra analytics begrensd op 200.000 rijen/20 MiB; het totale bestaande JSON-plafond is 30 MiB.
+- Alle analytics worden binnen de bestaande restoretransactie hersteld. Validatie weigert malformed payload vóór fotowissels; diagnose/finalize/mixed-recovery vergelijken ook analytics. Zonder geomigratie blijft het bestaande v1-contract werken. Oude v1-snapshots worden na de upgrade vóór herstel geweigerd, conform de al gegeven keuze `oude_snapshots_herstellen=nee`; bestaande bestanden worden niet verwijderd.
+- Privacytekst vermeldt de optionele lokale herkomstschatting en gelijke retentie. Geen automatische einddatumdelete toegevoegd: geaggregeerde resultaten uiterlijk tot en met 31 oktober 2027 en daarna de bestaande expliciete verwijderroute.
 
-Local evidence: seven PHP fixture suites and 28 MySQL 8.4 checks passed. Actual PR CI must be checked separately on the updated immutable head. This is not production acceptance.
+## Reader en reproduceerbare build
 
-Before activation: pinned official reader/autoloader and licensed private MMDB provisioning; OVH disk/runtime preflight; reviewed schema and coverage start date; live tracker integration preserving DNT/bot/off controls; manual plus issue224 cron integration; snapshot/export/restore/reset/retention coverage; privacy text and dashboard integration with unknown/empty/partial coverage states and small-group privacy review. Retention ends on 31 October 2027. Old snapshots need not remain restorable after upgrade, as previously agreed; new snapshots must round-trip all statistics. Migration, dependency provisioning, deployment and cron activation retain their existing separate approval gates.
+`dependencies/geoip/composer.json` pint de officiële `geoip2/geoip2` op 3.2.0; composer.lock pint ook de transitieve code en commitrefs. `composer install --no-plugins --no-scripts` bouwt in een gecontroleerde ontwikkel-/buildomgeving naar de genegeerde `private/geoip/vendor`. Valideer met `composer validate --no-check-publish --no-check-all`; een niet opgegeven projectlicentie is alleen een Composer-waarschuwing en wijzigt geen licentievoorwaarden. Composer rapporteerde bij de lokale dependencybuild geen security advisories.
 
-The original plan is in PR #395 (`docs/visitor-geolocation-implementation-plan.md`); that separate design PR is not merged by this continuation.
+De runtime laadt uitsluitend de private autoloader en `private/geoip/GeoLite2-City.mmdb`. Vendor/MMDB/configuratie komen niet in Git en worden niet met snapshots geëxporteerd. Behoud upstream licentie-/NOTICE-bestanden in het gecontroleerde readerpakket, zonder ontwikkelgitmappen. Gebruik geen download in een publiek verzoek of live installatiescript. MaxMind-account, licentie en echte actuele MMDB blijven afzonderlijk te regelen; de tests bewijzen geen productieprovisioning.
 
-## Original phase-1 notes (29 October)
+## Validatie
 
-This is an **unexecuted migration proposal**. Running this schema alone will not enable geographic tracking; no collection, dashboard, or archive changes ship in this phase.
+Gerichte fixtures voor lookup, geïnstalleerde officiële reader, staleness, escaping, suppression en procentnoemers. Echte MySQL 8.4-tests: 28 basiscontroles, 32 geïntegreerde tracker/archief/verwijdercontroles en 15 echte snapshot/restore/recovery-controles. Bestaande analytics-, kaveleditor- en snapshotregressies blijven van toepassing. GitHub-CI op de actuele PR-head is afzonderlijk te verifiëren; lokale resultaten zijn geen productieacceptatie.
 
-- `visitor_geo_daily`: at most one row per (UTC day, pseudonymous visitor id). Repeated visits increment views. One daily visitor is assigned one geo bucket. Never store raw IP or browser agent.
-- `visitor_geo_day_totals`: daily aggregate keyed by country, region and city. Consolidation MUST be in the same DB transaction as deleting the corresponding geo detail rows, after verifying archive counts. Implement a migration-aware cron guard before activating writes.
-- Country `ZZ`, blank region and blank city mean unknown, not a known location.
-- GeoLite2 City reader + locally provisioned .mmdb is a separate dependency; do not call remote geolocation services per visitor.
-- Any mismatch between old archive and new geo-detail retention is an activation blocker.
-- Update snapshot export, restore, wipe, reporting, privacy and retention before deploying the feature.
-- Database quota, geo data file placement, backup size and privacy implications need read-only preflight.
-- User decided that legacy snapshots need not be restorable *after* migration, but new snapshots must be restorable.
-- Explicit scoped permission is mandatory before executing SQL or uploading runtime PHP.
+Een niet-aangesloten oude statische suite `visitor_stats_manual_archive_test.py` bevat reeds op de voorafgaande head twee mislukte, achterhaalde bronverwachtingen (7 versus de bestaande 3 dagen en een vroegere bulk-queryvorm). De wijziging verlaagt daarvoor geen retentie en wijzigt die suite niet. De echte MySQL-suite toetst de actuele drie-dagen-/archief-/concurrentiecontracten.
 
-## Stage-only transaction-bound collection seam
+## Veilige uitrolvolgorde — nog niet uitgevoerd
 
-`private/visitor_geo_record.php` provides `visitor_geo_record_view()` but is not called by the live visitor tracker. Its 32-byte daily identifier must be exactly the existing tracker identifier; the duplicate-key update increments page views while preserving one geographic visitor-day. The eventual tracker must write existing and geographic counters in the **same** transaction, so a failed geo write cannot skew totals. An approved migration, geolocation reader installation, privacy update, snapshot/restore verification and archive/cron integration are prerequisites to enabling collection.
-
-The proposed geo archive helper is not yet connected to either the manual archive or issue224 cron; **do not activate geo collection or deploy these files** until both archive paths preserve geo totals and the deployment order is validated. `tests/visitor_geo_record_test.php` exercises isolated SQLite transaction/deduplication guards; MySQL integration is still required before activation.
-
-## Fail-closed archive guard (not activated)
-
-`private/visitor_geo_archive_guard.php` compares distinct visitor-days and total page views between `visitor_stats_daily` and `visitor_geo_daily` for a single UTC date within an existing transaction. A mismatch aborts archiving rather than silently losing location data. The function is deliberately not wired into the manual or issue224 cron archive because legacy days before geo activation require an explicit migration decision, and concurrent locking guarantees must be reviewed. No production archive is changed. `tests/visitor_geo_archive_guard_test.php` checks mismatch rejection with an isolated fixture; live MySQL locking and transaction verification remain required.
-
-## Geographic dashboard presentation: percentages only
-
-The admin geographic breakdown must show **percentages, never absolute visitor-day or page-view numbers**. Use `visitor_geo_group()` followed by `visitor_geo_percentages()` for each country / region / city breakdown. Each grouping uses the sum of visitor-days in all its buckets as the denominator, including unknown country (`ZZ`) and missing region/city (`?`), so percentages are comparable within that view. Round to one decimal place; rounding can make displayed percentages differ from 100.0% by a tenth. Internal counts remain in the database for archival integrity only and are never displayed in the geographical section. State explicitly that a visitor-day is not necessarily a unique person. The dashboard is not connected yet; this requirement must be enforced when implementing it.
-
-## Staged percentage-only admin markup
-
-`private/visitor_geo_render.php` renders an escaped two-column geography table (origin and share) strictly from `visitor_geo_percentages()` output. It rejects arrays containing absolute `visitor_days` or `views` and supports an explicit empty state. `tests/visitor_geo_render_test.php` covers percentage formatting, HTML escaping and rejection of absolute data. The renderer is not included by the live admin until the geo schema, data collection, 3-day archive/cron, retention and snapshot/restore have been approved together. Do not expose zero/partial geo coverage as if it represented the complete audience.
+1. Exacte head/diff, tests, afhankelijkheden en aparte mergebeslissing. PR #395 is het oorspronkelijke ontwerp; de keuze voor oude snapshots blijft gelden. PR #398 betreft oudere statistiek-releasevoorbereiding met overlappende runtime-intentie: geen verouderde bron/manifest deployen na deze activering. Sandbox-PRs en skill-PR blijven buiten deze feature.
+2. Read-only OVH-inventaris: zes betrokken tabellen/kolommen/engines, huidige croncode en planner, PHP 8.2+, mbstring/zip/PDO, huidige bron-/serverhashes, vrije schijf/databasequota en MMDB/readerbenodigdheden. Niet op CI of een gebruikersmelding alleen afgaan.
+3. Cron pauzeren uitsluitend met specifieke toestemming; bevestig dat geen oude worker loopt. Eerst nieuwe helpers/consumenten code-only in een gecontroleerde release, terwijl de geostaat ontbreekt/NULL is. Algemene publieke/geo-helperpaden kunnen na actuele routering naar shared-OVH; `private/snapshots.php` is beschermd en heeft een aparte releaseprocedure. Geen allowlist verruimen om deze bundel te laten passen. Het cron-entrypoint zelf is niet gewijzigd; verifieer wel dat de gedeelde nieuwe helper daadwerkelijk de serverversie is vóór heractivering.
+4. Pre-migratie data-only veiligheidsback-up en getest migratieherstelplan. Dan afzonderlijke exacte SQL-autorisatie en drie geo-tabellen provisionen met start NULL. Controleer normale tabellen en v2-snapshot/restore op een geïsoleerde kloon; oude backups blijven bewaard en mogen geen gedeeltelijke restore ondergaan.
+5. Afzonderlijk goedgekeurd reader/MMDB-pakket provisionen, hashes/licentie/leeftijd/quota controleren. Verifieer alle runtimebestanden en dependencies onafhankelijk voordat een startdatum wordt voorgesteld. Afzonderlijke startconfiguratie-autorisatie voor een toekomstige UTC-dag; nooit de datum terugzetten terwijl data bestaan. De algemene collectie-uitknop stopt beide tellers.
+6. Alleen na verificatie en specifieke toestemming cron hervatten. Eerste echte archivering met DELETE vereist haar eigen autorisatie. Houd de 3 volledige UTC-dagen, grens van 20.000 bronrijen/dag, maximaal 14 dagen/run en logging/monitoring in stand. Een oude cron/helper mag niet meer gestart worden na geo-activering.
+7. Voor elke upload: immutable SHA, exacte paden, remote SHA/ABSENT, pre-write driftgate, hostkey, codeback-up, rollback en readback. Na geo-activering nooit naar geo-onbewuste code terugrollen zonder specifiek onderzocht dataherstelplan. Technische readback en functionele browseracceptatie apart vastleggen.

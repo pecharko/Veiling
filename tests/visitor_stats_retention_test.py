@@ -17,7 +17,9 @@ class RetentionTests(unittest.TestCase):
         self.assertIn("REMOTE_ADDR", SOURCE)
         self.assertIn("hash_hmac(", SOURCE)
         self.assertIn("HTTP_USER_AGENT", SOURCE)
-        self.assertIn("PDOException", SOURCE)
+        # Geo schema/lock/reader errors must also remain non-fatal for visitors.
+        self.assertIn("catch (Throwable $exception)", SOURCE)
+        self.assertIn("$started && $pdo->inTransaction()", SOURCE)
 
 if __name__ == "__main__":
     unittest.main()

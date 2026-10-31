@@ -3,6 +3,14 @@ on:
   pull_request:
     paths:
       - "private/visitor_stats_archive.php"
+      - "private/visitor_stats.php"
+      - "private/visitor_stats_archive_one_day_experimental.php"
+      - "private/snapshots.php"
+      - "private/restore_diagnosis.php"
+      - "private/restore_mixed_diagnosis.php"
+      - "catalogus-public/admin/statistieken.php"
+      - "dependencies/geoip/composer.json"
+      - "dependencies/geoip/composer.lock"
       - "private/visitor_geo_*.php"
       - "tests/visitor_geo_*.php"
       - "database/migrations/20261029_visitor_geo_analytics.sql"
@@ -43,6 +51,11 @@ jobs:
           php-version: "8.2"
           extensions: pdo_mysql, pdo_sqlite, mbstring
           coverage: none
+      - name: Install locked official GeoIP2 reader without plugins or scripts
+        working-directory: dependencies/geoip
+        run: |
+          composer validate --no-check-publish --no-check-all
+          composer install --no-interaction --no-plugins --no-scripts --prefer-dist
       - name: PHP syntax and isolated database integration
         env:
           ANALYTICS_TEST_DSN: "mysql:host=127.0.0.1;port=3306;dbname=visitor_stats_ci;charset=utf8mb4"
@@ -59,3 +72,6 @@ jobs:
           php tests/visitor_stats_tracking_mysql_integration.php
           for test in tests/visitor_geo_*test.php; do php "$test"; done
           php tests/visitor_geo_mysql_integration.php
+          php tests/visitor_geo_lifecycle_mysql_integration.php
+          python3 tests/visitor_stats_retention_test.py
+          python3 tests/visitor_stats_admin_deletion_test.py

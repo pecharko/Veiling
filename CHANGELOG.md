@@ -1,5 +1,9 @@
 # Wijzigingslogboek
 
+## 2026-10-31 — Geografische statistieken geïntegreerd, standaard UIT
+
+PR #396 verbindt dagdeduplicatie met de bestaande tracker, het procentendashboard, beide archiefroutes en de bevestigde verwijdering. De migratie bevat een standaard lege UTC-startdatum. V2-geo-snapshots en incidentdiagnose nemen alle statistieken en binaire bezoekerscodes mee; oude snapshots worden na de upgrade vóór herstel geweigerd. Officiële GeoIP2-reader en transitieve versies vastgepind in composer.lock. Kleine groepen worden samengevoegd; onvolledige dekking wordt niet als volledige verdeling weergegeven. Nieuwe MySQL-, snapshot- en echte HTTP-regressies; geen productiehandeling of activering uitgevoerd.
+
 ## 2026-10-31 — Geografische bezoekersstatistieken: geteste basis in draft PR #396
 
 Voortbouw op de bestaande schema-/helperdraft: echte MySQL 8.4-tests voor deduplicatie, gezamenlijke transactierollback, concurrentie en archivering. Archiefcontrole leest en vergrendelt actuele rijen in plaats van een mogelijk oude read-snapshot. Rapportage begrenst op UTC; renderer weigert ongeldige percentages; locatieopzoeking weigert verouderde GeoLite2-data. MMDB-bestanden blijven buiten Git. Bestaande bezoekersregistratie en productie zijn ongewijzigd; de geografische functie is nog niet geactiveerd.

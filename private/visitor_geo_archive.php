@@ -6,8 +6,8 @@ require_once __DIR__ . '/visitor_geo_archive_guard.php';
 /**
  * Aggregate a single UTC day of geo analytics inside the caller's transaction.
  * Caller MUST hold the existing visitor-statistics archive lock.
- * This helper is intentionally not wired to the active cron until collection,
- * migration and snapshot/restore have been reviewed together.
+ * Both parent archive entry points call this on/after the approved coverage
+ * start, in the same transaction as their normal aggregate/delete operations.
  */
 function visitor_geo_archive_day(PDO $pdo, string $day): array
 {

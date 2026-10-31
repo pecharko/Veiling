@@ -6,13 +6,18 @@ declare(strict_types=1);
  * are disjoint after successful archive. This function does not activate
  * tracking and must be used only after the geo schema is provisioned.
  */
-function visitor_geo_report(PDO $pdo, int $days = 30): array
+function visitor_geo_report(PDO $pdo, ?int $days = 30, ?string $since = null): array
 {
-    if ($days < 1 || $days > 3660) {
+    if ($days !== null && ($days < 1 || $days > 3660)) {
         throw new InvalidArgumentException('Invalid report range');
     }
     $today = new DateTimeImmutable('today', new DateTimeZone('UTC'));
-    $start = $today->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+    $start = $days===null?'1000-01-01':$today->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+    if ($since!==null) {
+        $date=DateTimeImmutable::createFromFormat('!Y-m-d',$since,new DateTimeZone('UTC'));
+        if (!$date || $date->format('Y-m-d')!==$since) throw new InvalidArgumentException('Invalid geographic coverage start');
+        $start=max($start,$since);
+    }
     $end = $today->format('Y-m-d');
     $sql = "SELECT country_code,region_code,city_name,
                    SUM(visitor_days) AS visitor_days,SUM(views) AS views

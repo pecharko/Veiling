@@ -2,6 +2,8 @@
 
 ## Geografische basis — 31 oktober 2026, alleen geïsoleerde tests
 
+Vervolg: negen gerichte geo-fixtures, 28 basis-MySQL-controles, 32 geïntegreerde tracker/startdatum/archief/verwijdercontroles, 15 snapshot/restore/recovery-controles en 11 echte admin-HTTP-controles. De HTTP-tests bewijzen sessietoegang, standaard-UIT, percentages, onvolledige dekking, CSRF en twee-stapsverwijdering. De officiële reader wordt via composer.lock geïnstalleerd en op corrupte MMDB-fallback getest. Een echte actuele gelicentieerde productie-MMDB en OVH-acceptatie blijven afzonderlijk te verifiëren. De oorspronkelijke basisnotities hieronder beschrijven de eerdere fase.
+
 Zeven `tests/visitor_geo_*test.php`-suites toetsen input/transactiegrenzen, lookupfallback, readercontract (inclusief freshness en sluiten), archiefvolgorde, onbekend, procentnoemers en HTML-escaping. `tests/visitor_geo_mysql_integration.php` weigert elke DSN behalve de lokale wegwerpdatabase `visitor_stats_ci` op poort 3306 en vereist MySQL 8.4.
 
 28 lokale MySQL-controles: één bezoekersdag bij home/lot-herhaling, behoud eerste locatie, rollback van beide tellers bij SQL-fout, twee verbindingen met lockconflict, vereiste archieflock, actuele reads ondanks vooraf bestaande oude snapshot, range-lock tegen nieuwe bezoekers, rollback bij mismatch/oud aggregaat/corruptie, gelijk rapport vóór/na archivering, lege herhaling, UTC-bereik en Belgische procentnoemer. De bestaande visitor-statistics MySQL-workflow voert deze tests ook op de PR uit. Werkelijke CI-status moet afzonderlijk op de PR-head worden bevestigd.

@@ -2,10 +2,10 @@
 declare(strict_types=1);
 
 /**
- * Stage-only geo counter: caller must supply the same UTC-day pseudonymous
+ * Transaction-bound geo counter: caller supplies the same UTC-day pseudonymous
  * identifier used by the existing visitor-stats tracker, and an already
- * resolved coarse location. Not wired to public traffic until migration,
- * archive, snapshot and privacy gates are approved.
+ * resolved coarse location. The tracker calls it only on/after the separately
+ * approved coverage start; migration leaves that start NULL (OFF).
  *
  * Both the existing counter and this counter must be called in one database
  * transaction by the eventual tracking integration.

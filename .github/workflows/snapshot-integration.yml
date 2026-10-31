@@ -213,3 +213,11 @@ jobs:
           CI_DB_HOST: 127.0.0.1
           CI_DB_NAME: auction_test
         run: php tests/restore_mixed_diagnosis_integration.php
+
+      - name: Geographic snapshot binary identifiers and full recovery round trip
+        if: needs.impact.outputs.run == 'true'
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/visitor_geo_snapshot_mysql_integration.php

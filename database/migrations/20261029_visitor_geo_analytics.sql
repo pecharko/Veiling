@@ -13,6 +13,16 @@ CREATE TABLE IF NOT EXISTS visitor_geo_daily (
   KEY idx_geo_date (visit_date, country_code, region_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- NULL keeps the feature OFF. Activation is a separate, approved operation:
+-- choose a FUTURE complete UTC day only after every writer/archive/restore
+-- dependency has been deployed and verified. Never backfill historic locations.
+CREATE TABLE IF NOT EXISTS visitor_geo_state (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  start_date DATE NULL DEFAULT NULL,
+  CONSTRAINT chk_geo_singleton CHECK (id=1)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+INSERT IGNORE INTO visitor_geo_state (id,start_date) VALUES (1,NULL);
+
 CREATE TABLE IF NOT EXISTS visitor_geo_day_totals (
   visit_date DATE NOT NULL,
   country_code CHAR(2) NOT NULL DEFAULT 'ZZ',
