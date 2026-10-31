@@ -219,8 +219,8 @@ def verify_static_evidence(owner_token):
     verify_ref_states(owner_token)
 
 
-def verify_rules(token):
-    """Fail closed on effective ruleset state of the ACTUAL caller identity."""
+def verify_rules(token, *, allow_redacted_bypass=False):
+    """Check exact rules; only the separately owner-attested writer may omit bypass actors."""
     for rule_id, target, included, types in (
         (26113993, "branch", BRANCH_RULE_INCLUDES, {"deletion", "non_fast_forward"}),
         (26113833, "tag", ["refs/tags/phase-c-once-issue-*"], {"update", "deletion"}),
@@ -228,14 +228,27 @@ def verify_rules(token):
         rule = get(token, BASE + "/rulesets/" + str(rule_id))
         ref_condition = rule.get("conditions", {}).get("ref_name", {})
         rules = rule.get("rules", [])
+        # GitHub REST redacts bypass_actors for callers lacking ruleset write access.
+        # Only the limited writer, AFTER a fresh unredacted owner attestation,
+        # may accept the field being absent. A present field must always be [].
+        bypass_ok = (rule.get("bypass_actors") == [] or
+                     (allow_redacted_bypass and "bypass_actors" not in rule))
         require(rule.get("enforcement") == "active" and rule.get("target") == target
-                and rule.get("source") == REPO and rule.get("bypass_actors") == []
+                and rule.get("source") == REPO and bypass_ok
                 and rule.get("current_user_can_bypass") == "never"
                 and ref_condition.get("include") == included
                 and ref_condition.get("exclude") == []
                 and len(rules) == len(types)
                 and {r.get("type") for r in rules} == types,
                 "Ruleset protection or effective caller bypass unverified")
+
+
+def verify_writer_rules(owner_token, writer_token):
+    """Independently attest owner no-bypass, then limited writer effective rules."""
+    # The owner must still see both complete bypass_actors arrays as [].
+    # Never infer 'no bypass' from an absent field on a limited writer token.
+    verify_rules(owner_token)
+    verify_rules(writer_token, allow_redacted_bypass=True)
 
 
 def verify_checkout():
@@ -323,7 +336,7 @@ def run(app_jwt, owner_token, execute=False, comment_id=None):
     writer = mint_exact_writer_token(app_jwt)
     # Independently check effective rules with the ACTUAL installation writer token.
     # GitHub may return 403 here: fail closed, NEVER bypass rules or retry.
-    verify_rules(writer)
+    verify_writer_rules(owner_token, writer)
     verify_ref_states(writer)
     request = mutation(comment_id)
     # One and only one GraphQL mutation request. No network retries on any error.
