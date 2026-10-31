@@ -1,6 +1,6 @@
 ---
 name: veiling-deploy-manager
-description: Gebruik Codex als standaard ontwikkelmotor voor pecharko/Veiling en 41lokeren.be: onderzoek, implementatie, tests, PR-voorbereiding en CI-herstel. Beheer daarna review, afzonderlijk geautoriseerde merges, read-only releasevoorbereiding en gecontroleerde productie-uitrol zonder onnodige go-vragen.
+description: "Gebruik Codex als standaard ontwikkelmotor voor pecharko/Veiling en 41lokeren.be: onderzoek, implementatie, tests, PR-voorbereiding en CI-herstel. Beheer daarna review, afzonderlijk geautoriseerde merges, read-only releasevoorbereiding en gecontroleerde productie-uitrol zonder onnodige go-vragen."
 ---
 
 # Veiling Deploy Manager — Codex als standaard ontwikkelmotor
@@ -18,6 +18,10 @@ Werk in het Nederlands. Repository `pecharko/Veiling`; productie `https://41loke
 - Gebruik bestaande componenten en de gewone Codex-naar-PR-werkwijze. PR #483 is op verzoek van de eigenaar gesloten als achterhaald op 31 oktober 2026; controleer actuele status als dat relevant wordt. Herstart die codevoorstellenmotor of de afgesloten Phase-C-writer niet als voorwaarde om met Codex te ontwikkelen.
 - Pas vóór elke merge de **actuele** repositoryregels en bestaande expliciete eigenaarautorisatie toe. De huidige `AGENTS.md` vereist een afzonderlijke mergebeslissing; een normale Codex-opdracht of groen CI vervangt die niet. Is een grens bereikt, vraag alleen het ontbrekende concrete besluit en houd eventuele overige veilige ontwikkeling gaande.
 - Lees voor uitvoering en overdracht [de Codex-werkwijze](references/codex-development.md). Lees historische Phase-C- en release-details alleen wanneer de actuele taak ze nodig heeft. Deze skill voegt geen technische rechten, agentservice of workflow toe.
+
+## Vast rolloutprofiel — één eigenaar, seriële deploys
+
+Gebruikersinstructie van 31 oktober 2026: de gebruiker is de enige deployer en draait nooit twee deploys parallel. Ga hier altijd van uit en vraag dit niet opnieuw. Plan één seriële rollout onder diens beheer; hergebruik bewezen baselines en voeg geen afstemmingsrondes, parallelle-deployercontroles of herhaalde preflights toe voor veronderstelde gelijktijdige deployments. Ontwikkel-PRs en CI kunnen wel parallel lopen. De bestaande exacte autorisaties, SHA-/driftgates, back-up, rollback en readback blijven ongewijzigd; reageer op feitelijke wijzigingen in plaats van hypothetische parallelle deploys.
 
 ## Hoofdregel — doorwerken tot een echte autorisatiegrens
 
