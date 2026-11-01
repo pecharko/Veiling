@@ -30,40 +30,41 @@ try {
     $name=snap_create($pdo);$names[]=$name;
     [$snapshot]=snap_verified($name);
     sg_check($snapshot['format']==='41lokeren-v2-geo','Migrated snapshots use explicit geo format');
-    sg_check($snapshot['analytics']['tables']['visitor_stats_daily'][0]['visitor_id']===str_repeat('ff',32),'Binary non-UTF8 identifier survives JSON as hex');
-    sg_check(visitor_geo_snapshot_digest($snapshot['analytics'])===$digest,'All analytics and state appear in snapshot');
-    sg_check(recovery_compare_database($pdo,$snapshot)['matches_target'],'Recovery comparison includes complete initial state');
+    sg_check(!array_key_exists('analytics',$snapshot),'Catalog snapshot omits all visitor and geographic analytics');
+    sg_check(recovery_compare_database($pdo,$snapshot)['matches_target'],'Recovery comparison checks catalog data only');
 
     $pdo->exec('UPDATE visitor_geo_daily SET views=3');
     $result=recovery_compare_database($pdo,$snapshot);
-    sg_check(!$result['matches_target']&&in_array('analytics',$result['different_tables'],true),'Recovery refuses changed geo state even when core tables match');
+    sg_check($result['matches_target']&&!in_array('analytics',$result['different_tables'],true),'Analytics change cannot invalidate catalog recovery');
     $mixed=recovery_mixed_db_view($pdo,$snapshot,$snapshot);
-    sg_check($mixed['table_states']['analytics']==='neither'&&!$mixed['all_target'],'Mixed diagnosis includes analytics fingerprint');
-    $pdo->exec('DELETE FROM visitor_geo_daily');$pdo->exec('DELETE FROM visitor_stats_daily');$pdo->exec('UPDATE visitor_geo_state SET start_date=NULL');
+    sg_check(!isset($mixed['table_states']['analytics'])&&$mixed['all_target'],'Mixed recovery ignores independent analytics');
+    $pdo->exec('UPDATE visitor_geo_state SET start_date=NULL');
+    $afterChange=visitor_geo_snapshot_digest(sg_payload($pdo));
     snap_restore($pdo,$name);
-    sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$digest,'Full restore round-trips stats, geo, binary IDs and start date');
+    sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Restore preserves current analytics and geo start state');
     sg_check(!restore_journal_pending(),'Successful geo restore clears journal through existing gates');
     sg_throws(fn()=>snap_restore($pdo,$legacy),'Old pre-geo snapshot is clearly rejected after migration');
-    sg_check(!restore_journal_pending()&&visitor_geo_snapshot_digest(sg_payload($pdo))===$digest,'Legacy rejection occurs before any mutation');
+    sg_check(!restore_journal_pending()&&visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Legacy rejection occurs before any analytics mutation');
 
     // Recompute the checksums to prove schema validation, not only SHA checking.
     $bad='snapshot-20990102-000000-'.bin2hex(random_bytes(6)).'.zip';$names[]=$bad;
     copy(snap_path($name),snap_path($bad));$zip=new ZipArchive();$zip->open(snap_path($bad));
     $data=json_decode($zip->getFromName('database.json'),true,512,JSON_THROW_ON_ERROR);
-    $data['analytics']['tables']['visitor_geo_daily'][0]['visitor_id']='not-a-binary-id';
+    $data['analytics']=['unexpected'=>'visitor statistics'];
     $json=json_encode($data,JSON_THROW_ON_ERROR);
     $manifest=json_decode($zip->getFromName('manifest.json'),true,512,JSON_THROW_ON_ERROR);
     $manifest['sha256']['database.json']=hash('sha256',$json);
     $zip->addFromString('database.json',$json);$zip->addFromString('manifest.json',json_encode($manifest,JSON_THROW_ON_ERROR));$zip->close();
-    sg_throws(fn()=>snap_verified($bad),'Malformed analytics are rejected even with recomputed checksums');
-    sg_throws(fn()=>snap_restore($pdo,$bad),'Malformed analytics cannot enter restore');
+    sg_throws(fn()=>snap_verified($bad),'Snapshots carrying analytics are rejected even with recomputed checksums');
+    sg_throws(fn()=>snap_restore($pdo,$bad),'Analytics cannot be imported through catalog restore');
     sg_check(!restore_journal_pending(),'Invalid analytics do not swap photos or publish a journal');
 
     // A normal catalog reset currently preserves campaign stats; keep BOTH sets.
     catalog_data_lock($pdo,0);
     try{reset_catalog_lots($pdo);}finally{catalog_data_unlock($pdo);}
-    sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$digest,'Catalog lot reset preserves normal and geo campaign stats consistently');
+    sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Catalog reset preserves independent analytics');
     snap_restore($pdo,$name);
+    sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Repeated catalog restore never resets analytics');
 } finally {
     foreach($names as $name)if(snap_name($name)&&is_file(snap_path($name)))unlink(snap_path($name));
     // Leave no geo schema behind for unrelated snapshot regressions.
