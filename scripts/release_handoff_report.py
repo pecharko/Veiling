@@ -18,13 +18,13 @@ def summary(facts):
     rid = decision["release_id"]
     lines = [
         "### Release handoff advisory (read-only)",
-        "- Release: \`" + rid + "\`",
+        "- Release: `" + rid + "`",
         "- Next step: **" + action + "**",
         "- Reason: " + reason,
         "- Writes, merge and dispatch: **not authorized by this report**",
     ]
     if action == "WAIT_FOR_MAIN_CI":
-        lines.append("- Do not request a \`go\`; refresh the independent push-CI evidence")
+        lines.append("- Do not request a `go`; refresh the independent push-CI evidence")
     if action == "OWNER_DISPATCH_REQUIRED":
         lines.append("- Use only the existing owner-authenticated controller or one approved manual Actions launch")
     if action == "EVIDENCE_REVIEW_OPEN":
