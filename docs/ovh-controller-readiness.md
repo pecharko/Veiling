@@ -1,6 +1,8 @@
 # Releasecontroller: volledige ketentest en activatiegrens
 
 Deze controle bouwt voort op de gemergede, inactieve onderdelen #516–#521.
+De eigenaar koos daarna een handmatig gestarte controller op de eigen Mac.
+De uitvoerbare voorbereiding staat in [macOS versie 1](ovh-controller-macos-v1.md).
 De bestaande OVH-webhosting blijft de websitehost; SSH-beschikbaarheid is door
 de eigenaar gemeld. Er is geen extra server, runtime, auditrepository, key,
 journal of endpoint aangemaakt. De publieke Python/WSGI/PHP-ingangen blijven
@@ -74,8 +76,8 @@ Tests starten geen SSH-, GitHub- of OVH-sessies en bewijzen geen live provisioni
 
 Dit is geen multi-release scheduler: één globale poging blijft permanent
 verbruikt. Geen reset, unlock, automatische volgende release of geactiveerde
-writer. Een geschikte onafhankelijke duurzame runtime is nog niet gekozen of
-bewezen; uitsluitend OVH-beschikbaarheid en groene CI vullen dat bewijs niet in.
+writer. De eigen Mac is gekozen; echte opslagisolatie en de concrete
+installatie/configuratie zijn nog niet bewezen. Groene CI vult dat bewijs niet in.
 
 Een merge betreft alleen deze test-/documentatie-/CI-wijziging. Auditresources,
 SSH/read-only live inspectie, SQL, credentials/rechten, runtimebootstrap,

@@ -1,5 +1,13 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Handmatig gestarte macOS-controller, versie 1
+
+Uitvoerbare CLI voor lokale configuratiecontrole, read-only review, één
+eigenaargebonden poging en reconciliatie. Private PHP-bootstrap met vaste
+configlocatie, exacte configdigest en authenticatie vóór PDO; SSH pint alle
+drie codebestanden. Getest met tijdelijke private bestanden en geïsoleerde
+MySQL. Geen achtergrondservice, live credentials, installatie of activatie.
+
 ## 2026-11-01 — Volledige geïsoleerde controllerketentest
 
 Eén samenhangende regressiesuite verbindt ondertekende eigenaarinput,

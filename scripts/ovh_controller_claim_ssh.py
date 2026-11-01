@@ -46,6 +46,8 @@ class SSHConfig:
     executor_sha256: str
     store_sha256: str
     php_binary: str
+    runtime_sha256: str | None = None
+    runtime_config_sha256: str | None = None
 
     def validate(self):
         if (type(self.host) is not str or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]{0,252}', self.host)
@@ -63,6 +65,11 @@ class SSHConfig:
             raise ValueError('Missing exact executor/store code digests')
         if self.php_binary not in PHP_BINARIES:
             raise ValueError('Unreviewed PHP binary')
+        if (self.runtime_sha256 is None) != (self.runtime_config_sha256 is None):
+            raise ValueError('Runtime code and private configuration pins required together')
+        if self.runtime_sha256 is not None and any(type(h) is not str or not HASH.fullmatch(h)
+                for h in (self.runtime_sha256,self.runtime_config_sha256)):
+            raise ValueError('Invalid private runtime pins')
         pin = self.known_host
         if type(pin) is not str or '\n' in pin or '\r' in pin or len(pin) > 16384:
             raise ValueError('Require one exact pinned hostkey line')
@@ -80,7 +87,11 @@ class SSHConfig:
             raise ValueError('Malformed pinned hostkey') from None
 
     def paths(self):
-        return tuple(self.private_root + '/' + self.revision + '/' + f for f in FILES)
+        files=FILES + (('ovh_controller_claim_runtime.php',) if self.runtime_sha256 is not None else ())
+        return tuple(self.private_root + '/' + self.revision + '/' + f for f in files)
+
+    def hashes(self):
+        return (self.executor_sha256,self.store_sha256) + ((self.runtime_sha256,) if self.runtime_sha256 else ())
 
 
 def _bounded_run(argv, payload, limit, timeout):
@@ -187,12 +198,14 @@ class SSHTransport:
                 stdout, stderr, code = self.runner(
                     self._argv(known, shlex.join(('sha256sum', '--', *paths))), b'', 4096, 20)
                 expected = ''.join(h + '  ' + p + '\n' for h, p in zip(
-                    (self.config.executor_sha256, self.config.store_sha256), paths)).encode()
+                    self.config.hashes(), paths)).encode()
                 if code != 0 or stderr or stdout != expected:
                     raise ValueError('Remote code identity unverified')
                 # Exactly one fixed executor call. Never run SFTP/upload/install,
                 # a shell command supplied by a request, or a retry on failure.
                 command = shlex.join((self.config.php_binary, '-f', paths[0]))
+                if self.config.runtime_sha256 is not None:
+                    command = shlex.join((self.config.php_binary,'-f',paths[2],'--',self.config.runtime_config_sha256))
                 stdout, stderr, code = self.runner(self._argv(known, command), frame, MAX_FRAME, 30)
                 if code != 0 or stderr or not stdout.endswith(b'\n'):
                     raise ValueError('Executor outcome unknown')
