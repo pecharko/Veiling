@@ -7,6 +7,11 @@ on:
       - "database/controller_release_claims_migration.sql"
       - "database/controller_release_claim_bindings_proposal.sql"
       - "scripts/ovh_controller_claim_adapter.py"
+      - "scripts/ovh_controller_audit.py"
+      - "tests/ovh_controller_audit_test.py"
+      - "docs/ovh-controller-independent-audit.md"
+      - "deploy/controller/audit-main-ruleset.proposal.json"
+      - "deploy/controller/audit-claims.bootstrap.json"
       - "scripts/ovh_controller_claim_store.php"
       - "scripts/ovh_controller_claim_ssh.py"
       - "scripts/ovh_controller_claim_executor.php"
@@ -76,4 +81,4 @@ jobs:
       - name: Require real Python to PHP signed protocol and restore-safety regressions
         env:
           OVH_CLAIM_REQUIRE_PHP: "1"
-        run: python3 -B -m unittest discover -s tests -p 'ovh_controller_claim_*test.py' -v
+        run: python3 -B -m unittest discover -s tests -p 'ovh_controller_*test.py' -v

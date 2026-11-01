@@ -1,5 +1,9 @@
 # OVH shared hosting — dormant claimadapter
 
+De nog niet geconfigureerde onafhankelijke autoriteit krijgt een concreet
+[GitHub-auditvoorstel](ovh-controller-independent-audit.md). Dat voorstel creëert
+geen infrastructuur, kiest geen credentials en activeert deze adapter niet.
+
 De eigenaar bevestigde vervolgens SSH-beschikbaarheid. De concrete private
 transportvoorbereiding staat in [Private SSH/CLI-route](ovh-controller-private-ssh.md).
 Die code is eveneens dormant en verleent geen OVH-uitvoeringsbevoegdheid.
@@ -53,8 +57,9 @@ De volgorde is strikt:
    `ATTEMPTED` duurzaam op vóór de ene dispatchpoging. Iedere onzekere externe
    reserve-, commit-, response- of POST-uitkomst blijft `STOP, NO RETRY`.
 
-Er is **geen productie-implementatie of configuratie van die externe
-autoriteit** toegevoegd. Dat is een echte activatieblokkade, geen bewijsboolean
+Er is **geen externe autoriteit geselecteerd of geconfigureerd** in deze adapter.
+De afzonderlijke provider blijft dormant zonder echte provisioning/evidence.
+Dat is een echte activatieblokkade, geen bewijsboolean
 die later op true gezet kan worden. De typed testreceipt is ook geen zelfstandig
 trustcertificaat: de runtime moet exclusiviteit, identiteit, onveranderbaarheid,
 retentie, herstelgedrag en beperkte rechten van de echte provider bewijzen.
