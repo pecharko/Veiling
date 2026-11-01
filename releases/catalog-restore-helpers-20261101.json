@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/restore_diagnosis.php",
+      "source_sha256": "fd0646bcc8b61ad3c9ab24dd7e54f3857e9e2b8c77eecf6587c9a59c166d1285",
+      "remote_sha256": "bc9765bcb2a8fdc1d489b2a0d18f898957c65e848b2af0adb91aa635ead588ec"
+    },
+    {
+      "path": "private/restore_mixed_diagnosis.php",
+      "source_sha256": "08e57ccc0b2110194509e2f45182bc50bc5758b7c532b221ede0b246a89a8820",
+      "remote_sha256": "f14c765f0e709b4103a6fe154d21f6c4195f960c36e0e393b21d3baa155e5817"
+    }
+  ]
+}
