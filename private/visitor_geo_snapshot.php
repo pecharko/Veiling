@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/visitor_geo_eu.php';
 require_once __DIR__ . '/visitor_geo_state.php';
 
 const GEO_SNAPSHOT_COLUMNS = [
@@ -69,7 +70,7 @@ function visitor_geo_snapshot_validate(mixed $data): void
                     || ($row['region_code']!=='' && !preg_match('/^[A-Z0-9-]{1,16}$/D',$row['region_code']))
                     || !mb_check_encoding($row['city_name'],'UTF-8') || mb_strlen($row['city_name'],'UTF-8')>120
                     || preg_match('/[\x00-\x1F\x7F]/u',$row['city_name'])
-                    || ($row['country_code']!=='BE' && $row['city_name']!=='')
+                    || (!visitor_geo_is_eu_country($row['country_code']) && $row['city_name']!=='')
                     || ($row['country_code']==='ZZ' && $row['region_code']!=='')) throw new RuntimeException('Invalid geographic bucket');
             }
             $keys = array_values(array_diff($columns,['views','visitor_days','lot_views','start_date']));
