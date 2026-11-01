@@ -2,31 +2,9 @@
   "schema": 1,
   "issue_id": 0,
   "comment_id": 0,
-  "audit": {
-    "repository_id": 0,
-    "anchor_sha": "0000000000000000000000000000000000000000",
-    "ruleset_id": 0,
-    "policy_updated_at": "2000-01-01T00:00:00Z"
-  },
-  "ssh": {
-    "host": "hosting.example.invalid",
-    "user": "CHANGE_ME",
-    "port": 22,
-    "identity_file": "/Users/CHANGE_ME/.veiling-controller/ovh-key",
-    "known_host": "REPLACE_WITH_INDEPENDENTLY_VERIFIED_PUBLIC_HOSTKEY",
-    "private_root": "/home/CHANGE_ME/private/veiling-controller",
-    "revision": "0000000000000000000000000000000000000000",
-    "executor_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "store_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "runtime_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "runtime_config_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-    "php_binary": "/usr/local/php8.2/bin/php"
-  },
   "paths": {
     "attempt_journal": "/Users/CHANGE_ME/.veiling-controller/attempt.sqlite",
     "read_token": "/Users/CHANGE_ME/.veiling-controller/read-token",
-    "audit_token": "/Users/CHANGE_ME/.veiling-controller/audit-token",
-    "dispatch_token": "/Users/CHANGE_ME/.veiling-controller/dispatch-token",
-    "claim_hmac": "/Users/CHANGE_ME/.veiling-controller/claim-hmac.bin"
+    "dispatch_token": "/Users/CHANGE_ME/.veiling-controller/dispatch-token"
   }
 }

@@ -4,7 +4,6 @@ Installing/configuring this proposal is a separate owner-authorized action.
 Default invocation is disabled. No credentials are discovered from environment.
 """
 import argparse
-from dataclasses import fields
 import hashlib
 import json
 import os
@@ -13,22 +12,22 @@ import stat
 
 from owner_bound_dispatch import GitHubDispatch, _attempt_once, reconcile
 from owner_bound_dispatch_ledger import Ledger, binding_digest
-from ovh_controller_audit import AuditAPI, AuditConfig, GitHubAudit
-from ovh_controller_claim_adapter import OvhEvidence, RemoteLedger, RestoreSafeLedger
-from ovh_controller_claim_ssh import SSHConfig, SSHTransport
+from ovh_controller_claim_adapter import OvhEvidence
 from shared_ovh_controller_adapter import HASH, _json_bytes
 from datetime import datetime, timezone
 
 DENIED={'status':'DISABLED','dispatch_started':False,'retry_allowed':False,'production_accepted':False}
-PATHS={'attempt_journal','read_token','audit_token','dispatch_token','claim_hmac'}
+PATHS={'attempt_journal','read_token','dispatch_token'}
 
 
 def private_path(value):
     if type(value) is not str or not Path(value).is_absolute() or str(Path(value).resolve())!=value:
         raise ValueError('Require absolute private path without symlinks')
     s=os.lstat(value)
+    parent=Path(value).parent.stat()
     if (not stat.S_ISREG(s.st_mode) or stat.S_IMODE(s.st_mode)!=0o600
-            or s.st_uid!=os.geteuid() or s.st_nlink!=1):
+            or s.st_uid!=os.geteuid() or s.st_nlink!=1
+            or stat.S_IMODE(parent.st_mode)!=0o700 or parent.st_uid!=os.geteuid()):
         raise ValueError('Private owner-only regular file required')
     return s
 
@@ -58,20 +57,13 @@ def configuration(path,pin):
     raw=private_bytes(path,65536)
     if hashlib.sha256(raw).hexdigest()!=pin: raise ValueError('Local config digest drift')
     cfg=_json_bytes(raw)
-    if type(cfg) is not dict or set(cfg)!={'schema','issue_id','comment_id','audit','ssh','paths'} or type(cfg['schema']) is not int or cfg['schema']!=1:
+    if type(cfg) is not dict or set(cfg)!={'schema','issue_id','comment_id','paths'} or type(cfg['schema']) is not int or cfg['schema']!=1:
         raise ValueError('Invalid exact local configuration')
     for key in ('issue_id','comment_id'):
         if type(cfg[key]) is not int or not 0<cfg[key]<=2**53-1: raise ValueError('Invalid owner event identity')
-    if type(cfg['audit']) is not dict or set(cfg['audit'])!={f.name for f in fields(AuditConfig)}:
-        raise ValueError('Invalid audit configuration')
-    AuditConfig(**cfg['audit']).validate()
-    if type(cfg['ssh']) is not dict or set(cfg['ssh'])!={f.name for f in fields(SSHConfig)}:
-        raise ValueError('Invalid SSH configuration')
-    ssh=SSHConfig(**cfg['ssh']);ssh.validate()
-    if ssh.runtime_sha256 is None: raise ValueError('V1 requires the pinned private PHP runtime')
     paths=cfg['paths']
     if type(paths) is not dict or set(paths)!=PATHS: raise ValueError('Invalid credential/journal paths')
-    all_paths=[*paths.values(),ssh.identity_file,path]
+    all_paths=[*paths.values(),path]
     if any(type(p) is not str for p in all_paths) or len(set(all_paths))!=len(all_paths):
         raise ValueError('Separate files required for each credential and journal')
     for p in all_paths: private_path(p)
@@ -81,9 +73,7 @@ def configuration(path,pin):
 def components(cfg,*,dispatch=False):
     paths=cfg['paths']
     reader=OvhEvidence(token(paths['read_token']))
-    authority=GitHubAudit(AuditAPI(token(paths['audit_token'])),AuditConfig(**cfg['audit']),Ledger(paths['attempt_journal']))
-    remote=RemoteLedger(SSHTransport(SSHConfig(**cfg['ssh'])),private_bytes(paths['claim_hmac'],1024))
-    ledger=RestoreSafeLedger(remote,authority)
+    ledger=Ledger(paths['attempt_journal'])
     sender=GitHubDispatch(token(paths['dispatch_token'])) if dispatch else None
     return reader,ledger,sender
 

@@ -8,7 +8,6 @@ on:
       - "database/controller_release_claim_bindings_proposal.sql"
       - "scripts/ovh_controller_claim_adapter.py"
       - "scripts/ovh_controller_local.py"
-      - "scripts/ovh_controller_claim_runtime.php"
       - "tests/ovh_controller_local_test.py"
       - "deploy/controller/macos-controller.example.json"
       - "docs/ovh-controller-macos-v1.md"
@@ -97,7 +96,6 @@ jobs:
           php tests/controller_mysql_claim_integration.php
           php -l scripts/ovh_controller_claim_store.php
           php -l scripts/ovh_controller_claim_executor.php
-          php -l scripts/ovh_controller_claim_runtime.php
           php -l tests/ovh_controller_claim_stdio_test.php
           php -l tests/ovh_controller_claim_protocol_test.php
           php -l tests/ovh_controller_claim_mysql_test.php
