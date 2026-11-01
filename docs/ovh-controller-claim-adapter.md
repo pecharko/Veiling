@@ -1,5 +1,9 @@
 # OVH shared hosting — dormant claimadapter
 
+De eigenaar bevestigde vervolgens SSH-beschikbaarheid. De concrete private
+transportvoorbereiding staat in [Private SSH/CLI-route](ovh-controller-private-ssh.md).
+Die code is eveneens dormant en verleent geen OVH-uitvoeringsbevoegdheid.
+
 Randvoorwaarde van de eigenaar: **alleen bestaande OVH-webhosting**. Er is geen
 aparte Python/systemd-controllerhost beschikbaar. Daarom is die servicevariant
 geen gekozen productieroute. Dit voorstel levert de host-onafhankelijke
@@ -15,8 +19,9 @@ Python/PHP-claimkoppeling, met echte geïsoleerde MySQL-tests, zonder OVH te rak
   bij dezelfde repo/main horen en vóór het exacte ownerconsent zijn voltooid.
 - Een **nog apart te beoordelen private uitvoerroute** kan de PHP-bibliotheek
   `scripts/ovh_controller_claim_store.php` bij OVH aanroepen. Er is geen URL,
-  HTTP-route, daemon, webhook, cron, upload of concreet netwerktransport toegevoegd.
-  URL-geheimhouding is geen authenticatie. Standaard ontbreekt een transport.
+  HTTP-route, daemon, webhook, cron of upload toegevoegd.
+  URL-geheimhouding is geen authenticatie. De latere SSH-transportklasse wordt
+  niet standaard geïnstantieerd of geconfigureerd.
 - Alleen `reserve`, toegestane `transition` en `read` zijn mogelijk. Geen
   aangeleverde SQL, willekeurige tabel, workflow, ref of dispatchactie.
 - De PHP-bibliotheek accepteert een expliciet verstrekte PDO-verbinding. Zij

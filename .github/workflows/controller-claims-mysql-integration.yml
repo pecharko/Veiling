@@ -8,6 +8,11 @@ on:
       - "database/controller_release_claim_bindings_proposal.sql"
       - "scripts/ovh_controller_claim_adapter.py"
       - "scripts/ovh_controller_claim_store.php"
+      - "scripts/ovh_controller_claim_ssh.py"
+      - "scripts/ovh_controller_claim_executor.php"
+      - "tests/ovh_controller_claim_ssh_test.py"
+      - "tests/ovh_controller_claim_stdio_test.php"
+      - "docs/ovh-controller-private-ssh.md"
       - "scripts/owner_bound_dispatch.py"
       - "scripts/owner_bound_dispatch_ledger.py"
       - "scripts/shared_ovh_controller_adapter.py"
@@ -63,10 +68,12 @@ jobs:
           php -l tests/controller_mysql_claim_integration.php
           php tests/controller_mysql_claim_integration.php
           php -l scripts/ovh_controller_claim_store.php
+          php -l scripts/ovh_controller_claim_executor.php
+          php -l tests/ovh_controller_claim_stdio_test.php
           php -l tests/ovh_controller_claim_protocol_test.php
           php -l tests/ovh_controller_claim_mysql_test.php
           php tests/ovh_controller_claim_mysql_test.php
       - name: Require real Python to PHP signed protocol and restore-safety regressions
         env:
           OVH_CLAIM_REQUIRE_PHP: "1"
-        run: python3 -B -m unittest discover -s tests -p ovh_controller_claim_adapter_test.py -v
+        run: python3 -B -m unittest discover -s tests -p 'ovh_controller_claim_*test.py' -v

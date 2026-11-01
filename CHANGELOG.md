@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Dormant private SSH/CLI-route voor OVH-controller
+
+Na bevestigde SSH-beschikbaarheid: expliciet gepind transport met remote
+PHP-codehashcontrole vóór claimdata, één vaste executor-aanroep, begrensde
+pipes/time-outs en geen retries. CLI-framing hergebruikt het gesigneerde
+claimprotocol; directe executor en publieke ingangen blijven uitgeschakeld.
+Lokale fake-SSH-/pipe-regressies en echte PHP-stdio-tests in CI. Geen OVH-login,
+upload, credential-/rechtenwijziging, databaseactie of activatie uitgevoerd.
+
 ## 2026-11-01 — Dormant claimadapter voor uitsluitend OVH-webhosting
 
 Python/PHP-claimprotocol met exacte releasebinding, gesigneerde requests en
