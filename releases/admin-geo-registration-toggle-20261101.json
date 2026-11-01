@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "4d0842cb5417d28330a456cfdbdd39d7786f806c522931de485d5ceea358f7bb",
+      "remote_sha256": "67b2e9e615e2e7fbadee5b4499a91fe38d24ccc1861c7bc823e9e54676362120"
+    },
+    {
+      "path": "private/visitor_geo_dashboard.php",
+      "source_sha256": "3fed0a90a3f71daf2f07f94e3f598915ace90b16604c808389015a70e8e2d0ee",
+      "remote_sha256": "39480ef4af917395927bdd165339bb1d8b4ca1be6f899bac3939633333e9d8dc"
+    },
+    {
+      "path": "private/visitor_geo_state.php",
+      "source_sha256": "373aa29ca1ad86785d1493976abfa1f3c950acc73834c1b557251458e5f61f1a",
+      "remote_sha256": "2afabcd7066175ffa6716ef2dfc4281624b60b3e28e1255d00d09fd6fe6acb85"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "92754fa19d3e9451cfef70b2c7a9d19ed2d8536a9f320883098e7859e8ef940a",
+      "remote_sha256": "7367ebe9ce9a21604e0abd0faad2065e4975f80ea2991fb3322cc63df42444d6"
+    }
+  ]
+}
