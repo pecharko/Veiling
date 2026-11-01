@@ -27,6 +27,19 @@ owner and is not an acceptable test environment.
   overlaps, and required owner approval. A prepared PR does NOT imply merge
   or production acceptance.
 
+## Standard deploy handoff — minimum human interruptions
+
+For ordinary allowlisted website code changes requested with `deploy`, complete the safe development and release preparation in one active session, without soliciting intermediate `go` turns. Do not stop just because CI is queued or a branch or PR was created. Poll CI within the active turn, inspect logs, and fix in-scope regressions.
+
+- Prefer **one development PR** containing the code, tests, and `releases/<id>.json` rather than separate release-request and manifest PRs. Select only runtime files accepted by the existing shared-OVH release allowlist. Specialized code (cron, database, snapshots, auth, secrets, release controller) retains its dedicated process.
+- Obtain the exact existing OVH expected remote hashes from authenticated, per-file `VERIFIED` production readback and check for later deployments; otherwise obtain fresh pinned read-only SFTP baselines. Never infer remote state from a stale manifest, green CI or a user's memory.
+- Compute current source SHA-256, assemble and review one immutable manifest **on that same PR head**, and run CI against the final PR diff. Use `scripts/single_pr_verified_readback_manifest.py` only on independently authenticated logs; its output is not a trust certificate.
+- Ask the owner **once for the exact PR merge**, as presently required. After an authorized merge, verify exact main and independent push-CI without requesting `go`. Ask **once for the exact production approval**, including immutable main SHA, manifest, each remote/source SHA, drift check, backup/rollback and readback.
+- Preserve the owner-only merge and production authority. Do not auto-merge, auto-dispatch, change permissions, or interpret `deploy` or `go` as either approval. On missing tool access provide a single manual GitHub Actions launch instruction only after production authorization.
+- Work through all otherwise permitted safe steps before each actual approval boundary. No promises of asynchronous work after the chat ends.
+
+See `docs/single-review-shared-ovh-deploy.md` and `docs/single-pr-verified-readback-howto.md`.
+
 ## Security and authority boundaries
 
 - Do not independently merge PRs, change protected refs, force-push, trigger
