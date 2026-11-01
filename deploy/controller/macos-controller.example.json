@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "issue_id": 0,
+  "comment_id": 0,
+  "paths": {
+    "attempt_journal": "/Users/CHANGE_ME/.veiling-controller/attempt.sqlite",
+    "read_token": "/Users/CHANGE_ME/.veiling-controller/read-token",
+    "dispatch_token": "/Users/CHANGE_ME/.veiling-controller/dispatch-token"
+  }
+}

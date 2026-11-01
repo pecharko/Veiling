@@ -7,6 +7,10 @@ on:
       - "database/controller_release_claims_migration.sql"
       - "database/controller_release_claim_bindings_proposal.sql"
       - "scripts/ovh_controller_claim_adapter.py"
+      - "scripts/ovh_controller_local.py"
+      - "tests/ovh_controller_local_test.py"
+      - "deploy/controller/macos-controller.example.json"
+      - "docs/ovh-controller-macos-v1.md"
       - "scripts/ovh_controller_audit.py"
       - "tests/ovh_controller_audit_test.py"
       - "tests/ovh_controller_fullchain_test.py"
@@ -40,6 +44,19 @@ on:
 permissions:
   contents: read
 jobs:
+  local-controller-macos-smoke:
+    name: macOS operator CLI and persistent journal
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Test operator CLI and local journal on macOS without credentials or network
+        run: python3 -B -m unittest discover -s tests -p 'ovh_controller_local_test.py' -v
   claims-mysql-isolated:
     name: Isolated claim schema and uniqueness tests
     runs-on: ubuntu-latest

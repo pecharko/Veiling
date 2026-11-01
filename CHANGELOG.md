@@ -1,5 +1,13 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Handmatig gestarte macOS-controller, versie 1
+
+Uitvoerbare CLI voor lokale configuratiecontrole, read-only review, één
+eigenaargebonden poging en reconciliatie. Hergebruik het bestaande duurzame
+SQLite-ledger op de eigen Mac, buiten OVH-restore, en de bestaande beschermde
+releaseworkflow. Geen extra auditrepo, OVH-SQL/PHP-installatie of server voor
+deze versie. Geen live credentials, installatie, activatie of deployment.
+
 ## 2026-11-01 — Volledige geïsoleerde controllerketentest
 
 Eén samenhangende regressiesuite verbindt ondertekende eigenaarinput,
