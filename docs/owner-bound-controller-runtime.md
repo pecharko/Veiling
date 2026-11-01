@@ -1,5 +1,10 @@
 # Controller-runtime — dormant serviceverpakking
 
+**Actuele hostingkeuze:** de eigenaar beschikt alleen over bestaande
+OVH-webhosting. De hieronder beschreven Python/systemd-variant is daarom geen
+gekozen productieruntime. De passende vervolgvoorbereiding staat in
+[OVH-claimadapter](ovh-controller-claim-adapter.md); alle ingangen blijven uit.
+
 Dit voorstel vervolgt PR #516 zonder afhankelijk te zijn van een reeds gekozen
 hostnaam. Ontwerpkeuze: **één afzonderlijke controllerhost met persistente lokale
 opslag**. De huidige ontwikkelcontainer en tijdelijke GitHub Actions-runners

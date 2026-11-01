@@ -1,8 +1,25 @@
 name: B3.2 isolated MySQL 8.4 claim schema tests
 on:
+  push:
+    branches: [main]
   pull_request:
     paths:
       - "database/controller_release_claims_migration.sql"
+      - "database/controller_release_claim_bindings_proposal.sql"
+      - "scripts/ovh_controller_claim_adapter.py"
+      - "scripts/ovh_controller_claim_store.php"
+      - "scripts/owner_bound_dispatch.py"
+      - "scripts/owner_bound_dispatch_ledger.py"
+      - "scripts/shared_ovh_controller_adapter.py"
+      - "scripts/shared_ovh_controller_evidence.py"
+      - "scripts/controller_cron_handoff_contract.py"
+      - "tests/owner_bound_dispatch_integration_test.py"
+      - "tests/shared_ovh_controller_evidence_test.py"
+      - "tests/shared_ovh_controller_adapter_test.py"
+      - "tests/ovh_controller_claim_adapter_test.py"
+      - "tests/ovh_controller_claim_protocol_test.php"
+      - "tests/ovh_controller_claim_mysql_test.php"
+      - "docs/ovh-controller-claim-adapter.md"
       - "tests/controller_mysql_claim_integration.php"
       - ".github/workflows/controller-claims-mysql-integration.yml"
 permissions:
@@ -11,6 +28,7 @@ jobs:
   claims-mysql-isolated:
     name: Isolated claim schema and uniqueness tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       mysql:
         image: mysql:8.4
@@ -28,6 +46,8 @@ jobs:
           --health-retries=12
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - name: Set up PHP with PDO MySQL
         uses: shivammathur/setup-php@v2
         with:
@@ -42,3 +62,11 @@ jobs:
         run: |
           php -l tests/controller_mysql_claim_integration.php
           php tests/controller_mysql_claim_integration.php
+          php -l scripts/ovh_controller_claim_store.php
+          php -l tests/ovh_controller_claim_protocol_test.php
+          php -l tests/ovh_controller_claim_mysql_test.php
+          php tests/ovh_controller_claim_mysql_test.php
+      - name: Require real Python to PHP signed protocol and restore-safety regressions
+        env:
+          OVH_CLAIM_REQUIRE_PHP: "1"
+        run: python3 -B -m unittest discover -s tests -p ovh_controller_claim_adapter_test.py -v

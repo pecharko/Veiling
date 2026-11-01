@@ -1,5 +1,9 @@
 # B3.3 — OVH shared-hosting claim boundary (design only)
 
+Vervolgvoorstel: [dormant Python/PHP-claimadapter](ovh-controller-claim-adapter.md)
+met companionbindings en geïsoleerde MySQL-tests. Dit activeert of deployt
+geen executor en bewijst geen live OVH-toegang of onafhankelijke auditprovider.
+
 Status: **NOT IMPLEMENTED / NO PRODUCTION AUTHORIZATION**. Baseline main `da78fee38f17044175a00fda752ad27894deb308`. Owner reports creation and verification of `controller_release_claims` on OVH MySQL `kobejoechris`; no independent live DB query access.
 
 ## Existing functionality — reuse, do not replace
