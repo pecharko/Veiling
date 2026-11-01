@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/analytics_control.php';
 
 /** Read-only feature state. A missing migration leaves geography OFF. */
 function visitor_geo_state(PDO $pdo): ?array
