@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "67b2e9e615e2e7fbadee5b4499a91fe38d24ccc1861c7bc823e9e54676362120",
+      "remote_sha256": "1c60cc883b19d1277642675382f6ea9fc513eb60c1cb6f9f987ad9a4e270ab75"
+    }
+  ]
+}
