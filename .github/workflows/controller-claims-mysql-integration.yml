@@ -9,6 +9,11 @@ on:
       - "scripts/ovh_controller_claim_adapter.py"
       - "scripts/ovh_controller_audit.py"
       - "tests/ovh_controller_audit_test.py"
+      - "tests/ovh_controller_fullchain_test.py"
+      - "tests/ovh_controller_fullchain_fixture.php"
+      - "docs/ovh-controller-readiness.md"
+      - "scripts/owner_bound_dispatch_service.py"
+      - "tests/owner_bound_dispatch_service_test.py"
       - "docs/ovh-controller-independent-audit.md"
       - "deploy/controller/audit-main-ruleset.proposal.json"
       - "deploy/controller/audit-claims.bootstrap.json"
@@ -77,8 +82,10 @@ jobs:
           php -l tests/ovh_controller_claim_stdio_test.php
           php -l tests/ovh_controller_claim_protocol_test.php
           php -l tests/ovh_controller_claim_mysql_test.php
+          php -l tests/ovh_controller_fullchain_fixture.php
           php tests/ovh_controller_claim_mysql_test.php
       - name: Require real Python to PHP signed protocol and restore-safety regressions
         env:
           OVH_CLAIM_REQUIRE_PHP: "1"
+          OVH_CLAIM_REQUIRE_FULLCHAIN: "1"
         run: python3 -B -m unittest discover -s tests -p 'ovh_controller_*test.py' -v
