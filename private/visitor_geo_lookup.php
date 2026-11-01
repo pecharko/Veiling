@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/visitor_geo_eu.php';
 
 /**
  * Optional local GeoLite2 City lookup. No remote network call is made.
@@ -34,8 +35,8 @@ function visitor_geo_resolve(string $ip, ?string $databasePath = null): array
             $city = (string)($record->city->name ?? '');
             if (!preg_match('/^[A-Z]{2}$/D', $country) || $country === 'ZZ') return $unknown;
             if (!preg_match('/^[A-Z0-9-]{1,16}$/D', $region)) $region = '';
-            // Store city only for Belgium, avoid publishing misleading precision abroad.
-            if ($country !== 'BE') $city = '';
+            // Estimated cities are available within the EU; unknown/non-EU cities remain blank.
+            if (!visitor_geo_is_eu_country($country)) $city = '';
             $city = trim(preg_replace('/[\\x00-\\x1F\\x7F]/u', '', $city) ?? '');
             if (mb_strlen($city, 'UTF-8') > 120) $city = mb_substr($city, 0, 120, 'UTF-8');
             return ['country_code' => $country, 'region_code' => $region, 'city_name' => $city];

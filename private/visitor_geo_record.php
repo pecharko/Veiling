@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/visitor_geo_eu.php';
 
 /**
  * Transaction-bound geo counter: caller supplies the same UTC-day pseudonymous
@@ -31,8 +32,8 @@ function visitor_geo_record_view(PDO $pdo, string $day, string $visitorId, array
         || preg_match('/[\x00-\x1F\x7F]/u', $city)) {
         throw new InvalidArgumentException('Invalid coarse geo bucket');
     }
-    if ($country !== 'BE' && $city !== '') {
-        throw new InvalidArgumentException('City-level geo is restricted to Belgium');
+    if (!visitor_geo_is_eu_country($country) && $city !== '') {
+        throw new InvalidArgumentException('City-level geo is restricted to EU countries');
     }
     if ($country === 'ZZ' && ($region !== '' || $city !== '')) {
         throw new InvalidArgumentException('Unknown country cannot have a region or city');
