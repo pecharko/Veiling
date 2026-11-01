@@ -1,0 +1,21 @@
+name: Owner-bound dispatch offline safety tests
+on:
+  pull_request:
+    paths:
+      - 'scripts/owner_bound_dispatch_review.py'
+      - 'tests/owner_bound_dispatch_review_test.py'
+      - 'docs/owner-bound-dispatch-disabled.md'
+      - '.github/workflows/owner-bound-dispatch-offline-tests.yml'
+permissions:
+  contents: read
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline fail-closed regression tests (no credentials or network)
+        run: |
+          python3 -m py_compile scripts/owner_bound_dispatch_review.py tests/owner_bound_dispatch_review_test.py
+          python3 -m unittest discover -s tests -p owner_bound_dispatch_review_test.py -v
