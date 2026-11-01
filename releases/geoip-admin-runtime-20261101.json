@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/systeemcheck.php",
+      "source_sha256": "ad7ebb5b8a5167875a38818fdada93f356d599b94502ebce61cc5f5605977de6",
+      "remote_sha256": "d62f176604bbf06bea293becb362b0e07ddc9edcdbff28830b2d065ce2f0a76f"
+    }
+  ]
+}
