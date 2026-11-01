@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "paths": [
+    "private/restore_diagnosis.php",
+    "private/restore_mixed_diagnosis.php"
+  ]
+}
