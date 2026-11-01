@@ -58,9 +58,30 @@ if (is_post()) {
             $deleteError = 'Archiveringsbevestiging ongeldig of verlopen.';
         } else {
             try {
-                $result = archive_visitor_stats_one_day(db(), (string)$pending['cutoff']);
-                flash($result['days'] === 0 ? 'Geen afgesloten dag om te archiveren.' : ((string)$result['rows'] . ' detailrecords van één UTC-dag veilig samengevat en verwijderd. Start opnieuw om de volgende dag te verwerken.'));
-                redirect('admin/statistieken.php');
+                // A bounded web request: the CLI cron remains the 14-day catch-up path.
+                // Each day commits independently; do not conceal completed days on later failure.
+                $archivedDays = 0;
+                $deletedRows = 0;
+                try {
+                    for ($i = 0; $i < 3; ++$i) {
+                        $result = archive_visitor_stats_one_day(db(), (string)$pending['cutoff']);
+                        if ($result['days'] === 0) break;
+                        $archivedDays += $result['days'];
+                        $deletedRows += $result['rows'];
+                    }
+                } catch (Throwable $e) {
+                    error_log('Manual archive batch interrupted; completed_days=' . $archivedDays);
+                    $deleteError = 'Archivering onderbroken na ' . $archivedDays
+                        . ' verwerkte UTC-dagen (' . $deletedRows
+                        . ' records). Eerder voltooide dagen blijven veilig gearchiveerd. Controleer de status voordat je opnieuw start.';
+                }
+                if ($deleteError === '') {
+                    flash($archivedDays === 0
+                        ? 'Geen afgesloten dag om te archiveren.'
+                        : $deletedRows . ' detailrecords van ' . $archivedDays
+                          . ' UTC-dagen veilig samengevat en verwijderd. Maximaal 3 dagen per handmatige start; herhaal indien nodig.');
+                    redirect('admin/statistieken.php');
+                }
             } catch (Throwable $e) {
                 error_log('Manual analytics archive failed; no details logged.');
                 $deleteError = 'Archivering gestopt zonder gedeeltelijke wijziging van de lopende dag. Mogelijke oorzaken: een tweede verzoek, te veel records op één dag of een databasefout.';
@@ -297,24 +318,24 @@ admin_top('Bezoekersstatistieken');
     <?php endif; ?>
   </section>
   <section class="dashboard-panel" aria-labelledby="analytics-archive-title">
-    <h2 id="analytics-archive-title">Oude bezoekerscodes handmatig archiveren</h2>
-    <p>Na jouw bevestiging wordt maximaal één afgesloten UTC-dag ouder dan 3 dagen samengevat. De bijbehorende bezoekerscodes worden alleen na succesvolle opslag van die dag verwijderd. Start deze actie opnieuw voor de volgende dag. Er is geen automatische opschoning.</p>
+    <h2 id="analytics-archive-title">Handmatige archivering starten</h2>
+    <p>Start de archivering onmiddellijk vanuit de adminpagina. Per bevestiging worden maximaal 3 afgesloten UTC-dagen ouder dan 3 dagen verwerkt, met maximaal 20.000 records per dag. Elke dag wordt binnen een eigen transactie samengevat voordat detailrecords worden verwijderd. De dagelijkse OVH-cron blijft onafhankelijk actief.</p>
     <?php if ($archivePreview !== null): ?>
-      <p><strong><?=e((string)$archivePreview['count'])?></strong> historische detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in totaal in aanmerking. Per bevestiging wordt slechts de oudste dag verwerkt (maximaal 20.000 records op die dag).</p>
+      <p><strong><?=e((string)$archivePreview['count'])?></strong> historische detailrecords vóór <?=e($archivePreview['cutoff'])?> (UTC) komen in totaal in aanmerking. Per bevestiging worden maximaal 3 oudste dagen verwerkt (maximaal 20.000 records per dag).</p>
       <form method="post" action="<?=e(url('admin/statistieken.php'))?>" onsubmit="return confirm('Archiveren en detailcodes definitief wissen?');">
         <?=csrf_field()?>
         <input type="hidden" name="action" value="confirm_archive">
         <input type="hidden" name="preview_token" value="<?=e($archivePreview['token'])?>">
         <label for="analytics-archive-confirm">Typ ARCHIVEER ter bevestiging</label>
         <input id="analytics-archive-confirm" name="confirmation" required autocomplete="off">
-        <button type="submit" class="primary">Archiveren en codes wissen</button>
+        <button type="submit" class="primary">Archivering nu starten</button>
         <a href="<?=e(url('admin/statistieken.php'))?>">Annuleren</a>
       </form>
     <?php else: ?>
       <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
         <?=csrf_field()?>
         <input type="hidden" name="action" value="preview_archive">
-        <button type="submit" <?=!$available?'disabled':''?>>Bekijk te archiveren gegevens</button>
+        <button type="submit" <?=!$available?'disabled':''?>>Handmatige archivering voorbereiden</button>
       </form>
     <?php endif; ?>
   </section>
