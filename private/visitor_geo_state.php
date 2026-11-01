@@ -28,6 +28,54 @@ function visitor_geo_covers_day(?array $state, string $day): bool
     return $state !== null && $state['start_date'] !== null && $day >= $state['start_date'];
 }
 
+
+/** Persistent geo switch; default ON only after the separately initialized start_date. */
+function visitor_geo_disabled_marker(): string
+{
+    return __DIR__ . '/visitor_geo.disabled';
+}
+
+function visitor_geo_collection_enabled(?array $state): bool
+{
+    return $state !== null
+        && $state['start_date'] !== null
+        && !is_file(visitor_geo_disabled_marker())
+        && analytics_collection_enabled();
+}
+
+/** Fail closed when turning collection off. Does not delete any statistics. */
+function visitor_geo_set_disabled(): void
+{
+    $path = visitor_geo_disabled_marker();
+    if (!is_file($path)) {
+        $file = @fopen($path, 'x');
+        if ($file === false) throw new RuntimeException('Kan geografische registratie niet uitschakelen.');
+        fclose($file);
+    }
+    if (!is_file($path)) throw new RuntimeException('Geografische uitschakeling niet bevestigd.');
+}
+
+/** Can only switch ON after schema validation and general collection is ON. */
+function visitor_geo_set_enabled(PDO $pdo): void
+{
+    if (!analytics_collection_enabled()) throw new RuntimeException('Schakel eerst bezoekersregistratie in.');
+    $state = visitor_geo_state($pdo);
+    if ($state === null) throw new RuntimeException('Geografische databasetabellen ontbreken.');
+    // Starting today may be a partial day; historical days are never backfilled.
+    if ($state['start_date'] === null) {
+        $stmt = $pdo->prepare('UPDATE visitor_geo_state SET start_date = UTC_DATE() WHERE id = 1 AND start_date IS NULL');
+        $stmt->execute();
+        if (visitor_geo_state($pdo)['start_date'] === null) {
+            throw new RuntimeException('Startdatum geografische registratie kon niet worden ingesteld.');
+        }
+    }
+    $marker = visitor_geo_disabled_marker();
+    if (is_file($marker) && !unlink($marker)) {
+        throw new RuntimeException('Geografische registratie kon niet worden ingeschakeld.');
+    }
+    if (is_file($marker)) throw new RuntimeException('Geografische registratie blijft uitgeschakeld.');
+}
+
 /** Before the first complete geo day, no location may be invented for history. */
 function visitor_geo_require_empty_legacy_day(PDO $pdo, string $day): void
 {
