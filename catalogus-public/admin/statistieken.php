@@ -7,6 +7,7 @@ require_once dirname(__DIR__, 2) . '/private/analytics_control.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_archive_one_day_experimental.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_stats_cron_log.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_geo_dashboard.php';
+require_once dirname(__DIR__, 2) . '/private/visitor_geo_state.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_geo_delete.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 
@@ -14,6 +15,7 @@ require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 // a server-generated preview token and explicit confirmation in a second POST.
 $deleteError = '';
 $toggleError = '';
+$geoToggleError = '';
 $deletePreview = null;
 $archivePreview = null;
 if (is_post()) {
@@ -25,6 +27,7 @@ if (is_post()) {
             $toggleError = 'Ongeldige keuze voor bezoekersregistratie.';
         } else {
             try {
+                if ($enabled === '0') visitor_geo_set_disabled();
                 set_analytics_collection_enabled($enabled === '1');
                 flash($enabled === '1'
                     ? 'Bezoekersregistratie ingeschakeld. Nieuwe bezoeken worden weer geteld.'
@@ -33,6 +36,25 @@ if (is_post()) {
             } catch (Throwable $exception) {
                 error_log('Analytics toggle failed (no visitor data logged).');
                 $toggleError = 'Wijzigen mislukt. Controleer de schrijfrechten van de private map.';
+            }
+        }
+    } elseif ($action === 'toggle_geo_collection') {
+        $enabled = (string)($_POST['enabled'] ?? '');
+        if (!in_array($enabled, ['0', '1'], true)) {
+            $geoToggleError = 'Ongeldige keuze voor geografische registratie.';
+        } else {
+            try {
+                if ($enabled === '1') {
+                    visitor_geo_set_enabled(db());
+                    flash('Geografische registratie ingeschakeld. Locaties worden uitsluitend vanaf de ingestelde startdatum geschat.');
+                } else {
+                    visitor_geo_set_disabled();
+                    flash('Geografische registratie uitgeschakeld. Bestaande geografische gegevens blijven bewaard.');
+                }
+                redirect('admin/statistieken.php');
+            } catch (Throwable $exception) {
+                error_log('Geo registration toggle failed (no visitor data logged).');
+                $geoToggleError = 'Geografische registratie wijzigen mislukt. Controleer de configuratie en database.';
             }
         }
     } elseif ($action === 'preview_archive') {
@@ -251,6 +273,11 @@ $cronRuns = visitor_stats_cron_log_read();
 $cronSuccessful = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => ($run['status'] ?? '') === 'ok')), 0, 3);
 $cronAlerts = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => in_array($run['status'] ?? '', ['error', 'limit'], true))), 0, 3);
 $collectionEnabled = analytics_collection_enabled();
+$geoState = null;
+$geoStatusError = '';
+try { $geoState = visitor_geo_state(db()); }
+catch (Throwable $e) { $geoStatusError = 'Geografische registratie niet beschikbaar: controleer de databasetabellen.'; }
+$geoEnabled = $geoStatusError === '' && visitor_geo_collection_enabled($geoState);
 $geoReports=[];
 foreach (['Laatste 30 dagen'=>30,'Veilingcampagne sinds geografische registratie'=>null] as $title=>$days) {
     try { $geoReports[$title]=visitor_geo_dashboard(db(),$days); }
@@ -272,6 +299,21 @@ admin_top('Bezoekersstatistieken');
       <input type="hidden" name="enabled" value="<?= $collectionEnabled ? '0' : '1' ?>">
       <button type="submit" class="<?= $collectionEnabled ? '' : 'primary' ?>"><?= $collectionEnabled ? 'Registratie uitschakelen' : 'Registratie inschakelen' ?></button>
     </form>
+    <div class="dashboard-table-scroll">
+      <h3>Geografische bezoekersregistratie</h3>
+      <p><strong>Huidige status: <?= $geoEnabled ? 'Aan' : 'Uit' ?></strong></p>
+      <p>Geografische herkomst wordt uitsluitend geschat wanneer zowel de algemene als de geografische bezoekersregistratie aanstaat. Bij uitschakeling blijven bestaande gegevens bewaard.</p>
+      <?php if ($geoStatusError !== ''): ?><div class="alert error" role="alert"><?=e($geoStatusError)?></div><?php endif; ?>
+      <?php if ($geoToggleError !== ''): ?><div class="alert error" role="alert"><?=e($geoToggleError)?></div><?php endif; ?>
+      <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="toggle_geo_collection">
+        <input type="hidden" name="enabled" value="<?= $geoEnabled ? '0' : '1' ?>">
+        <button type="submit" class="<?= $geoEnabled ? '' : 'primary' ?>" <?= (!$collectionEnabled || $geoStatusError !== '' || $geoState === null) ? 'disabled' : '' ?>><?= $geoEnabled ? 'Geostatistieken uitschakelen' : 'Geostatistieken inschakelen' ?></button>
+      </form>
+      <?php if (!$collectionEnabled): ?><p><small>Schakel eerst de algemene bezoekersregistratie in. Geostatistieken blijven afzonderlijk uitgeschakeld tot je ze opnieuw inschakelt.</small></p><?php endif; ?>
+      <?php if ($geoState !== null && $geoState['start_date'] === null): ?><p><small>De eerste activering start de geografische meting vanaf de huidige UTC-dag. Oudere bezoeken worden niet achteraf gelokaliseerd.</small></p><?php endif; ?>
+    </div>
     <p><small>Dit wist geen bestaande gegevens. Handmatige archivering en verwijdering blijven afzonderlijke acties.</small></p>
   </section>
   <p class="dashboard-subtitle">Overzicht van de afgelopen 30 UTC-dagen. Unieke bezoekers zijn daggebonden schattingen: wie op meerdere dagen terugkomt telt opnieuw mee.</p>
