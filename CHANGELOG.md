@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Dormant duurzaam audit-pogingjournal
+
+De onafhankelijke auditprovider vereist nu vóór iedere externe mutatie een
+apart vooraf geprovisioneerd persistent ledger. Atomische reservering,
+ATTEMPTED-commit en exacte readback blokkeren replay ook na procesuitval en lege
+externe readback. Tests gebruiken echte tijdelijke SQLite en procesherstarts;
+geen live journal, opslag, credentials of runtime geprovisioneerd/geactiveerd.
+Opslag buiten OVH-restore en ephemeral runners moet vóór activatie bewezen zijn.
+
 ## 2026-11-01 — Dormant onafhankelijke GitHub-auditautoriteit voor OVH
 
 Voorstel voor een afgescheiden privé-auditrepository met vaste CAS-mutatie,

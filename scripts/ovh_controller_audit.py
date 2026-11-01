@@ -11,7 +11,7 @@ import re
 from urllib.request import Request, build_opener
 
 from owner_bound_dispatch import NoRedirect
-from owner_bound_dispatch_ledger import canonical, binding_digest
+from owner_bound_dispatch_ledger import Ledger, canonical, binding_digest
 from ovh_controller_claim_adapter import AuditReservation, validate_binding
 from shared_ovh_controller_adapter import HASH, SHA, _datetime, _json_bytes
 
@@ -110,11 +110,17 @@ class GitHubAudit:
     More history, deleted/cleared ledger or mismatched policy fails closed.
     This deliberately admits ONE global attempt, not automatic next releases.
     """
-    def __init__(self, api, config):
+    def __init__(self, api, config, attempt_journal=None):
         if type(config) is not AuditConfig:
             raise ValueError('Require exact reviewed audit baseline')
         config.validate()
+        if attempt_journal is not None and type(attempt_journal) is not Ledger:
+            raise ValueError('Require the existing durable local Ledger')
         self.api, self.config = api, config
+        # None admits read-only reconciliation, never an audit mutation.
+        # Must be a dedicated pre-provisioned persistent journal, outside OVH
+        # backup/restore and ephemeral runners. Never provision/reset here.
+        self.attempt_journal = attempt_journal
         self._uncertain = False
 
     def _guard(self, expected_owner=None):
@@ -209,6 +215,9 @@ class GitHubAudit:
 
     def reserve_once(self, binding):
         validate_binding(binding)
+        binding = _json_bytes(canonical(binding).encode())
+        if self.attempt_journal is None:
+            raise RuntimeError('Durable attempt journal missing; STOP, NO RETRY')
         if self._uncertain:
             raise RuntimeError('Audit write uncertain; STOP, NO RETRY')
         attempted = False
@@ -217,8 +226,21 @@ class GitHubAudit:
             head, claims = self._snapshot(owner)
             if claims:
                 return None
-            self._guard(owner)  # Fresh protection baseline immediately before mutation.
             raw = canonical({'schema': 1, 'claims': [binding]}).encode() + b'\n'
+            # Consume the global local slot before any external write. Retain
+            # it after success, failure or process death; never abort/release.
+            record = {**binding, 'audit_attempt': {
+                'repository': REPOSITORY, 'repository_id': self.config.repository_id,
+                'anchor_sha': self.config.anchor_sha, 'ruleset_id': self.config.ruleset_id,
+                'policy_updated_at': self.config.policy_updated_at,
+            }}
+            if self.attempt_journal.reserve(record) is not True:
+                return None
+            self.attempt_journal.transition(record, 'RESERVED', 'ATTEMPTED')
+            stored = self.attempt_journal.read(binding['nonce'])
+            if stored['binding'] != record or stored['state'] != 'ATTEMPTED':
+                raise ValueError('Durable attempt readback mismatch')
+            self._guard(owner)  # Fresh protection baseline after local durable I/O.
             attempted = True
             reply = self.api.commit_once(head, raw)
             if type(reply) is not dict or reply.get('errors'):

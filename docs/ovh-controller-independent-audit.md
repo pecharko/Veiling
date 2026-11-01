@@ -53,7 +53,8 @@ Volgorde in `GitHubAudit.reserve_once(binding)`:
    claims.json bevatten. Bloblengte, base64, Git-blob-OID en canonieke JSON worden gecontroleerd;
    ontbrekend, symlink, onvolledig of corrupt bewijs betekent geen vrije nonce.
 6. Alleen de lege bootstrap is beschikbaar. Controleer policy opnieuw en doe
-   één CAS-mutatie met de waargenomen immutable head.
+   eerst de hieronder beschreven duurzame lokale pogingregistratie. Controleer
+   policy daarna opnieuw en doe één CAS-mutatie met de waargenomen immutable head.
 7. Na de response: controleer policy opnieuw en lees het resultaat onafhankelijk
    via REST. Alleen exact de geacknowledgde commit met parent=bootstrap en één
    exacte binding levert een **nieuwe** typed `AuditReservation` op.
@@ -65,10 +66,50 @@ kan nooit een nieuwe receipt of retryrecht produceren. Een gecommitteerde claim
 blokkeert ook een nieuwe process/instance na herstart of OVH-restore.
 
 Een ontbrekende claim na een onzekere POST bewijst geen niet-uitvoering. De
-aanroepende runtime moet STOP/NO RETRY ook bij herstart/redelivery respecteren;
-de in-memory onzekerheidsflag is geen duurzaam restartjournal. Geen supervisor,
-workflow-rerun, nieuwe instance of lege readback mag als automatische retry
-worden gebruikt. Dit voorstel activeert geen runtime of restartbeleid.
+duurzame lokale pogingregistratie hieronder blokkeert dezelfde runtime ook bij
+herstart/redelivery en lege externe readback. De in-memory onzekerheidsflag is
+alleen een extra blokkade. Dit voorstel activeert geen runtime of restartbeleid.
+
+## Duurzaam STOP over procesherstart
+
+`GitHubAudit(api, config, attempt_journal)` vereist voor iedere mutatie een
+apart, vooraf geprovisioneerd `owner_bound_dispatch_ledger.Ledger`. Zonder
+journal is uitsluitend `lookup` mogelijk; `reserve_once` weigert vóór API-I/O.
+Er is geen runtime-defaultpad, automatische provisioning of fake fallback.
+
+Na de read-only preflight, vóór de eerste externe schrijfactie:
+
+1. `Ledger.reserve` schrijft atomair de volledige releasebinding en auditrepo-ID,
+   root-SHA, ruleset-ID en policytimestamp. Het bestaande globale unieke slot
+   staat hoogstens één poging toe, ook tussen onafhankelijke processen.
+2. Een tweede duurzame transactie zet `RESERVED` naar `ATTEMPTED`; exacte lokale
+   readback is verplicht vóór de GitHub-mutatie. Het bestaande ledger gebruikt
+   SQLite `synchronous=FULL`. Een lokale fout of ontbrekend/corrupt journal
+   levert geen externe schrijfactie op.
+3. Er is geen overgang naar `ABORTED`, reset, vrijgave of herstel van authority.
+   Ook een succesvolle auditreserve houdt het pogingjournal verbruikt. Een
+   crash tussen de twee lokale transacties blokkeert conservatief via RESERVED;
+   een crash tijdens/na de externe aanroep via ATTEMPTED.
+
+Na een procesherstart opent de runtime exact hetzelfde journal in bestaande
+`mode=rw`; ook een verse provider met een leeg fake/externe bootstrap kan geen
+tweede poging reserveren. Een nieuwe nonce/consent/release heft de globale
+blokkade evenmin op. Lookup leest alleen extern bewijs en geeft nooit een receipt.
+
+**Opslagvoorwaarde:** dit is een single-host journal op een vooraf goedgekeurd
+privé-filesystem met aantoonbare duurzame SQLite/fsync-semantiek. Het moet de
+runtimeherstart overleven en buiten OVH-site-/database-restore en ephemeral
+Actions-runners blijven. Geen netwerkfilesystem, jobartifact of nieuw leeg
+journal per start. Het journal is een aparte database, niet het SQL-claimstore
+of een hergebruikte dispatchledger. De runtime moet pad, identiteit en toegang
+beschermen: deze adapter bewijst geen bescherming tegen vervanging, wissen,
+rollback van het journal of een beheerder die alle opslag herschrijft.
+
+Er is geen geschikte runtime/opslag aangemaakt of bewezen. Als alleen OVH of
+een ephemeral runner beschikbaar is zonder onafhankelijke duurzame opslag,
+blijft activatie geblokkeerd. Dit voorstel provisioniert geen extra server.
+De externe GitHub-claim blijft nodig voor replaybescherming na OVH-restore;
+het lokale journal vervangt die onafhankelijke autoriteit niet.
 
 ## Conservatieve globale blokkade
 
@@ -107,6 +148,11 @@ Lokale tests gebruiken een strikt afgescheiden fake GitHub met atomaire CAS.
 Zij testen clientgedrag: parallelle contenders, gewijzigd repo-ID/owner/role,
 policy drift/bypass/scope, symlink/blob/historiecorruptie, fout na commit, lookup
 zonder authority en de echte controllerseam met gesimuleerde SQL-restore.
+Extra subprocess-tests beëindigen een proces na de lokale ATTEMPTED-commit en
+tijdens een fake POST. Een nieuw proces met lege externe fake blijft geblokkeerd.
+Twee onafhankelijke processen delen hetzelfde echte tijdelijke SQLite-journal
+en kunnen samen hoogstens één fake externe aanroep doen. Lokale commit-ackfouten,
+afwijkende readback en een ontbrekend/corrupt journal blokkeren eveneens.
 De fake is geen bewijs van echte GitHub-duurzaamheid, privéplanondersteuning of
 werkelijke repositoryrechten. De documentatie verifieert het API-contract;
 een live harmless CAS-/permissions-/herstelproef vereist eigen exacte toestemming.
@@ -114,5 +160,6 @@ een live harmless CAS-/permissions-/herstelproef vereist eigen exacte toestemmin
 Public execute en de bestaande controller-, SSH- en PHP-ingangen blijven uit.
 Voor activatie blijven nodig: echte externe auditprovisioning met onafhankelijk
 bewijs, geconfigureerde beperkte credentials, runtime STOP/NO RETRY bij herstart,
+inclusief onafhankelijk bewezen persistentie en isolatie van het pogingjournal,
 geverifieerde private OVH-SSH-/code-/keyisolatie en apart exact DB-/bootstrap-/
 activatiebesluit. Geen merge van deze code schakelt die voorzieningen in.
