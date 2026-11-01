@@ -67,7 +67,7 @@ def review(ticket, observed):
 
 
 def execute(*_args, **_kwargs):
-    return {**DENY, "reason": "Live adapter disabled and not installed"}
+    return {**DENY, "reason": "Dispatch integration dormant; activation is separately authorized"}
 
 
 def main():

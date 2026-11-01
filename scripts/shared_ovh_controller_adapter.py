@@ -93,6 +93,13 @@ def parse_approval(text):
             or not HASH.fullmatch(values["manifest_sha256"])
             or not re.fullmatch(r"[1-9][0-9]*", values["preflight_run_id"])):
         raise ValueError("Malformed release identity or digest")
+    # The dormant dispatch integration requires an owner-bound random nonce.
+    # Legacy offline reviews remain supported without one; they cannot execute.
+    if lines[-1].startswith("nonce="):
+        nonce = lines.pop()[6:]
+        if not HASH.fullmatch(nonce):
+            raise ValueError("Invalid owner-bound nonce")
+        values["nonce"] = nonce
     rows = []
     for line in lines[6:]:
         if not line.startswith("file="):

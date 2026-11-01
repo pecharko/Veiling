@@ -1,6 +1,10 @@
 # Owner-bound dispatch controller — disabled design boundary
 
-This PR adds **offline consistency review only**, deliberately without any GitHub write/dispatch API.
+The original review remains **offline consistency review only**. The separately
+implemented integration in `scripts/owner_bound_dispatch.py` is dormant: its
+public `execute()` entrypoint always returns `DISABLED`, before reading evidence,
+opening storage or constructing a transport. No workflow imports it, and no
+environment variable, input JSON or CLI flag can activate this revision.
 Do not treat a user-provided JSON ticket, nonce, GitHub issue comment, or boolean proof as an
 authenticated owner authorization. A non-atomic read of prior dispatches is insufficient to
 prevent two dispatches; the existing production workflow concurrency alone does not guarantee
@@ -23,4 +27,6 @@ at-most-once *invocation*.
 7. Independent evidence review must not be conflated with runner readback or browser acceptance.
 
 The offline review module always returns `dispatch_allowed: false`. Passing tests is not
-proof of owner authentication, nonce consumption, GitHub dispatch safety, or OVH access.
+proof of live owner authentication, production storage durability or OVH access.
+See [the integration and activation boundary](owner-bound-dispatch-integration.md)
+for the implemented sequence, tests, trust assumptions and reconciliation limits.
