@@ -1,5 +1,15 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Dormant claimadapter voor uitsluitend OVH-webhosting
+
+Python/PHP-claimprotocol met exacte releasebinding, gesigneerde requests en
+responses, vaste SQL-operaties en een handmatig companiontabelvoorstel bij de
+bestaande MySQL-claimbasis. Een onafhankelijke reserveringsautoriteit moet vóór
+OVH reserveren; ontbrekende of onzekere evidence blokkeert zonder retry.
+Regressies voor SQL-restore, parallelle processen en onzekere commits, inclusief
+echte geïsoleerde MySQL/PHP-CI. Geen endpoint, databasewijziging, transport,
+credential, cron, activatie of productie-uitrol uitgevoerd.
+
 ## 2026-11-01 — Controller-runtime en webhookreview, standaard uitgeschakeld
 
 Dormant WSGI-serviceverpakking met HMAC-verificatie over ruwe GitHub-webhooks,
