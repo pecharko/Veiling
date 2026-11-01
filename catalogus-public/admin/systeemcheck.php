@@ -21,6 +21,18 @@ foreach (['pdo_mysql' => 'MySQL via PDO', 'mbstring' => 'Unicode / multibyte-tek
 }
 report_item($rows, 'Foto-optimalisatie (optioneel)', extension_loaded('gd') && function_exists('imagewebp'),
   'Bij ontbreken van PHP-GD worden originele JPG/PNG/WebP bestanden bewaard; de catalogus blijft werken.', true);
+// Private, authenticated GeoIP runtime smoke test. Never use a visitor IP or expose paths/errors.
+$geoReady = false;
+$geoDetail = 'GeoIP2-reader of recente GeoLite2 City-database ontbreekt of werkt niet.';
+try {
+  require_once dirname(__DIR__, 2) . '/private/visitor_geo_lookup.php';
+  $geo = visitor_geo_resolve('8.8.8.8');
+  $geoReady = ($geo['country_code'] ?? '') === 'US';
+  if ($geoReady) $geoDetail = 'GeoIP2-reader en actuele lokale GeoLite2 City-database werken op deze PHP-runtime.';
+} catch (Throwable $ignored) {
+  // Keep diagnostics generic; no server paths, configuration or IP information disclosed.
+}
+report_item($rows, 'GeoLite2 City op OVH', $geoReady, $geoDetail, true);
 $root = dirname(__DIR__);
 $private = dirname(__DIR__, 2) . '/private';
 $privateReal = realpath($private) ?: $private;
