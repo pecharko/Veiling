@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Dormant onafhankelijke GitHub-auditautoriteit voor OVH
+
+Voorstel voor een afgescheiden privé-auditrepository met vaste CAS-mutatie,
+gepinde repo-/bootstrap-/policy-identiteit, beschermd lineair claimverleden en
+onafhankelijke readback. Regressies voor races, policy-/historiedrift, onzekere
+commits en replay na OVH-restore. Er is geen auditrepository, ruleset, credential,
+claim of runtime aangemaakt/geactiveerd. Planondersteuning en live scopes blijven
+te verifiëren; de provider verleent maximaal één globale poging zonder reset.
+
 ## 2026-11-01 — Dormant private SSH/CLI-route voor OVH-controller
 
 Na bevestigde SSH-beschikbaarheid: expliciet gepind transport met remote

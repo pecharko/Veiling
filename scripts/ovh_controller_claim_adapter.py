@@ -166,7 +166,7 @@ class RestoreSafeLedger:
     never return a receipt recovered by reading an earlier reservation.
     lookup(nonce) returns its immutable exact binding; unknown/unavailable blocks.
     No authority is inferred from a JSON proof flag, SQL count or local file.
-    There is deliberately no production audit provider or permissive fallback.
+    No audit provider is selected/configured here; no permissive fallback.
     """
     def __init__(self, remote, audit):
         self.remote = remote
