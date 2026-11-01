@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Controller-runtime en webhookreview, standaard uitgeschakeld
+
+Dormant WSGI-serviceverpakking met HMAC-verificatie over ruwe GitHub-webhooks,
+binding aan onafhankelijke eigenaar-/release-evidence en uitsluitend read-only
+reviewantwoorden. Regressies voor verzoekframing, vervalste events, gewijzigde
+comments en herlevering; niet geïnstalleerde systemd-template en concrete
+runtime-/activatievoorwaarden. Geen listener, infrastructuur, credentials,
+ledgerwrites, dispatch of activatie toegevoegd aan de productie-ingangen.
+
 ## 2026-11-01 — Beveiligde release-dispatchintegratie, niet geactiveerd
 
 Dormant integratievoorstel met onafhankelijke GitHub-eigenaarverificatie,

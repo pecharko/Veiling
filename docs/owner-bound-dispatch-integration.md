@@ -1,5 +1,9 @@
 # Beveiligde dispatchintegratie — dormant implementatievoorstel
 
+De vervolgvoorbereiding van de geauthenticeerde read-only service-ingang en
+procesverpakking staat in [Controller-runtime](owner-bound-controller-runtime.md).
+Ook die ingang blijft standaard uitgeschakeld en activeert geen dispatcher.
+
 Deze wijziging implementeert de samenhangende dispatchketen, maar activeert hem
 niet. `owner_bound_dispatch.execute()` retourneert onvoorwaardelijk `DISABLED`.
 De bestaande `verified_deploy_controller.py`, registry en productieworkflow

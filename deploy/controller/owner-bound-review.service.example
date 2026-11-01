@@ -1,0 +1,36 @@
+# REVIEW TEMPLATE ONLY. Do not install/start without separate exact approval.
+# The CLI is intentionally DISABLED and exits 78; no listener is opened.
+# APPROVED_MAIN_SHA is a literal placeholder for a reviewed immutable version.
+[Unit]
+Description=Veiling owner-bound controller review (dormant template)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=veiling-controller-review
+Group=veiling-controller-review
+WorkingDirectory=/opt/veiling-controller/APPROVED_MAIN_SHA
+ExecStart=/usr/bin/python3 -B /opt/veiling-controller/APPROVED_MAIN_SHA/scripts/owner_bound_dispatch_service.py
+Restart=no
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/opt/veiling-controller
+StandardOutput=journal
+StandardError=journal
+
+# No Install section, credential paths, writable ledger, ports or ingress.
+# A read-only review principal must never receive dispatch credentials.
