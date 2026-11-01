@@ -2,16 +2,6 @@
   "schema": 1,
   "files": [
     {
-      "path": "catalogus-public/privacy.php",
-      "source_sha256": "004e6d7ff55f0e85177b70acc722bf7d1b3c99b927324c467d1b52ca155b3f25",
-      "remote_sha256": "7747a6b1c4a114fa47038c38864d204c27769137bbb671bb88ec1d1855be04d6"
-    },
-    {
-      "path": "private/visitor_geo_dashboard.php",
-      "source_sha256": "39480ef4af917395927bdd165339bb1d8b4ca1be6f899bac3939633333e9d8dc",
-      "remote_sha256": "440a7abe265c2e738e033d1aa4d80156867b4e01af93d97a694cf649bb4730af"
-    },
-    {
       "path": "private/visitor_geo_eu.php",
       "source_sha256": "94eb6d9aedd8f0bb73c1642a0090d9a67c5d434e44ac31ab45e50ac45603c491",
       "remote_sha256": "ABSENT"
@@ -30,6 +20,16 @@
       "path": "private/visitor_geo_snapshot.php",
       "source_sha256": "49e912a30523ea1264d1fffec06c8d97fdcfa009b6e4a1faba0ce59e58d537cc",
       "remote_sha256": "e196f5f4122604adbe97aa13c51c55a5977b69d971f79d7e615268873b64dea9"
+    },
+    {
+      "path": "private/visitor_geo_dashboard.php",
+      "source_sha256": "39480ef4af917395927bdd165339bb1d8b4ca1be6f899bac3939633333e9d8dc",
+      "remote_sha256": "440a7abe265c2e738e033d1aa4d80156867b4e01af93d97a694cf649bb4730af"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "004e6d7ff55f0e85177b70acc722bf7d1b3c99b927324c467d1b52ca155b3f25",
+      "remote_sha256": "7747a6b1c4a114fa47038c38864d204c27769137bbb671bb88ec1d1855be04d6"
     }
   ]
 }
