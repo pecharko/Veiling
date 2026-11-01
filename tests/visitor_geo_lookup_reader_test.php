@@ -33,13 +33,15 @@ namespace {
         $be = visitor_geo_resolve('8.8.8.8', $path);
         if ($be !== ['country_code'=>'BE','region_code'=>'VOV','city_name'=>'Lokeren']) throw new RuntimeException('Belgian location lost');
         Reader::$record = ['country'=>'nl','region'=>'NH','city'=>'Amsterdam'];
-        if (visitor_geo_resolve('8.8.8.8',$path) !== ['country_code'=>'NL','region_code'=>'NH','city_name'=>'']) throw new RuntimeException('Foreign city retained');
-        Reader::$record = ['city'=>"Gent\n\t" . str_repeat('é',130)];
+        if (visitor_geo_resolve('8.8.8.8',$path) !== ['country_code'=>'NL','region_code'=>'NH','city_name'=>'Amsterdam']) throw new RuntimeException('EU city missing');
+        Reader::$record = ['country'=>'BE','region'=>'VOV','city'=>"Gent\n\t" . str_repeat('é',130)];
         $clean = visitor_geo_resolve('8.8.8.8',$path)['city_name'];
         if (mb_strlen($clean)!==120 || str_contains($clean,"\n") || str_contains($clean,"\t")) throw new RuntimeException('City bounds or control sanitization failed');
+        Reader::$record = ['country'=>'US','region'=>'CA','city'=>'Mountain View'];
+        if (visitor_geo_resolve('8.8.8.8',$path) !== ['country_code'=>'US','region_code'=>'CA','city_name'=>'']) throw new RuntimeException('Non-EU city leaked');
         Reader::$record = ['country'=>'!'];
         if (visitor_geo_resolve('8.8.8.8',$path)!==$unknown) throw new RuntimeException('Malformed country accepted');
-        Reader::$record = ['region'=>'<invalid>','city'=>"\xFF"];
+        Reader::$record = ['country'=>'BE','region'=>'<invalid>','city'=>"\xFF"];
         if (visitor_geo_resolve('8.8.8.8',$path)!==['country_code'=>'BE','region_code'=>'','city_name'=>'']) throw new RuntimeException('Malformed names not cleaned');
         foreach ([time()-31*86400, time()+86400, 0] as $invalidEpoch) {
             Reader::$built = $invalidEpoch;
