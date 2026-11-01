@@ -1,0 +1,20 @@
+name: Release handoff decision tests (read-only)
+on:
+  pull_request:
+    paths:
+      - 'scripts/release_handoff_state.py'
+      - 'tests/release_handoff_state_test.py'
+      - '.github/workflows/release-handoff-tests.yml'
+permissions:
+  contents: read
+jobs:
+  handoff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate offline controller and regressions
+        run: |
+          python3 -m py_compile scripts/release_handoff_state.py tests/release_handoff_state_test.py
+          python3 -m unittest discover -s tests -p release_handoff_state_test.py -v
