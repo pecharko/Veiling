@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "paths": [
+    "catalogus-public/privacy.php",
+    "private/visitor_geo_dashboard.php",
+    "private/visitor_geo_eu.php",
+    "private/visitor_geo_lookup.php",
+    "private/visitor_geo_record.php",
+    "private/visitor_geo_snapshot.php"
+  ]
+}
