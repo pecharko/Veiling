@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Beveiligde release-dispatchintegratie, niet geactiveerd
+
+Dormant integratievoorstel met onafhankelijke GitHub-eigenaarverificatie,
+exacte manifest/source/remote-binding, actuele main-push-CI, duurzame atomische
+eenmalige claims, hercontrole en één vaste dispatchpoging zonder retries.
+Offline regressies gebruiken tijdelijke SQL-opslag en een nagebootste API.
+De publieke ingang blijft uitgeschakeld; kandidaat-runs gelden niet als
+onafhankelijk dispatch-, OVH- of browserbewijs. Geen activatie of productieactie.
+
 ## 2026-10-31 — Geografische statistieken geïntegreerd, standaard UIT
 
 PR #396 verbindt dagdeduplicatie met de bestaande tracker, het procentendashboard, beide archiefroutes en de bevestigde verwijdering. De migratie bevat een standaard lege UTC-startdatum. V2-geo-snapshots en incidentdiagnose nemen alle statistieken en binaire bezoekerscodes mee; oude snapshots worden na de upgrade vóór herstel geweigerd. Officiële GeoIP2-reader en transitieve versies vastgepind in composer.lock. Kleine groepen worden samengevoegd; onvolledige dekking wordt niet als volledige verdeling weergegeven. Nieuwe MySQL-, snapshot- en echte HTTP-regressies; geen productiehandeling of activering uitgevoerd.

@@ -1,10 +1,20 @@
 name: Owner-bound dispatch offline safety tests
 on:
+  push:
+    branches: [main]
   pull_request:
     paths:
       - 'scripts/owner_bound_dispatch_review.py'
+      - 'scripts/owner_bound_dispatch.py'
+      - 'scripts/owner_bound_dispatch_ledger.py'
+      - 'scripts/shared_ovh_controller_adapter.py'
+      - 'scripts/shared_ovh_controller_evidence.py'
+      - 'tests/owner_bound_dispatch_integration_test.py'
+      - 'tests/shared_ovh_controller_adapter_test.py'
+      - 'tests/shared_ovh_controller_evidence_test.py'
       - 'tests/owner_bound_dispatch_review_test.py'
       - 'docs/owner-bound-dispatch-disabled.md'
+      - 'docs/owner-bound-dispatch-integration.md'
       - '.github/workflows/owner-bound-dispatch-offline-tests.yml'
 permissions:
   contents: read
@@ -19,3 +29,6 @@ jobs:
         run: |
           python3 -m py_compile scripts/owner_bound_dispatch_review.py tests/owner_bound_dispatch_review_test.py
           python3 -m unittest discover -s tests -p owner_bound_dispatch_review_test.py -v
+          python3 -B -m unittest discover -s tests -p owner_bound_dispatch_integration_test.py -v
+          python3 -B -m unittest discover -s tests -p shared_ovh_controller_adapter_test.py -v
+          python3 -B -m unittest discover -s tests -p shared_ovh_controller_evidence_test.py -v
