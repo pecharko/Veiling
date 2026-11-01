@@ -1,5 +1,14 @@
 # Wijzigingslogboek
 
+## 2026-11-01 — Volledige geïsoleerde controllerketentest
+
+Eén samenhangende regressiesuite verbindt ondertekende eigenaarinput,
+onafhankelijk releasebewijs, duurzaam pogingjournal, auditprovider, private
+transportseam, echt PHP/MySQL-claimprotocol en de vaste dispatchrequest.
+Test ook verloren commitacks, ownerdrift, SQL-rollback en reconciliatie zonder
+retryrecht. Live SSH/GitHub-grenzen blijven testdubbels; activatievoorwaarden
+zijn expliciet vastgelegd. Geen productiecode, live configuratie of uitrol.
+
 ## 2026-11-01 — Dormant duurzaam audit-pogingjournal
 
 De onafhankelijke auditprovider vereist nu vóór iedere externe mutatie een
