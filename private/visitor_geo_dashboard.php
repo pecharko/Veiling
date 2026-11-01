@@ -14,7 +14,7 @@ function visitor_geo_dashboard(PDO $pdo, ?int $days = 30): array
     try {
         $state=visitor_geo_state($pdo);
         $today=new DateTimeImmutable('today',new DateTimeZone('UTC'));
-        if (!visitor_geo_covers_day($state,$today->format('Y-m-d'))) {
+        if (!visitor_geo_collection_enabled($state) || !visitor_geo_covers_day($state,$today->format('Y-m-d'))) {
             $pdo->commit();return ['status'=>'inactive','since'=>$state['start_date']??null,'rows'=>[]];
         }
         $since=$days===null?$state['start_date']:max($state['start_date'],$today->modify('-'.($days-1).' days')->format('Y-m-d'));

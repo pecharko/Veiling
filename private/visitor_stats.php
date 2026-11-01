@@ -30,7 +30,7 @@ function track_catalog_view(?int $lotId = null): void
         $locked = true;
         restore_journal_require_clear();
         $state = visitor_geo_state($pdo);
-        $geo = visitor_geo_covers_day($state, $day) ? visitor_geo_resolve($ip) : null;
+        $geo = visitor_geo_collection_enabled($state) && visitor_geo_covers_day($state, $day) ? visitor_geo_resolve($ip) : null;
         $pdo->beginTransaction();
         $started = true;
         $stmt = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date, visitor_id, page_kind, lot_id, views) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE views = views + 1');
