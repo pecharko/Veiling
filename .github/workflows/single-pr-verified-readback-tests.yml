@@ -1,0 +1,19 @@
+name: Single PR verified readback offline regression
+on:
+  pull_request:
+    paths:
+      - 'scripts/single_pr_verified_readback_manifest.py'
+      - 'tests/single_pr_verified_readback_manifest_test.py'
+      - '.github/workflows/single-pr-verified-readback-tests.yml'
+permissions:
+  contents: read
+jobs:
+  offline-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Pinned existing SFTP parser dependency
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - run: python3 -B -m unittest discover -s tests -p single_pr_verified_readback_manifest_test.py -v
