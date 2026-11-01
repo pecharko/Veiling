@@ -7,14 +7,18 @@ on:
       - 'scripts/owner_bound_dispatch_review.py'
       - 'scripts/owner_bound_dispatch.py'
       - 'scripts/owner_bound_dispatch_ledger.py'
+      - 'scripts/owner_bound_dispatch_service.py'
       - 'scripts/shared_ovh_controller_adapter.py'
       - 'scripts/shared_ovh_controller_evidence.py'
       - 'tests/owner_bound_dispatch_integration_test.py'
+      - 'tests/owner_bound_dispatch_service_test.py'
       - 'tests/shared_ovh_controller_adapter_test.py'
       - 'tests/shared_ovh_controller_evidence_test.py'
       - 'tests/owner_bound_dispatch_review_test.py'
       - 'docs/owner-bound-dispatch-disabled.md'
       - 'docs/owner-bound-dispatch-integration.md'
+      - 'docs/owner-bound-controller-runtime.md'
+      - 'deploy/controller/owner-bound-review.service.example'
       - '.github/workflows/owner-bound-dispatch-offline-tests.yml'
 permissions:
   contents: read
@@ -30,5 +34,12 @@ jobs:
           python3 -m py_compile scripts/owner_bound_dispatch_review.py tests/owner_bound_dispatch_review_test.py
           python3 -m unittest discover -s tests -p owner_bound_dispatch_review_test.py -v
           python3 -B -m unittest discover -s tests -p owner_bound_dispatch_integration_test.py -v
+          python3 -B -m unittest discover -s tests -p owner_bound_dispatch_service_test.py -v
           python3 -B -m unittest discover -s tests -p shared_ovh_controller_adapter_test.py -v
           python3 -B -m unittest discover -s tests -p shared_ovh_controller_evidence_test.py -v
+      - name: Validate dormant systemd template without installing or starting it
+        run: |
+          unit_dir="$RUNNER_TEMP/owner-bound-review-unit"
+          mkdir -p "$unit_dir"
+          cp deploy/controller/owner-bound-review.service.example "$unit_dir/owner-bound-review.service"
+          systemd-analyze verify "$unit_dir/owner-bound-review.service"
