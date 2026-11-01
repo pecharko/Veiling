@@ -18,7 +18,7 @@ try {
 foreach ([
     ['day'=>'2026-10-99', 'id'=>$id, 'geo'=>$geo],
     ['day'=>'2026-10-29', 'id'=>'short', 'geo'=>$geo],
-    ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'NL','region_code'=>'','city_name'=>'Gent']],
+    ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'US','region_code'=>'','city_name'=>'Gent']],
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>str_repeat('A', 121)]],
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>"\xFF"]],
     ['day'=>'2026-10-29', 'id'=>$id, 'geo'=>['country_code'=>'BE','region_code'=>'VOV','city_name'=>"Gent\n"]],
