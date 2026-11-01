@@ -132,10 +132,19 @@ check(!$store->reserve($binding), 'Never retry a possibly committed claim');
 
 // A failure after parent insertion must roll back both parts of the claim.
 resetFixture($db);
-$db->exec("CREATE TRIGGER ovh_claim_fixture_fail BEFORE INSERT ON controller_release_claim_bindings "
-    . "FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='synthetic fixture failure'");
-try { rejected(fn()=>$store->reserve($binding)); }
-finally { $db->exec('DROP TRIGGER ovh_claim_fixture_fail'); }
+final class FailBindingStatement extends PDOStatement {
+    protected function __construct() {}
+    public function execute(?array $params = null): bool {
+        if (str_starts_with($this->queryString, 'INSERT INTO controller_release_claim_bindings ')) {
+            throw new RuntimeException('synthetic failure after actual parent insert');
+        }
+        return parent::execute($params);
+    }
+}
+$failureDb = connectFixture();
+$failureDb->setAttribute(PDO::ATTR_STATEMENT_CLASS, [FailBindingStatement::class, []]);
+$failureStore = new OvhMysqlClaimStore($failureDb);
+rejected(fn()=>$failureStore->reserve($binding));
 check((int)$db->query('SELECT COUNT(*) FROM controller_release_claims')->fetchColumn() === 0,
       'No orphan parent after transaction rollback');
 check((int)$db->query('SELECT COUNT(*) FROM controller_release_claim_bindings')->fetchColumn() === 0,
