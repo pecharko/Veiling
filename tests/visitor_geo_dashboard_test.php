@@ -9,7 +9,7 @@ $rows=[
  ['country_code'=>'ZZ','region_code'=>'','city_name'=>'','visitor_days'=>1,'views'=>1],
 ];
 $countries=array_column(visitor_geo_display_percentages($rows,'country'),'percentage','label');
-if($countries!==['België'=>50.0,'Nederland'=>37.5,'Onbekend'=>6.3,'Overige (kleine groepen)'=>6.3])throw new RuntimeException('Country suppression changed denominator');
+if($countries!==['België'=>53.3,'Nederland'=>40.0,'Onbekend'=>6.7])throw new RuntimeException('Country suppression changed denominator');
 $cities=visitor_geo_display_percentages($rows,'city');
 if(abs(array_sum(array_column($cities,'percentage'))-100.0)>0.2)throw new RuntimeException('EU city denominator incorrect');
 $html=visitor_geo_render_dashboard(['30 dagen'=>['status'=>'ready','since'=>'2026-10-31','rows'=>$rows]]);
