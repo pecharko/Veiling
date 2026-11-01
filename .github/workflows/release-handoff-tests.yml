@@ -6,6 +6,8 @@ on:
       - 'tests/release_handoff_state_test.py'
       - 'scripts/release_handoff_report.py'
       - 'tests/release_handoff_report_test.py'
+      - 'scripts/development_ci_feedback_adapter.py'
+      - 'tests/development_ci_handoff_bridge_test.py'
       - '.github/workflows/release-handoff-tests.yml'
 permissions:
   contents: read
@@ -21,3 +23,4 @@ jobs:
           python3 -m py_compile scripts/release_handoff_state.py tests/release_handoff_state_test.py scripts/release_handoff_report.py tests/release_handoff_report_test.py
           python3 -m unittest discover -s tests -p release_handoff_state_test.py -v
           python3 -m unittest discover -s tests -p release_handoff_report_test.py -v
+          python3 -m unittest discover -s tests -p development_ci_handoff_bridge_test.py -v

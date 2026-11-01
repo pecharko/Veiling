@@ -6,7 +6,10 @@ This consumes only separately collected trusted facts, not owner authorization.
 """
 import json
 import re
-from release_handoff_state import evaluate
+if __package__:
+    from .release_handoff_state import evaluate
+else:
+    from release_handoff_state import evaluate
 
 SAFE = re.compile(r"[^A-Za-z0-9_ .:()/-]")
 

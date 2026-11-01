@@ -214,6 +214,22 @@ def format_summary(output):
         "- Scope: this workflow only; other PR checks require independent review",
         "- No automatic code changes, merge, retry, workflow dispatch or deployment.",
     ]
+    # Handoff is advisory only: one workflow NEVER establishes aggregate PR CI,
+    # reviewed manifest, merge approval or production authority.
+    if type(output.get("pr")) is int and output["pr"] > 0 and _sha(output.get("head_sha")):
+        if __package__:
+            from .release_handoff_report import summary as handoff_summary
+        else:
+            from release_handoff_report import summary as handoff_summary
+        handoff = handoff_summary({
+            "release_id": "pr-" + str(output["pr"]),
+            "pr_head": output["head_sha"],
+            "pr_ci": False,
+            "reviewed_manifest": False,
+        })
+        lines.append("")
+        lines.append(handoff.rstrip())
+        lines.append("- PR-only identifier; no actual release ID or approval inferred.")
     return "\n".join(lines)
 
 
