@@ -76,7 +76,6 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $pdo->beginTransaction();
   try{
    $rows=[];foreach(SNAP_TABLES as $table){$rows[$table]=$pdo->query('SELECT * FROM `'.$table.'`')->fetchAll(PDO::FETCH_ASSOC);}
-   $analytics=visitor_geo_snapshot_export($pdo);
    $pdo->commit();
   }catch(Throwable $e){
    if($pdo->inTransaction())$pdo->rollBack();
@@ -85,9 +84,9 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $assets=snap_assets(); $bytes=0;foreach($assets as $path)$bytes+=(int)filesize($path);
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
-  $format=$analytics===null?'41lokeren-v1':'41lokeren-v2-geo';
+  // The catalog snapshot never captures visitor statistics, even when geo is installed.
+  $format=visitor_geo_state($pdo)===null?'41lokeren-v1':'41lokeren-v2-geo';
   $payload=['format'=>$format,'created_at'=>gmdate('c'),'tables'=>$rows];
-  if($analytics!==null)$payload['analytics']=$analytics;
   $data=json_encode($payload,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
   if(strlen($data)>30*1024*1024)throw new RuntimeException('Snapshotdatabase te groot.');
   $space=snap_storage_stats($quotaBytes);
@@ -123,8 +122,8 @@ function snap_verified(string $name): array {
   if(!isset($database['tables'])||array_keys($database['tables'])!==SNAP_TABLES)throw new RuntimeException('Onvolledige databasetabellen.');
   $hashes=$manifest['sha256']??null;if(!is_array($hashes)||count($hashes)>20000||!isset($hashes['database.json']))throw new RuntimeException('Ongeldige bestandslijst.');
   if(!hash_equals($hashes['database.json'],hash('sha256',$d)))throw new RuntimeException('Database checksum ongeldig.');
-  if($database['format']==='41lokeren-v2-geo')visitor_geo_snapshot_validate($database['analytics']??null);
-  elseif(array_key_exists('analytics',$database))throw new RuntimeException('Onverwachte geografische snapshotinhoud.');
+  // Never import historic analytics from a catalog snapshot, including former v2-geo files.
+  if(array_key_exists('analytics',$database))throw new RuntimeException('Catalogussnapshot mag geen bezoekersstatistieken bevatten.');
   $size=0;
   foreach($hashes as $entry=>$hash){
    if($entry==='database.json')continue;
@@ -211,7 +210,6 @@ function snap_restore(PDO $pdo,string $name): void {
    // A restore may reintroduce lots deleted after the snapshot was taken.
    // Never clear the registry here: only the administrator's explicit full reset can.
    $pdo->exec('INSERT IGNORE INTO issued_lot_numbers (lot_number) SELECT lot_number FROM lots');
-   if($geoInstalled)visitor_geo_snapshot_restore($pdo,$database['analytics']);
    // If commit throws, the outcome can be ambiguous. Keep maintenance on.
    $commitAttempted=true;
    if(!$pdo->commit())throw new RuntimeException('Databasecommit kon niet worden bevestigd.');
