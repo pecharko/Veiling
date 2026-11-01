@@ -205,9 +205,36 @@ $available = true;
 $campaign = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 try {
     $pdo = db();
-    $summary = $pdo->query("SELECT COUNT(DISTINCT CONCAT(visit_date,HEX(visitor_id))) visitors, COALESCE(SUM(views),0) views, COALESCE(SUM(CASE WHEN page_kind='lot' THEN views ELSE 0 END),0) lot_views FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY")->fetch();
-    $daily = $pdo->query("SELECT visit_date, COUNT(*) visitors, SUM(views) views FROM (SELECT visit_date, visitor_id, SUM(views) views FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY GROUP BY visit_date, visitor_id) daily_visitors GROUP BY visit_date ORDER BY visit_date DESC")->fetchAll();
-    $top = $pdo->query("SELECT l.lot_number, l.title, SUM(v.views) views FROM visitor_stats_daily v INNER JOIN lots l ON l.id=v.lot_id WHERE v.page_kind='lot' AND v.visit_date >= UTC_DATE() - INTERVAL 29 DAY GROUP BY l.id, l.lot_number, l.title ORDER BY views DESC, l.lot_number LIMIT 10")->fetchAll();
+    // Archived days are stored in totals; live days remain in visitor_stats_daily.
+    // These date sets are disjoint because the archive transaction inserts totals
+    // and removes the matching raw rows atomically.
+    $summary = $pdo->query("SELECT COALESCE(SUM(visitors),0) visitors,
+      COALESCE(SUM(views),0) views, COALESCE(SUM(lot_views),0) lot_views FROM (
+        SELECT visitor_days visitors, views, lot_views
+        FROM visitor_stats_day_totals WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY
+        UNION ALL
+        SELECT COUNT(DISTINCT visitor_id) visitors, SUM(views) views,
+          SUM(CASE WHEN page_kind='lot' THEN views ELSE 0 END) lot_views
+        FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY
+        GROUP BY visit_date
+      ) recent_days")->fetch();
+    $daily = $pdo->query("SELECT visit_date, SUM(visitors) visitors, SUM(views) views FROM (
+        SELECT visit_date, visitor_days visitors, views FROM visitor_stats_day_totals
+        WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY
+        UNION ALL
+        SELECT visit_date, COUNT(DISTINCT visitor_id) visitors, SUM(views) views
+        FROM visitor_stats_daily WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY
+        GROUP BY visit_date
+      ) recent_days GROUP BY visit_date ORDER BY visit_date DESC")->fetchAll();
+    $top = $pdo->query("SELECT l.lot_number, l.title, SUM(v.views) views
+      FROM (
+        SELECT lot_id, views FROM visitor_stats_lot_totals
+        WHERE visit_date >= UTC_DATE() - INTERVAL 29 DAY
+        UNION ALL
+        SELECT lot_id, views FROM visitor_stats_daily
+        WHERE page_kind='lot' AND visit_date >= UTC_DATE() - INTERVAL 29 DAY
+      ) v INNER JOIN lots l ON l.id=v.lot_id
+      GROUP BY l.id, l.lot_number, l.title ORDER BY views DESC, l.lot_number LIMIT 10")->fetchAll();
     // Historical aggregates and active unarchived days have disjoint dates.
     $campaign = $pdo->query("SELECT COALESCE(SUM(visitor_days),0) visitors, COALESCE(SUM(views),0) views, COALESCE(SUM(lot_views),0) lot_views FROM (
       SELECT visitor_days, views, lot_views FROM visitor_stats_day_totals
