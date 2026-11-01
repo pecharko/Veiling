@@ -1,0 +1,27 @@
+name: Admin geo toggle regression
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/admin/statistieken.php'
+      - 'private/visitor_geo_state.php'
+      - 'private/visitor_stats.php'
+      - 'private/visitor_geo_dashboard.php'
+      - 'tests/admin_geo_registration_toggle_test.py'
+      - '.github/workflows/admin-geo-toggle-tests.yml'
+permissions:
+  contents: read
+jobs:
+  geo-toggle-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline toggle regression
+        run: python3 -B -m unittest discover -s tests -p admin_geo_registration_toggle_test.py -v
+      - name: PHP syntax
+        run: |
+          php -l catalogus-public/admin/statistieken.php
+          php -l private/visitor_geo_state.php
+          php -l private/visitor_stats.php
+          php -l private/visitor_geo_dashboard.php
