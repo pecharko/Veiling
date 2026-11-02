@@ -28,7 +28,7 @@ try {
         impression_check($status === 200 && str_contains($home,'Bekijk de vorige editie')
             && str_contains($home,'vorige-editie.php'), 'Homepage links to impression with published=' . $published);
         [$status,$body] = impression_request('/vorige-editie.php');
-        impression_check($status === 200 && substr_count($body,'data-impression-photo=') === 9
+        impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9\n            && !str_contains($body,'data-impression-photo=')\n            && !str_contains($body,'<figcaption')
             && !str_contains($body,'ADMINVOORBEELD'), 'Nine public photos independent of lot publication');
     }
     db()->exec('UPDATE settings SET is_site_online=0 WHERE id=1');
