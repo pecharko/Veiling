@@ -483,6 +483,64 @@ class GitHubEvidenceReadOnlyTests(unittest.TestCase):
 
 
 class SinglePrBaselineTests(unittest.TestCase):
+    def candidate_fixture(self):
+        responses = self.fixture()
+        head = 'e' * 40
+        with zipfile.ZipFile(io.BytesIO(responses['/actions/artifacts/321/zip'])) as z:
+            baseline = json.loads(z.read('shared-ovh-readonly-baselines.json'))
+        baseline['head_sha'] = head
+        for row in baseline['files']:
+            item = responses['/contents/'+row['path']+'?ref='+MAIN_SHA]
+            raw = base64.b64decode(item['content'])
+            row['source_sha256'] = hashlib.sha256(raw).hexdigest()
+            responses['/contents/'+row['path']+'?ref='+head] = item
+            del responses['/contents/'+row['path']+'?ref='+PRE_SHA]
+        self.set_baseline(responses, baseline)
+        return responses, baseline, head
+
+    def set_baseline(self, responses, baseline):
+        blob = archive({'shared-ovh-readonly-baselines.json':encode(baseline)})
+        responses['/actions/artifacts/321/zip'] = blob
+        responses['/actions/runs/400/artifacts?per_page=100']['artifacts'][0]['digest'] = 'sha256:'+hashlib.sha256(blob).hexdigest()
+
+    def test_candidate_bytes_independently_fetched_without_main_preflight_sources(self):
+        responses, _, head = self.candidate_fixture()
+        result, calls = review(responses)
+        self.assertEqual(result['status'], 'OFFLINE_CONTRACT_VERIFIED')
+        self.assertFalse(result['dispatch_started'])
+        self.assertEqual(sum(p.startswith('/contents/') and '?ref='+head in p for p in calls), 2)
+        self.assertFalse(any(p.startswith('/contents/') and '?ref='+PRE_SHA in p for p in calls))
+
+    def test_candidate_sha_and_source_metadata_tampering_fails_closed(self):
+        for bad_head in ['main', 'E'*40, 'f'*40, PRE_SHA]:
+            responses, baseline, _ = self.candidate_fixture()
+            baseline['head_sha'] = bad_head
+            self.set_baseline(responses, baseline)
+            with self.subTest(head=bad_head), self.assertRaises(ValueError): review(responses)
+        for field, value in [('source_sha256', '0'*64), ('remote_sha256','0'*64), ('extra',True)]:
+            responses, baseline, _ = self.candidate_fixture()
+            if field == 'extra': baseline[field] = value
+            else: baseline['files'][0][field] = value
+            self.set_baseline(responses, baseline)
+            with self.subTest(field=field), self.assertRaises(ValueError): review(responses)
+
+    def test_correctly_hashed_older_candidate_cannot_deploy_different_main_bytes(self):
+        responses, baseline, head = self.candidate_fixture()
+        for row in baseline['files']:
+            raw = ('different candidate '+row['path']).encode()
+            responses['/contents/'+row['path']+'?ref='+head] = git_item(raw)
+            row['source_sha256'] = hashlib.sha256(raw).hexdigest()
+        self.set_baseline(responses, baseline)
+        with self.assertRaisesRegex(ValueError, 'Candidate source bytes differ'):
+            review(responses)
+
+    def test_candidate_still_requires_first_attempt_and_same_repo_main_run(self):
+        for change in [{'run_attempt':2}, {'head_branch':'development/candidate'},
+                       {'head_repository':{'full_name':'fork/Veiling'}}]:
+            responses, _, _ = self.candidate_fixture()
+            responses['/actions/runs/400'].update(change)
+            with self.subTest(change=change), self.assertRaises(ValueError): review(responses)
+
     def fixture(self):
         responses,data=make_api()
         run=responses['/actions/runs/400']

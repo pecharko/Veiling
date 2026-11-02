@@ -7,6 +7,11 @@ on:
         required: true
         type: string
         default: 'private/bootstrap.php,catalogus-public/admin/admin.css'
+      source_sha:
+        description: 'Optional immutable candidate commit; read Git blobs only, never execute candidate code'
+        required: false
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
@@ -20,6 +25,7 @@ jobs:
     environment: production
     env:
       RELEASE_FILES: ${{ inputs.files }}
+      SOURCE_SHA: ${{ inputs.source_sha }}
       OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
       OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
       OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
@@ -29,6 +35,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Fetch immutable candidate data without checkout or execution
+        if: inputs.source_sha != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          git fetch --no-tags --depth=1 origin "$SOURCE_SHA"
+          test "$(git rev-parse --verify "$SOURCE_SHA^{commit}")" = "$SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
       - name: Install pinned client
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Read-only source and OVH remote hash manifest
