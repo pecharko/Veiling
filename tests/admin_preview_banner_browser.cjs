@@ -21,7 +21,8 @@ const { chromium } = require('playwright');
     await preview.evaluate(() => { const space = document.createElement('div'); space.style.height = '3000px'; document.body.append(space); });
     for (const width of [1280, 390]) {
       await preview.setViewportSize({ width, height: 800 });
-      await preview.evaluate(() => window.scrollTo(0, 1500));
+      await preview.evaluate(() => window.scrollTo({ top: 1500, behavior: 'instant' }));
+      await preview.waitForFunction(() => window.scrollY > 1000);
       await preview.waitForFunction(() => {
         const b = document.querySelector('.admin-preview-banner');
         return b && b.offsetHeight === parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--admin-preview-height'));
