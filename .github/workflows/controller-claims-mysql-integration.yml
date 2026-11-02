@@ -48,7 +48,7 @@ permissions:
 jobs:
   local-controller-macos-smoke:
     name: macOS operator CLI and persistent journal
-    runs-on: macos-latest
+    runs-on: macos-26-intel
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
