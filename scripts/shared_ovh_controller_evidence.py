@@ -20,7 +20,7 @@ import zipfile
 from ovh_release_evidence_discovery import ArtifactRedirect, get as github_get
 from shared_ovh_controller_adapter import (
     HASH, RELEASE_ID, SHA, MAX_JSON_BYTES, _valid_path,
-    parse_approval, review_offline, single_pr_preflight,
+    parse_approval, review_offline, single_pr_preflight, baseline_source, _json_bytes,
 )
 
 BASE = "https://api.github.com/repos/pecharko/Veiling"
@@ -223,7 +223,9 @@ def collect_review(token, issue_number, comment_id, now=None):
     request_preflight = None if single else _git_file(token, request_path, approval["preflight_sha"],limit=MAX_JSON_BYTES)
     preflight_sources = None
     if single:
-        preflight_sources = {row['path']:hashlib.sha256(_git_file(token,row['path'],approval['preflight_sha'])).hexdigest()
+        source_sha, _ = baseline_source(
+            _json_bytes(artifact_files['shared-ovh-readonly-baselines.json']), approval['preflight_sha'])
+        preflight_sources = {row['path']:hashlib.sha256(_git_file(token,row['path'],source_sha)).hexdigest()
                              for row in approval['files']}
     source_hashes = {
         row["path"]: hashlib.sha256(

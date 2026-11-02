@@ -283,6 +283,19 @@ def _validate_manifest(manifest, approved):
         raise ValueError("Approved allowlist, source or remote baselines mismatch")
 
 
+def baseline_source(baseline, run_sha):
+    """Normalize authenticated evidence; legacy main and candidate data stay distinct."""
+    if not isinstance(baseline, dict):
+        raise ValueError("Invalid baseline evidence")
+    if set(baseline) == {"schema", "files"}:
+        return run_sha, baseline
+    if (set(baseline) != {"schema", "head_sha", "files"}
+            or not isinstance(baseline["head_sha"], str)
+            or not SHA.fullmatch(baseline["head_sha"])):
+        raise ValueError("Invalid immutable candidate evidence")
+    return baseline["head_sha"], {"schema": baseline["schema"], "files": baseline["files"]}
+
+
 def _validate_request(raw, paths):
     req = _json_bytes(raw)
     if (not isinstance(req, dict) or set(req) != {"schema", "paths"}
@@ -349,8 +362,12 @@ def review_offline(text, *, issue, comment, previously_closed, run,
         if not isinstance(artifact_files,dict) or set(artifact_files)!={'shared-ovh-readonly-baselines.json'}:
             raise ValueError('Unexpected single-PR baseline artifact members')
         baseline = _json_bytes(artifact_files['shared-ovh-readonly-baselines.json'])
+        candidate = isinstance(baseline, dict) and 'head_sha' in baseline
+        _, baseline = baseline_source(baseline, approval['preflight_sha'])
         if type(preflight_source_hashes) is not dict or set(preflight_source_hashes)!=set(paths):
             raise ValueError('Missing independently retrieved preflight source bytes')
+        if candidate and preflight_source_hashes != source_hashes:
+            raise ValueError('Candidate source bytes differ from approved current main')
         expected = [{**row,'source_sha256':preflight_source_hashes[row['path']]} for row in approval['files']]
         _validate_manifest(baseline,{'files':expected})
     elif not isinstance(artifact_files, dict) or set(artifact_files) != {
