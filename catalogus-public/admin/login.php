@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
+require_once dirname(__DIR__, 2) . '/private/analytics_control.php';
 require_no_index();
 admin_session();
 if (isset($_SESSION['admin_id'])) redirect('admin/index.php');
@@ -30,6 +31,12 @@ if (is_post()) {
       $_SESSION['admin_credential_hash'] = hash('sha256', (string)$admin['password_hash']);
       $pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')->execute([$ip]);
       $pdo->prepare('UPDATE admins SET last_login_at=UTC_TIMESTAMP() WHERE id=? AND is_active=1')->execute([(int)$admin['id']]);
+      try {
+        analytics_ip_register_login($pdo, (int)$admin['id']);
+      } catch (Throwable $e) {
+        // Analytics failure never locks an authenticated administrator out.
+        flash('IP-registratie is tijdelijk niet beschikbaar. Controleer de IP-uitsluiting bij Statistieken.', 'error');
+      }
       redirect('admin/index.php');
     }
     $pdo->prepare('INSERT INTO login_attempts (ip_hash) VALUES (?)')->execute([$ip]);

@@ -74,6 +74,8 @@ try {
     $pdo->exec("ALTER TABLE admins MODIFY COLUMN role ENUM('administrator','assistant','veilingmeester') NOT NULL DEFAULT 'administrator'");
     visitor_geo_set_enabled($pdo);
     $pdo->exec('DELETE FROM visitor_geo_daily');
+    $pdo->exec('DELETE FROM visitor_stats_ip_exclusions');
+    analytics_ip_set_exclusion($pdo, true);
     $pdo->exec('DELETE FROM visitor_stats_daily');
     $pdo->exec('UPDATE settings SET is_published=0,is_site_online=1 WHERE id=1');
     $insert = $pdo->prepare('INSERT INTO lots (lot_number,title,category,description,details,status) VALUES (?,?,?,?,?,?)');
@@ -94,8 +96,8 @@ try {
     preview_check($status === 200 && !str_contains($body,'ADMINVOORBEELD') && !str_contains($body,'Preview fixture'), 'Login alone or GET flag cannot enter preview');
     $before = preview_views();
     $geoBefore = (int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM visitor_geo_daily')->fetchColumn();
-    preview_check($geoBefore >= 2, 'Ordinary geo views calibrated before preview');
-    preview_check($before >= 2, 'Real ordinary browser views are counted before preview');
+    preview_check($geoBefore >= 1, 'Ordinary geo views calibrated before preview');
+    preview_check($before >= 1, 'Real ordinary browser views are counted before preview');
     [$status] = preview_request('/index.php', ['admin_preview_action'=>'start','csrf'=>'invalid']);
     preview_check($status === 403, 'Missing valid CSRF blocks preview activation');
     [$status] = preview_request('/index.php', ['admin_preview_action'=>'start','csrf'=>$csrf]);
@@ -122,7 +124,7 @@ try {
     preview_check((int)settings()['is_published'] === 0, 'Preview does not publish global settings');
     [$status,$body] = preview_request('/index.php', null, true);
     preview_check($status === 200 && !str_contains($body,'ADMINVOORBEELD') && !str_contains($body,'Preview fixture'), 'Concurrent public session remains unaffected');
-    preview_check(preview_views() === $before+1, 'Concurrent ordinary visitor is still counted');
+    preview_check(preview_views() === $before, 'Another session at the same admin IP is also excluded');
     $before = preview_views();
     [$status] = preview_request('/index.php', ['admin_preview_action'=>'stop','csrf'=>'invalid']);
     preview_check($status === 403, 'CSRF also protects closing preview');
@@ -159,7 +161,7 @@ try {
     preview_check($status === 303, 'Logout destroys the preview session');
     $before = preview_views();
     [$status,$body] = preview_request('/index.php');
-    preview_check($status === 200 && !str_contains($body,'ADMINVOORBEELD') && preview_views() === $before+1, 'After logout normal visitor collection resumes');
+    preview_check($status === 200 && !str_contains($body,'ADMINVOORBEELD') && preview_views() === $before, 'After logout the stored admin IP remains excluded');
 } finally {
     $pdo->prepare('UPDATE settings SET is_published=?,is_site_online=? WHERE id=1')->execute([$settingsBefore['is_published'],$settingsBefore['is_site_online'] ?? 1]);
     $pdo->prepare('UPDATE admins SET password_hash=?,is_active=?,role=? WHERE id=?')->execute([$accountBefore['password_hash'],$accountBefore['is_active'],$accountBefore['role'],$accountBefore['id']]);

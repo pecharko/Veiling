@@ -238,11 +238,12 @@ PHP;
        'SIGKILL during finalization preserves old photos in private and leaves journal active');
 
     file_put_contents($receipt,'not valid JSON',LOCK_EX);
+    clearstatcache(true); // The killed child changed directories observed by this long-running test.
     $invalidReceipt=recovery_finalize_plan($pdo,$safety,$operator);
     finalize_test($invalidReceipt['ready']===false
        &&$invalidReceipt['reason']==='invalid_existing_approval_receipt'
        &&restore_journal_pending(),
-       'corrupt previous approval receipt leaves interrupted restore in maintenance');
+       'corrupt previous approval receipt leaves interrupted restore in maintenance (actual: '.$invalidReceipt['reason'].')');
     unlink($receipt);
     file_put_contents($receipt,json_encode([
         'format'=>'41lokeren-restore-finalized-v1',

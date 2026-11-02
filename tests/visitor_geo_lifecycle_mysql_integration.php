@@ -25,6 +25,8 @@ function lc_install(PDO $pdo,string $path): void {
     $sql=preg_replace('/^\s*--[^\n]*$/m','',(string)file_get_contents(dirname(__DIR__).'/'.$path));
     foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='')$pdo->exec($statement);
 }
+lc_install($pdo,'database/migrations/20261102_visitor_stats_ip_exclusions.sql');
+$pdo->exec('DELETE FROM visitor_stats_ip_exclusions');analytics_ip_set_exclusion($pdo,true);
 lc_install($pdo,'database/visitor_stats.sql');lc_install($pdo,'database/visitor_stats_aggregates.sql');
 $_SERVER=['REQUEST_METHOD'=>'GET','REMOTE_ADDR'=>'192.0.2.10','HTTP_USER_AGENT'=>'Geo lifecycle browser'];
 lc_check(visitor_geo_state($pdo)===null,'No migration means disabled');

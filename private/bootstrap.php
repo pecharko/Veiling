@@ -176,15 +176,16 @@ function admin_preview_active(): bool {
   return true;
 }
 
-function admin_preview_statistics_suppressed(): bool {
-  return admin_preview_session_present() && ($_SESSION['admin_preview_no_stats'] ?? false) === true;
-}
-
 function admin_preview_banner(): void {
   if (!admin_preview_active()) return;
+  require_once __DIR__ . '/analytics_control.php';
+  try { $excluded = analytics_ip_is_excluded(db()); }
+  catch (Throwable $e) { $excluded = true; } // Tracker also fails closed on unavailable state.
+  $statistics = $excluded ? 'Voor dit IP-adres worden geen bezoekersstatistieken verzameld.'
+    : 'IP-uitsluiting staat uit of dit IP-adres is niet opgeslagen. Statistieken kunnen worden verzameld.';
   echo '<style>.admin-preview-banner{position:sticky;top:0;z-index:110}.admin-preview-banner~.site-header{top:var(--admin-preview-height,0px)!important}</style>'
     . '<aside class="admin-preview-banner" role="status" aria-label="Adminvoorbeeld" style="background:#fff3cc;color:#332900;padding:12px 20px;border-bottom:2px solid #9b7300;font:15px/1.5 system-ui;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap">'
-    . '<strong>ADMINVOORBEELD</strong><span>Kavels zijn zichtbaar voor deze beheersessie. Er worden geen bezoekersstatistieken verzameld.</span>'
+    . '<strong>ADMINVOORBEELD</strong><span>Kavels zijn zichtbaar voor deze beheersessie. ' . e($statistics) . '</span>'
     . '<a href="' . e(url('admin/index.php')) . '" style="color:inherit;text-decoration:underline">Terug naar beheer</a>'
     . '<form method="post" action="' . e(url('index.php')) . '" style="margin:0"><input type="hidden" name="admin_preview_action" value="stop">'
     . csrf_field() . '<button type="submit" style="font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;padding:4px 10px;cursor:pointer">Voorbeeld sluiten</button></form></aside>'

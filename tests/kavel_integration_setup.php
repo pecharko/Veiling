@@ -111,4 +111,7 @@ if (!preg_match('/CREATE TABLE admin_invitations \\([\\s\\S]*?\\) ENGINE=InnoDB 
 }
 $pdo->exec($invitationDdl[0]);
 $pdo->exec("INSERT INTO settings (id,title,introduction,practical_info) VALUES (1,'CI catalogus','','')");
+$ipMigration = file_get_contents($dir . '/database/migrations/20261102_visitor_stats_ip_exclusions.sql');
+$ipMigration = preg_replace('/^\s*--[^\n]*$/m', '', (string)$ipMigration);
+foreach (explode(';', (string)$ipMigration) as $sql) if (trim($sql) !== '') $pdo->exec($sql);
 echo "Isolated MySQL schema ready; production is not accessed.\n";

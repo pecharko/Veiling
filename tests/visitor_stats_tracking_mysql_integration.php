@@ -12,9 +12,11 @@ $pdo->exec('CREATE TABLE visitor_stats_daily (visit_date DATE NOT NULL, visitor_
 $secret = str_repeat('a', 64);
 function cfg(string $key): ?string { global $secret; return $key === 'analytics_secret' ? $secret : null; }
 function db(): PDO { global $pdo; return $pdo; }
-$previewSession = false;
-function admin_preview_statistics_suppressed(): bool { global $previewSession; return $previewSession; }
 require dirname(__DIR__) . '/private/visitor_stats.php';
+$ipSql = preg_replace('/^\s*--[^\n]*$/m', '', (string)file_get_contents(dirname(__DIR__).'/database/migrations/20261102_visitor_stats_ip_exclusions.sql'));
+foreach (explode(';',(string)$ipSql) as $sql) if (trim($sql) !== '') $pdo->exec($sql);
+$pdo->exec('DELETE FROM visitor_stats_ip_exclusions');
+analytics_ip_set_exclusion($pdo,true);
 function failUnless(bool $condition, string $description): void { if (!$condition) throw new RuntimeException($description); }
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_SERVER['REMOTE_ADDR'] = '192.0.2.1';
@@ -43,11 +45,28 @@ $secret = '';
 track_catalog_view();
 failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Skipped visits unexpectedly counted');
 $secret = str_repeat('a', 64);
-$previewSession = true;
+analytics_ip_register_login($pdo,7);
+$created = $pdo->query('SELECT created_at FROM visitor_stats_ip_exclusions')->fetchColumn();
+analytics_ip_register_login($pdo,7);
+failUnless((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 1
+    && $pdo->query('SELECT created_at FROM visitor_stats_ip_exclusions')->fetchColumn() === $created, 'Existing IP/admin pair must be an unchanged no-op');
+analytics_ip_register_login($pdo,8);
+failUnless((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 2, 'Shared IP retains both admin IDs');
+failUnless(analytics_ip_key('::ffff:192.0.2.2') === analytics_ip_key('192.0.2.2'), 'Mapped IPv4 normalizes identically');
+failUnless(analytics_ip_key('2001:db8::1') === analytics_ip_key('2001:0db8:0:0:0:0:0:1'), 'IPv6 alternate spelling normalizes identically');
+$_SERVER['REMOTE_ADDR'] = '::ffff:192.0.2.2';
 track_catalog_view();
 track_catalog_view(7);
-failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Admin preview session must not record home or lot views');
-$previewSession = false;
+failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Stored admin IP must not record home or lot views');
+analytics_ip_set_exclusion($pdo,false);
 track_catalog_view();
-failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 5, 'Ordinary collection must remain enabled');
+failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 5, 'Disabling exclusion restores ordinary collection');
+analytics_ip_set_exclusion($pdo,true);
+track_catalog_view();
+failUnless((int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily')->fetchColumn() === 5, 'Re-enabling exclusion reuses retained addresses');
+$_SERVER['REMOTE_ADDR'] = '192.0.2.44';
+$_SERVER['HTTP_X_FORWARDED_FOR'] = '192.0.2.2';
+track_catalog_view();
+failUnless((int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily')->fetchColumn() === 6, 'Spoofed forwarding header cannot exclude another visitor');
+$pdo->exec('DELETE FROM visitor_stats_ip_exclusions');
 echo "PASS isolated MySQL visitor writes and suppression contracts\n";

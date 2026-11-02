@@ -129,7 +129,9 @@ jobs:
           set -euo pipefail
           php -d upload_max_filesize=1K -d post_max_size=10M -S localhost:8090 -t catalogus-public > /tmp/kavel-test-http.log 2>&1 &
           server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          php -S 127.0.0.1:8091 -t catalogus-public > /tmp/ip-test-http.log 2>&1 &
+          ip_server_pid=$!
+          trap 'kill "$server_pid" "$ip_server_pid" 2>/dev/null || true' EXIT
           for attempt in {1..25}; do
             if curl -fsS -o /dev/null http://localhost:8090/admin/login.php; then
               break
@@ -139,6 +141,7 @@ jobs:
           php tests/kavel_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/visitor_geo_admin_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/admin_website_preview_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
+          php tests/admin_ip_exclusions_http_integration.php || { tail -n 70 /tmp/ip-test-http.log; exit 1; }
           NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node tests/admin_preview_banner_browser.cjs || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
 
       - name: Test full catalog reset in disposable MySQL database
