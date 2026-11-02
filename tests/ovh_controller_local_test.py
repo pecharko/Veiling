@@ -14,7 +14,8 @@ ROOT=Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT/'scripts'),str(ROOT/'tests')]
 import ovh_controller_local as local
 import owner_bound_dispatch as guard
-from owner_bound_dispatch_ledger import Ledger,canonical
+from owner_bound_dispatch_ledger import canonical
+from ovh_controller_release_lifecycle import MacReleaseLedger as Ledger
 from owner_bound_dispatch_integration_test import API,NONCE,CI_QUERY
 from ovh_controller_claim_adapter_test import ovh_api
 from shared_ovh_controller_adapter_test import NOW
@@ -150,9 +151,35 @@ class OperatorTests(unittest.TestCase):
         self.assertFalse(self.posts)
         with self.assertRaises(ValueError): Ledger(self.paths['attempt_journal']).read(NONCE)
 
+    def test_explicit_upgrade_is_local_and_preserves_old_claim(self):
+        from owner_bound_dispatch_ledger import Ledger as LegacyLedger
+        old=self.root/'legacy.sqlite';LegacyLedger.provision(old)
+        with patch.object(local,'token',side_effect=AssertionError('Credential read')), \
+             patch('sys.stdout',new_callable=io.StringIO) as out:
+            self.assertEqual(local.main(['upgrade-journal','--journal',str(old)]),0)
+        self.assertEqual(json.loads(out.getvalue())['status'],'LOCAL_JOURNAL_UPGRADED_NO_NETWORK')
+        self.assertTrue(Path(str(old)+'.v1-backup.sqlite').is_file())
+        Ledger(old)
+
+    def test_complete_fetches_personal_acceptance_and_artifacts_without_dispatch_token(self):
+        import ovh_controller_release_lifecycle as life
+        from ovh_controller_release_lifecycle_test import proof_api
+        from ovh_controller_claim_adapter_test import binding_fixture
+        binding=binding_fixture();self.api=proof_api(binding)
+        ledger=Ledger(self.paths['attempt_journal']);ledger.reserve(binding)
+        ledger.transition(binding,'RESERVED','ATTEMPTED');ledger.transition(binding,'ATTEMPTED','ACCEPTED')
+        original=local.token;read=[]
+        def tok(path): read.append(path);return original(path)
+        with patch.object(local,'token',side_effect=tok),patch.object(life,'datetime') as clock:
+            clock.now.return_value=NOW
+            code,result=self.cli('complete','--nonce',binding['nonce'],'--run-id','123','--acceptance-comment-id','78')
+        self.assertEqual((code,result['status']),(0,'COMPLETED_NO_DISPATCH'))
+        self.assertEqual(read,[self.paths['read_token']]);self.assertFalse(self.posts)
+        self.assertEqual(ledger.read(binding['nonce'])['state'],'COMPLETED')
+
     def test_separate_process_uses_persistent_journal_instead_of_reinitializing(self):
         self.cli('attempt')
-        source="import sys;sys.path.insert(0,'scripts');from owner_bound_dispatch_ledger import Ledger;from ovh_controller_local import configuration;cfg=configuration(sys.argv[1],sys.argv[2]);db=Ledger(cfg['paths']['attempt_journal']);row=db.read(sys.argv[3]);assert row['state']=='ACCEPTED';assert db.reserve(row['binding']) is False;print('BLOCKED')"
+        source="import sys;sys.path.insert(0,'scripts');from ovh_controller_release_lifecycle import MacReleaseLedger as Ledger;from ovh_controller_local import configuration;cfg=configuration(sys.argv[1],sys.argv[2]);db=Ledger(cfg['paths']['attempt_journal']);row=db.read(sys.argv[3]);assert row['state']=='ACCEPTED';assert db.reserve(row['binding']) is False;print('BLOCKED')"
         p=subprocess.run([sys.executable,'-B','-c',source,str(self.path),self.pin,NONCE],
                          cwd=ROOT,capture_output=True,timeout=10)
         self.assertEqual(p.returncode,0,p.stderr);self.assertEqual(p.stdout,b'BLOCKED\n')

@@ -51,6 +51,8 @@ function settings(): array {
  * until the separately approved database migration is performed.
  */
 function require_public_site_online(): void {
+  header('Vary: Cookie', false);
+  admin_preview_active(); // Validate preview identity before public output/tracking.
   $s = settings();
   if ((int)($s['is_site_online'] ?? 1) === 1) return;
   http_response_code(503);
@@ -150,6 +152,42 @@ function admin_session(): void {
   ]);
   session_start();
 }
+
+/** Public visitors never receive a new admin session just to check preview. */
+function admin_preview_session_present(): bool {
+  if (session_status() === PHP_SESSION_ACTIVE) return session_name() === 'catalog_admin';
+  if (session_status() !== PHP_SESSION_NONE || !is_string($_COOKIE['catalog_admin'] ?? null)
+      || $_COOKIE['catalog_admin'] === '') return false;
+  admin_session();
+  return session_status() === PHP_SESSION_ACTIVE && session_name() === 'catalog_admin';
+}
+
+/** The flag is server-side only; every preview request revalidates the account. */
+function admin_preview_active(): bool {
+  static $verified = false;
+  if (!admin_preview_session_present()) return false;
+  $id = $_SESSION['admin_id'] ?? null;
+  if (!is_int($id) || $id <= 0 || ($_SESSION['admin_catalog_preview'] ?? null) !== $id) return false;
+  if (!$verified) {
+    require_auth(); // Existing active-account, password-proof and role checks.
+    require_no_index();
+    $verified = true;
+  }
+  return true;
+}
+
+function admin_preview_statistics_suppressed(): bool {
+  return admin_preview_session_present() && ($_SESSION['admin_preview_no_stats'] ?? false) === true;
+}
+
+function admin_preview_banner(): void {
+  if (!admin_preview_active()) return;
+  echo '<aside role="status" aria-label="Adminvoorbeeld" style="background:#fff3cc;color:#332900;padding:12px 20px;border-bottom:2px solid #9b7300;font:15px/1.5 system-ui;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap">'
+    . '<strong>ADMINVOORBEELD</strong><span>Kavels zijn zichtbaar voor deze beheersessie. Er worden geen bezoekersstatistieken verzameld.</span>'
+    . '<a href="' . e(url('admin/index.php')) . '" style="color:inherit;text-decoration:underline">Terug naar beheer</a>'
+    . '<form method="post" action="' . e(url('index.php')) . '" style="margin:0"><input type="hidden" name="admin_preview_action" value="stop">'
+    . csrf_field() . '<button type="submit" style="font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;padding:4px 10px;cursor:pointer">Voorbeeld sluiten</button></form></aside>';
+}
 function csrf_token(): string {
   admin_session();
   if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(24));
@@ -188,6 +226,7 @@ function admin_top(string $title): void {
   $flash = take_flash();
   $home = e(url('admin/index.php'));
   $public = e(url('index.php'));
+  $publicPreview = '<form method="post" action="' . $public . '" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;margin:0"><input type="hidden" name="admin_preview_action" value="start">' . csrf_field() . '<button class="admin-logout-button" type="submit">Bekijk website ↗</button></form>';
   $edit = e(url('admin/kavel.php'));
   $auctionOrganise = e(url('admin/veiling-organisatie.php'));
   $settings = e(url('admin/instellingen.php'));
@@ -206,7 +245,7 @@ function admin_top(string $title): void {
   $roleIndicator = '<span class="admin-active-role" aria-label="Actieve rol: ' . $activeRoleLabel . '">Rol: ' . $activeRoleLabel . '</span>';
   $reportIssue = '<a class="admin-report-issue" href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer" aria-label="Probleem of verbetering melden op GitHub (opent in nieuw tabblad)">⚠ Probleem melden</a>';
   $roleSwitchNav = $isOriginalAdministrator ? '<a href="' . $roleSwitch . '">Rol wisselen (' . e(effective_admin_role()) . ')</a>' : '';
-  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><div class="admin-brand-row"><a href="' . $home . '" class="admin-logo">Website Beheer</a>' . $roleIndicator . $reportIssue . '</div><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . '<a href="' . $public . '" target="_blank" rel="noopener noreferrer">Bekijk website ↗</a>' . '<a href="' . $rolesHelp . '">Rollen &amp; rechten</a>' . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
+  echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><div class="admin-brand-row"><a href="' . $home . '" class="admin-logo">Website Beheer</a>' . $roleIndicator . $reportIssue . '</div><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . $publicPreview . '<a href="' . $rolesHelp . '">Rollen &amp; rechten</a>' . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {

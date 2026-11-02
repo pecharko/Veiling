@@ -113,3 +113,78 @@ readback en functionele browseracceptatie blijven vereist. Er worden geen
 workflowpermissions, productieomgevinggates, secrets of OVH-rechten gewijzigd.
 Geen daemon, scheduler, automatische vrijgave of retry. Uitbreiding naar
 onbeheerde/redundante uitvoering is geen onderdeel van versie 1.
+
+## Opeenvolgende releases: expliciete afronding (journalversie 2)
+
+De Mac blijft de gecontroleerde opslagautoriteit buiten OVH-webhosting. Gebruik
+altijd hetzelfde journal. Deze uitbreiding activeert niets en wijzigt geen
+credentials, GitHub-rechten, productie-SQL of deploymentworkflow. Upgrade en
+lokale afronding worden pas uitgevoerd na afzonderlijk toepasselijke toestemming.
+
+Een bestaande versie-1-database wordt nooit automatisch gemigreerd. Met de
+nieuwe, exact beoordeelde checkout en afzonderlijke lokale autorisatie:
+
+```bash
+python3 scripts/ovh_controller_local.py upgrade-journal --journal /Users/NAAM/.veiling-controller/attempt.sqlite
+```
+
+Dit controleert de oorspronkelijke schema/index, bewaart onder een schrijfslot
+een exclusief aangemaakte private `attempt.sqlite.v1-backup.sqlite`, migreert
+atomair en vergelijkt alle oorspronkelijke claimvelden. De oude ACCEPTED/
+UNKNOWN/ATTEMPTED/reserveringsstatus blijft staan. Een bestaand backupbestand,
+onbekend schema of fout stopt zonder vrijgave. De backup is bewijs; herstel die
+niet over het huidige journal. Initialiseer geen tweede journal als omweg.
+
+Alleen een ACCEPTED claim kan vervolgens COMPLETED worden. UNKNOWN, ATTEMPTED en
+RESERVED blijven geblokkeerd. Eerst controleert de eigenaar de onafhankelijke
+readback en browserwerking en plaatst persoonlijk een **nieuw, onbewerkt**
+comment op het oorspronkelijke eigenaarissue, met exact onderstaande tekst en
+de werkelijke oude waarden (zonder codeblok):
+
+```text
+ACCEPT MAC RELEASE WITH READBACK
+nonce=OUDE_NONCE
+release_id=OUDE_RELEASE_ID
+release_sha=OUDE_MAIN_SHA
+run_id=WERKELIJKE_RUN_ID
+acceptance=READBACK-AND-BROWSER-ACCEPTED
+```
+
+Dit comment moet na de succesvolle run zijn geplaatst en hoogstens 24 uur oud
+zijn. Het is een persoonlijke attestatie van readback/browseracceptatie; de
+controller voert zelf geen onafhankelijke SFTP/browsercontrole uit. Een publieke
+HTTPS-hash bewijst publieke bereikbaarheid/bytes, geen geauthenticeerde directe
+OVH-originreadback. De eigenaar moet die beperking bij acceptatie beoordelen.
+Een agent plaatst dit comment niet namens de eigenaar.
+
+Na afzonderlijke lokale toestemming:
+
+```bash
+python3 scripts/ovh_controller_local.py complete --config /Users/NAAM/.veiling-controller/controller.json --config-sha256 CONFIG_SHA256 --nonce OUDE_NONCE --run-id WERKELIJKE_RUN_ID --acceptance-comment-id NIEUW_PERSOONLIJK_COMMENT_ID
+```
+
+Dit leest uitsluitend het read-token. Onafhankelijke vaste GitHub-GETs controleren
+het oorspronkelijke ownercomment, het verse acceptatiecomment, één unieke
+succesvolle eerste workflowpoging op de oude immutable main, het oude manifest,
+alle readback-hashes en beide onexpired evidence-/rollback-artifacts. ZIP-digests,
+backupmetadata en alle vorige bestandsbytes moeten overeenkomen. Pas daarna
+wordt atomair een receipt opgeslagen en de claim COMPLETED. Er volgt geen POST.
+Geen claim of nonce wordt verwijderd: nonce, issue/comment en release-ID blijven
+voor altijd uniek/verbruikt. Run-correlatie bewijst geen cryptografische echo van
+de oorspronkelijke POST; de oorspronkelijke reconciliatiebeperkingen blijven
+bestaan. Een mislukte of onzekere afronding wordt uitsluitend read-only onderzocht.
+
+Een volgende release vereist een nieuw exact goedgekeurd manifest, immutable
+main met onafhankelijke push-CI, nieuw persoonlijk eigenaarcomment en nieuwe
+nonce/release-ID. Wijzig pas dan de private configuratie en controleer haar nieuwe
+SHA-256. De bestaande `review` en één `attempt` gelden opnieuw; afronding is geen
+volgende productieautorisatie en start nooit automatisch een release.
+
+Voor één feature-PR accepteert de evidencelezer nu ook een succesvolle eerste
+`shared-ovh-readonly-preflight.yml`-run op main. Het authenticieke artifact bevat
+alleen `shared-ovh-readonly-baselines.json`. De oorspronkelijke bronhashes worden
+gecontroleerd tegen onafhankelijk opgehaalde bestanden op de preflight-SHA; de
+nieuwe bronhashes tegen de uiteindelijke main. Padvolgorde en remote baselines
+moeten exact gelijk zijn, de ZIP-digest moet kloppen. Er is geen release-request
+of tweede manifest-PR nodig. De oude auto-manifestroute blijft ongewijzigd strikt;
+alleen daar bestaat het eerder beoordeelde herstel voor geweigerde bot-PR-aanmaak.

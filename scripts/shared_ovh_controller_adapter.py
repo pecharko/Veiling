@@ -16,6 +16,14 @@ PREFLIGHT_WORKFLOW = re.compile(
     r"^(?:pecharko/Veiling/)?\.github/workflows/shared-ovh-auto-manifest\.yml"
     r"(?:@(?:refs/heads/)?main)?$"
 )
+READONLY_WORKFLOW = re.compile(
+    r"^(?:pecharko/Veiling/)?\.github/workflows/shared-ovh-readonly-preflight\.yml"
+    r"(?:@(?:refs/heads/)?main)?$"
+)
+
+
+def single_pr_preflight(run):
+    return isinstance(run, dict) and isinstance(run.get('path'), str) and bool(READONLY_WORKFLOW.fullmatch(run['path']))
 PREFIX = "DEPLOY SHARED OVH MANIFEST WITH ROLLBACK"
 RELEASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 SHA = re.compile(r"^[a-f0-9]{40}$")
@@ -212,8 +220,14 @@ def verify_preflight(approval, run, artifact_inventory, now, comment_created,
             or run.get("status") != "completed"
             or run.get("conclusion") not in ("success", "failure")
             or not isinstance(run.get("path"), str)
-            or not PREFLIGHT_WORKFLOW.fullmatch(run["path"])):
+            or not (PREFLIGHT_WORKFLOW.fullmatch(run["path"]) or single_pr_preflight(run))):
         raise ValueError("Untrusted or unsuccessful read-only preflight")
+    single = single_pr_preflight(run)
+    if single and (run.get('conclusion') != 'success' or run.get('event') != 'workflow_dispatch'
+                   or type(run.get('run_attempt')) is not int or run['run_attempt'] != 1
+                   or run.get('repository',{}).get('full_name') != REPO
+                   or run.get('head_repository',{}).get('full_name') != REPO):
+        raise ValueError('Single-PR preflight provenance/attempt mismatch')
     # A red run is NEVER treated as run success; only the named API-PR failure
     # may be independently recovered. The immutable artifact/manifest/source
     # checks below must still succeed for either outcome.
@@ -225,7 +239,9 @@ def verify_preflight(approval, run, artifact_inventory, now, comment_created,
     _require_fresh(started, now, "Read-only preflight")
     if started > comment_created:
         raise ValueError("Approval predates its read-only preflight")
-    expected = "readonly-release-" + str(run["id"])
+    if single and _datetime(run.get('updated_at')) > comment_created:
+        raise ValueError('Owner approval predates completed baseline measurement')
+    expected = ("shared-ovh-readonly-" if single else "readonly-release-") + str(run["id"])
     if not isinstance(artifact_inventory, list):
         raise ValueError("Missing GitHub preflight artifact inventory")
     matches = [a for a in artifact_inventory
@@ -233,6 +249,8 @@ def verify_preflight(approval, run, artifact_inventory, now, comment_created,
     if len(matches) != 1:
         raise ValueError("Missing or duplicate read-only preflight artifact")
     artifact = matches[0]
+    if single and artifact.get('workflow_run',{}).get('head_sha') != approval['preflight_sha']:
+        raise ValueError('Baseline artifact belongs to another source snapshot')
     if (artifact.get("expired") is not False
             or type(artifact.get("id")) is not int or artifact["id"] <= 0
             or "workflow_run" in artifact and
@@ -288,7 +306,7 @@ def build_dispatch_command(approval):
 def review_offline(text, *, issue, comment, previously_closed, run,
                    artifact_inventory, artifact_files, manifest_bytes,
                    request_at_main, request_at_preflight, current_main_sha,
-                   source_hashes, now, preflight_jobs=None):
+                   source_hashes, now, preflight_jobs=None, preflight_source_hashes=None):
     """Offline plan only; all inputs must be independently fetched by a future guard.
 
     No authorization is consumed and no dispatch is started. The caller must
@@ -314,23 +332,33 @@ def review_offline(text, *, issue, comment, previously_closed, run,
     manifest = _json_bytes(manifest_bytes)
     _validate_manifest(manifest, approval)
     paths = [row["path"] for row in approval["files"]]
-    if (not isinstance(request_at_main, bytes)
+    single = single_pr_preflight(run)
+    if not single and (not isinstance(request_at_main, bytes)
             or not isinstance(request_at_preflight, bytes)
             or request_at_main != request_at_preflight):
         raise ValueError("Release request differs between preflight and latest main")
-    _validate_request(request_at_main, paths)
+    if not single:
+        _validate_request(request_at_main, paths)
     if (not isinstance(source_hashes, dict) or set(source_hashes) != set(paths)
             or any(not isinstance(v, str) or not HASH.fullmatch(v)
                    for v in source_hashes.values())
             or any(source_hashes[row["path"]] != row["source_sha256"]
                    for row in approval["files"])):
         raise ValueError("Current main source files do not match reviewed manifest")
-    if not isinstance(artifact_files, dict) or set(artifact_files) != {
+    if single:
+        if not isinstance(artifact_files,dict) or set(artifact_files)!={'shared-ovh-readonly-baselines.json'}:
+            raise ValueError('Unexpected single-PR baseline artifact members')
+        baseline = _json_bytes(artifact_files['shared-ovh-readonly-baselines.json'])
+        if type(preflight_source_hashes) is not dict or set(preflight_source_hashes)!=set(paths):
+            raise ValueError('Missing independently retrieved preflight source bytes')
+        expected = [{**row,'source_sha256':preflight_source_hashes[row['path']]} for row in approval['files']]
+        _validate_manifest(baseline,{'files':expected})
+    elif not isinstance(artifact_files, dict) or set(artifact_files) != {
         "shared-ovh-readonly-baselines.json",
         "releases/" + approval["release_id"] + ".json"
     }:
         raise ValueError("Missing or unexpected preflight artifact members")
-    if any(data != manifest_bytes for data in artifact_files.values()):
+    if not single and any(data != manifest_bytes for data in artifact_files.values()):
         raise ValueError("Artifact bytes do not match immutable approved manifest")
     return {
         "status": "OFFLINE_CONTRACT_VERIFIED",

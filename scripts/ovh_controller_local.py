@@ -11,7 +11,8 @@ from pathlib import Path
 import stat
 
 from owner_bound_dispatch import GitHubDispatch, _attempt_once, reconcile
-from owner_bound_dispatch_ledger import Ledger, binding_digest
+from owner_bound_dispatch_ledger import binding_digest
+from ovh_controller_release_lifecycle import MacReleaseLedger as Ledger, verify_completion
 from ovh_controller_claim_adapter import OvhEvidence
 from shared_ovh_controller_adapter import HASH, _json_bytes
 from datetime import datetime, timezone
@@ -78,7 +79,7 @@ def components(cfg,*,dispatch=False):
     return reader,ledger,sender
 
 
-def run(mode,cfg,*,nonce=None):
+def run(mode,cfg,*,nonce=None,run_id=None,acceptance_comment_id=None):
     if mode=='check': return {**DENIED,'status':'LOCAL_CONFIG_VALID_NO_NETWORK'}
     if mode=='review':
         reader=OvhEvidence(token(cfg['paths']['read_token']))
@@ -91,41 +92,56 @@ def run(mode,cfg,*,nonce=None):
         if type(nonce) is not str or not HASH.fullmatch(nonce): raise ValueError('Exact nonce required')
         reader,ledger,_=components(cfg)
         return reconcile(reader,ledger,nonce)
+    if mode=='complete':
+        if type(nonce) is not str or not HASH.fullmatch(nonce): raise ValueError('Exact nonce required')
+        reader,ledger,_=components(cfg)
+        proof=verify_completion(reader,ledger,nonce,run_id,acceptance_comment_id)
+        ledger.complete(ledger.read(nonce)['binding'],proof)
+        return {**DENIED,'status':'COMPLETED_NO_DISPATCH','completed_run_id':run_id}
     raise ValueError('Unknown operation')
 
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description='One manually started owner-bound OVH controller attempt')
-    parser.add_argument('mode',nargs='?',choices=('init-journal','check','review','attempt','reconcile'))
+    parser.add_argument('mode',nargs='?',choices=('init-journal','upgrade-journal','check','review','attempt','reconcile','complete'))
     parser.add_argument('--config')
     parser.add_argument('--config-sha256')
     parser.add_argument('--nonce')
     parser.add_argument('--journal')
+    parser.add_argument('--run-id',type=int)
+    parser.add_argument('--acceptance-comment-id',type=int)
     args=parser.parse_args(argv)
     if args.mode is None:
         print(json.dumps(DENIED,sort_keys=True));return 78
     try:
-        if args.mode=='init-journal':
-            if any(v is not None for v in (args.config,args.config_sha256,args.nonce)):
+        if args.mode in ('init-journal','upgrade-journal'):
+            if any(v is not None for v in (args.config,args.config_sha256,args.nonce,args.run_id,args.acceptance_comment_id)):
                 raise ValueError('Journal initialization accepts no runtime inputs')
             path=Path(args.journal)
             parent=path.parent
             if (not path.is_absolute() or str(parent.resolve())!=str(parent)
                     or stat.S_IMODE(parent.stat().st_mode)!=0o700 or parent.stat().st_uid!=os.geteuid()):
                 raise ValueError('Pre-existing private absolute directory required')
-            Ledger.provision(path)
+            if args.mode=='upgrade-journal':
+                private_path(str(path))
+                Ledger.upgrade(path)
+            else:
+                Ledger.provision(path)
             for p in (path,parent):
                 fd=os.open(p,os.O_RDONLY)
                 try: os.fsync(fd)
                 finally: os.close(fd)
-            print(json.dumps({**DENIED,'status':'LOCAL_JOURNAL_CREATED_NO_NETWORK'},sort_keys=True));return 0
+            status='LOCAL_JOURNAL_UPGRADED_NO_NETWORK' if args.mode=='upgrade-journal' else 'LOCAL_JOURNAL_CREATED_NO_NETWORK'
+            print(json.dumps({**DENIED,'status':status},sort_keys=True));return 0
         if args.journal is not None: raise ValueError('Unexpected journal provisioning input')
-        if args.nonce is not None and args.mode!='reconcile': raise ValueError('Unexpected nonce')
+        if args.nonce is not None and args.mode not in ('reconcile','complete'): raise ValueError('Unexpected nonce')
+        if args.mode!='complete' and any(v is not None for v in (args.run_id,args.acceptance_comment_id)):
+            raise ValueError('Unexpected completion identity')
         cfg=configuration(args.config,args.config_sha256)
-        result=run(args.mode,cfg,nonce=args.nonce)
+        result=run(args.mode,cfg,nonce=args.nonce,run_id=args.run_id,acceptance_comment_id=args.acceptance_comment_id)
         print(json.dumps(result,sort_keys=True))
         return 0 if result['status'] in ('LOCAL_CONFIG_VALID_NO_NETWORK','VERIFIED_READ_ONLY',
-                                        'READ_ONLY_RECONCILIATION','ACCEPTED_RECONCILIATION_REQUIRED') else 75
+                                        'READ_ONLY_RECONCILIATION','ACCEPTED_RECONCILIATION_REQUIRED','COMPLETED_NO_DISPATCH') else 75
     except Exception:
         print(json.dumps({**DENIED,'status':'STOP_NO_RETRY'},sort_keys=True));return 75
 

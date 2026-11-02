@@ -10,6 +10,9 @@ require_once __DIR__ . '/visitor_geo_lookup.php';
 
 function track_catalog_view(?int $lotId = null): void
 {
+    // Standalone analytics fixtures do not load the web bootstrap. A real
+    // preview can only be activated by that authenticated bootstrap/session.
+    if (function_exists('admin_preview_statistics_suppressed') && admin_preview_statistics_suppressed()) return;
     if (!analytics_collection_enabled()) return;
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
     if (($_SERVER['HTTP_DNT'] ?? '') === '1') return;

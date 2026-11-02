@@ -481,5 +481,61 @@ class GitHubEvidenceReadOnlyTests(unittest.TestCase):
         self.assertTrue(callable(reader.collect_review))
 
 
+
+class SinglePrBaselineTests(unittest.TestCase):
+    def fixture(self):
+        responses,data=make_api()
+        run=responses['/actions/runs/400']
+        run.update(path='.github/workflows/shared-ovh-readonly-preflight.yml',event='workflow_dispatch',run_attempt=1,
+                   repository={'full_name':'pecharko/Veiling'},head_repository={'full_name':'pecharko/Veiling'},updated_at=run['created_at'])
+        baseline=json.loads(data['artifact_files']['shared-ovh-readonly-baselines.json'])
+        for row in baseline['files']:
+            raw=('older source '+row['path']).encode()
+            row['source_sha256']=hashlib.sha256(raw).hexdigest()
+            responses['/contents/'+row['path']+'?ref='+PRE_SHA]=git_item(raw)
+        blob=archive({'shared-ovh-readonly-baselines.json':encode(baseline)})
+        responses['/actions/artifacts/321/zip']=blob
+        artifact=responses['/actions/runs/400/artifacts?per_page=100']['artifacts'][0]
+        artifact['workflow_run']['head_sha']=PRE_SHA
+        artifact.update(name='shared-ovh-readonly-400',digest='sha256:'+hashlib.sha256(blob).hexdigest())
+        for key in list(responses):
+            if key.startswith('/contents/release-requests/'):del responses[key]
+        return responses
+
+    def test_real_old_sources_and_new_manifest_verified_without_release_request(self):
+        result,calls=review(self.fixture())
+        self.assertEqual(result['status'],'OFFLINE_CONTRACT_VERIFIED')
+        self.assertFalse(any('/release-requests/' in p for p in calls))
+        self.assertEqual(sum('?ref='+PRE_SHA in p and p.startswith('/contents/') for p in calls),2)
+
+    def test_forged_sources_remote_paths_artifact_and_run_fail_closed(self):
+        import copy
+        original=self.fixture()
+        mutations=[lambda a:a['/actions/runs/400'].update(conclusion='failure'),
+                   lambda a:a['/actions/runs/400'].update(event='push'),
+                   lambda a:a['/actions/runs/400'].update(run_attempt=2),
+                   lambda a:a['/actions/runs/400']['head_repository'].update(full_name='fork/Veiling'),
+                   lambda a:a['/actions/runs/400'].update(path='.github/workflows/other.yml'),
+                   lambda a:a['/actions/runs/400/artifacts?per_page=100']['artifacts'][0].update(digest='sha256:'+'0'*64)]
+        for mutate in mutations:
+            a=copy.deepcopy(original);mutate(a)
+            with self.subTest(mutation=mutations.index(mutate)),self.assertRaises(ValueError):review(a)
+        for field,value in [('source_sha256','0'*64),('remote_sha256','0'*64),('path','private/other.php')]:
+            a=copy.deepcopy(original)
+            with zipfile.ZipFile(io.BytesIO(a['/actions/artifacts/321/zip'])) as z:
+                baseline=json.loads(z.read('shared-ovh-readonly-baselines.json'))
+            baseline['files'][0][field]=value
+            blob=archive({'shared-ovh-readonly-baselines.json':encode(baseline)})
+            a['/actions/artifacts/321/zip']=blob
+            a['/actions/runs/400/artifacts?per_page=100']['artifacts'][0]['digest']='sha256:'+hashlib.sha256(blob).hexdigest()
+            with self.subTest(field=field),self.assertRaises(ValueError):review(a)
+
+    def test_extra_zip_member_refused_even_with_correct_digest(self):
+        a=self.fixture();blob=archive({'shared-ovh-readonly-baselines.json':b'{}','extra':b'bad'})
+        a['/actions/artifacts/321/zip']=blob
+        a['/actions/runs/400/artifacts?per_page=100']['artifacts'][0]['digest']='sha256:'+hashlib.sha256(blob).hexdigest()
+        with self.assertRaises(ValueError):review(a)
+
+
 if __name__ == "__main__":
     unittest.main()

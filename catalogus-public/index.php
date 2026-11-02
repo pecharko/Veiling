@@ -1,11 +1,27 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+if (is_post() && array_key_exists('admin_preview_action', $_POST)) {
+  require_auth();
+  check_csrf();
+  $action = $_POST['admin_preview_action'];
+  if (!is_string($action) || !in_array($action, ['start', 'stop'], true)) {
+    http_response_code(400); exit('Ongeldige voorbeeldactie.');
+  }
+  if ($action === 'start') {
+    $_SESSION['admin_catalog_preview'] = $_SESSION['admin_id'];
+    $_SESSION['admin_preview_no_stats'] = true;
+  } else {
+    unset($_SESSION['admin_catalog_preview']);
+    // This preview session stays excluded until logout/session expiry.
+  }
+  redirect('index.php');
+}
 require_public_site_online();
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
 $s = settings();
-$published = (int)($s['is_published'] ?? 0) === 1;
+$published = (int)($s['is_published'] ?? 0) === 1 || admin_preview_active();
 $q = mb_substr(trim((string)(is_string($_GET['q'] ?? null) ? $_GET['q'] : '')), 0, 100);
 $category = mb_substr(trim((string)(is_string($_GET['categorie'] ?? null) ? $_GET['categorie'] : '')), 0, 120);
 $price = (string)($_GET['prijs'] ?? '');
@@ -77,6 +93,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
 <html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
+  <?php admin_preview_banner(); ?>
   <header class="site-header front-header" id="top">
     <div class="shell header-inner front-header-inner">
       <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">

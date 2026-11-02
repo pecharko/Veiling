@@ -20,7 +20,7 @@ import zipfile
 from ovh_release_evidence_discovery import ArtifactRedirect, get as github_get
 from shared_ovh_controller_adapter import (
     HASH, RELEASE_ID, SHA, MAX_JSON_BYTES, _valid_path,
-    parse_approval, review_offline,
+    parse_approval, review_offline, single_pr_preflight,
 )
 
 BASE = "https://api.github.com/repos/pecharko/Veiling"
@@ -133,19 +133,21 @@ def _git_file(token, path, sha, *, limit=MAX_CONTENT):
     return raw
 
 
-def _artifact_files(token, artifact_id, release_id):
+def _artifact_files(token, artifact_id, release_id, *, single=False, digest=None):
     _positive(artifact_id, "read-only GitHub artifact ID")
     if not RELEASE_ID.fullmatch(release_id):
         raise ValueError("Invalid reviewed release ID")
     zipped = github_get(BASE + "/actions/artifacts/" + str(artifact_id) + "/zip", token)
     if not isinstance(zipped, bytes) or len(zipped) > MAX_ARCHIVE:
         raise ValueError("Invalid or oversized GitHub artifact ZIP")
-    expected = {"shared-ovh-readonly-baselines.json",
-                "releases/" + release_id + ".json"}
+    if single and digest != 'sha256:' + hashlib.sha256(zipped).hexdigest():
+        raise ValueError('Single-PR baseline artifact digest mismatch')
+    expected = {"shared-ovh-readonly-baselines.json"}
+    if not single: expected.add("releases/" + release_id + ".json")
     try:
         with zipfile.ZipFile(io.BytesIO(zipped)) as zf:
             members = zf.infolist()
-            if len(members) != 2 or {m.filename for m in members} != expected:
+            if len(members) != len(expected) or {m.filename for m in members} != expected:
                 raise ValueError("Missing, duplicate or extraneous read-only evidence ZIP members")
             for m in members:
                 mode = m.external_attr >> 16
@@ -200,7 +202,8 @@ def collect_review(token, issue_number, comment_id, now=None):
         token, "/actions/runs/" + str(run_id) + "/artifacts?per_page=100",
         "artifacts",
     )
-    expected_name = "readonly-release-" + str(run_id)
+    single = single_pr_preflight(run)
+    expected_name = ("shared-ovh-readonly-" if single else "readonly-release-") + str(run_id)
     candidates = [
         x for x in artifact_inventory
         if isinstance(x, dict) and x.get("name") == expected_name
@@ -209,16 +212,19 @@ def collect_review(token, issue_number, comment_id, now=None):
     if len(candidates) != 1:
         raise ValueError("Missing unexpired exact preflight artifact")
     artifact = candidates[0]
-    artifact_files = _artifact_files(token, artifact.get("id"), release_id)
+    artifact_files = _artifact_files(token, artifact.get("id"), release_id,
+                                     single=single,digest=artifact.get('digest'))
     manifest = _git_file(
         token, "releases/" + release_id + ".json", current_sha,
         limit=MAX_JSON_BYTES,
     )
     request_path = "release-requests/" + release_id + ".json"
-    request_main = _git_file(token, request_path, current_sha,
-                             limit=MAX_JSON_BYTES)
-    request_preflight = _git_file(token, request_path, approval["preflight_sha"],
-                                  limit=MAX_JSON_BYTES)
+    request_main = None if single else _git_file(token, request_path, current_sha,limit=MAX_JSON_BYTES)
+    request_preflight = None if single else _git_file(token, request_path, approval["preflight_sha"],limit=MAX_JSON_BYTES)
+    preflight_sources = None
+    if single:
+        preflight_sources = {row['path']:hashlib.sha256(_git_file(token,row['path'],approval['preflight_sha'])).hexdigest()
+                             for row in approval['files']}
     source_hashes = {
         row["path"]: hashlib.sha256(
             _git_file(token, row["path"], current_sha)
@@ -239,5 +245,5 @@ def collect_review(token, issue_number, comment_id, now=None):
         artifact_files=artifact_files, manifest_bytes=manifest,
         request_at_main=request_main, request_at_preflight=request_preflight,
         current_main_sha=current_sha, source_hashes=source_hashes,
-        now=now, preflight_jobs=jobs,
+        now=now, preflight_jobs=jobs, preflight_source_hashes=preflight_sources,
     )
