@@ -16,16 +16,14 @@ $photos = [
   ['samenspel', 'In gesprek met de zaal', 'Het veilingteam maakt contact met het publiek vanuit de veilingtafel', 1600, 1067],
 ];
 function impression_photo(array $photo, int $index, string $class = ''): void {
-  [$name, $caption, $alt, $width, $height] = $photo;
+  [$name, , $alt, $width, $height] = $photo;
   $small = url('assets/vorige-editie-' . $name . '-800.webp');
   $large = url('assets/vorige-editie-' . $name . '-1600.webp');
   ?>
   <figure class="impression-photo <?=e($class)?>">
-    <a class="impression-photo-link" href="<?=e($large)?>" data-impression-photo="<?=$index?>" data-caption="<?=e($caption)?>" aria-label="<?=e('Vergroot foto: ' . $caption)?>">
+    <div class="impression-photo-image">
       <img src="<?=e($index === 0 ? $large : $small)?>" <?php if ($index === 0): ?>srcset="<?=e($small)?> 800w, <?=e($large)?> 1600w" sizes="(min-width: 900px) 54vw, 100vw" fetchpriority="high"<?php else: ?>loading="lazy"<?php endif; ?> width="<?=$width?>" height="<?=$height?>" alt="<?=e($alt)?>" decoding="async">
-      <span class="impression-enlarge" aria-hidden="true">+</span>
-    </a>
-    <figcaption><span class="impression-photo-number"><?=str_pad((string)($index + 1), 2, '0', STR_PAD_LEFT)?></span><?=e($caption)?></figcaption>
+    </div>
   </figure>
   <?php
 }
@@ -88,7 +86,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <section class="impression-gallery shell" id="in-beeld" aria-labelledby="gallery-title">
     <div class="impression-section-heading">
       <div><p class="impression-eyebrow">DE VEILING IN BEELD</p><h2 id="gallery-title">Alle ogen op<br>het <em>podium.</em></h2></div>
-      <div><p>Presentaties, bijzondere kavels en het samenspel tussen veilingteam en publiek. Een terugblik op wat deze editie zo bijzonder maakte.</p><p class="impression-hint">Klik op een foto om die groter te bekijken <span aria-hidden="true">→</span></p></div>
+      <div><p>Presentaties, bijzondere kavels en het samenspel tussen veilingteam en publiek. Een terugblik op wat deze editie zo bijzonder maakte.</p></div>
     </div>
     <div class="impression-gallery-grid">
       <?php for ($i = 3; $i < count($photos); $i++): impression_photo($photos[$i], $i); endfor; ?>
@@ -102,11 +100,6 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </section>
 </main>
 <footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="#top">Naar boven ↑</a></div></footer>
-<dialog class="impression-viewer" id="impression-viewer" aria-labelledby="viewer-caption">
-  <div class="impression-viewer-heading"><span>DE VORIGE EDITIE</span><button type="button" class="impression-viewer-close" aria-label="Fotoweergave sluiten" autofocus>Sluiten <span aria-hidden="true">×</span></button></div>
-  <div class="impression-viewer-image"><img id="viewer-image" alt=""></div>
-  <div class="impression-viewer-footer"><button type="button" id="viewer-previous" aria-label="Vorige foto">←</button><div><p id="viewer-caption"></p><span id="viewer-count" aria-live="polite"></span></div><button type="button" id="viewer-next" aria-label="Volgende foto">→</button></div>
-</dialog>
-<script src="<?=e(url('assets/vorige-editie.js'))?>?v=1" defer></script>
+
 </body>
 </html>
