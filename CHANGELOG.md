@@ -1,5 +1,16 @@
 # Wijzigingslogboek
 
+## 2026-11-02 — Beveiligd adminvoorbeeld van de catalogus
+
+- Mac-controller: expliciete journalupgrade en owner-geaccepteerde afronding maken volgende releases mogelijk zonder verbruikte nonces, comments of release-ID’s vrij te geven. Eén-PR-baselinebewijs wordt onafhankelijk op oude en nieuwe bron-SHA gecontroleerd.
+
+‘Bekijk website’ opent via een beveiligde POST een voorbeeld binnen de bestaande
+beheersessie. Gepubliceerde en verkochte kavels zijn daarin zichtbaar wanneer
+de publieke kavelweergave uitstaat; concepten en ‘website offline’ blijven
+afgeschermd. Een duidelijke banner en sluitknop verschijnen op catalogus,
+detail en privacy. Bezoek- en geostatistieken worden voor deze sessie
+overgeslagen tot uitloggen/sessie-einde. De publieke instelling verandert niet.
+
 ## 2026-11-01 — Handmatig gestarte macOS-controller, versie 1
 
 Uitvoerbare CLI voor lokale configuratiecontrole, read-only review, één

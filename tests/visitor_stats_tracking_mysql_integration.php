@@ -12,6 +12,8 @@ $pdo->exec('CREATE TABLE visitor_stats_daily (visit_date DATE NOT NULL, visitor_
 $secret = str_repeat('a', 64);
 function cfg(string $key): ?string { global $secret; return $key === 'analytics_secret' ? $secret : null; }
 function db(): PDO { global $pdo; return $pdo; }
+$previewSession = false;
+function admin_preview_statistics_suppressed(): bool { global $previewSession; return $previewSession; }
 require dirname(__DIR__) . '/private/visitor_stats.php';
 function failUnless(bool $condition, string $description): void { if (!$condition) throw new RuntimeException($description); }
 $_SERVER['REQUEST_METHOD'] = 'GET';
@@ -40,4 +42,12 @@ $_SERVER['REQUEST_METHOD'] = 'GET';
 $secret = '';
 track_catalog_view();
 failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Skipped visits unexpectedly counted');
+$secret = str_repeat('a', 64);
+$previewSession = true;
+track_catalog_view();
+track_catalog_view(7);
+failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Admin preview session must not record home or lot views');
+$previewSession = false;
+track_catalog_view();
+failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 5, 'Ordinary collection must remain enabled');
 echo "PASS isolated MySQL visitor writes and suppression contracts\n";

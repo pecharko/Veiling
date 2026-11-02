@@ -8,6 +8,8 @@ on:
       - "database/controller_release_claim_bindings_proposal.sql"
       - "scripts/ovh_controller_claim_adapter.py"
       - "scripts/ovh_controller_local.py"
+      - "scripts/ovh_controller_release_lifecycle.py"
+      - "tests/ovh_controller_release_lifecycle_test.py"
       - "tests/ovh_controller_local_test.py"
       - "deploy/controller/macos-controller.example.json"
       - "docs/ovh-controller-macos-v1.md"
@@ -56,7 +58,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Test operator CLI and local journal on macOS without credentials or network
-        run: python3 -B -m unittest discover -s tests -p 'ovh_controller_local_test.py' -v
+        run: |
+          python3 -B -m unittest discover -s tests -p 'ovh_controller_local_test.py' -v
+          python3 -B -m unittest discover -s tests -p 'ovh_controller_release_lifecycle_test.py' -v
   claims-mysql-isolated:
     name: Isolated claim schema and uniqueness tests
     runs-on: ubuntu-latest

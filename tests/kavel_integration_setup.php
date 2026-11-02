@@ -15,6 +15,7 @@ $settings = [
   'database' => ['host' => $host, 'port' => 3306, 'name' => $name, 'user' => $user, 'password' => $pass],
   'base_path' => '',
   'setup_key' => 'ci-test-only-nonproduction',
+  'analytics_secret' => str_repeat('preview-ci-only-', 4),
 ];
 file_put_contents($config, "<?php\nreturn " . var_export($settings, true) . ";\n");
 $pdo = new PDO("mysql:host={$host};dbname={$name};charset=utf8mb4", $user, $pass, [
@@ -82,7 +83,8 @@ $ddl = [
     address VARCHAR(300) NOT NULL DEFAULT '',
     contact_email VARCHAR(190) NOT NULL DEFAULT '',
     practical_info TEXT NOT NULL,
-    is_published TINYINT NOT NULL DEFAULT 0
+    is_published TINYINT NOT NULL DEFAULT 0,
+    is_site_online TINYINT NOT NULL DEFAULT 1
   ) ENGINE=InnoDB",
 ];
 foreach ($ddl as $sql) $pdo->exec($sql);

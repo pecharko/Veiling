@@ -14,6 +14,7 @@ require_public_site_online();
 <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>">
 </head>
 <body>
+<?php admin_preview_banner(); ?>
 <main class="shell" style="max-width:780px;padding:48px 20px 72px">
   <p><a href="<?=e(url('index.php'))?>">← Terug naar de catalogus</a></p>
   <h1>Privacy en bezoekersstatistieken</h1>

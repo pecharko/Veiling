@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "975b7dbe1fe14d9dd7b8720e256d640a60c3ad03b39b829d7f53a68d264fefa2",
+      "remote_sha256": "92754fa19d3e9451cfef70b2c7a9d19ed2d8536a9f320883098e7859e8ef940a"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "a5614b95bc7118f877800fa0a87ac9e4196fd3521438533463b4528e73579b29",
+      "remote_sha256": "bad352aec296374209557dcfd1520be028862ff58c724a4191dc6625bcbc203d"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "54d5bbc2adb2ca74e2acede9ae80ed3b1e10c0ba36d54e52b618e677332d8a9f",
+      "remote_sha256": "fb70334019ece14fd37fb71ca58b91522425434d350d22724acd25f5b66b2a04"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "5d8850b89af6889d297654b74c55eb396e63b53ecb3a7994704090d77c40d405",
+      "remote_sha256": "0ba908641d8ab44fd35f9153312905909c29bec8f1307ed848536254982a1b76"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "29fc2ad6f1fe852bd84c05b9f185d942abdd714f77e4e8c750861d4c24fc0187",
+      "remote_sha256": "004e6d7ff55f0e85177b70acc722bf7d1b3c99b927324c467d1b52ca155b3f25"
+    }
+  ]
+}
