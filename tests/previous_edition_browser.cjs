@@ -37,10 +37,14 @@ const fs = require('node:fs');
     fs.mkdirSync('/tmp/previous-edition-preview', { recursive: true });
     for (const width of [1280, 768, 390, 320]) {
       await page.setViewportSize({ width, height: 900 });
-      await page.evaluate(() => window.scrollTo(0, 0));
+      await page.evaluate(() => {
+        document.activeElement?.blur();
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      });
+      await page.waitForFunction(() => window.scrollY === 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No horizontal overflow at ${width}px`);
       assert.equal(await page.getByRole('link', { name: 'Home', exact: true }).isVisible(), true, 'Mobile return navigation');
-      if ([1280,390].includes(width)) await page.screenshot({ path: `/tmp/previous-edition-preview/${width}.png`, fullPage: true });
+      if ([1280,390].includes(width)) await page.screenshot({ path: `/tmp/previous-edition-preview/${width}.png`, fullPage: true, animations: 'disabled' });
     }
     assert.deepEqual(errors, [], 'No browser errors or failed resources');
     await context.close();
