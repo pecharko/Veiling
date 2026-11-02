@@ -3,6 +3,7 @@ declare(strict_types=1);
 /** Real HTTP/session/CSRF + disposable MySQL; refuses all production targets. */
 require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/analytics_control.php';
+require_once dirname(__DIR__) . '/private/visitor_geo_state.php';
 if (getenv('GITHUB_ACTIONS') !== 'true' || cfg('setup_key') !== 'ci-test-only-nonproduction'
     || (cfg('database')['host'] ?? '') !== '127.0.0.1'
     || db()->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test') {
@@ -61,6 +62,9 @@ $wasEnabled = analytics_collection_enabled();
 $geoWasDisabled = is_file(visitor_geo_disabled_marker());
 try {
     set_analytics_collection_enabled(true);
+    if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) {
+        $pdo->exec("ALTER TABLE settings ADD COLUMN is_site_online TINYINT NOT NULL DEFAULT 1");
+    }
     foreach (['database/visitor_stats.sql','database/visitor_stats_aggregates.sql',
               'database/migrations/20261029_visitor_geo_analytics.sql'] as $fixtureSql) {
         $sql = file_get_contents(dirname(__DIR__).'/'.$fixtureSql);
