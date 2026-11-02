@@ -12,6 +12,10 @@ class BaselinesTest(unittest.TestCase):
         self.assertEqual(validate_paths("catalogus-public/vorige-editie.php\ncatalogus-public/assets/vorige-editie.css"), [
             "catalogus-public/vorige-editie.php", "catalogus-public/assets/vorige-editie.css"])
 
+    def test_accepts_space_separated_paths(self):
+        raw = "catalogus-public/vorige-editie.php catalogus-public/assets/vorige-editie.css"
+        self.assertEqual(validate_paths(raw), ["catalogus-public/vorige-editie.php", "catalogus-public/assets/vorige-editie.css"])
+
     def test_rejects_unsafe_inputs(self):
         for text in ("", "catalogus-public/../private/.env", "private/foo.php",
                      "catalogus-public/a.php\ncatalogus-public/a.php", "catalogus-public/a.txt",
