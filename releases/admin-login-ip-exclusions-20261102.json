@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/analytics_control.php",
+      "source_sha256": "3ae6f1bafe54db417d6f01ef8d2cf8f147a7d4faedf2a0c1ee4d77d6300b7bd5",
+      "remote_sha256": "487e8c63e329dca703a94d88113b0ac86cf3a08b642a669696c9078c2787a8d0"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "5c5fec1e916747eb404e5db6e5d62b075c86967be7f4360907c2d18c2507a33e",
+      "remote_sha256": "975b7dbe1fe14d9dd7b8720e256d640a60c3ad03b39b829d7f53a68d264fefa2"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "d0897ef5af12544d635046392483cbdf51fb33a44f0799148467f83485ae1a4a",
+      "remote_sha256": "a5614b95bc7118f877800fa0a87ac9e4196fd3521438533463b4528e73579b29"
+    },
+    {
+      "path": "catalogus-public/admin/login.php",
+      "source_sha256": "e3328c9bc88feb59b68f25c5eb8e9ee4d4a7404528bc9883cd92d1a964cced5d",
+      "remote_sha256": "de2a285d804d7458663fd3a9fbff7c58c167741a0203003c548fb9ee87beeca4"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "8c7039f02a7f92196e34621d34af3c4a1b36b9b0ce6f84395b757b61b3f97e29",
+      "remote_sha256": "54d5bbc2adb2ca74e2acede9ae80ed3b1e10c0ba36d54e52b618e677332d8a9f"
+    },
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "acaf96e3418bf7a11bdf760a1d2ed442e9e22f63c9ddcc71d883a53e62cf7b14",
+      "remote_sha256": "4d0842cb5417d28330a456cfdbdd39d7786f806c522931de485d5ceea358f7bb"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "75f84c04481b3d1bc55b7ac1547e771545989ac71b8765ec2e9c0b51c141edd3",
+      "remote_sha256": "29fc2ad6f1fe852bd84c05b9f185d942abdd714f77e4e8c750861d4c24fc0187"
+    }
+  ]
+}

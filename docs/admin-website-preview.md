@@ -77,6 +77,15 @@ MySQL-fixture, plus lokale journalmigratie/afronding en GitHub-evidencecontracte
 
 De nieuwe login/IP-uitbreiding gebruikt zeven runtimebestanden: analytics_control,
 visitor_stats, bootstrap, admin/login, index, admin/statistieken en privacy.
-Een nieuw code-only manifest wacht op verse geautoriseerde read-only baselines
-voor deze exacte paden. Het SQL-voorstel wordt nooit in dat uploadmanifest
-opgenomen en vereist afzonderlijke, exacte productietoestemming.
+Het code-only manifest staat in dezelfde PR:
+`releases/admin-login-ip-exclusions-20261102.json`.
+De zeven echte remote baselines komen uit de afzonderlijk geautoriseerde
+gepinde read-only run 41409711546 op main
+`bafad0ec00e0720e4a846e98a7f54da74263ca89`, 2026-11-02 07:58:16 UTC.
+Artifact 13124449275 heeft ZIP SHA-256
+`00a4ed63f711dd1257b16610d44c93e2c9afb321d2cc1981187c813da8644db8`.
+Alle zeven live hashes kwamen overeen met die main; de nieuwe source-hashes
+worden samen met de code gecontroleerd. De volgorde is analytics-control,
+tracker, bootstrap, login, index, statistieken en privacy. Het SQL-voorstel
+wordt nooit in het uploadmanifest opgenomen en vereist afzonderlijke, exacte
+productietoestemming vóór de code-uitrol.
