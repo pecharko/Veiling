@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/placeholder.svg",
+      "source_sha256": "12700ed20b5246a9d5645254e588a55d5c8fa7a09666e2f3e9ba0da4335bb31f",
+      "remote_sha256": "12700ed20b5246a9d5645254e588a55d5c8fa7a09666e2f3e9ba0da4335bb31f"
+    }
+  ]
+}
