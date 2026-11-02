@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/vorige-editie.css",
+      "source_sha256": "3ed894cf3d1a4ad32310b0774d9f2cbb1cd46053aa1a989c20c8cb833a953895",
+      "remote_sha256": "3fe17d97c9b2e349249a18bb2f2c11d1defad6d5f44666bf6b28b33fc219cf0f"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "5e8970c41ac1840881041817355ca06e354a07372ce419a0b5bb892e6d921af8",
+      "remote_sha256": "57892c65646ad4301294bed503a8cfd88efbaf23d62a2f320f7c247d0f3994a8"
+    }
+  ]
+}
