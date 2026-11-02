@@ -18,7 +18,8 @@ function impression_request(string $path): array {
 }
 function impression_check(bool $ok, string $label): void {
     if (!$ok) throw new RuntimeException($label);
-    echo "PASS $label\n";
+    echo "PASS $label 
+           ";
 }
 $before = db()->query('SELECT is_site_online,is_published FROM settings WHERE id=1')->fetch();
 try {
@@ -28,7 +29,9 @@ try {
         impression_check($status === 200 && str_contains($home,'Bekijk de vorige editie')
             && str_contains($home,'vorige-editie.php'), 'Homepage links to impression with published=' . $published);
         [$status,$body] = impression_request('/vorige-editie.php');
-        impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9\n            && !str_contains($body,'data-impression-photo=')\n            && !str_contains($body,'<figcaption')
+        impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9 
+                       && !str_contains($body,'data-impression-photo=') 
+                       && !str_contains($body,'<figcaption')
             && !str_contains($body,'ADMINVOORBEELD'), 'Nine public photos independent of lot publication');
     }
     db()->exec('UPDATE settings SET is_site_online=0 WHERE id=1');
