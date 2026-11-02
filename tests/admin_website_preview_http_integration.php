@@ -112,7 +112,7 @@ try {
         && str_contains(implode(' ', $headers['x-robots-tag'] ?? []),'noindex'), 'Preview is private, non-cacheable and non-indexable');
     preview_check(strpos($body,'ADMINVOORBEELD') < strpos($body,'class="site-header'), 'Banner precedes public header');
     $closeCsrf = preview_csrf($body);
-    foreach (['/kavel.php?nr=990101','/kavel.php?nr=990102','/privacy.php',
+    foreach (['/kavel.php?nr=990101','/kavel.php?nr=990102','/privacy.php','/vorige-editie.php',
               '/index.php?q=Preview&categorie=Preview%20CI','/index.php?favorieten=1&nummers=990101'] as $path) {
         [$status,$body] = preview_request($path);
         preview_check($status === 200 && str_contains($body,'ADMINVOORBEELD'), 'Preview survives detail/filter/favorites/privacy navigation');
