@@ -12,7 +12,7 @@ MAX_PATHS = 25
 
 
 def validate_paths(raw):
-    paths = [v.strip() for v in raw.splitlines()]
+    paths = raw.split()
     if not 1 <= len(paths) <= MAX_PATHS or len(paths) != len(set(paths)):
         raise ValueError("Expected 1-25 unique paths")
     for path in paths:
