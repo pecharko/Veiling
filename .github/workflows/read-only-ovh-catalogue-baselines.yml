@@ -1,0 +1,55 @@
+name: Read-only OVH catalogue baselines
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/read-only-ovh-catalogue-baselines.yml'
+      - 'scripts/read_only_ovh_baselines.py'
+      - 'tests/read_only_ovh_baselines_test.py'
+  workflow_dispatch:
+    inputs:
+      paths:
+        description: 'One catalogus-public/ file path per line, maximum 25'
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  tests:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -p read_only_ovh_baselines_test.py -v
+      - run: python3 -m py_compile scripts/read_only_ovh_baselines.py
+  observe:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    env:
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+      REQUESTED_PATHS: ${{ inputs.paths }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate paths offline
+        shell: bash
+        run: |
+          printf '%s\n' "$REQUESTED_PATHS" > /tmp/ovh-readonly-paths.txt
+          python3 -c 'import sys; sys.path.insert(0, "scripts"); from read_only_ovh_baselines import validate_paths; from pathlib import Path; validate_paths(Path("/tmp/ovh-readonly-paths.txt").read_text())'
+      - run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Observe remote SHA-256 without writing
+        run: python3 scripts/read_only_ovh_baselines.py --paths-file /tmp/ovh-readonly-paths.txt --output /tmp/ovh-readonly-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: read-only-ovh-baselines-${{ github.run_id }}
+          path: /tmp/ovh-readonly-evidence.json
+          retention-days: 7
