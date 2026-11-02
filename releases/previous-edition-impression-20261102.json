@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/vorige-editie-kavel-1600.webp",
+      "source_sha256": "33eb836adf4272a838ef27c877cc279149437bd6d413736dbda0294d6641adce",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-kavel-800.webp",
+      "source_sha256": "53d3b0fb1242a4cc17d561318337b0ed75a4e80c36d727521837cd45adde02f0",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-kijkmoment-1600.webp",
+      "source_sha256": "69f1ff2a94f292a09535a6032e41c69d6e31015e698b5587f5393e96295876eb",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-kijkmoment-800.webp",
+      "source_sha256": "d064f4edaf34658cda551e4787be601024027a48b24537b901bc5994ae52d8f1",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-ontmoeting-1600.webp",
+      "source_sha256": "4345f293203f3e48ea5fc7b8b04bfc411386f60187e9faa4877a73e849b7cbd8",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-ontmoeting-800.webp",
+      "source_sha256": "5b8defc5bb146a83818866b4621abe53ca94d77578de1200aabdfa7a38d2024f",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-podium-1600.webp",
+      "source_sha256": "d2ceaa85b14478244aee5343642dde3b2888803ecd8cc1d106796d75af28f49e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-podium-800.webp",
+      "source_sha256": "4590f5d6bc7111b1d05fe4971f8315700510cd6e72c2ec8a8c8b951de48a95ab",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-publiek-1600.webp",
+      "source_sha256": "d3f04ec7fdd3243864fa8eee77efc3dc8a0b6eab46d527d06ceb0bc2269f09b4",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-publiek-800.webp",
+      "source_sha256": "1060fb82716bb543c77367a0f100d36762d8fa624b331fd54f03ac39d2a86de4",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-samenspel-1600.webp",
+      "source_sha256": "b2043e9ed4672bdca8591156b19b926bee4a53f92c5b28c2eca166fee9981816",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-samenspel-800.webp",
+      "source_sha256": "96f8948ab369802e6e499ae7e768a43e93149461f2dc573e900dac888b05cc5f",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-veilingmeester-1600.webp",
+      "source_sha256": "3c4660505c93cf74a1ac560213455c5ed6dc1fcc462fce2d8a81207d4dd7011e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-veilingmeester-800.webp",
+      "source_sha256": "63b8e9016ba771f7e9d705ef69323f869cdbb23779c109dc3fe718f25aa59b7d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-veilingteam-1600.webp",
+      "source_sha256": "2a61a9bb3c496de9ffe5b92f5143b2f25703b3d4d95eca4b1620bafcbb2602db",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-veilingteam-800.webp",
+      "source_sha256": "d53e5807cada08938045dd6f304543bb087946d07c03cd5c987dbdeebb064d45",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-zaal-1600.webp",
+      "source_sha256": "ce42b118a1c98cd856da4f9577883931f6e1310deab8b25fc2f3a48f58f3ba87",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie-zaal-800.webp",
+      "source_sha256": "ba67fdbc79496e1800fde3e6d911f1aa8fee33c935ff67085b96bd2810af3e1a",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie.css",
+      "source_sha256": "3fe17d97c9b2e349249a18bb2f2c11d1defad6d5f44666bf6b28b33fc219cf0f",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie.js",
+      "source_sha256": "ae149e67030c7ba758b7b9aa5b1e4cf7ad26c59964cd89ba0bb76d95e0268175",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "4040ae88ea7e8e1316944378a9f8e4157e08a23dfeb260c3af269b0b9858de63",
+      "remote_sha256": "8c7039f02a7f92196e34621d34af3c4a1b36b9b0ce6f84395b757b61b3f97e29"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "57892c65646ad4301294bed503a8cfd88efbaf23d62a2f320f7c247d0f3994a8",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
