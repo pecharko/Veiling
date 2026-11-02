@@ -90,6 +90,16 @@ try {
     ip_check(ip_views()===$before+1,'Unknown address counts even if a preview session is active');
     ip_http('/admin/logout.php',['csrf'=>$csrf]);$before=ip_views();ip_http('/index.php');
     ip_check(ip_views()===$before,'Logout never removes the persistent IP exclusion');
+    $pdo->exec('RENAME TABLE visitor_stats_ip_exclusions TO visitor_stats_ip_exclusions_ci_hidden');
+    try {
+        ip_check(ip_login('127.0.0.7','missing-table')===303,'Unavailable exclusion storage never locks an administrator out');
+        $before=ip_views();ip_http('/index.php',null,'127.0.0.7','missing-table');
+        ip_check(ip_views()===$before,'Unverifiable exclusion fails closed for analytics without breaking the public page');
+        [$status,$page]=ip_http('/admin/statistieken.php',null,'127.0.0.7','missing-table');
+        ip_check($status===200 && str_contains($page,'IP-uitsluiting is tijdelijk niet beschikbaar'),'Unavailable exclusion storage has a clear administrator status');
+    } finally {
+        $pdo->exec('RENAME TABLE visitor_stats_ip_exclusions_ci_hidden TO visitor_stats_ip_exclusions');
+    }
 } finally {
     $pdo->prepare('UPDATE settings SET is_published=? WHERE id=1')->execute([$oldPublished]);
     if ($assistantId) $pdo->prepare('DELETE FROM admins WHERE id=?')->execute([$assistantId]);

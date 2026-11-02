@@ -16,6 +16,7 @@ require dirname(__DIR__) . '/private/visitor_stats.php';
 $ipSql = preg_replace('/^\s*--[^\n]*$/m', '', (string)file_get_contents(dirname(__DIR__).'/database/migrations/20261102_visitor_stats_ip_exclusions.sql'));
 foreach (explode(';',(string)$ipSql) as $sql) if (trim($sql) !== '') $pdo->exec($sql);
 $pdo->exec('DELETE FROM visitor_stats_ip_exclusions');
+if (!analytics_ip_exclusion_enabled($pdo)) throw new RuntimeException('Fresh exclusion migration must default ON');
 analytics_ip_set_exclusion($pdo,true);
 function failUnless(bool $condition, string $description): void { if (!$condition) throw new RuntimeException($description); }
 $_SERVER['REQUEST_METHOD'] = 'GET';
@@ -59,6 +60,8 @@ track_catalog_view();
 track_catalog_view(7);
 failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 4, 'Stored admin IP must not record home or lot views');
 analytics_ip_set_exclusion($pdo,false);
+foreach (explode(';',(string)$ipSql) as $sql) if (trim($sql) !== '') $pdo->exec($sql);
+failUnless(!analytics_ip_exclusion_enabled($pdo) && (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 2, 'Reapplying SQL proposal must preserve disabled switch and registered pairs');
 track_catalog_view();
 failUnless((int)$pdo->query("SELECT COALESCE(SUM(views),0) FROM visitor_stats_daily")->fetchColumn() === 5, 'Disabling exclusion restores ordinary collection');
 analytics_ip_set_exclusion($pdo,true);

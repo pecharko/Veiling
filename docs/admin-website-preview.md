@@ -13,13 +13,52 @@ rol opnieuw. Geen queryparameter kan de modus activeren. Responses zijn private,
 no-store en noindex; publieke pagina's variëren op Cookie. Gewone bezoekers
 krijgen hiervoor geen adminsessie.
 
-Zodra preview is gestart verzamelt die PHP-beheersessie geen bezoekers- of
-geostatistieken. Dit blijft na sluiten gelden tot uitloggen of sessieverloop,
-ook voor andere tabbladen met dezelfde cookie. Andere browsers/sessies blijven
-normaal tellen. Bestaande rollen administrator, assistant en veilingmeester
-behouden toegang via het bestaande menu. Er is geen productie-SQL nodig.
+Vanaf deze uitbreiding registreert uitsluitend een **geslaagde login** de combinatie
+IP-adres/admin-ID. `Bekijk website` registreert of wijzigt geen IP-adres. Herhaalde
+logins met dezelfde combinatie zijn een ongewijzigde no-op; een nieuw IP of een
+andere admin achter hetzelfde IP krijgt een eigen rij. De uitsluiting kijkt naar
+het IP-adres en geldt dus ook na uitloggen, in andere browsers en voor andere
+gebruikers achter hetzelfde internetadres. IPv4-mapped IPv6 wordt als IPv4
+behandeld; clientgestuurde forwardingheaders worden genegeerd.
 
-Het releasemanifest `releases/admin-website-preview-20261102.json` bevat precies
+Een afzonderlijke schakelaar in Statistieken staat standaard aan. Uitschakelen
+laat bezoeken weer normaal tellen (ook in preview) wanneer de algemene
+bezoekersregistratie aan staat. Alle geregistreerde IP/admin-combinaties blijven
+bewaard, en geslaagde logins blijven de lijst aanvullen. Opnieuw inschakelen
+hergebruikt de lijst. De banner vermeldt of het huidige IP daadwerkelijk wordt
+uitgesloten. Bezoekers- én geostatistieken worden vóór HMAC/geo/INSERT overgeslagen.
+De oude sessieflag is geen alternatieve uitsluitingsroute meer.
+
+De banner blijft aan de bovenkant bij scrollen. De bestaande vaste navigatie
+staat eronder, ook wanneer de banner op mobiel over meerdere regels loopt.
+
+SQL-voorstel: `database/migrations/20261102_visitor_stats_ip_exclusions.sql`.
+Twee aparte tabellen bevatten de IP/admin-lijst en de standaard ingeschakelde
+schakelaar. Er is geen foreign key naar admins: herstel wist/vervangt accountrows,
+maar mag de uitsluitingsgegevens niet wissen. Het opgeslagen admin-ID is de
+registratie bij login; het wordt bij herstel niet opnieuw aan een accountnaam
+gekoppeld. Beide tabellen vallen buiten de expliciete snapshotlijst; exports
+bevatten ze niet en herstel bewaart de actuele lijst én schakelaar. Geïsoleerde
+tests bewijzen dit met gegevens toegevoegd na het maken van de snapshot.
+
+Eigenaarkeuze voor dit wijzigingspakket: `oude_snapshots_herstellen = nee`.
+Er wordt geen nieuwe conversieroute voor oude snapshots toegevoegd en geen
+bestaande backup verwijderd. Productie-SQL is niet uitgevoerd. Vóór uitrol is
+aparte exacte SQL-autorisatie nodig; pas de beoordeelde migratie vooraf toe en
+controleer beide tabellen/constraints en de singletonrij. Herhalen van de SQL
+behoudt een eerder uitgezette schakelaar en alle adressen. Er is geen runtime-DDL.
+Bij onbeschikbare opslag blijft login werken met een melding; analytics slaan
+uit voorzorg over wanneer uitsluiting niet kan worden vastgesteld. SQL-tabellen
+verwijderen als code-rollback is niet toegestaan: behoud deze nieuwe data.
+
+Bestaande actieve sessies worden niet achteraf geregistreerd. Log na uitrol
+opnieuw in om het huidige IP/admin-ID vast te leggen. De lijst kan de eerste
+keer leeg zijn. De beheerpagina toont maximaal 50 recente combinaties; alle
+opgeslagen adressen blijven gelden, ook als ze niet in die beperkte tabel staan.
+
+
+De eerste, inmiddels geaccepteerde uitrol gebruikte
+`releases/admin-website-preview-20261102.json` met precies
 vijf runtimebestanden, in volgorde stats-uitsluiting, bootstrap, index, detail,
 privacy. Remote baselines komen uit de eenmalig geautoriseerde gepinde read-only
 run 41399163638 op main 108bbc0f33e0a6d5b8bc10739277ac865ba99e72
@@ -29,8 +68,15 @@ Alle vijf live hashes kwamen op dat meetmoment overeen met die main. Vóór een
 werkelijke upload blijven verse driftcontrole, back-up, rollback en readback
 verplicht; deze voorbereiding autoriseert geen merge of deployment.
 
-De Mac moet vóór de volgende release gecontroleerd het bestaande journal
-upgraden en de oude succesvolle release afronden, zie
+De Mac gebruikt altijd hetzelfde journal. Vóór een volgende release moet de
+laatst uitgevoerde release gecontroleerd worden afgerond; nooit resetten of
+herhalen. Zie
 [Mac-controller](ovh-controller-macos-v1.md#opeenvolgende-releases-expliciete-afronding-journalversie-2).
 Tests controleren echte HTTP/login/CSRF/sessies en statswrites in een geïsoleerde
 MySQL-fixture, plus lokale journalmigratie/afronding en GitHub-evidencecontracten.
+
+De nieuwe login/IP-uitbreiding gebruikt zeven runtimebestanden: analytics_control,
+visitor_stats, bootstrap, admin/login, index, admin/statistieken en privacy.
+Een nieuw code-only manifest wacht op verse geautoriseerde read-only baselines
+voor deze exacte paden. Het SQL-voorstel wordt nooit in dat uploadmanifest
+opgenomen en vereist afzonderlijke, exacte productietoestemming.
