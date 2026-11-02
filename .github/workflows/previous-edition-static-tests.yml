@@ -1,0 +1,19 @@
+name: Previous edition static photo tests
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/assets/vorige-editie.css'
+      - 'tests/previous_edition_static_photos_test.py'
+      - '.github/workflows/previous-edition-static-tests.yml'
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: php -l catalogus-public/vorige-editie.php
+      - run: python3 -m unittest discover -s tests -p previous_edition_static_photos_test.py -v
