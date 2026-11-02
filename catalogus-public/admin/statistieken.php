@@ -16,11 +16,30 @@ require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 $deleteError = '';
 $toggleError = '';
 $geoToggleError = '';
+$ipToggleError = '';
 $deletePreview = null;
 $archivePreview = null;
 if (is_post()) {
     check_csrf();
     $action = (string)($_POST['action'] ?? '');
+    if ($action === 'toggle_ip_exclusion') {
+        require_administrator();
+        $enabled = $_POST['enabled'] ?? null;
+        if (!is_string($enabled) || !in_array($enabled, ['0','1'], true)) {
+            $ipToggleError = 'Ongeldige keuze voor IP-uitsluiting.';
+        } else {
+            try {
+                catalog_lock_for_request(db());
+                analytics_ip_set_exclusion(db(), $enabled === '1');
+                flash($enabled === '1'
+                    ? 'IP-uitsluiting ingeschakeld. Opgeslagen IP-adressen tellen niet mee.'
+                    : 'IP-uitsluiting uitgeschakeld. Statistieken tellen normaal; de IP-lijst blijft bewaard.');
+                redirect('admin/statistieken.php');
+            } catch (Throwable $e) {
+                $ipToggleError = 'IP-uitsluiting kon niet worden aangepast. Probeer later opnieuw.';
+            }
+        }
+    }
     if ($action === 'toggle_collection') {
         $enabled = (string)($_POST['enabled'] ?? '');
         if (!in_array($enabled, ['0', '1'], true)) {
@@ -273,6 +292,17 @@ $cronRuns = visitor_stats_cron_log_read();
 $cronSuccessful = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => ($run['status'] ?? '') === 'ok')), 0, 3);
 $cronAlerts = array_slice(array_values(array_filter($cronRuns, static fn(array $run): bool => in_array($run['status'] ?? '', ['error', 'limit'], true))), 0, 3);
 $collectionEnabled = analytics_collection_enabled();
+$ipAvailable = false;
+$ipEnabled = true;
+$ipRows = [];
+$ipCount = 0;
+try {
+    $ipEnabled = analytics_ip_exclusion_enabled(db());
+    $ipCount = (int)db()->query('SELECT COUNT(DISTINCT ip_address) FROM visitor_stats_ip_exclusions')->fetchColumn();
+    $ipRows = db()->query('SELECT ip_address,admin_id FROM visitor_stats_ip_exclusions ORDER BY created_at DESC,ip_address,admin_id LIMIT 50')->fetchAll(PDO::FETCH_ASSOC);
+    $ipAvailable = true;
+} catch (Throwable $e) { /* No raw address or database details in logs/output. */ }
+
 $geoState = null;
 $geoStatusError = '';
 try { $geoState = visitor_geo_state(db()); }
@@ -315,6 +345,28 @@ admin_top('Bezoekersstatistieken');
       <?php if ($geoState !== null && $geoState['start_date'] === null): ?><p><small>De eerste activering start de geografische meting vanaf de huidige UTC-dag. Oudere bezoeken worden niet achteraf gelokaliseerd.</small></p><?php endif; ?>
     </div>
     <p><small>Dit wist geen bestaande gegevens. Handmatige archivering en verwijdering blijven afzonderlijke acties.</small></p>
+  </section>
+  <section class="dashboard-panel" aria-labelledby="ip-exclusion-title">
+    <h2 id="ip-exclusion-title">IP-adressen uitsluiten van statistieken</h2>
+    <?php if (!$ipAvailable): ?>
+      <p role="alert">IP-uitsluiting is tijdelijk niet beschikbaar. Bezoekersregistratie wordt uit voorzorg overgeslagen zolang de uitsluiting niet gecontroleerd kan worden.</p>
+    <?php else: ?>
+      <p><strong>Huidige status: <?= $ipEnabled ? 'Aan' : 'Uit' ?></strong> · <?=e($ipCount)?> opgeslagen IP-adressen.</p>
+    <?php endif; ?>
+    <p>Na elke geslaagde login slaan we het IP-adres met het admin-ID op. Bestaande combinaties worden niet dubbel toegevoegd. Bij ingeschakelde uitsluiting telt geen enkel bezoek vanaf deze adressen mee in bezoekers- of geostatistieken, ook na uitloggen en vanuit een andere browser. Gebruikers die hetzelfde internetadres delen vallen onder dezelfde uitsluiting.</p>
+    <p>Deze functie staat standaard aan. Uitschakelen bewaart de lijst en laat bezoeken weer normaal tellen wanneer bezoekersregistratie aan staat. Lijst en instelling zitten niet in snapshots en blijven bij herstel behouden.</p>
+    <?php if ($ipToggleError !== ''): ?><div class="alert error" role="alert"><?=e($ipToggleError)?></div><?php endif; ?>
+    <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
+      <?=csrf_field()?>
+      <input type="hidden" name="action" value="toggle_ip_exclusion">
+      <input type="hidden" name="enabled" value="<?= $ipEnabled ? '0' : '1' ?>">
+      <button type="submit" <?= !$ipAvailable ? 'disabled' : '' ?>><?= $ipEnabled ? 'IP-uitsluiting uitschakelen' : 'IP-uitsluiting inschakelen' ?></button>
+    </form>
+    <?php if ($ipRows): ?>
+      <div class="dashboard-table-scroll"><table><thead><tr><th>IP-adres</th><th>Admin-ID</th></tr></thead><tbody>
+      <?php foreach ($ipRows as $row): ?><tr><td><?=e(inet_ntop((string)$row['ip_address']))?></td><td><?=e($row['admin_id'])?></td></tr><?php endforeach; ?>
+      </tbody></table></div><p><small>Maximaal de 50 laatst toegevoegde combinaties. Alle opgeslagen adressen blijven meetellen voor uitsluiting.</small></p>
+    <?php endif; ?>
   </section>
   <p class="dashboard-subtitle">Overzicht van de afgelopen 30 UTC-dagen. Unieke bezoekers zijn daggebonden schattingen: wie op meerdere dagen terugkomt telt opnieuw mee.</p>
   <?php if (!$available): ?>

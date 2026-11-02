@@ -10,9 +10,6 @@ require_once __DIR__ . '/visitor_geo_lookup.php';
 
 function track_catalog_view(?int $lotId = null): void
 {
-    // Standalone analytics fixtures do not load the web bootstrap. A real
-    // preview can only be activated by that authenticated bootstrap/session.
-    if (function_exists('admin_preview_statistics_suppressed') && admin_preview_statistics_suppressed()) return;
     if (!analytics_collection_enabled()) return;
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') return;
     if (($_SERVER['HTTP_DNT'] ?? '') === '1') return;
@@ -23,7 +20,6 @@ function track_catalog_view(?int $lotId = null): void
     $ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
     if ($ip === '') return;
     $day = gmdate('Y-m-d');
-    $identifier = hash_hmac('sha256', $day . ':' . $ip . ':' . $agent, $secret, true);
     $locked = false;
     $started = false;
     try {
@@ -32,6 +28,8 @@ function track_catalog_view(?int $lotId = null): void
         catalog_data_lock($pdo, 0);
         $locked = true;
         restore_journal_require_clear();
+        if (analytics_ip_is_excluded($pdo)) return; // Before HMAC/geo/INSERT, for every session at this IP.
+        $identifier = hash_hmac('sha256', $day . ':' . $ip . ':' . $agent, $secret, true);
         $state = visitor_geo_state($pdo);
         $geo = visitor_geo_collection_enabled($state) && visitor_geo_covers_day($state, $day) ? visitor_geo_resolve($ip) : null;
         $pdo->beginTransaction();

@@ -10,10 +10,8 @@ if (is_post() && array_key_exists('admin_preview_action', $_POST)) {
   }
   if ($action === 'start') {
     $_SESSION['admin_catalog_preview'] = $_SESSION['admin_id'];
-    $_SESSION['admin_preview_no_stats'] = true;
   } else {
     unset($_SESSION['admin_catalog_preview']);
-    // This preview session stays excluded until logout/session expiry.
   }
   redirect('index.php');
 }

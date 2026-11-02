@@ -4,6 +4,8 @@ on:
     paths:
       - "private/visitor_stats_archive.php"
       - "private/visitor_stats.php"
+      - "private/analytics_control.php"
+      - "database/migrations/20261102_visitor_stats_ip_exclusions.sql"
       - "private/visitor_stats_archive_one_day_experimental.php"
       - "private/snapshots.php"
       - "private/restore_diagnosis.php"

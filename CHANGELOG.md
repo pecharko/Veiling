@@ -1,5 +1,16 @@
 # Wijzigingslogboek
 
+## 2026-11-02 — Vaste adminvoorbeeldbanner en IP-uitsluiting bij login
+
+De voorbeeldbanner blijft tijdens scrollen zichtbaar met de navigatie eronder.
+Na geslaagde login wordt het server-IP met admin-ID in een unieke SQL-combinatie
+opgeslagen. Statistieken kan deze permanente IP-lijst standaard ingeschakeld
+uitsluiten van bezoek- en georegistratie. Uitschakelen bewaart de lijst en laat
+bezoeken normaal tellen, ook tijdens preview; opnieuw inschakelen hergebruikt
+alle adressen. Registratie gebeurt nooit bij de knop Bekijk website. Lijst en
+schakelaar zitten niet in snapshots en blijven bij herstel behouden. SQL is een
+voorstel; productie-uitvoering vereist afzonderlijke toestemming.
+
 ## 2026-11-02 — Beveiligd adminvoorbeeld van de catalogus
 
 - Mac-controller: expliciete journalupgrade en owner-geaccepteerde afronding maken volgende releases mogelijk zonder verbruikte nonces, comments of release-ID’s vrij te geven. Eén-PR-baselinebewijs wordt onafhankelijk op oude en nieuwe bron-SHA gecontroleerd.

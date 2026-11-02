@@ -65,6 +65,8 @@ verify($initialStorage['total'] > 0 && $initialStorage['uploads'] >= filesize($o
        'Hosting size estimator includes snapshot photo without double-counting');
 verify($initialStorage['snapshots'] === 0, 'No snapshot existed before isolated test');
 
+require_once $root . '/private/analytics_control.php';
+$pdo->prepare('INSERT INTO visitor_stats_ip_exclusions (ip_address,admin_id) VALUES (?,?)')->execute([analytics_ip_key('192.0.2.77'),1]);
 $name = snap_create($pdo);
 verify(!$pdo->inTransaction(), 'Successful snapshot ends consistent read transaction before archiving photos');
 verify(snap_name($name) && is_file(snap_path($name)), 'Snapshot created with safe filename');
@@ -80,6 +82,8 @@ $listing = snap_listing();
 verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['size'] > 0,
        'Snapshot listed with nonzero exact ZIP size');
 [$snapshot, $hashes, $photoBytes] = snap_verified($name);
+verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($snapshot['tables']['visitor_stats_ip_exclusion_state'])
+    && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
@@ -139,7 +143,11 @@ $pdo->prepare("INSERT INTO admin_invitations (name,email,role,token_hash,created
  DATE_ADD(UTC_TIMESTAMP(),INTERVAL 48 HOUR))")->execute([$pendingTokenHash]);
 verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 1,
        'Pending invitation exists before restoring snapshot');
+analytics_ip_set_exclusion($pdo,false);
+$pdo->prepare('INSERT INTO visitor_stats_ip_exclusions (ip_address,admin_id) VALUES (?,?)')->execute([analytics_ip_key('2001:db8::77'),99]);
 snap_restore($pdo, $name);
+verify((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 2
+    && !analytics_ip_exclusion_enabled($pdo), 'Restore preserves current IP/admin associations and switch instead of resetting them');
 verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 0,
        'Snapshot restore invalidates pending invitation tokens');
 verify($pdo->query("SELECT last_login_at FROM admins LIMIT 1")->fetchColumn() === null,
