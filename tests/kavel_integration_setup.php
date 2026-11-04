@@ -5,7 +5,8 @@ $host = getenv('CI_DB_HOST') ?: '127.0.0.1';
 $name = getenv('CI_DB_NAME') ?: 'auction_test';
 $user = getenv('CI_DB_USER') ?: 'root';
 $pass = getenv('CI_DB_PASSWORD') ?: '';
-if ($name !== 'auction_test' || $host !== '127.0.0.1') {
+if ($name !== 'auction_test' || !($host === '127.0.0.1' ||
+    ($host === 'preview-db' && getenv('LOCAL_PREVIEW_ISOLATED') === '1'))) {
   throw new RuntimeException('Isolated-test database settings required.');
 }
 $dir = dirname(__DIR__);
@@ -14,7 +15,7 @@ if (file_exists($config)) throw new RuntimeException('Refusing to overwrite exis
 $settings = [
   'database' => ['host' => $host, 'port' => 3306, 'name' => $name, 'user' => $user, 'password' => $pass],
   'base_path' => '',
-  'setup_key' => 'ci-test-only-nonproduction',
+  'setup_key' => $host === 'preview-db' ? 'local-preview-only-nonproduction' : 'ci-test-only-nonproduction',
   'analytics_secret' => str_repeat('preview-ci-only-', 4),
 ];
 file_put_contents($config, "<?php\nreturn " . var_export($settings, true) . ";\n");
