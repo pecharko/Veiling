@@ -1,0 +1,60 @@
+# Disposable synthetic data; no published MySQL port or production mounts.
+services:
+  preview-db:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: preview-fixture-only-password
+      MYSQL_DATABASE: auction_test
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -ppreview-fixture-only-password --silent"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    volumes:
+      - preview-db-data:/var/lib/mysql
+    networks:
+      - isolated
+  preview-web:
+    build:
+      context: ../..
+      dockerfile: dev/preview/Dockerfile
+    depends_on:
+      preview-db:
+        condition: service_healthy
+    environment:
+      LOCAL_PREVIEW_ISOLATED: "1"
+      CI_DB_HOST: preview-db
+      CI_DB_NAME: auction_test
+      CI_DB_USER: root
+      CI_DB_PASSWORD: preview-fixture-only-password
+    volumes:
+      - ../..:/app
+    working_dir: /app
+    command:
+      - sh
+      - -ec
+      - |
+        if [ -e private/config.php ]; then
+          grep -q 'local-preview-only-nonproduction' private/config.php || { echo 'REFUSE: existing non-preview config'; exit 1; }
+        else
+          php tests/kavel_integration_setup.php
+        fi
+        php dev/preview/seed.php
+        exec php -S 0.0.0.0:8080 -t catalogus-public
+    ports:
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/index.php') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 8s
+    networks:
+      - isolated
+      - localhost-access
+networks:
+  isolated:
+    internal: true
+  localhost-access:
+volumes:
+  preview-db-data:

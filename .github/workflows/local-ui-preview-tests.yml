@@ -1,0 +1,52 @@
+name: Local UI preview isolated tests
+on:
+  pull_request:
+    paths:
+      - 'dev/preview/**'
+      - 'scripts/preview'
+      - 'tests/kavel_integration_setup.php'
+      - 'docs/local-ui-preview.md'
+      - '.github/workflows/local-ui-preview-tests.yml'
+      - '.gitignore'
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Static syntax and safety checks before Docker startup
+        run: |
+          set -eu
+          php -l dev/preview/seed.php
+          php -l tests/kavel_integration_setup.php
+          sh -n scripts/preview
+          node --check dev/preview/visual_test.cjs
+          grep -Fq '127.0.0.1:8080:8080' dev/preview/compose.yaml
+          grep -Fq 'internal: true' dev/preview/compose.yaml
+      - name: Start synthetic Docker preview
+        run: sh scripts/preview start
+      - name: Install pinned headless browser
+        run: |
+          npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/preview-browser" playwright@1.57.0
+          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Public and admin screenshots at desktop and mobile sizes
+        run: NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node dev/preview/visual_test.cjs
+      - name: Diagnose isolated preview startup failure
+        if: failure()
+        run: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml logs --no-color --tail=100
+      - name: Preserve visual previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-preview-screenshots
+          path: dev/preview/.screenshots/
+          retention-days: 7
+          if-no-files-found: warn
+          include-hidden-files: true
+      - name: Stop and erase synthetic fixture
+        if: always()
+        run: sh scripts/preview stop
