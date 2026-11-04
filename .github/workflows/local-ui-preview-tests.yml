@@ -45,7 +45,8 @@ jobs:
           name: ui-preview-screenshots
           path: dev/preview/.screenshots/
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: warn
+          include-hidden-files: true
       - name: Stop and erase synthetic fixture
         if: always()
         run: sh scripts/preview stop
