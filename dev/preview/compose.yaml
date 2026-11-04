@@ -51,8 +51,10 @@ services:
       start_period: 8s
     networks:
       - isolated
+      - localhost-access
 networks:
   isolated:
     internal: true
+  localhost-access:
 volumes:
   preview-db-data:
