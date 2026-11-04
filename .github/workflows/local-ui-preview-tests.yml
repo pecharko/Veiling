@@ -35,6 +35,9 @@ jobs:
           dev/preview/node_modules/.bin/playwright install --with-deps chromium
       - name: Public and admin screenshots at desktop and mobile sizes
         run: node dev/preview/visual_test.cjs
+      - name: Diagnose isolated preview startup failure
+        if: failure()
+        run: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml logs --no-color --tail=100
       - name: Preserve visual previews
         if: always()
         uses: actions/upload-artifact@v4
