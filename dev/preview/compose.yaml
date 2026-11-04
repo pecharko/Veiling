@@ -43,6 +43,12 @@ services:
         exec php -S 0.0.0.0:8080 -t catalogus-public
     ports:
       - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://127.0.0.1:8080/index.php') === false ? 1 : 0);"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+      start_period: 8s
     networks:
       - isolated
 networks:
