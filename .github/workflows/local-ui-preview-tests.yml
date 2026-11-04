@@ -1,0 +1,37 @@
+name: Local UI preview isolated tests
+on:
+  pull_request:
+    paths:
+      - 'dev/preview/**'
+      - 'scripts/preview'
+      - 'tests/kavel_integration_setup.php'
+      - 'docs/local-ui-preview.md'
+      - '.github/workflows/local-ui-preview-tests.yml'
+      - '.gitignore'
+permissions:
+  contents: read
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start synthetic Docker preview
+        run: sh scripts/preview start
+      - name: Install pinned headless browser
+        run: |
+          npm --prefix dev/preview install --no-save --no-package-lock --no-audit --no-fund playwright@1.57.0
+          dev/preview/node_modules/.bin/playwright install --with-deps chromium
+      - name: Public and admin screenshots at desktop and mobile sizes
+        run: node dev/preview/visual_test.cjs
+      - name: Preserve visual previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-preview-screenshots
+          path: dev/preview/.screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Stop and erase synthetic fixture
+        if: always()
+        run: sh scripts/preview stop

@@ -50,3 +50,7 @@ error_log
 # Local licensed geolocation data; never commit a MaxMind database or license.
 *.mmdb
 private/geoip/
+
+# Local UI preview (generated, never commit)
+node_modules/
+dev/preview/.screenshots/

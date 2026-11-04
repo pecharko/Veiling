@@ -1,0 +1,51 @@
+#!/bin/sh
+# Usage: sh scripts/preview start|test|status|stop
+set -eu
+ROOT=$(CDPATH= cd "$(dirname "$0")/.." && pwd)
+cd "$ROOT"
+COMPOSE="$ROOT/dev/preview/compose.yaml"
+PROJECT=veiling-local-ui-preview
+CFG="$ROOT/private/config.php"
+check_config() {
+  if [ -e "$CFG" ]; then
+    if [ ! -f "$CFG" ] || [ -L "$CFG" ] ||
+       ! grep -q 'local-preview-only-nonproduction' "$CFG" ||
+       ! grep -q "'host' => 'preview-db'" "$CFG"; then
+      echo 'STOP: private/config.php belongs to another environment. Use an isolated worktree.' >&2
+      exit 1
+    fi
+  fi
+}
+dc() { docker compose --project-name "$PROJECT" -f "$COMPOSE" "$@"; }
+case "${1:-}" in
+  start)
+    command -v docker >/dev/null || { echo 'Docker Desktop is required.' >&2; exit 1; }
+    docker compose version >/dev/null
+    branch=$(git branch --show-current)
+    [ -n "$branch" ] && [ "$branch" != main ] || { echo 'STOP: use a development branch/worktree, not main.' >&2; exit 1; }
+    check_config
+    dc up -d --build --wait
+    printf 'Local preview: http://localhost:8080\nAdmin: http://localhost:8080/admin/login.php\n'
+    printf 'Synthetic login: ci-admin@example.invalid / ci-password-not-a-real-secret\n'
+    ;;
+  test)
+    check_config
+    command -v npm >/dev/null || { echo 'Node.js/npm required for Playwright.' >&2; exit 1; }
+    npm --prefix dev/preview install --no-save --no-package-lock --no-audit --no-fund playwright@1.57.0
+    dev/preview/node_modules/.bin/playwright install chromium
+    node dev/preview/visual_test.cjs
+    ;;
+  status)
+    dc ps
+    ;;
+  stop)
+    check_config
+    dc down --volumes --remove-orphans
+    if [ -f "$CFG" ]; then rm -- "$CFG"; fi
+    echo 'Synthetic database removed; local preview stopped.'
+    ;;
+  *)
+    echo 'Usage: sh scripts/preview start|test|status|stop' >&2
+    exit 2
+    ;;
+esac
