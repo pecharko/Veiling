@@ -6,7 +6,7 @@ Doel: snelle UI-iteraties op een afzonderlijke developmentbranch in een wegwerpo
 - Mac met Docker Desktop, Git, Node.js/npm.
 - Vrije poort 8080 op localhost; geen andere lokale applicatie op deze poort.
 - Werk in een **afzonderlijke Git-worktree** zonder `private/config.php` of productiegegevens. Gebruik nooit `main`.
-- De MySQL 8.4-container heeft geen gepubliceerde DB-poort. De website is alleen beschikbaar op `127.0.0.1:8080`; de Docker-netwerkverbinding is intern. Gebruik geen productiesnapshots of production secrets.
+- De MySQL 8.4-container heeft geen gepubliceerde DB-poort en blijft uitsluitend op een intern Docker-netwerk. De PHP-webcontainer gebruikt daarnaast een aparte bridge voor de hostpoort, uitsluitend gebonden aan `127.0.0.1:8080`. Er worden geen OVH-configuraties of productiecredentials geladen. Gebruik geen productiesnapshots of production secrets.
 
 ## Starten
 Vanuit de ontwikkel-worktree:
