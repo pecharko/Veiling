@@ -25,7 +25,7 @@ sh scripts/preview test
 sh scripts/preview status
 sh scripts/preview stop
 ```
-`test` installeert Playwright Chromium indien nodig, test desktop/mobiel voor publieke catalogus en admin en schrijft PNG's naar `dev/preview/.screenshots/` (niet in Git).
+`test` hergebruikt lokaal Playwright wanneer beschikbaar. Op macOS kiest het eerst de reeds geïnstalleerde Google Chrome of Chromium-browser; er wordt **geen automatische Chromium-download** meer gestart, omdat die op sommige Macs bleef hangen. Bij ontbrekende browser toont het script een duidelijke fout. Optioneel kan je `PREVIEW_BROWSER_EXECUTABLE='/volledig/pad/naar/browser' sh scripts/preview test` gebruiken. Op Linux installeert het script indien nodig Playwright Chromium. De tests controleren desktop/mobiel voor de publieke catalogus en admin en schrijven PNG's naar `dev/preview/.screenshots/` (niet in Git).
 `stop` verwijdert **alleen de synthetische Docker-previewdatabase** en de uitsluitend voor deze preview gemaakte `private/config.php`. Herstarten maakt nieuwe fictieve gegevens.
 
 ## Codex-werkflow

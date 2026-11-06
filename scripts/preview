@@ -43,8 +43,36 @@ case "${1:-}" in
   test)
     check_config
     command -v npm >/dev/null || { echo 'Node.js/npm required for Playwright.' >&2; exit 1; }
-    npm --prefix dev/preview install --no-save --no-package-lock --no-audit --no-fund playwright@1.57.0
-    dev/preview/node_modules/.bin/playwright install chromium
+    if [ ! -x dev/preview/node_modules/.bin/playwright ]; then
+      npm --prefix dev/preview install --no-save --no-package-lock --no-audit --no-fund playwright@1.57.0
+    fi
+    # Avoid the known macOS Chromium-download hang. Use locally installed Chrome.
+    # CI runs visual_test.cjs directly after its own pinned browser install.
+    if [ "$(uname -s)" = Darwin ]; then
+      if [ -n "${PREVIEW_BROWSER_EXECUTABLE:-}" ]; then
+        [ -x "$PREVIEW_BROWSER_EXECUTABLE" ] || {
+          echo "Browser not executable: $PREVIEW_BROWSER_EXECUTABLE" >&2
+          exit 1
+        }
+      elif [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
+        PREVIEW_BROWSER_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      elif [ -x "$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then
+        PREVIEW_BROWSER_EXECUTABLE="$HOME/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+      elif [ -x "/Applications/Chromium.app/Contents/MacOS/Chromium" ]; then
+        PREVIEW_BROWSER_EXECUTABLE="/Applications/Chromium.app/Contents/MacOS/Chromium"
+      else
+        echo 'No installed Chrome/Chromium browser found on macOS.' >&2
+        echo 'Install Google Chrome or set PREVIEW_BROWSER_EXECUTABLE to a valid browser path.' >&2
+        echo 'The preview test will not retry the previously stuck Chromium download.' >&2
+        exit 1
+      fi
+      export PREVIEW_BROWSER_EXECUTABLE
+      echo "Preview tests: using browser $PREVIEW_BROWSER_EXECUTABLE"
+    else
+      if [ -z "${PREVIEW_BROWSER_EXECUTABLE:-}" ]; then
+        dev/preview/node_modules/.bin/playwright install chromium
+      fi
+    fi
     node dev/preview/visual_test.cjs
     ;;
   status)

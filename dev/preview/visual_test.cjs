@@ -6,7 +6,11 @@ const { chromium } = require('playwright');
 const base = 'http://localhost:8080';
 const output = path.join(__dirname, '.screenshots');
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browserPath = process.env.PREVIEW_BROWSER_EXECUTABLE;
+  const browser = await chromium.launch({
+    headless: true,
+    ...(browserPath ? { executablePath: browserPath } : {}),
+  });
   try {
     fs.mkdirSync(output, { recursive: true });
     const context = await browser.newContext();
