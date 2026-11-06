@@ -42,7 +42,9 @@ const output = path.join(__dirname, '.screenshots');
     await page.goto(base + '/admin/instellingen.php');
     const splitToggle = page.locator('input[name="catalog_split_active"]');
     assert.equal(await splitToggle.count(), 1, 'Persistent admin split toggle exists');
-    await splitToggle.check();
+    // The actual styled toggle intercepts pointer events on the hidden checkbox.
+    // Exercise the visible label as a real user would.
+    await page.locator('label.auction-settings-toggle:has(input[name="catalog_split_active"])').click();
     await page.locator('button.auction-settings-save').click();
     await page.waitForURL('**/admin/instellingen.php');
     assert.equal(await page.locator('input[name="catalog_split_active"]').isChecked(), true);
@@ -52,7 +54,7 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(await ordinaryPage.locator('.catalog-preview-tabs').count(), 1, 'Saved split affects ordinary visitor');
     assert.match(await ordinaryPage.locator('.lot-estimate').first().textContent(), /Startbod/);
     await ordinary.close();
-    await page.locator('input[name="catalog_split_active"]').uncheck();
+    await page.locator('label.auction-settings-toggle:has(input[name="catalog_split_active"])').click();
     await page.locator('button.auction-settings-save').click();
     await page.waitForURL('**/admin/instellingen.php');
     assert.equal(await page.locator('input[name="catalog_split_active"]').isChecked(), false);
