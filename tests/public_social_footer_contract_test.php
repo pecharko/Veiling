@@ -19,9 +19,11 @@ if ($catalogEnd===false || $footerAt===false || $footerAt<$catalogEnd) {
     throw new RuntimeException('Social footer must be outside lot visibility guard');
 }
 ob_start();public_social_footer();$html=ob_get_clean();
-if (!str_contains($html,'Volg ons') || substr_count($html,'footer-social-icon--pending')!==2
-    || str_contains($html,'<a class="footer-social-icon"')) {
-    throw new RuntimeException('Missing social icons or unexpected unconfigured links');
+if (!str_contains($html,'Volg ons') || substr_count($html,'footer-social-icon--pending')!==1
+    || substr_count($html,'<a class="footer-social-icon"')!==1
+    || !str_contains($html,'href="https://www.facebook.com/41Lokeren"')
+    || !str_contains($html,'target="_blank" rel="noopener noreferrer"')) {
+    throw new RuntimeException('Facebook must link to the confirmed page; Instagram stays unconfigured');
 }
 $GLOBALS['social_test_config']=[
     'facebook_url'=>'https://www.facebook.com/example',

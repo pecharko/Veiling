@@ -25,7 +25,12 @@ function public_social_footer(): void
     echo '<span class="footer-social-heading">Volg ons</span><div class="footer-social-icons">';
     foreach ($icons as $platform => $svg) {
         $label = ucfirst($platform);
-        $href = public_social_profile_url($platform, cfg($platform . '_url'));
+        $configuredUrl = cfg($platform . '_url');
+        // The organization confirmed its official Facebook page.
+        $profileUrl = $platform === 'facebook'
+            ? ($configuredUrl ?: 'https://www.facebook.com/41Lokeren')
+            : $configuredUrl;
+        $href = public_social_profile_url($platform, $profileUrl);
         $picture = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $svg . '</svg>';
         if ($href !== null) {
             echo '<a class="footer-social-icon" href="' . e($href) . '" aria-label="' . $label
