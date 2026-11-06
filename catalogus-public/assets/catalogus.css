@@ -86,3 +86,15 @@ body{background:#fffaf6;color:var(--ink)}
 .lot-cover .lot-sold-badge{position:absolute;right:4px;top:20px;z-index:2}
 .detail-sold-badge{position:relative;flex:none;margin:10px 15px 22px}
 @media(max-width:530px){.lot-cover .lot-sold-badge{right:4px;top:21px;min-width:88px;padding:9px 9px;font-size:10px}.detail-sold-badge{min-width:100px}}
+
+
+/* Always-on public social footer, independent of catalog lot visibility. */
+.footer .footer-social{display:flex;flex-direction:column;gap:10px;align-items:flex-start;flex:none;padding:14px 0}
+.footer .footer-social-heading{font-size:14px;font-weight:700;line-height:1.2;color:#fff}
+.footer .footer-social-icons{display:flex;align-items:center;gap:12px}
+.footer .footer-social-icon{display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px solid rgba(255,255,255,.28);border-radius:50%;color:#fff;background:rgba(255,255,255,.05)}
+.footer .footer-social-icon svg{display:block;width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.footer .footer-social-icon--pending{opacity:.7;cursor:default}
+.footer a.footer-social-icon:hover{background:rgba(255,255,255,.18)}
+.footer a.footer-social-icon:focus-visible{outline:3px solid #d4bd88;outline-offset:3px}
+@media(max-width:800px){.footer-inner{flex-wrap:wrap;justify-content:flex-start;gap:18px 25px}.footer .footer-social{width:100%;border-top:1px solid rgba(255,255,255,.2);padding:18px 0}}

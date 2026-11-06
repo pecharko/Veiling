@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
@@ -99,7 +100,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Naar de huidige veiling <span aria-hidden="true">→</span></a><a class="impression-text-link" href="<?=e(url('index.php'))?>#informatie">Praktische informatie →</a></div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="#top">Naar boven ↑</a></div></footer>
+<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="#top">Naar boven ↑</a><?php public_social_footer(); ?></div></footer>
 
 </body>
 </html>
