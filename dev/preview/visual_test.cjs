@@ -22,6 +22,7 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(new URL(page.url()).hostname, 'localhost');
     assert.match(await page.textContent('body'), /Abstract landschap/);
     assert.equal(await page.locator('form.toolbar').count(), 0, 'No public lot filters');
+    assert.equal(await page.locator('.catalog-preview-explain').count(), 0, 'Unsplit catalog has no introductory box');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.screenshot({ path: path.join(output, `catalogue-${width}.png`), fullPage: true, animations: 'disabled' });
