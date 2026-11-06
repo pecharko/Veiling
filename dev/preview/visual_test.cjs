@@ -83,7 +83,11 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(await preview.locator('form.toolbar').count(), 0, 'Split view has no lot filters');
     assert.match(await preview.locator('.catalog-preview-tabs').textContent(), /Veiling.*Marktplaats/s);
     assert.match(await preview.locator('.lot-estimate').first().textContent(), /Startbod/);
+    const beforeSwitchScroll = await preview.evaluate(() => window.scrollY);
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
+    assert.equal(await preview.evaluate(() => window.scrollY), beforeSwitchScroll, 'Tab switch must preserve scroll position');
+    assert.equal(new URL(preview.url()).hash, '', 'Tab switch must not create an anchor jump');
+    assert.equal(await preview.locator('a.catalog-preview-tabs a').count(), 0);
     assert.match(await preview.locator('.catalog-preview-help strong').textContent(), /Marktplaats/);
     await preview.screenshot({path:path.join(output,'split-marktplaats-1440.png'),fullPage:true,animations:'disabled'});
 

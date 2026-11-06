@@ -19,13 +19,51 @@
       const el = document.getElementById(id); if (el) el.href = link;
     }
   }
-  document.querySelectorAll('[data-favorite]').forEach(btn => btn.addEventListener('click', () => {
+  // Delegated favourites also work after switching catalog sections without a reload.
+  document.addEventListener('click', event => {
+    const btn = event.target.closest('[data-favorite]');
+    if (!btn) return;
     const n = Number(btn.dataset.favorite);
     saved = saved.includes(n) ? saved.filter(x => x !== n) : [...saved, n];
     try { localStorage.setItem(KEY, JSON.stringify(saved)); } catch { /* privévenster */ }
     paint();
     if (document.body.dataset.favorites === '1') location.assign(`${base}?favorieten=1&nummers=${encodeURIComponent(saved.join(','))}#catalogus`);
-  }));
+  });
+
+  // Change between Veiling / Marktplaats in place. No #catalogus jump or full reload.
+  // The ordinary href remains a fallback when JavaScript is unavailable.
+  let switchingCatalog = false;
+  document.addEventListener('click', async event => {
+    const tab = event.target.closest('.catalog-preview-tabs a');
+    if (!tab || event.defaultPrevented || event.button !== 0 || event.metaKey ||
+        event.ctrlKey || event.shiftKey || event.altKey || switchingCatalog) return;
+    const next = new URL(tab.href, window.location.href);
+    if (next.origin !== window.location.origin) return;
+    event.preventDefault();
+    if (next.pathname === window.location.pathname && next.search === window.location.search) return;
+    switchingCatalog = true;
+    const oldSection = document.getElementById('catalogus');
+    const oldScrollY = window.scrollY;
+    try {
+      const response = await fetch(next, { credentials: 'same-origin', headers: { 'Accept': 'text/html' } });
+      if (!response.ok) throw new Error('Catalog switch unavailable');
+      const html = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const newSection = html.getElementById('catalogus');
+      if (!oldSection || !newSection || !newSection.querySelector('.catalog-preview-tabs')) {
+        throw new Error('Catalog section missing');
+      }
+      oldSection.replaceWith(document.importNode(newSection, true));
+      window.history.pushState({ catalogSection: true }, '', next.pathname + next.search);
+      paint();
+      window.scrollTo({ top: oldScrollY, behavior: 'instant' });
+      document.querySelector('.catalog-preview-tabs a[aria-current="page"]')?.focus({ preventScroll: true });
+    } catch (_) {
+      // On errors, retain the navigable tab instead of leaving the old content selected.
+      window.location.assign(next.href);
+    } finally {
+      switchingCatalog = false;
+    }
+  });
   document.querySelectorAll('.gallery-thumb').forEach(btn => btn.addEventListener('click', () => {
     const img = document.querySelector('#mainPhoto'); if (img) img.src = btn.dataset.photo;
     document.querySelectorAll('.gallery-thumb').forEach(el => el.setAttribute('aria-pressed', String(el === btn)));
