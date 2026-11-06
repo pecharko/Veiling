@@ -84,7 +84,8 @@ $ddl = [
     address VARCHAR(300) NOT NULL DEFAULT '',
     contact_email VARCHAR(190) NOT NULL DEFAULT '',
     practical_info TEXT NOT NULL,
-    is_published TINYINT NOT NULL DEFAULT 0
+    is_published TINYINT NOT NULL DEFAULT 0,
+    catalog_split_active TINYINT(1) NOT NULL DEFAULT 0
   ) ENGINE=InnoDB",
 ];
 foreach ($ddl as $sql) $pdo->exec($sql);
