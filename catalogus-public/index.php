@@ -180,8 +180,6 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <p><?= $splitSection === 'veiling' ? 'Deze kavels worden geveild. Je vindt hier het veilingsnummer en het startbod.' : 'Deze kavels kunnen tijdens de kijkdagen onmiddellijk worden aangekocht. Je vindt hier de marktprijs.' ?></p>
       </div>
     </div>
-  <?php else: ?>
-    <div class="catalog-preview-explain"><h3>Alle kavels in één overzicht</h3><p>De verdeling tussen veiling en marktplaats wordt later bekendgemaakt. Bekijk alvast alle kavels.</p></div>
   <?php endif; ?>
   <?php if (!$published): ?>
     <div class="empty-state"><span class="empty-art">◌</span><h3>De catalogus wordt voorbereid</h3><p>De kavels verschijnen hier zodra de organisatie de veiling publiceert.</p></div>
