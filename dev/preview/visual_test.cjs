@@ -37,6 +37,24 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `admin-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No admin overflow ${width}`);
     }
+    // Persist the split via Veilinginfo and inspect it without an admin session.
+    await page.goto(base + '/admin/instellingen.php');
+    const splitToggle = page.locator('input[name="catalog_split_active"]');
+    assert.equal(await splitToggle.count(), 1, 'Persistent admin split toggle exists');
+    await splitToggle.check();
+    await page.locator('button.auction-settings-save').click();
+    await page.waitForURL('**/admin/instellingen.php');
+    assert.equal(await page.locator('input[name="catalog_split_active"]').isChecked(), true);
+    const ordinary = await browser.newContext();
+    const ordinaryPage = await ordinary.newPage();
+    await ordinaryPage.goto(base + '/index.php');
+    assert.equal(await ordinaryPage.locator('.catalog-preview-tabs').count(), 1, 'Saved split affects ordinary visitor');
+    assert.match(await ordinaryPage.locator('.lot-estimate').first().textContent(), /Startbod/);
+    await ordinary.close();
+    await page.locator('input[name="catalog_split_active"]').uncheck();
+    await page.locator('button.auction-settings-save').click();
+    await page.waitForURL('**/admin/instellingen.php');
+    assert.equal(await page.locator('input[name="catalog_split_active"]').isChecked(), false);
     // Open the real public website through the administrator's preview action.
     const [preview] = await Promise.all([
       context.waitForEvent('page'),
