@@ -86,3 +86,12 @@ body{background:#fffaf6;color:var(--ink)}
 .lot-cover .lot-sold-badge{position:absolute;right:4px;top:20px;z-index:2}
 .detail-sold-badge{position:relative;flex:none;margin:10px 15px 22px}
 @media(max-width:530px){.lot-cover .lot-sold-badge{right:4px;top:21px;min-width:88px;padding:9px 9px;font-size:10px}.detail-sold-badge{min-width:100px}}
+
+/* Public social footer: always present even with unpublished/hidden lots. */
+.footer-social-band{background:#65091c;color:#fff}
+.footer-social{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px 16px 28px;text-align:center}
+.footer-social h2{margin:0;color:#fff;font-size:20px;font-weight:700;line-height:1.25}
+.footer-social-icons{display:flex;align-items:center;justify-content:center;gap:22px}
+.footer-social-icon{display:inline-flex;width:40px;height:40px;align-items:center;justify-content:center;color:#fff}
+.footer-social-icon svg{display:block;width:39px;height:39px}
+@media(max-width:530px){.footer-social{padding:22px 12px 26px}.footer-social-icons{gap:26px}}
