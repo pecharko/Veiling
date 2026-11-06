@@ -4,3 +4,5 @@ Via **Bekijk website** in het adminmenu opent een geauthenticeerd adminvoorbeeld
 **Uit:** alle zichtbare kavels in één overzicht, zonder marktprijzen of startboden, ook op de detailpagina. **Aan:** tabbladen Veiling en Marktplaats; veilingnummers en oplopende veilingvolgorde, alleen startbod voor veilingkavels, alleen marktprijs voor marktplaatskavels. Voor de lokale preview zijn alle kavels fictief.
 
 Na definitieve acceptatie kan een afzonderlijke admininstelling voor publieke activering worden ontwikkeld en later alleen met aparte merge-, database- en productieautorisatie worden uitgerold.
+
+**Update:** de adminmodule bevat nu ook een aparte, opgeslagen publicatieschakelaar onder Veilinginfo → Publicatie & controle. Die bepaalt standaard de publieke weergave; de gele adminvoorbeeldknoppen blijven tijdelijk en overschrijven de opgeslagen instelling uitsluitend voor de eigen sessie. Zie `docs/catalog-split-admin-switch.md`.
