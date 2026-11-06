@@ -110,3 +110,25 @@ body{background:#fffaf6;color:var(--ink)}
 .lot-preview-number{position:absolute;bottom:12px;left:12px;background:#850015;color:white;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:800}
 .lot-cover{position:relative}
 @media(max-width:530px){.catalog-preview-explain{padding:15px}.catalog-preview-tabs a{font-size:13px;padding:12px 5px}}
+
+
+/* Reference-matched auction / marketplace introduction, tabs and detail strip. */
+.catalog-preview-explain{display:grid;grid-template-columns:72px minmax(0,1fr);align-items:start;gap:14px;margin:22px 0 26px;padding:24px 28px;background:linear-gradient(125deg,#fff,#f8f7f6);border:1px solid #e2dfdd;border-radius:12px;box-shadow:0 0 0 1px rgba(60,45,47,.02)}
+.catalog-preview-icon{display:flex;align-items:center;justify-content:center;width:58px;height:58px;color:#8d002b;flex:none}
+.catalog-preview-icon svg{width:100%;height:100%;display:block}
+.catalog-preview-explain h3{margin:0 0 5px;color:#8d002b;font:800 clamp(21px,2vw,25px)/1.18 Arial,sans-serif}
+.catalog-preview-explain p{margin:0;font-size:16px;line-height:1.46;color:#202323}
+.catalog-preview-explain ul{margin:3px 0 0;padding-left:23px;font-size:16px;line-height:1.4;color:#202323}
+.catalog-preview-explain li+li{margin-top:4px}
+.catalog-preview-explain strong{font-weight:850}
+.catalog-preview-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:0 0 24px}
+.catalog-preview-tabs a{display:flex;align-items:center;justify-content:center;gap:14px;min-width:0;min-height:66px;border:1px solid #dfdfe2;border-radius:14px 14px 0 0;background:linear-gradient(160deg,#f7f7f7,#eeeeef);color:#194b3f;font-size:21px;line-height:1.2;font-weight:850;text-align:center}
+.catalog-preview-tabs a.active{background:linear-gradient(120deg,#99002b,#8c0027);color:#fff;border-color:#900029}
+.catalog-preview-tab-icon{display:flex;width:34px;height:34px;align-items:center;justify-content:center;flex:none}
+.catalog-preview-tab-icon svg{display:block;width:100%;height:100%}
+.catalog-preview-tabs a:hover:not(.active){background:#ece9e9}
+.catalog-preview-help{display:flex;align-items:center;gap:16px;margin:0 0 22px;padding:15px 22px;background:linear-gradient(110deg,#fdf2f4,#f9ebee);border:1px solid #f0e2e5;border-radius:11px;color:#202323}
+.catalog-preview-help .catalog-preview-icon--small{width:44px;height:44px}
+.catalog-preview-help strong{display:block;margin-bottom:2px;color:#8d002b;font-size:20px;line-height:1.2;font-weight:850}
+.catalog-preview-help p{margin:0;font-size:15px;line-height:1.45;color:#202323}
+@media(max-width:650px){.catalog-preview-explain{grid-template-columns:45px minmax(0,1fr);gap:10px;padding:17px 14px}.catalog-preview-icon{width:42px;height:42px}.catalog-preview-explain h3{font-size:19px}.catalog-preview-explain p,.catalog-preview-explain ul{font-size:13px}.catalog-preview-explain ul{padding-left:18px}.catalog-preview-tabs a{gap:8px;min-height:58px;font-size:15px;padding:11px 4px}.catalog-preview-tab-icon{width:25px;height:25px}.catalog-preview-help{gap:10px;padding:13px}.catalog-preview-help .catalog-preview-icon--small{width:32px;height:32px}.catalog-preview-help strong{font-size:17px}.catalog-preview-help p{font-size:13px}}

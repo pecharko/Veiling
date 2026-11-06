@@ -51,10 +51,23 @@ const output = path.join(__dirname, '.screenshots');
       preview.locator('button[name="admin_preview_action"][value="split_on"]').click(),
     ]);
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 1);
+    assert.equal(await preview.locator('.catalog-preview-explain ul li').count(), 2);
+    assert.equal(await preview.locator('.catalog-preview-tabs svg').count(), 2);
+    assert.equal(await preview.locator('.catalog-preview-help svg').count(), 1);
+    assert.match(await preview.locator('.catalog-preview-help strong').textContent(), /Veiling/);
+    for (const width of [1440, 390]) {
+      await preview.setViewportSize({width, height:900});
+      await preview.screenshot({path:path.join(output,`split-veiling-${width}.png`),fullPage:true,animations:'disabled'});
+      assert.equal(await preview.evaluate(() => document.documentElement.scrollWidth <= innerWidth),true,`No split layout overflow ${width}`);
+    }
+
     assert.equal(await preview.locator('form.toolbar').count(), 0, 'Split view has no lot filters');
     assert.match(await preview.locator('.catalog-preview-tabs').textContent(), /Veiling.*Marktplaats/s);
     assert.match(await preview.locator('.lot-estimate').first().textContent(), /Startbod/);
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
+    assert.match(await preview.locator('.catalog-preview-help strong').textContent(), /Marktplaats/);
+    await preview.screenshot({path:path.join(output,'split-marktplaats-1440.png'),fullPage:true,animations:'disabled'});
+
     assert.match(await preview.locator('.lot-estimate').first().textContent(), /Marktprijs/);
     await preview.locator('button[name="admin_preview_action"][value="split_off"]').click();
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 0);

@@ -158,12 +158,27 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
   <?php if ($published): ?>
   <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
   <?php if ($splitPreview): ?>
-    <div class="catalog-preview-explain"><h3>Veiling en marktplaats</h3><p>De kavels voor de veiling zijn gekend. Omdat niet alle kavels worden geveild, is er ook een marktplaats. Tijdens de kijkdagen kunnen marktplaatskavels onmiddellijk worden aangekocht. Het loont dus zeker de moeite om langs te komen!</p></div>
+    <div class="catalog-preview-explain">
+      <span class="catalog-preview-icon catalog-preview-icon--gavel"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.8 4.7 25 12.9l-5.5 5.5-8.2-8.2a2.7 2.7 0 0 1 0-3.8l1.7-1.7a2.7 2.7 0 0 1 3.8 0ZM30.9 18.9l8.2 8.2a2.7 2.7 0 0 1 0 3.8l-1.7 1.7a2.7 2.7 0 0 1-3.8 0l-8.2-8.2 5.5-5.5ZM23 12.8l12.2 12.3-6.3 6.3-12.3-12.2 6.4-6.4ZM19.5 28.1l3.8 3.8-13.8 13.8a2.7 2.7 0 0 1-3.8 0l-1.7-1.7a2.7 2.7 0 0 1 0-3.8l15.5-12.1Z"/></svg></span>
+      <div class="catalog-preview-explain-copy">
+        <h3>Veiling en marktplaats</h3>
+        <p>De kavels zijn verdeeld in twee categorieën:</p>
+        <ul>
+          <li><strong>Veiling:</strong> een selectie bijzondere kavels die tijdens de benefietveiling worden toegewezen aan de hoogste bieder.</li>
+          <li><strong>Marktplaats:</strong> een breed aanbod kavels die je tijdens de kijkdagen onmiddellijk kunt aankopen. Kom zeker langs, want op = op!</li>
+        </ul>
+      </div>
+    </div>
     <nav class="catalog-preview-tabs" aria-label="Veiling of marktplaats">
-      <a class="<?= $splitSection === 'veiling' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'veiling']))?>#catalogus" <?= $splitSection === 'veiling' ? 'aria-current="page"' : '' ?>>Veiling (<?=$splitCounts['veiling']?>)</a>
-      <a class="<?= $splitSection === 'markt' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'markt']))?>#catalogus" <?= $splitSection === 'markt' ? 'aria-current="page"' : '' ?>>Marktplaats (<?=$splitCounts['markt']?>)</a>
+      <a class="<?= $splitSection === 'veiling' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'veiling']))?>#catalogus" <?= $splitSection === 'veiling' ? 'aria-current="page"' : '' ?>><span class="catalog-preview-tab-icon"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.8 4.7 25 12.9l-5.5 5.5-8.2-8.2a2.7 2.7 0 0 1 0-3.8l1.7-1.7a2.7 2.7 0 0 1 3.8 0ZM30.9 18.9l8.2 8.2a2.7 2.7 0 0 1 0 3.8l-1.7 1.7a2.7 2.7 0 0 1-3.8 0l-8.2-8.2 5.5-5.5ZM23 12.8l12.2 12.3-6.3 6.3-12.3-12.2 6.4-6.4ZM19.5 28.1l3.8 3.8-13.8 13.8a2.7 2.7 0 0 1-3.8 0l-1.7-1.7a2.7 2.7 0 0 1 0-3.8l15.5-12.1Z"/></svg></span><span>Veiling (<?=$splitCounts['veiling']?>)</span></a>
+      <a class="<?= $splitSection === 'markt' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'markt']))?>#catalogus" <?= $splitSection === 'markt' ? 'aria-current="page"' : '' ?>><span class="catalog-preview-tab-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M7 20 11 8h26l4 12v5c-1 4-6 5-9 1-3 4-8 4-11 0-3 4-8 4-11 0-3 4-8 3-9-1v-5z" transform="translate(3 0) scale(.88)"/><path d="M10 25v15h28V25M20 40V29h10v11"/></svg></span><span>Marktplaats (<?=$splitCounts['markt']?>)</span></a>
     </nav>
-    <p class="catalog-preview-help"><?= $splitSection === 'veiling' ? 'Veilingkavels verschijnen in de volgorde van de veiling. Bieden gebeurt tijdens de fysieke veiling.' : 'Marktplaatskavels zijn tijdens de kijkdagen meteen ter plaatse te koop.' ?></p>
+    <div class="catalog-preview-help">
+      <span class="catalog-preview-icon catalog-preview-icon--small"><?= $splitSection === 'veiling' ? '<svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false"><path d="M16.8 4.7 25 12.9l-5.5 5.5-8.2-8.2a2.7 2.7 0 0 1 0-3.8l1.7-1.7a2.7 2.7 0 0 1 3.8 0ZM30.9 18.9l8.2 8.2a2.7 2.7 0 0 1 0 3.8l-1.7 1.7a2.7 2.7 0 0 1-3.8 0l-8.2-8.2 5.5-5.5ZM23 12.8l12.2 12.3-6.3 6.3-12.3-12.2 6.4-6.4ZM19.5 28.1l3.8 3.8-13.8 13.8a2.7 2.7 0 0 1-3.8 0l-1.7-1.7a2.7 2.7 0 0 1 0-3.8l15.5-12.1Z"/></svg>' : '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M7 20 11 8h26l4 12v5c-1 4-6 5-9 1-3 4-8 4-11 0-3 4-8 4-11 0-3 4-8 3-9-1v-5z" transform="translate(3 0) scale(.88)"/><path d="M10 25v15h28V25M20 40V29h10v11"/></svg>' ?></span>
+      <div><strong><?= $splitSection === 'veiling' ? 'Veiling' : 'Marktplaats' ?></strong>
+        <p><?= $splitSection === 'veiling' ? 'Deze kavels worden geveild. Je vindt hier het veilingsnummer en het startbod.' : 'Deze kavels kunnen tijdens de kijkdagen onmiddellijk worden aangekocht. Je vindt hier de marktprijs.' ?></p>
+      </div>
+    </div>
   <?php else: ?>
     <div class="catalog-preview-explain"><h3>Alle kavels in één overzicht</h3><p>De verdeling tussen veiling en marktplaats wordt later bekendgemaakt. Bekijk alvast alle kavels.</p></div>
   <?php endif; ?>
