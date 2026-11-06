@@ -17,7 +17,9 @@ if (!str_contains($home,'catalog_split_active($s)') || !str_contains($detail,'ca
 if (!str_contains($helper,"\$settings['catalog_split_active'] ?? 0") ||
     !str_contains($helper, "array_key_exists('catalog_split_preview', \$_SESSION)"))
     throw new RuntimeException('Default-off state or admin override missing');
-if (!str_contains($seed,"SHOW COLUMNS FROM settings LIKE 'catalog_split_active'") ||
+if (!str_contains($seed,"'catalog_split_active' => 'TINYINT(1) NOT NULL DEFAULT 0'") ||
+    !str_contains($seed,"'is_site_online' => 'TINYINT(1) NOT NULL DEFAULT 1'") ||
+    !str_contains($seed,"'show_report_issue_link' => 'TINYINT(1) NOT NULL DEFAULT 0'") ||
     !str_contains($seed,"local-preview-only-nonproduction") ||
     !str_contains($fixture,'catalog_split_active TINYINT(1) NOT NULL DEFAULT 0'))
     throw new RuntimeException('Guarded disposable schema upgrade missing');
