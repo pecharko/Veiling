@@ -13,6 +13,10 @@ if (cfg('setup_key') !== 'local-preview-only-nonproduction'
     throw new RuntimeException('Refusing to seed a non-preview database.');
 }
 $pdo = db();
+// Safe, idempotent schema update for the isolated synthetic Docker database only.
+if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
+    $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
+}
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
     echo "Preview fixtures already present.\n";
     return;
