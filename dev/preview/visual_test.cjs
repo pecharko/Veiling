@@ -53,6 +53,7 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 1);
     assert.equal(await preview.locator('.catalog-preview-explain ul li').count(), 2);
     assert.equal(await preview.locator('.catalog-preview-tabs svg').count(), 2);
+    assert.equal(await preview.locator('[data-icon="auction-gavel"]').count(), 3, 'Same corrected gavel icon in three positions');
     assert.equal(await preview.locator('.catalog-preview-help svg').count(), 1);
     assert.match(await preview.locator('.catalog-preview-help strong').textContent(), /Veiling/);
     for (const width of [1440, 390]) {
