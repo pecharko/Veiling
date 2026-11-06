@@ -8,6 +8,15 @@ require_once __DIR__ . '/visitor_geo_state.php';
 require_once __DIR__ . '/visitor_geo_record.php';
 require_once __DIR__ . '/visitor_geo_lookup.php';
 
+/**
+ * Exclude known US-origin traffic from every visitor and lot statistic.
+ * Unresolved GeoIP countries (ZZ) are not guessed to be US.
+ */
+function visitor_stats_exclude_country(array $geo): bool
+{
+    return ($geo['country_code'] ?? null) === 'US';
+}
+
 function track_catalog_view(?int $lotId = null): void
 {
     if (!analytics_collection_enabled()) return;
@@ -29,9 +38,13 @@ function track_catalog_view(?int $lotId = null): void
         $locked = true;
         restore_journal_require_clear();
         if (analytics_ip_is_excluded($pdo)) return; // Before HMAC/geo/INSERT, for every session at this IP.
+        // Resolve even if geographic reporting is disabled: the US exclusion applies
+        // to both general visitor counts and lot views, not just geo counters.
+        $resolvedGeo = visitor_geo_resolve($ip);
+        if (visitor_stats_exclude_country($resolvedGeo)) return; // Nothing is inserted or aggregated.
         $identifier = hash_hmac('sha256', $day . ':' . $ip . ':' . $agent, $secret, true);
         $state = visitor_geo_state($pdo);
-        $geo = visitor_geo_collection_enabled($state) && visitor_geo_covers_day($state, $day) ? visitor_geo_resolve($ip) : null;
+        $geo = visitor_geo_collection_enabled($state) && visitor_geo_covers_day($state, $day) ? $resolvedGeo : null;
         $pdo->beginTransaction();
         $started = true;
         $stmt = $pdo->prepare('INSERT INTO visitor_stats_daily (visit_date, visitor_id, page_kind, lot_id, views) VALUES (?, ?, ?, ?, 1) ON DUPLICATE KEY UPDATE views = views + 1');
