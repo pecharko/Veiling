@@ -97,6 +97,7 @@ const output = path.join(__dirname, '.screenshots');
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').scrollIntoViewIfNeeded();
     const beforeSwitchScroll = await preview.evaluate(() => window.scrollY);
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
+    await preview.waitForFunction(() => document.querySelector('.catalog-preview-help strong')?.textContent.trim() === 'Marktplaats');
     assert.equal(await preview.evaluate(() => window.scrollY), beforeSwitchScroll, 'Tab switch must preserve scroll position');
     assert.equal(new URL(preview.url()).hash, '', 'Tab switch must not create an anchor jump');
     assert.equal(await preview.locator('a.catalog-preview-tabs a').count(), 0);
