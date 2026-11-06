@@ -28,6 +28,14 @@ try {
         [$status,$home] = impression_request('/index.php');
         impression_check($status === 200 && str_contains($home,'Bekijk de vorige editie')
             && str_contains($home,'vorige-editie.php'), 'Homepage links to impression with published=' . $published);
+        impression_check(substr_count($home,'class="footer-social-band"') === 1
+            && str_contains($home,'<h2>Volg ons</h2>')
+            && str_contains($home,'aria-label="Facebook"')
+            && str_contains($home,'aria-label="Instagram"')
+            && strpos($home,'class="footer-social-band"') > strpos($home,'</main>')
+            && !str_contains($home,'facebook.com/')
+            && !str_contains($home,'instagram.com/'),
+            'Social footer visible independently of lot publication=' . $published);
         [$status,$body] = impression_request('/vorige-editie.php');
         impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9 
                        && !str_contains($body,'data-impression-photo=') 
