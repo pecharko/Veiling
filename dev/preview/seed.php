@@ -14,8 +14,15 @@ if (cfg('setup_key') !== 'local-preview-only-nonproduction'
 }
 $pdo = db();
 // Safe, idempotent schema update for the isolated synthetic Docker database only.
-if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
-    $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
+foreach ([
+    'catalog_split_active' => 'TINYINT(1) NOT NULL DEFAULT 0',
+    'is_site_online' => 'TINYINT(1) NOT NULL DEFAULT 1',
+    'show_report_issue_link' => 'TINYINT(1) NOT NULL DEFAULT 0',
+] as $field => $definition) {
+    // Column name/definition are fixed literals from this controlled preview fixture.
+    if (!$pdo->query("SHOW COLUMNS FROM settings LIKE '" . $field . "'")->fetch()) {
+        $pdo->exec("ALTER TABLE settings ADD COLUMN " . $field . " " . $definition);
+    }
 }
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
     echo "Preview fixtures already present.\n";
