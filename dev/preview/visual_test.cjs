@@ -21,6 +21,7 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(home.status(), 200);
     assert.equal(new URL(page.url()).hostname, 'localhost');
     assert.match(await page.textContent('body'), /Abstract landschap/);
+    assert.equal(await page.locator('form.toolbar').count(), 0, 'No public lot filters');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.screenshot({ path: path.join(output, `catalogue-${width}.png`), fullPage: true, animations: 'disabled' });
@@ -50,6 +51,7 @@ const output = path.join(__dirname, '.screenshots');
       preview.locator('button[name="admin_preview_action"][value="split_on"]').click(),
     ]);
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 1);
+    assert.equal(await preview.locator('form.toolbar').count(), 0, 'Split view has no lot filters');
     assert.match(await preview.locator('.catalog-preview-tabs').textContent(), /Veiling.*Marktplaats/s);
     assert.match(await preview.locator('.lot-estimate').first().textContent(), /Startbod/);
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
