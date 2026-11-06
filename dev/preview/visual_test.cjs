@@ -32,6 +32,28 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `admin-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No admin overflow ${width}`);
     }
+    // Open the real public website through the administrator's preview action.
+    const [preview] = await Promise.all([
+      context.waitForEvent('page'),
+      page.locator('button:has-text("Bekijk website")').click(),
+    ]);
+    await preview.waitForLoadState('domcontentloaded');
+    assert.match(await preview.textContent('body'), /ADMINVOORBEELD/);
+    assert.equal(await preview.locator('.catalog-preview-tabs').count(), 0);
+    assert.equal(await preview.locator('.lot-estimate').count(), 0, 'Unsplit catalog shows no prices');
+    await Promise.all([
+      preview.waitForLoadState('domcontentloaded'),
+      preview.locator('button[name="admin_preview_action"][value="split_on"]').click(),
+    ]);
+    assert.equal(await preview.locator('.catalog-preview-tabs').count(), 1);
+    assert.match(await preview.locator('.catalog-preview-tabs').textContent(), /Veiling.*Marktplaats/s);
+    assert.match(await preview.locator('.lot-estimate').first().textContent(), /Startbod/);
+    await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
+    assert.match(await preview.locator('.lot-estimate').first().textContent(), /Marktprijs/);
+    await preview.locator('button[name="admin_preview_action"][value="split_off"]').click();
+    assert.equal(await preview.locator('.catalog-preview-tabs').count(), 0);
+    assert.equal(await preview.locator('.lot-estimate').count(), 0);
+    await preview.close();
     assert.deepEqual(errors, [], 'No browser JavaScript errors');
     await context.close();
     console.log('PASS local catalog and admin desktop/mobile screenshots: ' + output);
