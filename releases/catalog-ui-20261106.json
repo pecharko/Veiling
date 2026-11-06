@@ -2,9 +2,24 @@
   "schema": 1,
   "files": [
     {
-      "path": "catalogus-public/admin/instellingen.php",
-      "source_sha256": "0b610d74a5d38ed3d63c6ed2dcb1869a535b005256f948adadb2343f7ea293d6",
-      "remote_sha256": "a0b6f01c1934d3bd43e51b9cdf0ac8854ad0ffd94ec961b963bd007d6cbf1686"
+      "path": "private/catalog_preview_modes.php",
+      "source_sha256": "c0d099d67f11accad06a526397237dcbf50d4617eb58897380169c0aefae4a03",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/public_social_footer.php",
+      "source_sha256": "884270625855f9356e66cf9c6655667bd290ef41d899e73237bdef1dcd18b9c2",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "b3c361e7d447da1d265ac81dc0997e7e0f4899032c6fa3b64462bc02bd298776",
+      "remote_sha256": "5c5fec1e916747eb404e5db6e5d62b075c86967be7f4360907c2d18c2507a33e"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "4befc74e69a1cf2b8d178a6f0452dd6d98f590eeabd7d997c216d2019576494a",
+      "remote_sha256": "d0897ef5af12544d635046392483cbdf51fb33a44f0799148467f83485ae1a4a"
     },
     {
       "path": "catalogus-public/assets/catalogus.css",
@@ -15,6 +30,11 @@
       "path": "catalogus-public/assets/catalogus.js",
       "source_sha256": "9003719960102069718b3f59f0b363b8a22f38bfee07c24aedcd1dad3af2fd5e",
       "remote_sha256": "f91a92d67cc21594a634b121cdc3b674d8a02abd905913b53e4a6dbcf20a8866"
+    },
+    {
+      "path": "catalogus-public/admin/instellingen.php",
+      "source_sha256": "0b610d74a5d38ed3d63c6ed2dcb1869a535b005256f948adadb2343f7ea293d6",
+      "remote_sha256": "a0b6f01c1934d3bd43e51b9cdf0ac8854ad0ffd94ec961b963bd007d6cbf1686"
     },
     {
       "path": "catalogus-public/index.php",
@@ -35,26 +55,6 @@
       "path": "catalogus-public/vorige-editie.php",
       "source_sha256": "be5677b4a006cb9f37604e5d2ca84b9bdb12f556ccc3674a60803c0218bb40e2",
       "remote_sha256": "5e8970c41ac1840881041817355ca06e354a07372ce419a0b5bb892e6d921af8"
-    },
-    {
-      "path": "private/bootstrap.php",
-      "source_sha256": "4befc74e69a1cf2b8d178a6f0452dd6d98f590eeabd7d997c216d2019576494a",
-      "remote_sha256": "d0897ef5af12544d635046392483cbdf51fb33a44f0799148467f83485ae1a4a"
-    },
-    {
-      "path": "private/catalog_preview_modes.php",
-      "source_sha256": "c0d099d67f11accad06a526397237dcbf50d4617eb58897380169c0aefae4a03",
-      "remote_sha256": "ABSENT"
-    },
-    {
-      "path": "private/public_social_footer.php",
-      "source_sha256": "884270625855f9356e66cf9c6655667bd290ef41d899e73237bdef1dcd18b9c2",
-      "remote_sha256": "ABSENT"
-    },
-    {
-      "path": "private/visitor_stats.php",
-      "source_sha256": "b3c361e7d447da1d265ac81dc0997e7e0f4899032c6fa3b64462bc02bd298776",
-      "remote_sha256": "5c5fec1e916747eb404e5db6e5d62b075c86967be7f4360907c2d18c2507a33e"
     }
   ]
 }
