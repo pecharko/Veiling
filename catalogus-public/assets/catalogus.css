@@ -107,7 +107,8 @@ body{background:#fffaf6;color:var(--ink)}
 .catalog-preview-tabs a{flex:1;text-align:center;padding:14px;border:1px solid #ded6d3;border-radius:9px;background:#f9f7f5;font-weight:800;color:#20493e}
 .catalog-preview-tabs a.active{background:#850015;color:#fff}
 .catalog-preview-help{background:#fae9e9;padding:13px 16px;border-radius:8px;color:#772436}
-.lot-preview-number{position:absolute;bottom:12px;left:12px;background:#850015;color:white;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:800}
+.lot-preview-number{position:absolute;top:12px;bottom:auto;left:12px;background:#850015;color:white;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:800}
+.lot-cover .lot-badge--auction-bottom{top:auto;bottom:12px;left:12px}
 .lot-cover{position:relative}
 @media(max-width:530px){.catalog-preview-explain{padding:15px}.catalog-preview-tabs a{font-size:13px;padding:12px 5px}}
 
