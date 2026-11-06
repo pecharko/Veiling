@@ -1,17 +1,23 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_once dirname(__DIR__) . '/private/public_social_footer.php';
+require_once dirname(__DIR__) . '/private/catalog_preview_modes.php';
 if (is_post() && array_key_exists('admin_preview_action', $_POST)) {
   require_auth();
   check_csrf();
   $action = $_POST['admin_preview_action'];
-  if (!is_string($action) || !in_array($action, ['start', 'stop'], true)) {
+  if (!is_string($action) || !in_array($action, ['start', 'stop', 'split_on', 'split_off'], true)) {
     http_response_code(400); exit('Ongeldige voorbeeldactie.');
   }
   if ($action === 'start') {
     $_SESSION['admin_catalog_preview'] = $_SESSION['admin_id'];
+    unset($_SESSION['catalog_split_preview']);
+  } elseif ($action === 'stop') {
+    unset($_SESSION['admin_catalog_preview'], $_SESSION['catalog_split_preview']);
   } else {
-    unset($_SESSION['admin_catalog_preview']);
+    if (!admin_preview_active()) { http_response_code(403); exit('Geen actieve adminvoorbeeldsessie.'); }
+    $_SESSION['catalog_split_preview'] = $action === 'split_on';
   }
   redirect('index.php');
 }
@@ -20,10 +26,8 @@ require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
 $s = settings();
 $published = (int)($s['is_published'] ?? 0) === 1 || admin_preview_active();
-$q = mb_substr(trim((string)(is_string($_GET['q'] ?? null) ? $_GET['q'] : '')), 0, 100);
-$category = mb_substr(trim((string)(is_string($_GET['categorie'] ?? null) ? $_GET['categorie'] : '')), 0, 120);
-$price = (string)($_GET['prijs'] ?? '');
-$sort = (string)($_GET['sort'] ?? 'number');
+$splitPreview = catalog_split_active($s);
+$splitSection = ($_GET['deel'] ?? '') === 'markt' ? 'markt' : 'veiling';
 $onlyFavorites = isset($_GET['favorieten']) && $_GET['favorieten'] === '1';
 $favoriteNumbers = [];
 if ($onlyFavorites) {
@@ -35,36 +39,18 @@ if ($onlyFavorites) {
 $page = max(1, min(9999, (int)($_GET['pagina'] ?? 1)));
 $perPage = 24;
 $where = ["l.status IN ('published','sold')"];
+if ($splitPreview) $where[] = $splitSection === 'markt' ? "l.sale_location='markt'" : "l.sale_location='veiling'";
 $params = [];
-if ($q !== '') {
-  $where[] = "(CAST(l.lot_number AS CHAR) LIKE ? OR l.title LIKE ? OR l.subtitle LIKE ? OR l.description LIKE ? OR l.category LIKE ?)";
-  for ($i=0; $i<5; $i++) $params[] = '%' . $q . '%';
-}
-if ($category !== '') { $where[] = 'l.category = ?'; $params[] = $category; }
-$priceRules = [
-  '0-250' => 'l.market_price <= 250',
-  '250-500' => 'l.market_price > 250 AND l.market_price <= 500',
-  '500-1000' => 'l.market_price > 500 AND l.market_price <= 1000',
-  '1000+' => 'l.market_price > 1000',
-  'unknown' => 'l.market_price IS NULL'
-];
-if (isset($priceRules[$price])) $where[] = '(' . $priceRules[$price] . ')';
 if ($onlyFavorites) {
   if (!$favoriteNumbers) $where[] = '1=0';
   else { $where[] = 'l.lot_number IN (' . implode(',', array_fill(0,count($favoriteNumbers),'?')) . ')'; $params = array_merge($params, array_values($favoriteNumbers)); }
 }
-$orders = [
-  'number' => 'l.lot_number ASC',
-  'number-desc' => 'l.lot_number DESC',
-  'title' => 'l.title ASC, l.lot_number ASC',
-  'estimate' => '(l.market_price IS NULL), l.market_price ASC, l.lot_number ASC'
-];
-$order = $orders[$sort] ?? $orders['number'];
-$rows = []; $categories = []; $total = 0; $totalPublic = 0;
+$order = $splitPreview && $splitSection === 'veiling' ? 'l.auction_number IS NULL, l.auction_number ASC, l.lot_number ASC' : 'l.lot_number ASC';
+$rows = []; $total = 0; $totalPublic = 0; $splitCounts = ['veiling'=>0,'markt'=>0];
 if ($published) {
   $pdo = db();
   $totalPublic = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status IN ('published','sold')")->fetchColumn();
-  $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE status IN ('published','sold') ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+  if ($splitPreview) foreach ($pdo->query("SELECT sale_location, COUNT(*) n FROM lots WHERE status IN ('published','sold') GROUP BY sale_location")->fetchAll() as $x) if (isset($splitCounts[$x['sale_location']])) $splitCounts[$x['sale_location']] = (int)$x['n'];
   $whereSql = implode(' AND ', $where);
   $count = $pdo->prepare('SELECT COUNT(*) FROM lots l WHERE ' . $whereSql);
   $count->execute($params);
@@ -81,7 +67,12 @@ if ($published) {
   $rows = $st->fetchAll();
 }
 function page_link(int $number): string {
-  $p = $_GET;
+  $p = [];
+  if (catalog_split_active(settings())) $p['deel'] = ($_GET['deel'] ?? '') === 'markt' ? 'markt' : 'veiling';
+  if (($_GET['favorieten'] ?? '') === '1') {
+    $p['favorieten'] = 1;
+    if (is_string($_GET['nummers'] ?? null)) $p['nummers'] = $_GET['nummers'];
+  }
   $p['pagina'] = $number;
   return url('index.php', $p) . '#catalogus';
 }
@@ -166,26 +157,42 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       <div class="front-impact-media"><img src="<?=e(url('assets/veiling-kunstselectie.webp'))?>" alt="Illustratie van een kunstselectie met schilderij, vaas en beeldhouwwerk" width="736" height="342" loading="lazy"></div>
     </section>
   <?php if ($published): ?>
-  <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2>Ontdek de kavels<span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
+  <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
+  <?php if ($splitPreview): ?>
+    <div class="catalog-preview-explain">
+      <span class="catalog-preview-icon catalog-preview-icon--gavel"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false" data-icon="auction-gavel"><g transform="rotate(35 24 24)"><rect x="13" y="10" width="22" height="14" rx="2"/><rect x="7" y="8" width="8" height="18" rx="2"/><rect x="33" y="8" width="8" height="18" rx="2"/><rect x="21" y="23" width="6" height="19" rx="2"/></g></svg></span>
+      <div class="catalog-preview-explain-copy">
+        <h3>Veiling en marktplaats</h3>
+        <p>De kavels zijn verdeeld in twee categorieën:</p>
+        <ul>
+          <li><strong>Veiling:</strong> een selectie bijzondere kavels die tijdens de benefietveiling worden toegewezen aan de hoogste bieder.</li>
+          <li><strong>Marktplaats:</strong> een breed aanbod kavels die je tijdens de kijkdagen onmiddellijk kunt aankopen. Kom zeker langs, want op = op!</li>
+        </ul>
+      </div>
+    </div>
+    <nav class="catalog-preview-tabs" aria-label="Veiling of marktplaats">
+      <a class="<?= $splitSection === 'veiling' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'veiling']))?>" <?= $splitSection === 'veiling' ? 'aria-current="page"' : '' ?>><span class="catalog-preview-tab-icon"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false" data-icon="auction-gavel"><g transform="rotate(35 24 24)"><rect x="13" y="10" width="22" height="14" rx="2"/><rect x="7" y="8" width="8" height="18" rx="2"/><rect x="33" y="8" width="8" height="18" rx="2"/><rect x="21" y="23" width="6" height="19" rx="2"/></g></svg></span><span>Veiling (<?=$splitCounts['veiling']?>)</span></a>
+      <a class="<?= $splitSection === 'markt' ? 'active' : '' ?>" href="<?=e(url('index.php',['deel'=>'markt']))?>" <?= $splitSection === 'markt' ? 'aria-current="page"' : '' ?>><span class="catalog-preview-tab-icon"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M7 20 11 8h26l4 12v5c-1 4-6 5-9 1-3 4-8 4-11 0-3 4-8 4-11 0-3 4-8 3-9-1v-5z" transform="translate(3 0) scale(.88)"/><path d="M10 25v15h28V25M20 40V29h10v11"/></svg></span><span>Marktplaats (<?=$splitCounts['markt']?>)</span></a>
+    </nav>
+    <div class="catalog-preview-help">
+      <span class="catalog-preview-icon catalog-preview-icon--small"><?= $splitSection === 'veiling' ? '<svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false" data-icon="auction-gavel"><g transform="rotate(35 24 24)"><rect x="13" y="10" width="22" height="14" rx="2"/><rect x="7" y="8" width="8" height="18" rx="2"/><rect x="33" y="8" width="8" height="18" rx="2"/><rect x="21" y="23" width="6" height="19" rx="2"/></g></svg>' : '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.3" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M7 20 11 8h26l4 12v5c-1 4-6 5-9 1-3 4-8 4-11 0-3 4-8 4-11 0-3 4-8 3-9-1v-5z" transform="translate(3 0) scale(.88)"/><path d="M10 25v15h28V25M20 40V29h10v11"/></svg>' ?></span>
+      <div><strong><?= $splitSection === 'veiling' ? 'Veiling' : 'Marktplaats' ?></strong>
+        <p><?= $splitSection === 'veiling' ? 'Deze kavels worden geveild. Je vindt hier het veilingsnummer en het startbod.' : 'Deze kavels kunnen tijdens de kijkdagen onmiddellijk worden aangekocht. Je vindt hier de marktprijs.' ?></p>
+      </div>
+    </div>
+  <?php endif; ?>
   <?php if (!$published): ?>
     <div class="empty-state"><span class="empty-art">◌</span><h3>De catalogus wordt voorbereid</h3><p>De kavels verschijnen hier zodra de organisatie de veiling publiceert.</p></div>
   <?php else: ?>
-    <form class="toolbar" action="<?=e(url('index.php'))?>#catalogus" method="get">
-      <label class="search-field"><span class="field-name">ZOEKEN</span><span class="search-inline"><span aria-hidden="true">⌕</span><input name="q" type="search" value="<?=e($q)?>" placeholder="Lotnummer of trefwoord…" aria-label="Zoeken in kavels"></span></label>
-      <label class="filter-field"><span class="field-name">CATEGORIE</span><select name="categorie" aria-label="Categorie"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category === $cat ? 'selected' : ''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
-      <label class="filter-field"><span class="field-name">MARKTPRIJS</span><select name="prijs"><option value="">Alle marktprijzen</option><?php foreach(['0-250'=>'Tot € 250','250-500'=>'€ 250 – 500','500-1000'=>'€ 500 – 1.000','1000+'=>'Vanaf € 1.000','unknown'=>'Zonder marktprijs'] as $key=>$label): ?><option value="<?=e($key)?>" <?=$price === $key ? 'selected' : ''?>><?=e($label)?></option><?php endforeach; ?></select></label>
-      <label class="filter-field"><span class="field-name">SORTEREN</span><select name="sort"><option value="number" <?=$sort==='number'?'selected':''?>>Lotnummer oplopend</option><option value="number-desc" <?=$sort==='number-desc'?'selected':''?>>Lotnummer aflopend</option><option value="title" <?=$sort==='title'?'selected':''?>>Titel A–Z</option><option value="estimate" <?=$sort==='estimate'?'selected':''?>>Laagste marktprijs</option></select></label>
-      <button class="filter-submit" type="submit">Filter toepassen →</button>
-    </form>
-    <div class="catalog-status"><div><span class="result-count"><?=e((string)$total)?> kavels</span> <span class="status-separator">/</span><span class="status-caption">Pagina <?=e((string)$page)?> van <?=e((string)($pages ?? 1))?></span></div><div class="status-actions"><a class="chip <?=$onlyFavorites?'selected':''?>" id="favoritesOnly" href="<?=e(url('index.php',['favorieten'=>1]))?>">♡ Mijn favorieten</a><a class="text-button" href="<?=e(url('index.php'))?>#catalogus">Wis filters ↺</a></div></div>
-    <?php if (!$rows): ?><div class="empty-state"><span class="empty-art">◌</span><h3>Geen kavels gevonden</h3><p>Pas je zoekterm of filters aan, of bekijk alle kavels.</p><a class="btn btn-dark" href="<?=e(url('index.php'))?>#catalogus">Toon alle kavels</a></div>
+    <div class="catalog-status"><div><span class="result-count"><?=e((string)$total)?> kavels</span> <span class="status-separator">/</span><span class="status-caption">Pagina <?=e((string)$page)?> van <?=e((string)($pages ?? 1))?></span></div><div class="status-actions"><a class="chip <?=$onlyFavorites?'selected':''?>" id="favoritesOnly" href="<?=e(url('index.php',['favorieten'=>1]))?>">♡ Mijn favorieten</a></div></div>
+    <?php if (!$rows): ?><div class="empty-state"><span class="empty-art">◌</span><h3>Geen kavels in dit overzicht</h3><p>Er zijn momenteel geen kavels beschikbaar in dit overzicht.</p></div>
     <?php else: ?><div class="catalog-grid"><?php foreach($rows as $lot): ?>
-    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><div class="lot-estimate"><small>MARKTPRIJS</small><strong><?=e(estimate($lot))?></strong></div><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
+    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge<?= $splitPreview && $splitSection === 'veiling' ? ' lot-badge--auction-bottom' : '' ?>">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if ($splitPreview && $splitSection === "veiling" && !empty($lot["auction_number"])): ?><span class="lot-preview-number">VEILINGNR. <?= (int)$lot["auction_number"] ?></span><?php endif; ?><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><div class="lot-footer"><?php if (($previewPrice = catalog_preview_price($lot, $splitPreview)) !== null): ?><div class="lot-estimate"><small><?=e($previewPrice["label"])?></small><strong><?=e($previewPrice["amount"])?></strong></div><?php endif; ?><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
     <?php endforeach; ?></div>
     <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
   <?php endif; ?></section>
   <?php endif; ?>
   <section class="info-section" id="informatie"><div class="shell info-layout"><div><p class="eyebrow info-eyebrow">GOED OM TE WETEN</p><h2>Een bijzonder moment<br>om <em>bij te zijn.</em></h2><p><?= $published ? "Alle kavels zijn online te bekijken. De veiling zelf vindt fysiek plaats. Online bieden is niet mogelijk." : "De veiling vindt fysiek plaats. Online bieden is niet mogelijk." ?></p></div><div class="info-card"><h3>Praktische informatie</h3><dl><div><dt>Datum</dt><dd><?=e($date)?></dd></div><div><dt>Uur</dt><dd><?=e($s['event_time'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Locatie</dt><dd><?=e($s['location'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Adres</dt><dd><?=e($s['address'] ?: 'Wordt aangekondigd')?></dd></div></dl><p><?=nl2br(e($s['practical_info'] ?: 'Bieden gebeurt uitsluitend ter plaatse.'))?></p><?php if(!empty($s['contact_email'])): ?><a class="contact-link" href="mailto:<?=e($s['contact_email'])?>">Contacteer de organisatie ↗</a><?php endif; ?></div></div></section>
-  </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="<?=e(url('pecharko.php'))?>">Designed by Pecharko</a><a href="#top">Naar boven ↑</a></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
+  </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="<?=e(url('pecharko.php'))?>">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
 </body></html>

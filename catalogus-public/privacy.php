@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
+require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 ?>
 <!doctype html>
@@ -28,5 +29,6 @@ require_public_site_online();
   <p>41 Lokeren moet vóór activering de rechtsgrond en de proportionaliteit van de bewaartermijn juridisch beoordelen. Technische webserverlogs van de hosting vallen buiten deze statistiekenmodule.</p>
   <p>Voor vragen over privacy en je rechten kun je contact opnemen met 41 Lokeren via <a href="mailto:41clublokeren@gmail.com">41clublokeren@gmail.com</a>.</p>
 </main>
+<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('index.php'))?>">Naar de catalogus</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>

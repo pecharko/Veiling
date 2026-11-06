@@ -196,16 +196,20 @@ snap_restore($pdo, $name);
 verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 1,
        'Legacy snapshot restores safely online after schema upgrade');
 
-// Snapshot and restore the explicitly offline state on the upgraded schema.
-$pdo->exec('UPDATE settings SET is_site_online=0');
+// Snapshot and restore both the offline state and the new catalog split switch.
+$pdo->exec('UPDATE settings SET is_site_online=0,catalog_split_active=1');
 $newSchemaSnapshot = snap_create($pdo);
 [$newSchemaData] = snap_verified($newSchemaSnapshot);
 verify((int)$newSchemaData['tables']['settings'][0]['is_site_online'] === 0,
        'New schema snapshot stores the offline state');
-$pdo->exec('UPDATE settings SET is_site_online=1');
+verify((int)$newSchemaData['tables']['settings'][0]['catalog_split_active'] === 1,
+       'New schema snapshot stores the catalog split switch');
+$pdo->exec('UPDATE settings SET is_site_online=1,catalog_split_active=0');
 snap_restore($pdo, $newSchemaSnapshot);
 verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 0,
        'New schema restore recovers the offline state');
+verify((int)$pdo->query('SELECT catalog_split_active FROM settings WHERE id=1')->fetchColumn() === 1,
+       'New schema restore recovers the catalog split switch');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
 // Simulate a verified pre-#185 archive with no new lot metadata.
