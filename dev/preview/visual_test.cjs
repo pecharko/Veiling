@@ -84,6 +84,14 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(await preview.locator('form.toolbar').count(), 0, 'Split view has no lot filters');
     assert.match(await preview.locator('.catalog-preview-tabs').textContent(), /Veiling.*Marktplaats/s);
     assert.match(await preview.locator('.lot-estimate').first().textContent(), /Startbod/);
+    const auctionBadges = await preview.locator('.lot-card').first().evaluate(card => {
+      const auction = card.querySelector('.lot-preview-number');
+      const lot = card.querySelector('.lot-badge--auction-bottom');
+      return { auction: auction?.getBoundingClientRect().top, lot: lot?.getBoundingClientRect().top };
+    });
+    assert.ok(Number.isFinite(auctionBadges.auction) && Number.isFinite(auctionBadges.lot) &&
+      auctionBadges.auction < auctionBadges.lot, 'Auction number must be above the lot number');
+
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').scrollIntoViewIfNeeded();
     const beforeSwitchScroll = await preview.evaluate(() => window.scrollY);
     await preview.locator('.catalog-preview-tabs a[href*="deel=markt"]').click();
