@@ -26,10 +26,12 @@ function public_social_footer(): void
     foreach ($icons as $platform => $svg) {
         $label = ucfirst($platform);
         $configuredUrl = cfg($platform . '_url');
-        // The organization confirmed its official Facebook page.
-        $profileUrl = $platform === 'facebook'
-            ? ($configuredUrl ?: 'https://www.facebook.com/41Lokeren')
-            : $configuredUrl;
+        // Both official social profiles were confirmed by the organization.
+        $defaultUrls = [
+            'facebook' => 'https://www.facebook.com/41Lokeren',
+            'instagram' => 'https://www.instagram.com/41lokeren/',
+        ];
+        $profileUrl = $configuredUrl ?: $defaultUrls[$platform];
         $href = public_social_profile_url($platform, $profileUrl);
         $picture = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $svg . '</svg>';
         if ($href !== null) {
