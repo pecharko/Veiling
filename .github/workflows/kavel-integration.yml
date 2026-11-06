@@ -116,11 +116,23 @@ jobs:
           CI_DB_PASSWORD: ci-password-only
         run: php tests/admin_invitation_concurrency_test.php
 
-      - name: Install pinned browser test dependency
+      # Both browser suites use chromium.launch() without a headed channel.
+      # The pinned headless shell is sufficient; cache only browser binaries,
+      # not system libraries, so --with-deps still verifies OS dependencies.
+      - name: Cache pinned Playwright headless browser
         if: needs.impact.outputs.run == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-${{ runner.arch }}-playwright-headless-shell-1.57.0-v1
+
+      - name: Install pinned headless browser test dependency
+        if: needs.impact.outputs.run == 'true'
+        shell: bash
         run: |
+          set -euo pipefail
           npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/preview-browser" playwright@1.57.0
-          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps chromium
+          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps --only-shell chromium
 
       - name: Test real HTTP login, editor errors and photo uploads
         if: needs.impact.outputs.run == 'true'
