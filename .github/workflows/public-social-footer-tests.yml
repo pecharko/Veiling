@@ -1,0 +1,36 @@
+name: Public social footer contract tests
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/privacy.php'
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/assets/catalogus.css'
+      - 'private/public_social_footer.php'
+      - 'tests/public_social_footer_contract_test.php'
+      - '.github/workflows/public-social-footer-tests.yml'
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          coverage: none
+          tools: none
+      - run: |
+          set -eu
+          php -l private/public_social_footer.php
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          php -l catalogus-public/vorige-editie.php
+          php -l catalogus-public/privacy.php
+          php -l tests/public_social_footer_contract_test.php
+          php tests/public_social_footer_contract_test.php
