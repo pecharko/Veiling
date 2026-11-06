@@ -186,6 +186,9 @@ function admin_preview_banner(): void {
   echo '<style>.admin-preview-banner{position:sticky;top:0;z-index:110}.admin-preview-banner~.site-header{top:var(--admin-preview-height,0px)!important}</style>'
     . '<aside class="admin-preview-banner" role="status" aria-label="Adminvoorbeeld" style="background:#fff3cc;color:#332900;padding:12px 20px;border-bottom:2px solid #9b7300;font:15px/1.5 system-ui;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap">'
     . '<strong>ADMINVOORBEELD</strong><span>Kavels zijn zichtbaar voor deze beheersessie. ' . e($statistics) . '</span>'
+    . '<form method="post" action="' . e(url('index.php')) . '" style="display:inline-flex;gap:6px;align-items:center;margin:0">' . csrf_field()
+    . '<button name="admin_preview_action" value="split_on" type="submit" style="font:inherit;padding:4px 10px;border:1px solid #634300;border-radius:5px;cursor:pointer;background:' . (($_SESSION['catalog_split_preview'] ?? false) ? '#ead495' : '#fff') . '">Opsplitsing aan</button>'
+    . '<button name="admin_preview_action" value="split_off" type="submit" style="font:inherit;padding:4px 10px;border:1px solid #634300;border-radius:5px;cursor:pointer;background:' . (($_SESSION['catalog_split_preview'] ?? false) ? '#fff' : '#ead495') . '">Opsplitsing uit</button></form>'
     . '<a href="' . e(url('admin/index.php')) . '" style="color:inherit;text-decoration:underline">Terug naar beheer</a>'
     . '<form method="post" action="' . e(url('index.php')) . '" style="margin:0"><input type="hidden" name="admin_preview_action" value="stop">'
     . csrf_field() . '<button type="submit" style="font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;padding:4px 10px;cursor:pointer">Voorbeeld sluiten</button></form></aside>'

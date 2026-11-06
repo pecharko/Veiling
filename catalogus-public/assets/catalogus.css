@@ -98,3 +98,15 @@ body{background:#fffaf6;color:var(--ink)}
 .footer a.footer-social-icon:hover{background:rgba(255,255,255,.18)}
 .footer a.footer-social-icon:focus-visible{outline:3px solid #d4bd88;outline-offset:3px}
 @media(max-width:800px){.footer-inner{flex-wrap:wrap;justify-content:flex-start;gap:18px 25px}.footer .footer-social{width:100%;border-top:1px solid rgba(255,255,255,.2);padding:18px 0}}
+
+/* Session-only catalog layout controls for admin website preview. */
+.catalog-preview-explain{margin:18px 0;padding:20px 24px;background:#fff8f4;border:1px solid #eadbd5;border-radius:14px}
+.catalog-preview-explain h3{margin:0 0 8px;font:700 23px Georgia,serif;color:#850015}
+.catalog-preview-explain p{margin:0;line-height:1.7;color:#344d46}
+.catalog-preview-tabs{display:flex;gap:10px;margin:18px 0 10px}
+.catalog-preview-tabs a{flex:1;text-align:center;padding:14px;border:1px solid #ded6d3;border-radius:9px;background:#f9f7f5;font-weight:800;color:#20493e}
+.catalog-preview-tabs a.active{background:#850015;color:#fff}
+.catalog-preview-help{background:#fae9e9;padding:13px 16px;border-radius:8px;color:#772436}
+.lot-preview-number{position:absolute;bottom:12px;left:12px;background:#850015;color:white;border-radius:6px;padding:7px 11px;font-size:11px;font-weight:800}
+.lot-cover{position:relative}
+@media(max-width:530px){.catalog-preview-explain{padding:15px}.catalog-preview-tabs a{font-size:13px;padding:12px 5px}}
