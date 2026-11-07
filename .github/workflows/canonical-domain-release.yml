@@ -33,6 +33,8 @@ jobs:
           persist-credentials: false
       - name: Run isolated release guard tests
         run: python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
+      - name: Validate exact five-file source and baseline manifest offline
+        run: python3 -B -m scripts.deploy_canonical_domain plan
       - name: Verify general OVH manifest denylist remains intact
         run: |
           python3 - <<'PY'
