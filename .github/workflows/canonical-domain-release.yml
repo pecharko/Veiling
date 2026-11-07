@@ -18,6 +18,10 @@ on:
         description: 'CANONICAL-DOMAIN-DEPLOY-canonical-domain-20261107-<exact current main SHA>'
         required: true
         type: string
+      protected_htaccess_backup_sha:
+        description: 'SHA-256 of the independently saved offsite copy of production .htaccess'
+        required: true
+        type: string
 permissions:
   contents: read
 concurrency:
@@ -51,6 +55,7 @@ jobs:
     environment: production
     env:
       DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      PROTECTED_HTACCESS_BACKUP_SHA: ${{ inputs.protected_htaccess_backup_sha }}
       OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
       OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
       OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
