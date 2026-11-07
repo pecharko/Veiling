@@ -126,6 +126,10 @@ def main():
                 raise ValueError("Invalid exact main SHA")
             if previous_confirmation != AUTH_PREFIX + RELEASE_ID + "-" + main_sha:
                 raise ValueError("Owner-bound canonical production authorization missing")
+            _, _, verified_baselines = guarded_load(RELEASE_ID)
+            backup_ack = os.environ.get("PROTECTED_HTACCESS_BACKUP_SHA", "")
+            if (backup_ack == "ABSENT" or backup_ack != verified_baselines[HTACCESS]):
+                raise ValueError("Authenticated offsite .htaccess backup attestation missing")
             os.environ["DEPLOY_CONFIRMATION"] = "DEPLOY-" + RELEASE_ID + "-" + main_sha
         import ovh_deploy_evidence_contract as evidence_module
         previous_evidence_validate = evidence_module.validate
