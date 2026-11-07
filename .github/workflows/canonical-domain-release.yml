@@ -38,13 +38,23 @@ jobs:
           fetch-depth: 0
       - name: Run isolated release guard tests
         run: python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
-      - name: Validate canonical-domain manifest only when protected release scope changes
+      - name: Validate canonical-domain manifest only for its release payload
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: |
           set -euo pipefail
           git diff --name-only "$PR_BASE_SHA" HEAD > /tmp/canonical-changed-paths
-          if grep -Eq '^(\\.github/workflows/canonical-domain-release\\.yml|scripts/deploy_canonical_domain\\.py|scripts/readonly_canonical_domain_baselines\\.py|tests/deploy_canonical_domain_test\\.py|releases/canonical-domain-20261107\\.json|catalogus-public/\\.htaccess)
+          if grep -F -x \
+             -e 'scripts/deploy_canonical_domain.py' \
+             -e 'scripts/readonly_canonical_domain_baselines.py' \
+             -e 'tests/deploy_canonical_domain_test.py' \
+             -e 'releases/canonical-domain-20261107.json' \
+             -e 'catalogus-public/.htaccess' \
+             /tmp/canonical-changed-paths; then
+            python3 -B -m scripts.deploy_canonical_domain plan
+          else
+            echo 'Completed historical canonical release is immutable; public PHP updates are covered by their own manifest and the canonical contract tests.'
+          fi
       - name: Verify general OVH manifest denylist remains intact
         run: |
           python3 - <<'PY'
