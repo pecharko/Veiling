@@ -19,3 +19,8 @@ A specialized, owner-approved guarded release process must cover the `.htaccess`
 - `https://41lokeren.be/...` is not redirected again.
 - Public, indexable pages expose exactly one absolute canonical URL; preview remains non-indexable; privacy retains noindex.
 - Verify the redirects from a public network (OVH WAF can block CI-based HTTPS checks) after the specifically approved deployment.
+
+## Scoped release implementation prepared (inert without evidence)
+`script/deploy` is not used: `scripts/deploy_canonical_domain.py` is a dedicated adapter that requires an exact six-field schema-1 manifest at `releases/canonical-domain-20261107.json`, with exactly the five listed targets in order. The adapter does not relax the shared release engine's global denylist and fails closed while this manifest is absent. It delegates live pre-write drift checks, backups, remote verification and rollback to the existing engine. The offline `tests/deploy_canonical_domain_test.py` covers path restriction, missing baseline, source drift and confirmation denial.
+
+To finish the same PR, obtain *independently authenticated* remote hashes via `scripts/readonly_canonical_domain_baselines.py`, inspect the live www TLS/DNS setup, create and validate the complete immutable manifest with verified source SHA-256 digests, and add a dedicated tightly gated GitHub workflow for exact-main authorized delivery. Do not activate a deploy workflow with incomplete or fabricated baseline evidence. Existing shared release controls remain unchanged. Production requires a second explicit owner decision after a separate approved PR merge and independent main CI.
