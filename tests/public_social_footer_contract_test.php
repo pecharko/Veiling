@@ -46,4 +46,14 @@ foreach (['http://www.facebook.com/example','https://facebook.com.evil.test/a','
     if (public_social_profile_url(str_contains($bad,'instagram')?'instagram':'facebook',$bad)!==null)
         throw new RuntimeException('Unsafe social URL accepted');
 }
+$release=json_decode(file_get_contents($root.'/releases/pecharko-footer-link-20261107.json'), true, 512, JSON_THROW_ON_ERROR);
+$expectedPaths=['catalogus-public/index.php', 'catalogus-public/kavel.php'];
+if (($release['schema'] ?? null)!==1 || array_column($release['files'] ?? [], 'path')!==$expectedPaths) {
+    throw new RuntimeException('Footer release manifest must contain only two public pages');
+}
+foreach ($release['files'] as $entry) {
+    if (hash_file('sha256', $root.'/'.$entry['path'])!==$entry['source_sha256']) {
+        throw new RuntimeException('Footer release source hash must match committed code');
+    }
+}
 echo "PASS public social footer independent of catalog visibility and valid links only\n";
