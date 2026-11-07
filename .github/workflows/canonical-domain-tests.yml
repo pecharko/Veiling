@@ -12,6 +12,8 @@ on:
       - 'tests/canonical_domain_contract_test.py'
       - 'tests/readonly_canonical_domain_baselines_test.py'
       - 'scripts/readonly_canonical_domain_baselines.py'
+      - 'scripts/deploy_canonical_domain.py'
+      - 'tests/deploy_canonical_domain_test.py'
       - '.github/workflows/canonical-domain-tests.yml'
   push:
     branches: [main]
@@ -37,6 +39,7 @@ jobs:
         run: |
           python3 -B -m unittest discover -s tests -p canonical_domain_contract_test.py -v
           python3 -B -m unittest discover -s tests -p readonly_canonical_domain_baselines_test.py -v
+          python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
       - name: Lint public PHP templates
         run: |
           php -l catalogus-public/index.php
