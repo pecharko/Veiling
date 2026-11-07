@@ -1,6 +1,9 @@
 """Offline-only safety tests for the scoped canonical-domain release adapter."""
+import io
 import json
 import os
+import stat
+from types import SimpleNamespace
 from pathlib import Path
 import sys
 from tempfile import TemporaryDirectory
@@ -67,6 +70,69 @@ class CanonicalDomainReleaseTests(unittest.TestCase):
                 adapter.main()
         self.assertIs(adapter.engine.load_manifest, orig_loader)
         self.assertIs(sys.argv, orig_argv)
+
+
+    def test_preserves_exact_existing_production_htaccess_and_checks_baseline(self):
+        original = b"# existing security rules\\nDeny from all\\n"
+        baseline = adapter.engine.digest(original)
+        class Sftp:
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                return False
+            def lstat(self, path):
+                data = b"dashboard-table" if path.endswith("/admin/index.php") else original
+                return SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_size=len(data))
+            def open(self, path, mode):
+                self_ = b"dashboard-table" if path.endswith("/admin/index.php") else original
+                if mode != "rb":
+                    raise AssertionError("Write forbidden")
+                return io.BytesIO(self_)
+        client = SimpleNamespace(open_sftp=lambda: Sftp(), close=lambda: None)
+        self.assertEqual(adapter.read_pinned_htaccess(lambda: (client, "/fixture"), baseline), original)
+        with self.assertRaisesRegex(ValueError, "drift"):
+            adapter.read_pinned_htaccess(lambda: (client, "/fixture"), "a" * 64)
+        with self.assertRaisesRegex(ValueError, "absent"):
+            adapter.read_pinned_htaccess(lambda: (client, "/fixture"), "ABSENT")
+
+    def test_combined_template_retains_original_bytes(self):
+        original = b"Options -Indexes\\r\\nRewriteRule ^old$ /new [L]\\r\\n"
+        with TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            entries = []
+            for name in adapter.TARGETS:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(b"# redirect template\\n" if name == adapter.HTACCESS else b"<?php echo 1;")
+                entries.append({"path": name, "source_sha256": adapter.engine.digest(path.read_bytes()),
+                                "remote_sha256": adapter.engine.digest(original) if name == adapter.HTACCESS else "a" * 64})
+            manifest = root / adapter.MANIFEST_NAME
+            manifest.parent.mkdir()
+            manifest.write_text(json.dumps({"schema": 1, "files": entries}))
+            with patch.object(adapter, "read_pinned_htaccess", return_value=original) as read:
+                _, payload, expected = adapter.guarded_load(
+                    adapter.RELEASE_ID, source_root=root, preserve_remote_htaccess=True)
+            read.assert_called_once()
+            self.assertEqual(payload[adapter.HTACCESS], b"# redirect template\\n\\n" + original)
+            self.assertEqual(expected[adapter.HTACCESS], adapter.engine.digest(original))
+
+    def test_evidence_exception_is_only_one_exact_path(self):
+        from scripts import ovh_deploy_evidence_contract
+        rows = [{"path": name, "source_sha256": "a"*64,
+                 "baseline_sha256": "b"*64, "readback_sha256": "a"*64}
+                for name in adapter.TARGETS]
+        event = {"schema": 1, "release_id": adapter.RELEASE_ID,
+                 "release_sha": "a"*40, "run_id": 1234, "status": "VERIFIED",
+                 "files": rows, "rollback_artifact": None, "browser_acceptance": "PENDING"}
+        self.assertIs(adapter.canonical_evidence_validate(event, ovh_deploy_evidence_contract.validate), event)
+        altered = json.loads(json.dumps(event))
+        altered["files"][0]["path"] = "private/.env"
+        with self.assertRaisesRegex(ValueError, "exact five-file"):
+            adapter.canonical_evidence_validate(altered, ovh_deploy_evidence_contract.validate)
+        invalid = json.loads(json.dumps(event))
+        invalid["files"][0]["readback_sha256"] = "c"*64
+        with self.assertRaisesRegex(ValueError, "without matching readback"):
+            adapter.canonical_evidence_validate(invalid, ovh_deploy_evidence_contract.validate)
 
 
 if __name__ == "__main__":
