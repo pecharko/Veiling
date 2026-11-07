@@ -96,14 +96,14 @@ class CanonicalDomainReleaseTests(unittest.TestCase):
             adapter.read_pinned_htaccess(lambda: (client, "/fixture"), "ABSENT")
 
     def test_combined_template_retains_original_bytes(self):
-        original = b"Options -Indexes\\r\\nRewriteRule ^old$ /new [L]\\r\\n"
+        original = b"Options -Indexes\r\nRewriteRule ^old$ /new [L]\r\n"
         with TemporaryDirectory() as tmp:
             root = Path(tmp)
             entries = []
             for name in adapter.TARGETS:
                 path = root / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes(b"# redirect template\\n" if name == adapter.HTACCESS else b"<?php echo 1;")
+                path.write_bytes(b"# redirect template\n" if name == adapter.HTACCESS else b"<?php echo 1;")
                 entries.append({"path": name, "source_sha256": adapter.engine.digest(path.read_bytes()),
                                 "remote_sha256": adapter.engine.digest(original) if name == adapter.HTACCESS else "a" * 64})
             manifest = root / adapter.MANIFEST_NAME
@@ -113,7 +113,7 @@ class CanonicalDomainReleaseTests(unittest.TestCase):
                 _, payload, expected = adapter.guarded_load(
                     adapter.RELEASE_ID, source_root=root, preserve_remote_htaccess=True)
             read.assert_called_once()
-            self.assertEqual(payload[adapter.HTACCESS], b"# redirect template\\n\\n" + original)
+            self.assertEqual(payload[adapter.HTACCESS], b"# redirect template\n\n" + original)
             self.assertEqual(expected[adapter.HTACCESS], adapter.engine.digest(original))
 
     def test_evidence_exception_is_only_one_exact_path(self):
