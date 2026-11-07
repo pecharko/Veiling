@@ -1,0 +1,41 @@
+name: Canonical domain contract
+
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/.htaccess'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/pecharko.php'
+      - 'catalogus-public/privacy.php'
+      - 'tests/canonical_domain_contract_test.py'
+      - '.github/workflows/canonical-domain-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'catalogus-public/.htaccess'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/pecharko.php'
+      - 'catalogus-public/privacy.php'
+      - 'tests/canonical_domain_contract_test.py'
+      - '.github/workflows/canonical-domain-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run canonical-host regression tests
+        run: python3 -B -m unittest discover -s tests -p canonical_domain_contract_test.py -v
+      - name: Lint public PHP templates
+        run: |
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          php -l catalogus-public/vorige-editie.php
+          php -l catalogus-public/pecharko.php
