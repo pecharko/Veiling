@@ -13,6 +13,13 @@ foreach ([$home,$detail,$previous,$privacy] as $page) {
         throw new RuntimeException('Social footer missing on public page');
     }
 }
+$pecharkoFooter='<a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a>';
+foreach ([$home, $detail] as $page) {
+    if (substr_count($page, $pecharkoFooter) !== 1
+        || str_contains($page, '<a href="<?=e(url(\'pecharko.php\'))?>">Designed by Pecharko</a>')) {
+        throw new RuntimeException('Pecharko attribution link must point to the requested external site');
+    }
+}
 $catalogEnd=strpos($home, '<?php if ($published): ?>');
 $footerAt=strpos($home, 'public_social_footer();');
 if ($catalogEnd===false || $footerAt===false || $footerAt<$catalogEnd) {
