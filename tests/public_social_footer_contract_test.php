@@ -13,6 +13,13 @@ foreach ([$home,$detail,$previous,$privacy] as $page) {
         throw new RuntimeException('Social footer missing on public page');
     }
 }
+$pecharkoFooter='<a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a>';
+foreach ([$home, $detail] as $page) {
+    if (substr_count($page, $pecharkoFooter) !== 1
+        || str_contains($page, '<a href="<?=e(url(\'pecharko.php\'))?>">Designed by Pecharko</a>')) {
+        throw new RuntimeException('Pecharko attribution link must point to the requested external site');
+    }
+}
 $catalogEnd=strpos($home, '<?php if ($published): ?>');
 $footerAt=strpos($home, 'public_social_footer();');
 if ($catalogEnd===false || $footerAt===false || $footerAt<$catalogEnd) {
@@ -38,5 +45,15 @@ if (substr_count($html,'<a class="footer-social-icon"')!==2
 foreach (['http://www.facebook.com/example','https://facebook.com.evil.test/a','https://user@instagram.com/a'] as $bad) {
     if (public_social_profile_url(str_contains($bad,'instagram')?'instagram':'facebook',$bad)!==null)
         throw new RuntimeException('Unsafe social URL accepted');
+}
+$release=json_decode(file_get_contents($root.'/releases/pecharko-footer-link-20261107.json'), true, 512, JSON_THROW_ON_ERROR);
+$expectedPaths=['catalogus-public/index.php', 'catalogus-public/kavel.php'];
+if (($release['schema'] ?? null)!==1 || array_column($release['files'] ?? [], 'path')!==$expectedPaths) {
+    throw new RuntimeException('Footer release manifest must contain only two public pages');
+}
+foreach ($release['files'] as $entry) {
+    if (hash_file('sha256', $root.'/'.$entry['path'])!==$entry['source_sha256']) {
+        throw new RuntimeException('Footer release source hash must match committed code');
+    }
 }
 echo "PASS public social footer independent of catalog visibility and valid links only\n";

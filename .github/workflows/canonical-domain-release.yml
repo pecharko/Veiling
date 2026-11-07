@@ -35,10 +35,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Run isolated release guard tests
         run: python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
-      - name: Validate exact five-file source and baseline manifest offline
-        run: python3 -B -m scripts.deploy_canonical_domain plan
+      - name: Validate canonical manifest only for canonical release payload changes
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$PR_BASE_SHA" HEAD > /tmp/canonical-changed-paths
+          if grep -F -x \
+             -e 'scripts/deploy_canonical_domain.py' \
+             -e 'scripts/readonly_canonical_domain_baselines.py' \
+             -e 'tests/deploy_canonical_domain_test.py' \
+             -e 'releases/canonical-domain-20261107.json' \
+             -e 'catalogus-public/.htaccess' \
+             /tmp/canonical-changed-paths; then
+            python3 -B -m scripts.deploy_canonical_domain plan
+          else
+            echo 'Historical canonical manifest immutable; other page changes validated by their own manifest and contract tests.'
+          fi
       - name: Verify general OVH manifest denylist remains intact
         run: |
           python3 - <<'PY'
