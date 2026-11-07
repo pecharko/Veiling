@@ -134,6 +134,20 @@ class CanonicalDomainReleaseTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "without matching readback"):
             adapter.canonical_evidence_validate(invalid, ovh_deploy_evidence_contract.validate)
 
+    def test_valid_confirmation_without_offsite_backup_still_denied(self):
+        sha = "a" * 40
+        owner_approval = adapter.AUTH_PREFIX + adapter.RELEASE_ID + "-" + sha
+        with patch.dict(os.environ, {
+            "GITHUB_SHA": sha, "DEPLOY_CONFIRMATION": owner_approval,
+            "PROTECTED_HTACCESS_BACKUP_SHA": ""
+        }), patch.object(adapter, "guarded_load", return_value=(
+            {"schema": 1, "files": []}, {}, {adapter.HTACCESS: "b"*64}
+        )), patch.object(adapter.engine, "run", side_effect=AssertionError("Must not run")):
+            with patch.object(sys, "argv", ["adapter", "deploy"]), self.assertRaisesRegex(
+                ValueError, "offsite .htaccess backup attestation"
+            ):
+                adapter.main()
+
 
 if __name__ == "__main__":
     unittest.main()
