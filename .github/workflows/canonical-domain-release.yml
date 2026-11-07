@@ -35,10 +35,85 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Run isolated release guard tests
         run: python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
-      - name: Validate exact five-file source and baseline manifest offline
-        run: python3 -B -m scripts.deploy_canonical_domain plan
+      - name: Validate canonical-domain manifest only when protected release scope changes
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-only "$PR_BASE_SHA" HEAD > /tmp/canonical-changed-paths
+          if grep -Eq '^(\\.github/workflows/canonical-domain-release\\.yml|scripts/deploy_canonical_domain\\.py|scripts/readonly_canonical_domain_baselines\\.py|tests/deploy_canonical_domain_test\\.py|releases/canonical-domain-20261107\\.json|catalogus-public/\\.htaccess)
+      - name: Verify general OVH manifest denylist remains intact
+        run: |
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import ALLOWED_SUFFIX, PROTECTED
+          assert '.htaccess' not in ALLOWED_SUFFIX
+          assert 'private/snapshots' in PROTECTED
+          PY
+      - name: Lint dedicated workflow
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/canonical-domain-release.yml
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      PROTECTED_HTACCESS_BACKUP_SHA: ${{ inputs.protected_htaccess_backup_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify immutable current main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Verify explicit owner confirmation and exact source manifest offline
+        run: |
+          set -euo pipefail
+          test "$DEPLOY_CONFIRMATION" = "CANONICAL-DOMAIN-DEPLOY-canonical-domain-20261107-$GITHUB_SHA"
+          python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
+          python3 -B -m scripts.deploy_canonical_domain plan
+      - name: PHP syntax of the exact targets
+        run: |
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          php -l catalogus-public/pecharko.php
+          php -l catalogus-public/vorige-editie.php
+      - name: Install pinned SFTP runtime
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Live drift check, backup, five-file upload, readback, and rollback
+        run: python3 -B -m scripts.deploy_canonical_domain deploy
+      - name: Preserve verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-domain-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Preserve rollback backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: canonical-domain-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
+ /tmp/canonical-changed-paths; then
+            python3 -B -m scripts.deploy_canonical_domain plan
+          else
+            echo "Historical canonical-domain release manifest is immutable; unrelated PHP changes are checked by canonical-domain contract CI and their own release manifest."
+          fi
       - name: Verify general OVH manifest denylist remains intact
         run: |
           python3 - <<'PY'
