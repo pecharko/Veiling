@@ -36,6 +36,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <meta name="theme-color" content="#850015">
   <meta name="description" content="Blik terug op de vorige succesvolle veiling van 41 Lokeren. Een impressie in foto's: bijzondere kavels, een betrokken publiek en samen iets betekenen.">
   <title>De vorige editie in beeld · 41 Lokeren</title>
+  <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/vorige-editie.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">

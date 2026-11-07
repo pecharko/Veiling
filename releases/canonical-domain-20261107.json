@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/.htaccess",
+      "source_sha256": "7be466facc2b27e77f8bfe3d8f4a7a9633b30d35659d2957547e60f448755eda",
+      "remote_sha256": "defe7766ad2d82a1676ef63c40c2bdaf6c60ec62df9597577e640662e7626699"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "99b53a09cc3cbc651cb9e9381fa341dc08c230b76e0d38be721965ebd88029da",
+      "remote_sha256": "d962973cf600d67d60b4ed86fc394879c2a8ee4cd44b048b4d454f185ed783a5"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "0e19edf4f60097e9a4f8e1a62e45a1fbec4ee2515770556ab18b230a373485df",
+      "remote_sha256": "86dd9d66c469e55319fa7109e595e6b504bc21bba737e7dec30c3079e20040f8"
+    },
+    {
+      "path": "catalogus-public/pecharko.php",
+      "source_sha256": "1bf3ef89a0a026f5c703c7af0bb61a21c94a7d1d346eb7c12fb37ca6bc3a06b9",
+      "remote_sha256": "93ab1f4dc33bedaea59c765c06d0e35f856062a002d2268929d06389215a3dd5"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "f1ee2fff2bbb8e12853deb0912d023ceeb9fb655e9a4fcafee32a22abd70023b",
+      "remote_sha256": "be5677b4a006cb9f37604e5d2ca84b9bdb12f556ccc3674a60803c0218bb40e2"
+    }
+  ]
+}

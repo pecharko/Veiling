@@ -1,0 +1,64 @@
+name: Canonical domain contract
+
+on:
+  pull_request:
+    paths:
+      - 'catalogus-public/.htaccess'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/pecharko.php'
+      - 'catalogus-public/privacy.php'
+      - 'tests/canonical_domain_contract_test.py'
+      - 'tests/readonly_canonical_domain_baselines_test.py'
+      - 'scripts/readonly_canonical_domain_baselines.py'
+      - 'scripts/deploy_canonical_domain.py'
+      - 'tests/deploy_canonical_domain_test.py'
+      - '.github/workflows/canonical-domain-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'catalogus-public/.htaccess'
+      - 'catalogus-public/index.php'
+      - 'catalogus-public/kavel.php'
+      - 'catalogus-public/vorige-editie.php'
+      - 'catalogus-public/pecharko.php'
+      - 'catalogus-public/privacy.php'
+      - 'tests/canonical_domain_contract_test.py'
+      - '.github/workflows/canonical-domain-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-domain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run canonical-host regression tests
+        run: |
+          python3 -B -m unittest discover -s tests -p canonical_domain_contract_test.py -v
+          python3 -B -m unittest discover -s tests -p readonly_canonical_domain_baselines_test.py -v
+          python3 -B -m unittest discover -s tests -p deploy_canonical_domain_test.py -v
+      - name: Verify www and apex TLS hostname coverage (no HTTP request)
+        timeout-minutes: 2
+        run: |
+          python3 - <<'PY'
+          import socket
+          import ssl
+
+          context = ssl.create_default_context()
+          for host in ("www.41lokeren.be", "41lokeren.be"):
+              with socket.create_connection((host, 443), timeout=10) as sock:
+                  with context.wrap_socket(sock, server_hostname=host) as tls:
+                      certificate = tls.getpeercert()
+                      if not certificate:
+                          raise RuntimeError("TLS peer certificate missing")
+                      print("TLS HOSTNAME VERIFIED", host, tls.version())
+          PY
+      - name: Lint public PHP templates
+        run: |
+          php -l catalogus-public/index.php
+          php -l catalogus-public/kavel.php
+          php -l catalogus-public/vorige-editie.php
+          php -l catalogus-public/pecharko.php
