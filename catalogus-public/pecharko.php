@@ -9,6 +9,7 @@ declare(strict_types=1);
 <meta name="description" content="Pecharko ontwikkelt en onderhoudt moderne websites op maat van kleine ondernemingen. Persoonlijk, slim en klaar om mee te groeien.">
 <meta name="theme-color" content="#101b22">
 <title>Pecharko — Digitale ambities, persoonlijk gebouwd</title>
+<link rel="canonical" href="https://41lokeren.be/pecharko.php">
 <link rel="stylesheet" href="assets/pecharko.css?v=1">
 </head>
 <body>
