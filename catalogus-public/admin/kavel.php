@@ -229,8 +229,8 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
-            <label>Hyperlink kunstenaar<input type="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
-            <p id="artist-link-help" class="lot-full">Een hyperlink is alleen toegestaan wanneer de naam van de kunstenaar is ingevuld.</p>
+            <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
+            <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
@@ -261,4 +261,69 @@ if ($error === $cancelAuctionWarning) {
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
+<script>
+(function () {
+  'use strict';
+  const form = document.getElementById('lot-editor-form');
+  if (!form) return;
+  const name = form.elements.namedItem('artist_name');
+  const link = form.elements.namedItem('artist_url');
+  if (!(name instanceof HTMLInputElement) || !(link instanceof HTMLInputElement)) return;
+
+  function normalizedArtistLink(value) {
+    const trimmed = value.trim();
+    // Only a domain beginning with www. gets an implicit HTTPS prefix.
+    if (/^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#][^\s]*)?$/i.test(trimmed)) {
+      return 'https://' + trimmed;
+    }
+    return trimmed;
+  }
+
+  function validateArtistLink() {
+    const value = normalizedArtistLink(link.value);
+    let message = '';
+    if (value && !name.value.trim()) {
+      message = 'Vul eerst de naam van de kunstenaar in.';
+    } else if (value) {
+      try {
+        const url = new URL(value);
+        if (!/^https?:\/\//i.test(value) ||
+            !['http:', 'https:'].includes(url.protocol) ||
+            !url.hostname || url.username || url.password ||
+            /[\s\x00-\x1f\x7f]/.test(value) ||
+            value.length > 2048) {
+          message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
+        }
+      } catch (_) {
+        message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
+      }
+    }
+    link.setCustomValidity(message);
+    link.setAttribute('aria-invalid', message ? 'true' : 'false');
+    return !message;
+  }
+
+  function completeArtistLink() {
+    if (validateArtistLink() && link.value.trim()) {
+      link.value = normalizedArtistLink(link.value);
+    }
+  }
+
+  name.addEventListener('input', validateArtistLink);
+  link.addEventListener('input', validateArtistLink);
+  link.addEventListener('blur', function () {
+    completeArtistLink();
+    if (!validateArtistLink()) link.reportValidity();
+  });
+  form.addEventListener('submit', function (event) {
+    completeArtistLink();
+    if (!validateArtistLink()) {
+      event.preventDefault();
+      link.reportValidity();
+      link.focus();
+    }
+  });
+  validateArtistLink();
+})();
+</script>
 <?php admin_bottom(); ?>
