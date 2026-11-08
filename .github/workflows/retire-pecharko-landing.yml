@@ -1,0 +1,108 @@
+name: Retire obsolete Pecharko landing files (fixed-scope)
+on:
+  pull_request:
+    paths:
+      - 'scripts/retire_pecharko_landing.py'
+      - 'tests/retire_pecharko_landing_test.py'
+      - '.github/workflows/retire-pecharko-landing.yml'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'preflight reads only; deploy deletes exactly two pinned legacy files'
+        required: true
+        type: choice
+        options: [preflight, deploy]
+      confirmation:
+        description: 'For deploy only: DELETE-PECHARKO-LANDING-20261108-<exact main SHA>'
+        required: false
+        type: string
+      expected_pecharko_php_sha:
+        description: 'Authenticated live remote SHA-256 of obsolete pecharko.php (deploy only)'
+        required: false
+        type: string
+      expected_pecharko_css_sha:
+        description: 'Authenticated live remote SHA-256 of obsolete assets/pecharko.css (deploy only)'
+        required: false
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ovh-production-deploy
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test fixed-scope deletion guard offline
+        run: |
+          python3 -B -m unittest discover -s tests -p retire_pecharko_landing_test.py -v
+          python3 -m py_compile scripts/retire_pecharko_landing.py
+      - name: Lint this restricted workflow
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/retire-pecharko-landing.yml
+  operate:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    env:
+      RETIRE_MODE: ${{ inputs.mode }}
+      RETIRE_CONFIRMATION: ${{ inputs.confirmation }}
+      EXPECTED_PECHARKO_PHP_SHA: ${{ inputs.expected_pecharko_php_sha }}
+      EXPECTED_PECHARKO_CSS_SHA: ${{ inputs.expected_pecharko_css_sha }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify immutable main
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+      - name: Verify mode, exact owner authorization, and offline safety tests
+        run: |
+          set -euo pipefail
+          [[ "$RETIRE_MODE" == preflight || "$RETIRE_MODE" == deploy ]]
+          python3 -B -m unittest discover -s tests -p retire_pecharko_landing_test.py -v
+          if [[ "$RETIRE_MODE" == deploy ]]; then
+            test "$RETIRE_CONFIRMATION" = "DELETE-PECHARKO-LANDING-20261108-$GITHUB_SHA"
+            [[ "$EXPECTED_PECHARKO_PHP_SHA" =~ ^[0-9a-f]{64}$ ]]
+            [[ "$EXPECTED_PECHARKO_CSS_SHA" =~ ^[0-9a-f]{64}$ ]]
+          fi
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Fixed-scope read-only scan or authorized deletion
+        run: python3 -B -m scripts.retire_pecharko_landing "$RETIRE_MODE"
+      - name: Archive read-only proof
+        if: always() && inputs.mode == 'preflight'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pecharko-retirement-readonly-${{ github.run_id }}
+          path: pecharko-retirement-readonly.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Archive deletion evidence
+        if: always() && inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pecharko-retirement-evidence-${{ github.run_id }}
+          path: pecharko-retirement-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Archive original bytes for rollback
+        if: always() && inputs.mode == 'deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pecharko-retirement-rollback-${{ github.run_id }}
+          path: pecharko-retirement-backups/
+          retention-days: 7
+          if-no-files-found: warn
