@@ -8,7 +8,7 @@ const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
  'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
- 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
+ 'lots'=>['id','lot_number','title','subtitle','artist_name','artist_url','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'login_attempts'=>['id','ip_hash','attempted_at'],
 ];
@@ -133,7 +133,7 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
