@@ -191,12 +191,10 @@ assert_throws(fn() => snap_path('../config.php'), 'Ongeldige snapshotnaam',
               'Snapshot path traversal rejected');
 @unlink($corrupted);
 
-// Schema-upgrade regression: restore a snapshot created before is_site_online existed.
+// Only current-schema snapshots are supported; old archives remain on disk
+// but do not need a restore compatibility path.
 $pdo->exec('ALTER TABLE settings ADD COLUMN is_site_online TINYINT(1) NOT NULL DEFAULT 1');
 $pdo->exec('UPDATE settings SET is_site_online=0');
-snap_restore($pdo, $name);
-verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 1,
-       'Legacy snapshot restores safely online after schema upgrade');
 
 // Snapshot and restore both the offline state and the new catalog split switch.
 $pdo->exec('UPDATE settings SET is_site_online=0,catalog_split_active=1');
@@ -214,6 +212,8 @@ verify((int)$pdo->query('SELECT catalog_split_active FROM settings WHERE id=1')-
        'New schema restore recovers the catalog split switch');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
+// A legacy archive with missing metadata must be refused even when the ZIP
+// and its manifest SHA-256 have been correctly recomputed.
 // Simulate a verified pre-#185 archive with no new lot metadata.
 $legacyName = 'snapshot-20990102-000000-deadbeefcafe.zip';
 if (!copy(snap_path($name), snap_path($legacyName))) throw new RuntimeException('Could not prepare legacy snapshot');
@@ -232,20 +232,12 @@ $legacyManifest['sha256']['database.json'] = hash('sha256', $legacyJson);
 $legacyZip->addFromString('database.json', $legacyJson);
 $legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
 $legacyZip->close();
-[$verifiedLegacy] = snap_verified($legacyName);
-verify(!array_key_exists('name', $verifiedLegacy['tables']['admins'][0]),
-       'Legacy snapshot without admin names validates with correct checksums');
-verify(!array_key_exists('auction_only', $verifiedLegacy['tables']['lots'][0]),
-       'Old lot snapshot without #185 columns validates with correct checksums');
-$pdo->exec("UPDATE lots SET market_price=123, starting_bid=45, auction_only=1 WHERE lot_number=101");
-snap_restore($pdo, $legacyName);
-verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === '',
-       'Legacy snapshot restore leaves administrator name blank rather than using email');
-$legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id, artist_name, artist_url FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
-verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid'] === null
-       && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null
-       && $legacyRestored['artist_name'] === '' && $legacyRestored['artist_url'] === '',
-       'Legacy restore safely defaults unknown valuations, ownership and auction-only flag');
+assert_throws(fn() => snap_verified($legacyName), 'Ongeldige kolommen bij lots',
+              'Old snapshot missing lot metadata is not supported');
+assert_throws(fn() => snap_restore($pdo, $legacyName), 'Ongeldige kolommen bij lots',
+              'Old snapshot restore rejected before database or photos change');
+verify($pdo->query('SELECT artist_name FROM lots WHERE lot_number=101')->fetchColumn() === 'Jan Jans',
+       'Rejected legacy restore leaves current artist data intact');
 if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
