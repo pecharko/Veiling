@@ -30,4 +30,17 @@ artist_check(str_contains($linked, '>Jan &amp; Co</a>'), 'Name is linked');
 artist_check(str_contains($linked,'href="https://example.org/a?x=1&amp;y=2"'), 'URL escaped');
 artist_check(str_contains($linked,'rel="noopener noreferrer"'), 'Safe external link');
 artist_check(!str_contains(lot_artist_markup(['artist_name'=>'Piet','artist_url'=>'javascript:alert(1)']),'<a'), 'Invalid legacy URL cannot create link');
+$root=dirname(__DIR__);
+foreach (['catalogus-public/pecharko.php','catalogus-public/assets/pecharko.css'] as $deleted) {
+  artist_check(!file_exists($root.'/'.$deleted), 'Obsolete Pecharko site asset must be absent: '.$deleted);
+}
+foreach (['catalogus-public/index.php', 'catalogus-public/kavel.php'] as $page) {
+  $source=file_get_contents($root.'/'.$page);
+  artist_check(is_string($source) && str_contains($source, 'lot_artist_markup($lot)'),
+    'Public page must display linked artist name: '.$page);
+}
+$editor=file_get_contents($root.'/catalogus-public/admin/kavel.php');
+artist_check(is_string($editor) && str_contains($editor,'lot_artist_validate(')
+  && str_contains($editor,'name="artist_name"') && str_contains($editor,'name="artist_url"'),
+  'Editor must validate and show both artist fields');
 echo "PASS lot artist validation and safe public markup\n";
