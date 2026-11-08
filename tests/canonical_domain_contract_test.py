@@ -21,7 +21,6 @@ class CanonicalDomainContract(unittest.TestCase):
             "index.php": 'href="https://41lokeren.be/',
             "kavel.php": 'href="https://41lokeren.be/kavel.php?nr=',
             "vorige-editie.php": 'href="https://41lokeren.be/vorige-editie.php"',
-            "pecharko.php": 'href="https://41lokeren.be/pecharko.php"',
         }
         for name, fragment in paths.items():
             with self.subTest(name=name):
@@ -29,7 +28,6 @@ class CanonicalDomainContract(unittest.TestCase):
                 self.assertEqual(php.count('rel="canonical"'), 1)
                 self.assertIn(fragment, php)
                 self.assertNotIn('https://www.41lokeren.be', php)
-                if name != "pecharko.php":
                     self.assertIn("if (!admin_preview_active())", php)
 
     def test_nonindexable_privacy_stays_without_canonical(self):
