@@ -27,7 +27,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: ovh-production-deploy
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ovh-production-deploy' || format('pecharko-retirement-review-{0}', github.event.pull_request.number) }}
   cancel-in-progress: false
 jobs:
   validate:
