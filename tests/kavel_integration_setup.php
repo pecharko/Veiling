@@ -101,7 +101,7 @@ try {
   $pdo->exec("INSERT INTO lots (lot_number,title,description,details,artist_url) VALUES (999999,'Invalid','','','https://example.org/')");
   throw new RuntimeException('Artist URL without name bypassed database constraint');
 } catch (PDOException $expected) {
-  if ($expected->getCode() !== '23000') throw $expected;
+  if ((int)($expected->errorInfo[1] ?? 0) !== 3819) throw $expected;
 }
 
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
