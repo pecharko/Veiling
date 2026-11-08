@@ -230,7 +230,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
-            <p id="artist-link-help" class="lot-full">Een hyperlink is alleen toegestaan wanneer de naam van de kunstenaar is ingevuld.</p>
+            <p id="artist-link-help" class="lot-full">Optioneel. Gebruik een volledige link die begint met https:// of http://. Vul ook de kunstenaarsnaam in.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
@@ -261,4 +261,52 @@ if ($error === $cancelAuctionWarning) {
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
+<script>
+(function () {
+  'use strict';
+  const form = document.getElementById('lot-editor-form');
+  if (!form) return;
+  const name = form.elements.namedItem('artist_name');
+  const link = form.elements.namedItem('artist_url');
+  if (!(name instanceof HTMLInputElement) || !(link instanceof HTMLInputElement)) return;
+
+  function validateArtistLink() {
+    const value = link.value.trim();
+    let message = '';
+    if (value && !name.value.trim()) {
+      message = 'Vul eerst de naam van de kunstenaar in.';
+    } else if (value) {
+      try {
+        const url = new URL(value);
+        if (!/^https?:\/\//i.test(value) ||
+            !['http:', 'https:'].includes(url.protocol) ||
+            !url.hostname || url.username || url.password ||
+            /[\s\x00-\x1f\x7f]/.test(value) ||
+            value.length > 2048) {
+          message = 'Gebruik een geldige volledige link die begint met https:// of http://.';
+        }
+      } catch (_) {
+        message = 'Gebruik een geldige volledige link die begint met https:// of http://.';
+      }
+    }
+    link.setCustomValidity(message);
+    link.setAttribute('aria-invalid', message ? 'true' : 'false');
+    return !message;
+  }
+
+  name.addEventListener('input', validateArtistLink);
+  link.addEventListener('input', validateArtistLink);
+  link.addEventListener('blur', function () {
+    if (!validateArtistLink()) link.reportValidity();
+  });
+  form.addEventListener('submit', function (event) {
+    if (!validateArtistLink()) {
+      event.preventDefault();
+      link.reportValidity();
+      link.focus();
+    }
+  });
+  validateArtistLink();
+})();
+</script>
 <?php admin_bottom(); ?>
