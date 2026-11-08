@@ -28,7 +28,7 @@ class CanonicalDomainContract(unittest.TestCase):
                 self.assertEqual(php.count('rel="canonical"'), 1)
                 self.assertIn(fragment, php)
                 self.assertNotIn('https://www.41lokeren.be', php)
-                    self.assertIn("if (!admin_preview_active())", php)
+                self.assertIn("if (!admin_preview_active())", php)
 
     def test_nonindexable_privacy_stays_without_canonical(self):
         privacy = (PUBLIC / "privacy.php").read_text(encoding="utf-8")
