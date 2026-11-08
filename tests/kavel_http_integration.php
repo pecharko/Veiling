@@ -108,6 +108,42 @@ try {
   [$status] = request_page('/admin/fotos-bulk.php', ['action' => 'process', 'csrf' => 'unused']);
   claim($status === 404 && lot_count() === $lotsBeforeBulk, 'Old bulk photo import POST returns 404 without lot changes');
   $csrf = token($html);
+  // Artist metadata: validate before SQL, persist, and retain input on error.
+  claim(str_contains($html, 'name="artist_name"') && str_contains($html, 'name="artist_url"'),
+    'New lot editor exposes both artist fields');
+  $artistPost = [
+    'csrf'=>$csrf, 'action'=>'save', 'id'=>'0',
+    'lot_number'=>'750000', 'title'=>'Kunstwerk met maker',
+    'artist_name'=>'', 'artist_url'=>'https://example.org/kunst',
+    'status'=>'draft', 'sale_location'=>'markt'
+  ];
+  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
+  claim($status===200 && str_contains($artistError, 'Vul eerst de naam van de kunstenaar')
+    && str_contains($artistError,'name="artist_url" value="https://example.org/kunst"')
+    && !by_number(750000), 'Artist URL without name is rejected and retained, no lot created');
+  $artistPost['artist_name']='Jan Jans';
+  $artistPost['artist_url']='javascript:alert(1)';
+  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
+  claim($status===200 && str_contains($artistError, 'http- of https-link')
+    && !by_number(750000), 'Unsafe artist URL rejected before database write');
+  $artistPost['artist_url']='https://example.org/artist?x=1&y=2';
+  [$status] = request_page('/admin/kavel.php', $artistPost);
+  claim($status===303, 'Valid artist link and name accepted');
+  $artistStored=by_number(750000);
+  claim($artistStored && $artistStored['artist_name']==='Jan Jans'
+    && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
+    'Both artist fields stored');
+  $artistPost['id']=(string)$artistStored['id'];
+  $artistPost['artist_name']='';
+  [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
+  claim($status===200 && by_number(750000)['artist_name']==='Jan Jans',
+    'Cannot clear artist name while a URL remains');
+  $artistPost['artist_name']='Nieuwe kunstenaar';
+  $artistPost['artist_url']='';
+  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
+  claim($status===303 && by_number(750000)['artist_name']==='Nieuwe kunstenaar'
+    && by_number(750000)['artist_url']==='', 'Artist link can be removed while keeping name');
+
   $invalid = [
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
     'lot_number' => '99', 'title' => 'Nieuwe titel <&>',
