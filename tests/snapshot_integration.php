@@ -38,8 +38,8 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
 $pdo->exec("UPDATE admins SET name='CI Beheerder'");
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
-$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?)")
-    ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
+$pdo->prepare("INSERT INTO lots (lot_number,title,artist_name,artist_url,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?)")
+    ->execute([101,'Kunstwerk voor snapshot','Jan Jans','https://example.org/artist','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
@@ -162,7 +162,9 @@ verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
 
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
-$restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+$restoredLot=$pdo->query('SELECT sale_location,auction_number,artist_name,artist_url FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($restoredLot['artist_name']==='Jan Jans' && $restoredLot['artist_url']==='https://example.org/artist',
+       'Snapshot restore retains artist name and hyperlink');
 verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
@@ -219,7 +221,7 @@ $legacyZip = new ZipArchive();
 if ($legacyZip->open(snap_path($legacyName)) !== true) throw new RuntimeException('Cannot open legacy test ZIP');
 $legacyDb = json_decode($legacyZip->getFromName('database.json'), true, 512, JSON_THROW_ON_ERROR);
 foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
-    foreach (['market_price','starting_bid','auction_only','created_by_admin_id'] as $newColumn) unset($legacyLot[$newColumn]);
+    foreach (['market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url'] as $newColumn) unset($legacyLot[$newColumn]);
 }
 unset($legacyLot);
 foreach ($legacyDb['tables']['admins'] as &$legacyAdmin) unset($legacyAdmin['name']);
@@ -239,9 +241,10 @@ $pdo->exec("UPDATE lots SET market_price=123, starting_bid=45, auction_only=1 WH
 snap_restore($pdo, $legacyName);
 verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === '',
        'Legacy snapshot restore leaves administrator name blank rather than using email');
-$legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+$legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id, artist_name, artist_url FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
 verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid'] === null
-       && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null,
+       && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null
+       && $legacyRestored['artist_name'] === '' && $legacyRestored['artist_url'] === '',
        'Legacy restore safely defaults unknown valuations, ownership and auction-only flag');
 if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
 // Exercise the security regression in the existing isolated snapshot CI suite.
