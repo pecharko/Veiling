@@ -25,3 +25,6 @@
 - Previewbranch `preview/ui` en de Mac-worktree worden niet overschreven. Bij deze expliciete `één PR + deploy`-opdracht is de implementatie geïsoleerd vanaf `main` gemaakt.
 
 **Geen merge, workflowdispatch, OVH-mutatie of databasewijziging is door deze PR zelf geautoriseerd.**
+
+## Snapshotcompatibiliteit (beslissing 8 november 2026)
+Oude snapshots hoeven **niet** te worden ondersteund. Een snapshot zonder alle actuele kavelvelden, waaronder `artist_name` en `artist_url`, wordt bij verificatie geweigerd voordat een restore de database of foto's kan veranderen. Er worden geen historische kavelkolommen bijgevuld en de oude snapshotbestanden worden niet automatisch verwijderd. Nieuwe snapshots na de schemamigratie bewaren beide kunstenaarsvelden. Beveiligde backups, rollback, checksums en verificatie blijven verplicht.
