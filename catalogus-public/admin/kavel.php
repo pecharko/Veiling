@@ -273,7 +273,7 @@ if ($error === $cancelAuctionWarning) {
   function normalizedArtistLink(value) {
     const trimmed = value.trim();
     // Only a domain beginning with www. gets an implicit HTTPS prefix.
-    if (/^www\\.[a-z0-9-]+(?:\\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#][^\\s]*)?$/i.test(trimmed)) {
+    if (/^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#][^\s]*)?$/i.test(trimmed)) {
       return 'https://' + trimmed;
     }
     return trimmed;
@@ -287,10 +287,10 @@ if ($error === $cancelAuctionWarning) {
     } else if (value) {
       try {
         const url = new URL(value);
-        if (!/^https?:\\/\\//i.test(value) ||
+        if (!/^https?:\/\//i.test(value) ||
             !['http:', 'https:'].includes(url.protocol) ||
             !url.hostname || url.username || url.password ||
-            /[\\s\\x00-\\x1f\\x7f]/.test(value) ||
+            /[\s\x00-\x1f\x7f]/.test(value) ||
             value.length > 2048) {
           message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
         }
