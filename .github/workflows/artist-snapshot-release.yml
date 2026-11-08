@@ -38,6 +38,22 @@ jobs:
           else
             echo 'Awaiting authenticated independent read-only OVH baseline and same-PR manifest'
           fi
+      - name: Verify four-file artist runtime manifest, immutable scope and source hashes
+        run: |
+          python3 -B -m scripts.shared_ovh_release plan artist-fields-20261108
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import load_manifest
+          manifest, payload, remotes = load_manifest('artist-fields-20261108')
+          assert list(payload) == [
+              'catalogus-public/admin/kavel.php',
+              'private/lot_artist.php',
+              'catalogus-public/index.php',
+              'catalogus-public/kavel.php',
+          ]
+          assert remotes['private/lot_artist.php'] == 'ABSENT'
+          assert all('snapshots' not in name for name in payload)
+          print('VERIFIED REVIEWED ARTIST RUNTIME MANIFEST')
+          PY
       - name: Verify shared OVH denylist never changed
         run: |
           python3 - <<'PY'
