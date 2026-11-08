@@ -302,7 +302,10 @@ try {
     'Auction-only on market aborts entire publication transaction');
 
   // Artist metadata: validate before SQL, persist, and retain input on error.
-  claim(str_contains($html, 'name="artist_name"') && str_contains($html, 'name="artist_url"'),
+  [$status, $artistForm] = request_page('/admin/kavel.php');
+  claim($status===200, 'Artist editor loads');
+  $csrf = token($artistForm);
+  claim(str_contains($artistForm, 'name="artist_name"') && str_contains($artistForm, 'name="artist_url"'),
     'New lot editor exposes both artist fields');
   $artistPost = [
     'csrf'=>$csrf, 'action'=>'save', 'id'=>'0',
