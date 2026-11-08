@@ -7,7 +7,6 @@ on:
       - 'catalogus-public/index.php'
       - 'catalogus-public/kavel.php'
       - 'catalogus-public/vorige-editie.php'
-      - 'catalogus-public/pecharko.php'
       - 'catalogus-public/privacy.php'
       - 'tests/canonical_domain_contract_test.py'
       - 'tests/readonly_canonical_domain_baselines_test.py'
@@ -22,7 +21,6 @@ on:
       - 'catalogus-public/index.php'
       - 'catalogus-public/kavel.php'
       - 'catalogus-public/vorige-editie.php'
-      - 'catalogus-public/pecharko.php'
       - 'catalogus-public/privacy.php'
       - 'tests/canonical_domain_contract_test.py'
       - '.github/workflows/canonical-domain-tests.yml'
@@ -61,4 +59,3 @@ jobs:
           php -l catalogus-public/index.php
           php -l catalogus-public/kavel.php
           php -l catalogus-public/vorige-editie.php
-          php -l catalogus-public/pecharko.php
