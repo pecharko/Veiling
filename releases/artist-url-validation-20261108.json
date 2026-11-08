@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "6ec6c4184f6bb4319458ded2696e79fa1b5bb5025878a9c6d45e87a02be34f03",
+      "remote_sha256": "9dedfca443cda4a9f72ce655881054955ea62af2ffda23195bd8d2c0da6dfaf8"
+    },
+    {
+      "path": "private/lot_artist.php",
+      "source_sha256": "c37a19cbcff1091ed54595886e7db6099527d8b1f76fbac78e011c25841a46a5",
+      "remote_sha256": "dede2e3f6d5e18de920c1247ed39d694418a7440f81aa486f63d18e3dbcec35c"
+    }
+  ]
+}
