@@ -3,6 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/private/lot_form.php';
 // The required PHP CI job executes this file; include authorization regressions.
 require __DIR__ . '/lot_permissions_test.php';
+require __DIR__ . '/lot_artist_test.php';
 
 function check_value(mixed $expected, mixed $actual, string $case): void {
   if ($expected !== $actual) {
@@ -15,6 +16,8 @@ $defaults = [
   'lot_number' => '',
   'title' => '',
   'subtitle' => '',
+  'artist_name' => '',
+  'artist_url' => '',
   'category' => 'Overige',
   'description' => '',
   'details' => '',
@@ -26,6 +29,8 @@ $defaults = [
 $existing = array_merge($defaults, [
   'lot_number' => 7,
   'title' => 'Bewaarde titel',
+  'artist_name' => 'Bewaarde kunstenaar',
+  'artist_url' => 'https://example.org/artist',
   'description' => 'Bewaarde tekst',
   'status' => 'published',
 ]);
@@ -36,12 +41,16 @@ check_value('draft', $initial['status'], 'Nieuw kavel: standaardstatus');
 
 $edit = lot_form_values($defaults, $existing);
 check_value('Bewaarde titel', $edit['title'], 'Bestaand kavel: titel uit database');
+check_value('Bewaarde kunstenaar', $edit['artist_name'], 'Bestaand kavel: kunstenaar geladen');
+check_value('https://example.org/artist', $edit['artist_url'], 'Bestaand kavel: hyperlink geladen');
 check_value('published', $edit['status'], 'Bestaand kavel: opgeslagen status');
 
 $post = [
   'lot_number' => '7',
   'title' => 'Nieuwe titel <&>',
   'subtitle' => 'Extra tekst',
+  'artist_name' => 'Nieuwe kunstenaar',
+  'artist_url' => 'https://example.org/nieuw',
   'category' => 'Design',
   'description' => 'Nieuwe beschrijving',
   'details' => 'Onvolledige invoer',
@@ -54,6 +63,8 @@ $newWithError = lot_form_values($defaults, null, $post);
 check_value('Nieuwe titel <&>', $newWithError['title'], 'Aanmaakfout: ingevoerde titel behouden');
 check_value('200', $newWithError['estimate_min'], 'Aanmaakfout: schatting behouden');
 check_value('100', $newWithError['estimate_max'], 'Aanmaakfout: ongeldige max behouden');
+check_value('Nieuwe kunstenaar', $newWithError['artist_name'], 'Aanmaakfout: kunstenaar behouden');
+check_value('https://example.org/nieuw', $newWithError['artist_url'], 'Aanmaakfout: hyperlink behouden');
 check_value('draft', $newWithError['status'], 'Aanmaakfout: gekozen status behouden');
 check_value(false, array_key_exists('action', $newWithError), 'Onbekende velden niet overnemen');
 
