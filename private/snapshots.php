@@ -133,7 +133,7 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) )))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -207,10 +207,9 @@ function snap_restore(PDO $pdo,string $name): void {
      }
     }
     if($table==='admins') { foreach(['role','is_active','last_login_at'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM admins LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
-    if($table==='lots') { foreach(['market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM lots LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
-    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='admins' && $col==='is_active' ? 1 : ($table==='admins' && $col==='name' ? '' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : ($table==='lots' && $col==='sale_location' ? 'markt' : ($table==='lots' && $col==='auction_only' ? 0 : ($table==='lots' && in_array($col,['artist_name','artist_url'],true) ? '' : null)))))))), $columns));
+    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='admins' && $col==='is_active' ? 1 : ($table==='admins' && $col==='name' ? '' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : null))))), $columns));
    }
    // Keep permanent lot-number reservations monotonic across snapshot restores.
    // A restore may reintroduce lots deleted after the snapshot was taken.
