@@ -9,6 +9,11 @@ function lot_artist_validate(string $name, string $link): array {
     throw new InvalidArgumentException('De naam van de kunstenaar is te lang (maximaal 250 tekens).');
   }
   if ($link === '') return [$name, ''];
+  // A familiar www-address is completed to an HTTPS hyperlink on save.
+  // Never prepend a scheme to arbitrary or explicitly unsupported input.
+  if (preg_match('~^www\\.[a-z0-9-]+(?:\\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?\\#][^\\x00-\\x20\\x7f]*)?$~iD', $link)) {
+    $link = 'https://' . $link;
+  }
   if ($name === '') {
     throw new InvalidArgumentException('Vul eerst de naam van de kunstenaar in voordat je een hyperlink toevoegt.');
   }
