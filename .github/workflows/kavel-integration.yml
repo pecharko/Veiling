@@ -155,7 +155,8 @@ jobs:
           php tests/catalog_lot_title_contract_test.php
           php tests/artist_name_50_preview_test.php
           php tests/catalog_editor_detail_release_contract_test.php
-          python3 scripts/shared_ovh_release.py plan catalog-editor-detail-20261109
+          php tests/catalog_popular_tag_release_test.php
+          python3 scripts/shared_ovh_release.py plan catalog-popular-editor-polish-20261109
           node tests/lot_photo_upload_target_test.cjs
           node tests/lot_unsaved_warning_test.cjs
           php tests/lot_form_test.php
@@ -168,6 +169,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node tests/admin_preview_banner_browser.cjs || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/previous_edition_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node tests/previous_edition_browser.cjs || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
+          php tests/catalog_popular_mysql_test.php
 
       - name: Retain desktop and mobile impression previews
         if: needs.impact.outputs.run == 'true' && always()

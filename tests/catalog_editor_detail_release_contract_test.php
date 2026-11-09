@@ -20,7 +20,9 @@ foreach (['description'=>250,'details'=>100] as $field=>$limit) {
   preview_assert(str_contains($editor, 'elseif(mb_strlen($'.$field.')>'.$limit.')'), "$field server validation");
 }
 preview_assert(str_contains($editor, '<label class="lot-full">Ondertitel<input') && !str_contains($editor, 'Ondertitel / maker / materiaal'), 'Subtitle editor label');
-preview_assert(str_contains($editor, "['subtitle', 'lot-subtitle-error', 'De ondertitel mag maximaal 50 tekens bevatten.']"), 'Live subtitle warning');
+preview_assert(!str_contains($editor, 'lot-subtitle-error') && !str_contains($editor, 'lot-title-error') && !str_contains($editor, 'lot-artist-error'), 'No redundant editor length errors');
+preview_assert(str_contains($editor, 'str_replace(["\\r\\n", "\\r"], "\\n", (string)($_POST[\'description\']??\'\'))'), 'Description line endings normalized');
+preview_assert(str_contains($editor, 'str_replace(["\\r\\n", "\\r"], "\\n", (string)($_POST[\'details\']??\'\'))'), 'Details line endings normalized');
 preview_assert(str_contains($editor, "elseif(mb_strlen(\$subtitle)>50)"), 'Subtitle server length check');
 preview_assert(str_contains($editor, 'UPDATE lots SET lot_number=?,title=?,subtitle=?') && str_contains($editor, 'INSERT INTO lots (lot_number,title,subtitle,'), 'Unchanged subtitle DB field');
 preview_assert(str_contains($catalog, '<p class="lot-subtitle"><?=e($lot[\'subtitle\'])?></p>'), 'Full escaped subtitle');

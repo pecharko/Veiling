@@ -88,9 +88,9 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
-  claim(str_contains($html, 'name="title"') && str_contains($html, 'id="lot-title-error"')
-      && str_contains($html, 'De titel mag maximaal 50 tekens bevatten.'),
-      'New lot title shows the fifty-character validation message');
+  claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"')
+      && !str_contains($html, 'id="lot-title-error"'),
+      'New lot title uses native fifty-character maxlength without redundant warning');
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save',
     'lot_number' => '876542', 'title' => str_repeat('X', 51),
@@ -104,7 +104,8 @@ try {
   ]);
   claim($artistStatus === 200 && str_contains($tooLongArtistPage, 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.')
       && !by_number(876541), 'Server rejects 51-character artist without inserting a lot');
-  claim(str_contains($html, 'id="lot-artist-error"'), 'New lot displays artist length warning container');
+  claim(str_contains($html, 'name="artist_name"') && !str_contains($html, 'id="lot-artist-error"'),
+      'New lot uses native artist maxlength without redundant warning');
   foreach ([
     ['subtitle', 51, 'De ondertitel mag maximaal 50 tekens bevatten.', 876540],
     ['description', 251, 'De beschrijving mag maximaal 250 tekens bevatten.', 876539],
@@ -477,6 +478,20 @@ try {
   claim($status===303 && by_number(750000)['artist_name']==='Nieuwe kunstenaar'
     && by_number(750000)['artist_url']==='', 'Artist link can be removed while keeping name');
 
+  // Browsers count one newline as one character but send CRLF over HTTP.
+  // A full textarea including a newline must save without a false 251/101 error.
+  $fullDescription = str_repeat('D', 124) . "\r\n" . str_repeat('D', 125);
+  $fullDetails = str_repeat('S', 49) . "\r\n" . str_repeat('S', 50);
+  [$newlineStatus] = request_page('/admin/kavel.php', [
+    'csrf' => token($html), 'action' => 'save', 'lot_number' => '876537',
+    'title' => 'Regelafbreking limieten', 'description' => $fullDescription,
+    'details' => $fullDetails,
+  ]);
+  $newlineLot = by_number(876537);
+  claim($newlineStatus === 303 && $newlineLot
+      && $newlineLot['description'] === str_repeat('D', 124) . "\n" . str_repeat('D', 125)
+      && $newlineLot['details'] === str_repeat('S', 49) . "\n" . str_repeat('S', 50),
+      'CRLF at HTML maxlength does not cause false server length validation');
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
   claim($status === 405, 'Authenticated GET logout is rejected without destroying session');
