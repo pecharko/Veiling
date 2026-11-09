@@ -45,6 +45,18 @@
 .impression-gallery .impression-section-heading{padding-top:50px}
 .impression-gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:33px 24px}
 .impression-gallery-grid .impression-photo-image{aspect-ratio:4/3}
+/* Media feature links to TV Oost's own player; no unapproved video or images are hosted. */
+.impression-video{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:45px;align-items:center;padding-top:55px;padding-bottom:85px;border-top:1px solid var(--impression-line)}
+.impression-video-intro>p:not(.impression-eyebrow){max-width:450px;font-size:14px;line-height:1.85;color:var(--impression-muted);margin:22px 0 0}
+.impression-video-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;min-height:290px;aspect-ratio:16/9;overflow:hidden;border-radius:8px;padding:30px;background:linear-gradient(180deg,rgba(14,18,20,.12) 0%,rgba(14,18,20,.18) 40%,rgba(14,18,20,.78) 100%),url('vorige-editie-soepkar-tegel.webp') center 46%/cover no-repeat;background-color:#244d40;color:#fffaf3;text-decoration:none;box-shadow:0 18px 40px rgba(31,45,37,.16);transition:transform .18s ease,box-shadow .18s ease}
+.impression-video-card:hover{transform:translateY(-3px);box-shadow:0 22px 45px rgba(31,45,37,.22);color:#fffaf3;text-decoration:none}
+.impression-video-play{display:grid;place-items:center;width:72px;height:72px;border:2px solid rgba(255,250,243,.8);border-radius:50%;background:rgba(255,255,255,.14);font-size:27px;line-height:1;padding-left:5px}
+.impression-video-card-copy{display:flex;flex-direction:column;gap:8px}
+.impression-video-kicker{color:#e5d5b2;font-size:10px;font-weight:800;letter-spacing:.15em}
+.impression-video-card-copy strong{font:normal clamp(24px,2.5vw,35px)/1.16 Georgia,serif}
+.impression-video-card-copy>span:last-child{font-size:12px;letter-spacing:.02em;color:#eee2d4}
+@media(max-width:720px){.impression-video{grid-template-columns:1fr;gap:25px;padding-top:42px;padding-bottom:54px}.impression-video-card{min-height:230px;padding:24px}.impression-video-play{width:62px;height:62px;font-size:23px}}
+@media(prefers-reduced-motion:reduce){.impression-video-card{transition:none}.impression-video-card:hover{transform:none}}
 .impression-next{padding:58px 28px 62px;margin-bottom:80px;border:1px solid #d8d6c8;position:relative;text-align:center;background:#f1f0e5}
 .impression-next>.impression-eyebrow{justify-content:center;margin-bottom:19px}
 .impression-next>p:not(.impression-eyebrow){font-size:14px;line-height:1.8;color:var(--impression-muted);margin:21px auto 25px;max-width:420px}
