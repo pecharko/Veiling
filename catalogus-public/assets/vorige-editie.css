@@ -55,7 +55,7 @@
 .impression-video-kicker{color:#e5d5b2;font-size:10px;font-weight:800;letter-spacing:.15em}
 .impression-video-card-copy strong{font:normal clamp(24px,2.5vw,35px)/1.16 Georgia,serif}
 .impression-video-card-copy>span:last-child{font-size:12px;letter-spacing:.02em;color:#eee2d4}
-@media(max-width:720px){.impression-video{grid-template-columns:1fr;gap:25px;padding-top:42px;padding-bottom:54px}.impression-video-card{min-height:230px;padding:24px}.impression-video-play{width:62px;height:62px;font-size:23px}}
+@media(max-width:900px){.impression-video{grid-template-columns:1fr;gap:25px;padding-top:42px;padding-bottom:54px}.impression-video-card{min-height:230px;padding:24px}.impression-video-play{width:62px;height:62px;font-size:23px}}
 @media(prefers-reduced-motion:reduce){.impression-video-card{transition:none}.impression-video-card:hover{transform:none}}
 .impression-next{padding:58px 28px 62px;margin-bottom:80px;border:1px solid #d8d6c8;position:relative;text-align:center;background:#f1f0e5}
 .impression-next>.impression-eyebrow{justify-content:center;margin-bottom:19px}
