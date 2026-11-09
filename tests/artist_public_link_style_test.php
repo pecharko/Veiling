@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__) . '/private/lot_artist.php';
+require_once dirname(__DIR__) . '/private/lot_artist.php';
 
 function artist_style_assert(bool $condition, string $message): void {
   if (!$condition) throw new RuntimeException($message);
