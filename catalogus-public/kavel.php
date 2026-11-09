@@ -14,7 +14,9 @@ $st->execute([$lotNum]);
 $lot = $st->fetch();
 if (!$lot) { http_response_code(404); exit('Kavel niet gevonden.'); }
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
-track_catalog_view((int)$lot['id']);
+// Count a lot view only after selecting a card in the catalogue list.
+// Previous/next arrows and direct or shared URLs do not carry this source marker.
+if (($_GET['bron'] ?? null) === 'lijst') track_catalog_view((int)$lot['id']);
 $imagesSt = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY sort_order, id');
 $imagesSt->execute([(int)$lot['id']]);
 $images = $imagesSt->fetchAll(PDO::FETCH_COLUMN);
