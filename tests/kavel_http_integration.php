@@ -141,6 +141,11 @@ try {
   $id = (int)by_number(10)['id'];
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
   [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
+  claim(!str_contains($existingLayout, '<h2>Kavelinformatie</h2>')
+      && !str_contains($existingLayout, 'class="lot-editor-side"')
+      && str_contains($existingLayout, 'class="lot-editor-layout lot-editor-layout--single"'),
+    'Existing lot has no redundant information card or unused side column');
+
   claim($status === 200
       && str_contains($existingLayout, 'class="lot-editor-card lot-editor-publication"')
       && strpos($existingLayout, '<h2>Publicatie</h2>') < strpos($existingLayout, '<h2>Basisinformatie</h2>')
