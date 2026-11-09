@@ -88,6 +88,13 @@ const { chromium } = require('playwright');
     assert.equal(await tiles().count(), 3, 'Three previews remain before save');
     await page.locator('#lot-editor-form input[name=lot_number]').fill('999902');
     await page.locator('#lot-editor-form input[name=title]').fill('CI new-lot photo tiles');
+    page.once('dialog', async dialog => {
+      assert.match(dialog.message(), /wijzigingen.*niet zijn opgeslagen/i);
+      await dialog.dismiss();
+    });
+    await page.locator('.lot-editor-toolbar-actions a.lot-editor-cancel').click();
+    assert.equal(new URL(page.url()).pathname, '/admin/kavel.php',
+      'Top cancel respects the unsaved-changes warning and keeps staged files');
     await Promise.all([
       page.waitForURL(/\/admin\/kavel\.php\?id=\d+/, { timeout: 15000 }),
       page.locator('.lot-editor-bottom button[form="lot-editor-form"]').click(),
