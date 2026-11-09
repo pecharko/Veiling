@@ -19,7 +19,7 @@ admin_top('Rollen & rechten');
         <tr><td>Veilingorganisatie bekijken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingvolgorde wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Gebruikersbeheer, instellingen, statistieken, back-ups en systeemcheck</td><td>Ja</td><td>Nee</td><td>Nee</td></tr>
-        <tr><td>Tijdelijk van rol wisselen</td><td>Alleen oorspronkelijk administratoraccount</td><td>Nee</td><td>Nee</td></tr>
+        <tr><td>Tijdelijk van rol wisselen</td><td>Ja, alle rollen</td><td>Nee</td><td>Assistent en terug naar Veilingmeester</td></tr>
       </tbody>
     </table>
   </div>
