@@ -88,6 +88,15 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"'),
+      'New lot title input is limited to 50 characters');
+  [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
+    'csrf' => token($html), 'action' => 'save',
+    'lot_number' => '876542', 'title' => str_repeat('X', 51),
+  ]);
+  claim($titleStatus === 200 && str_contains($tooLongTitlePage, 'maximaal 50 tekens')
+      && !by_number(876542),
+      'Server rejects a 51-character title without inserting a lot');
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
   claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
