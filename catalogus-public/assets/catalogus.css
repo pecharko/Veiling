@@ -132,3 +132,11 @@ body{background:#fffaf6;color:var(--ink)}
 .catalog-preview-help strong{display:block;margin-bottom:2px;color:#8d002b;font-size:20px;line-height:1.2;font-weight:850}
 .catalog-preview-help p{margin:0;font-size:15px;line-height:1.45;color:#202323}
 @media(max-width:650px){.catalog-preview-explain{grid-template-columns:45px minmax(0,1fr);gap:10px;padding:17px 14px}.catalog-preview-icon{width:42px;height:42px}.catalog-preview-explain h3{font-size:19px}.catalog-preview-explain p,.catalog-preview-explain ul{font-size:13px}.catalog-preview-explain ul{padding-left:18px}.catalog-preview-tabs a{gap:8px;min-height:58px;font-size:15px;padding:11px 4px}.catalog-preview-tab-icon{width:25px;height:25px}.catalog-preview-help{gap:10px;padding:13px}.catalog-preview-help .catalog-preview-icon--small{width:32px;height:32px}.catalog-preview-help strong{font-size:17px}.catalog-preview-help p{font-size:13px}}
+
+/* Artist attribution: label followed by a recognizable hyperlink on the same line. */
+.lot-artist,.detail-artist{display:block;min-width:0}
+.lot-artist-name{overflow-wrap:anywhere}
+.lot-artist-name a{color:#1856a3;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;font-weight:700}
+.lot-artist-name a:hover{color:#103e7e;text-decoration-thickness:2px}
+.lot-artist-name a:focus-visible{outline:3px solid #1856a3;outline-offset:3px;border-radius:2px}
+.lot-artist-label{font-size:.82em;line-height:1.4;color:#58645e}
