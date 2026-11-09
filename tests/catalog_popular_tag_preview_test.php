@@ -24,4 +24,10 @@ popular_assert(str_contains($index, '>Populair</span>'), 'Populair tag shown in 
 popular_assert(str_contains($index, 'catch (PDOException $exception)'), 'Missing statistics fail safely');
 popular_assert(str_contains($css, '.lot-popular-tag{position:absolute;top:12px;right:12px;'), 'Visible, non-obscuring card tag');
 popular_assert(str_contains($css, '.lot-popular-tag--sold{top:88px}') && str_contains($css, '@media(max-width:800px)'), 'Sold and mobile layout');
+$fixture = file_get_contents($root . '/dev/preview/seed.php');
+popular_assert(is_string($fixture), 'Synthetic preview seed readable');
+popular_assert(str_contains($fixture, "LOCAL_PREVIEW_ISOLATED") && str_contains($fixture, "'auction_test'"), 'Fixture restricted to isolated preview');
+popular_assert(str_contains($fixture, 'function preview_seed_popularity(PDO $pdo): void'), 'Synthetic popularity fixture available');
+popular_assert(str_contains($fixture, 'FROM visitor_stats_daily') && str_contains($fixture, 'FROM visitor_stats_lot_totals'), 'Preview does not overwrite existing analytics fixture rows');
+popular_assert(str_contains($fixture, 'INSERT IGNORE INTO visitor_stats_day_totals') && str_contains($fixture, 'INSERT IGNORE INTO visitor_stats_lot_totals'), 'Consistent archived preview aggregates');
 echo "PASS: popularity is top five over seven UTC days, per group when split, with no visitor details.\n";
