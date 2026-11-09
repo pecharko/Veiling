@@ -92,6 +92,7 @@
       });
       savedForm.append(remove);
       img.src = result.image_url;
+      URL.revokeObjectURL(objectUrl);
       img.alt = 'Kavelfoto';
       tile.querySelector('.lot-editor-photo-add-picker').remove();
       tile.classList.remove('lot-editor-photo-add', 'is-selected');
@@ -107,13 +108,13 @@
       dismiss.className = 'lot-editor-remove-photo';
       dismiss.textContent = 'Voorbeeld verwijderen';
       dismiss.addEventListener('click', () => {
+        URL.revokeObjectURL(objectUrl);
         tile.remove();
         sync();
       });
       tile.append(dismiss);
       status.textContent = 'Upload niet bevestigd: ' + error.message + ' Controleer de melding en vernieuw zo nodig de pagina.';
     } finally {
-      URL.revokeObjectURL(objectUrl);
       busy = false;
       sync();
     }
