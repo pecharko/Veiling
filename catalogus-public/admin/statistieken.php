@@ -10,6 +10,7 @@ require_once dirname(__DIR__, 2) . '/private/visitor_geo_dashboard.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_geo_state.php';
 require_once dirname(__DIR__, 2) . '/private/visitor_geo_delete.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
+require_once dirname(__DIR__, 2) . '/private/catalog_popular_lots.php';
 
 // All deletion requires a current authenticated session, a valid CSRF token,
 // a server-generated preview token and explicit confirmation in a second POST.
@@ -242,6 +243,8 @@ if (is_post()) {
 $summary = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 $daily = [];
 $top = [];
+$popularGroups = [];
+$popularSplitActive = (int)(settings()['catalog_split_active'] ?? 0) === 1;
 $available = true;
 $campaign = ['visitors' => 0, 'views' => 0, 'lot_views' => 0];
 try {
@@ -276,6 +279,7 @@ try {
         WHERE page_kind='lot' AND visit_date >= UTC_DATE() - INTERVAL 29 DAY
       ) v INNER JOIN lots l ON l.id=v.lot_id
       GROUP BY l.id, l.lot_number, l.title ORDER BY views DESC, l.lot_number LIMIT 10")->fetchAll();
+    $popularGroups = catalog_popular_lots($pdo, $popularSplitActive);
     // Historical aggregates and active unarchived days have disjoint dates.
     $campaign = $pdo->query("SELECT COALESCE(SUM(visitor_days),0) visitors, COALESCE(SUM(views),0) views, COALESCE(SUM(lot_views),0) lot_views FROM (
       SELECT visitor_days, views, lot_views FROM visitor_stats_day_totals
@@ -386,6 +390,28 @@ admin_top('Bezoekersstatistieken');
       <?php foreach ($daily as $day): ?><tr><td><?=e($day['visit_date'])?></td><td><?=e((string)$day['visitors'])?></td><td><?=e((string)$day['views'])?></td></tr><?php endforeach; ?>
       <?php if (!$daily): ?><tr><td colspan="3">Nog geen gegevens beschikbaar.</td></tr><?php endif; ?>
       </tbody></table></div>
+    </section>
+    <section class="dashboard-panel" aria-labelledby="popular-lots-title">
+      <h2 id="popular-lots-title">Populaire kavels — laatste 7 dagen</h2>
+      <p>Deze kavels krijgen het label <strong>Populair</strong> op de website. De rangschikking telt kavelweergaven van de laatste 7 UTC-dagen (vandaag inbegrepen), inclusief gearchiveerde dagen. Bij gelijke aantallen beslist het kavel-ID. Alleen gepubliceerde of verkochte kavels tellen mee.</p>
+      <?php foreach ($popularGroups as $group => $popularLots): ?>
+        <?php if ($popularSplitActive): ?><h3><?=e($group === 'veiling' ? 'Veiling — top 5' : 'Marktplaats — top 5')?></h3><?php endif; ?>
+        <div class="dashboard-table-scroll"><table class="dashboard-table">
+          <thead><tr><th>Positie</th><th>Kavelnr.</th><th>Kavel</th><th>Weergaven (7 dagen)</th><th>Label</th></tr></thead>
+          <tbody>
+          <?php foreach ($popularLots as $rank => $popularLot): ?>
+            <tr>
+              <td><?= (int)$rank + 1 ?></td>
+              <td><?=e((string)$popularLot['lot_number'])?></td>
+              <td><a href="<?=e(url('kavel.php', ['nr'=>(int)$popularLot['lot_number']]))?>" target="_blank" rel="noopener noreferrer"><?=e((string)$popularLot['title'])?></a></td>
+              <td><?=e((string)$popularLot['total_views'])?></td>
+              <td><strong>Populair</strong></td>
+            </tr>
+          <?php endforeach; ?>
+          <?php if (!$popularLots): ?><tr><td colspan="5">Nog geen bekeken kavels in deze groep tijdens de laatste 7 dagen.</td></tr><?php endif; ?>
+          </tbody>
+        </table></div>
+      <?php endforeach; ?>
     </section>
     <section class="dashboard-panel"><h2>Top 10 meest bekeken kavels</h2>
       <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th>Nr.</th><th>Titel</th><th>Weergaven</th></tr></thead><tbody>
