@@ -19,6 +19,15 @@ const { chromium } = require('playwright');
       page.locator('button[type=submit]').click(),
     ]);
     await page.goto(base + '/admin/kavel.php');
+    const publication = page.locator('#lot-editor-form .lot-editor-publication');
+    const basics = page.locator('#lot-editor-form .lot-editor-main .lot-editor-card').first();
+    assert.equal(await publication.count(), 1, 'Publication card is unique on new lot');
+    assert.equal(await page.locator('.lot-editor-side .lot-editor-publication').count(), 0,
+      'Publication is not in the side column');
+    const publicationRect = await publication.boundingBox();
+    const basicRect = await basics.boundingBox();
+    assert(publicationRect && basicRect && publicationRect.y + publicationRect.height < basicRect.y,
+      'Publication card appears above basic information');
     assert.equal(await page.locator('#lot-new-photo-grid').count(), 1, 'New lot has photo tiles');
     assert.equal(await page.locator('.lot-editor-uploader').count(), 0, 'Old multipicker is removed');
     const input = () => page.locator('#lot-new-photo-grid .lot-editor-photo-add:not(.is-selected) input[type=file]');
