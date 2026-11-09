@@ -126,6 +126,16 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-photos {margin-top:16px}.lot-editor-photo-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
 .lot-editor-photo {padding:10px;border-radius:12px;border:1px solid var(--ed-line);background:#fff}
 .lot-editor-photo img {width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;margin-bottom:10px}
+/* New-photo tile shares the same gallery cell and frame as saved photos. */
+.lot-editor-photo-add {display:flex;flex-direction:column;gap:10px;margin:0;min-width:0}
+.lot-editor-photo-add-picker {display:flex;flex:1;min-height:148px;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:2px dashed #decac0;border-radius:8px;background:#fffaf7;text-align:center;padding:12px 8px;color:var(--ed-muted);cursor:pointer}
+.lot-editor-photo-add-picker:hover,.lot-editor-photo-add-picker:focus-within {border-color:var(--wine);background:#fff3ed}
+.lot-editor-photo-add-picker .lot-editor-upload-icon {width:42px;height:42px;font-size:26px}
+.lot-editor-photo-add-picker strong {color:var(--wine);font-size:13px}
+.lot-editor-photo-add-help {font-size:10px;line-height:1.35}
+.lot-editor-photo-add-picker input[type=file] {display:block;width:100%;max-width:100%;min-width:0;font-size:10px;color:var(--ed-muted)}
+.lot-editor-photo-add-picker input[type=file]::file-selector-button {max-width:100%;font-size:10px;cursor:pointer}
+.lot-editor-photo-add-submit.primary {width:100%;min-height:42px;padding:8px 5px;font-size:11px;line-height:1.3;white-space:normal}
 .lot-editor-remove-photo {width:100%;background:#fff;border:1px solid #e5b6bb;color:#982332;padding:9px 10px;border-radius:8px;font-size:12px;font-weight:800}
 .lot-editor-empty {font-size:13px;color:var(--ed-muted);margin:0}
 .lot-editor-danger {margin-top:26px;padding:17px 21px;border:1px solid #eed2d5;border-radius:12px;background:#fff8f8}
