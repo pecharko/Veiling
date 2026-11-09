@@ -25,10 +25,22 @@ const { chromium } = require('playwright');
     await page.locator('input[name="title"]').fill('Browser photo persistence fixture');
     await Promise.all([
       page.waitForURL(/\/admin\/kavel\.php\?id=\d+/),
-      page.locator('button[form="lot-editor-form"]').click(),
+      page.locator('#lot-editor-form button[type="submit"]').click(),
     ]);
     const editorUrl = page.url();
     assert.match(editorUrl, /\/admin\/kavel\.php\?id=\d+/);
+    // Regression: the hidden input name="action" shadows HTMLFormElement.action.
+    // The real upload must target this editor URL, never that input element.
+    const uploadForm = page.locator('#lot-photo-upload-form');
+    assert.equal(await uploadForm.count(), 1);
+    assert.equal(await uploadForm.evaluate(el => el.getAttribute('action')), null);
+    const uploadResponses = [];
+    page.on('response', response => {
+      if (response.request().method() === 'POST' &&
+          response.request().headers()['accept']?.includes('application/json')) {
+        uploadResponses.push({ url: response.url(), status: response.status() });
+      }
+    });
 
     // Generate a real 32x32 PNG inside the browser, no external images/data.
     const png = await page.evaluate(() => {
@@ -66,7 +78,7 @@ const { chromium } = require('playwright');
       if (n === 1) {
         await Promise.all([
           page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          page.locator('button[form="lot-editor-form"]').click(),
+          page.locator('#lot-editor-form button[type="submit"]').click(),
         ]);
         assert(delayedFirstUpload, 'The slow-upload race must actually be exercised');
         assert.equal(await page.locator('input[name="title"]').inputValue(), 'Edited while photo upload runs',
@@ -83,13 +95,16 @@ const { chromium } = require('playwright');
       assert.equal(await savedPhotos().count(), n, 'Photo ' + n + ' survives reopening the existing lot');
       assert.equal(await page.locator('#lot-photo-grid img[src^="/uploads/"]').count(), n);
     }
+    assert.equal(uploadResponses.length, 3, 'Exactly three automatic photo POST requests are sent');
+    assert(uploadResponses.every(entry => entry.url === editorUrl && entry.status === 200),
+      'Automatic photos POST to the actual editor URL, not a shadowed form.action property');
     assert.equal(await page.locator('#lot-photo-grid .lot-editor-photo-add').count(), 0,
       'No new upload tile after three saved photos');
 
     await page.locator('input[name="title"]').fill('Saved with three photos');
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-      page.locator('button[form="lot-editor-form"]').click(),
+      page.locator('#lot-editor-form button[type="submit"]').click(),
     ]);
     await page.reload();
     assert.equal(await page.locator('input[name="title"]').inputValue(), 'Saved with three photos');
