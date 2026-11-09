@@ -95,7 +95,10 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-back {font-size:13px;font-weight:800;color:var(--wine)}
 .lot-editor-hint {margin:6px 0 0;color:var(--ed-muted);font-size:13px}
 .lot-editor-toolbar-actions,.lot-editor-bottom {display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+.lot-editor-publication {margin-bottom:22px}
+.lot-editor-publication .lot-editor-fields {max-width:550px}
 .lot-editor-layout {display:grid;grid-template-columns:minmax(0,1.7fr) minmax(310px,1fr);gap:22px;align-items:start}
+.lot-editor-layout--single {grid-template-columns:minmax(0,1fr)}
 .lot-editor-main,.lot-editor-side {display:grid;gap:20px;min-width:0}
 .lot-editor-card {min-width:0;background:#fff;border:1px solid var(--ed-line);border-radius:16px;padding:clamp(20px,2.5vw,30px);box-shadow:0 10px 30px rgba(49,37,32,.045)}
 .lot-editor-card-header {display:flex;gap:14px;align-items:flex-start;margin-bottom:24px}
