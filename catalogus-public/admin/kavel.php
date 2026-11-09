@@ -41,9 +41,9 @@ if(is_post()){
       } else {
         $countSt=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
         $countSt->execute([$id]);
-        $available=max(0,16-(int)$countSt->fetchColumn());
+        $available=max(0,3-(int)$countSt->fetchColumn());
         if (count($photos)>$available) {
-          flash('Er is onvoldoende ruimte: maximaal 16 foto’s per kavel.', 'warning');
+          flash('Er is onvoldoende ruimte: maximaal 3 foto’s per kavel.', 'warning');
         } else {
           $failed=[];
           foreach($photos as $i=>$photo){
@@ -124,6 +124,17 @@ if(is_post()){
       }catch(RuntimeException $ex){
         error_log('[Kavel foto-upload] '.$ex->getMessage());
         $error='Foto-upload mislukt; het kavel is niet opgeslagen.';
+      }
+      if (!$error && $photos) {
+        $existingPhotoCount = 0;
+        if ($id) {
+          $photoCountSt = $pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+          $photoCountSt->execute([$id]);
+          $existingPhotoCount = (int)$photoCountSt->fetchColumn();
+        }
+        if ($existingPhotoCount + count($photos) > 3) {
+          $error = 'Maximaal 3 foto’s per kavel. Het kavel is niet opgeslagen.';
+        }
       }
       if(!$error){
         try{
@@ -265,7 +276,7 @@ if ($error === $cancelAuctionWarning) {
         </section>
         <?php if(!$lot): ?>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Foto's toevoegen</h2><p>Voeg meerdere beelden tegelijk toe.</p></div></div>
-          <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · 16 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
+          <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · maximaal 3 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
           <p class="lot-editor-help">Foto's worden toegevoegd wanneer je het kavel opslaat.</p>
         </section>
         <?php endif; ?>
@@ -277,20 +288,46 @@ if ($error === $cancelAuctionWarning) {
   </form>
   <?php if($lot): ?>
   <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg hier foto's toe of verwijder bestaande foto's.</p></div></div>
-    <div class="lot-editor-photo-grid">
-      <?php if($canEditLot): ?>
-      <form method="post" enctype="multipart/form-data" class="lot-editor-photo lot-editor-photo-add">
-        <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="add-photo">
+    <?php if($canEditLot && count($images)<3): ?>
+    <form id="lot-photo-upload-form" method="post" enctype="multipart/form-data">
+      <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="add-photo">
+    </form>
+    <?php endif; ?>
+    <div class="lot-editor-photo-grid" id="lot-photo-grid" data-existing-count="<?=count($images)?>" data-max-photos="3">
+      <?php foreach($images as $photo): ?>
+      <div class="lot-editor-photo">
+        <img src="<?=e(url($photo['path']))?>" alt="Kavelfoto">
+        <?php if($canEditLot): ?><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form><?php endif; ?>
+      </div>
+      <?php endforeach; ?>
+      <?php if($canEditLot && count($images)<3): ?>
+      <div class="lot-editor-photo lot-editor-photo-add">
         <label class="lot-editor-photo-add-picker">
           <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
           <strong>Foto toevoegen</strong>
           <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
-          <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" aria-label="Foto's selecteren" multiple required>
+          <input type="file" name="photos[]" form="lot-photo-upload-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
         </label>
-        <button class="primary lot-editor-photo-add-submit" type="submit">Foto's toevoegen</button>
-      </form>
+      </div>
       <?php endif; ?>
-      <?php foreach($images as $photo): ?><div class="lot-editor-photo"><img src="<?=e(url($photo['path']))?>" alt="Kavelfoto"><?php if($canEditLot): ?><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form><?php endif; ?></div><?php endforeach; ?><?php if(!$images): ?><p class="lot-editor-empty">Nog geen foto's toegevoegd. Gebruik 'Foto toevoegen' in deze box.</p><?php endif; ?></div>
+    </div>
+    <?php if($canEditLot && count($images)<3): ?>
+    <div class="lot-editor-photo-upload-actions">
+      <button form="lot-photo-upload-form" class="primary" type="submit" id="lot-photo-upload-submit">Geselecteerde foto's toevoegen</button>
+      <p class="lot-editor-help" id="lot-photo-upload-status" role="status" aria-live="polite"></p>
+    </div>
+    <template id="lot-photo-picker-template">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-photo-upload-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </template>
+    <script src="<?=e(url('admin/lot-photo-preview.js'))?>" defer></script>
+    <?php endif; ?>
   </section>
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
