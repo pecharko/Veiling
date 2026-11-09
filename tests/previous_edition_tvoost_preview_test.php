@@ -9,7 +9,7 @@ function assert_reportage(bool $condition, string $message): void {
 }
 $link = 'https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982';
 assert_reportage(str_contains($page, $link), 'TV Oost canonical link is present without Facebook tracking');
-assert_reportage(str_contains($page, 'Alderande vzw:') && str_contains($page, '10 jaar soepkar'), 'Reportage headline');
+assert_reportage(str_contains($page, 'Alderande vzw:') && str_contains($page, 'een nieuwe soepkar.'), 'Reportage headline');
 assert_reportage(str_contains($page, 'aria-labelledby="impression-video-title"'), 'Accessible video section');
 assert_reportage(str_contains($page, 'aria-label="Bekijk de TV Oost-reportage'), 'Accessible external media card');
 assert_reportage(!str_contains($page, 'target="_blank"') && str_contains($page, 'opent in hetzelfde tabblad'), 'TV Oost link opens in the same browser tab');
