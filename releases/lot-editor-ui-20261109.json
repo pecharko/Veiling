@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "8a50417a2f9030dcdd7588fd1fdd58ab8fc18ba98b9ccf7bda8d7b310a914dcf",
+      "remote_sha256": "6ec6c4184f6bb4319458ded2696e79fa1b5bb5025878a9c6d45e87a02be34f03"
+    },
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "94e14ecd13d74ada039e533d8067a4376e6602924796afd8e1320e71740f6c65",
+      "remote_sha256": "297a301acc456cb0a5f1fc161e7d4e4c5192b9f8ccc803ee2e7b1572c71d4d0c"
+    },
+    {
+      "path": "catalogus-public/admin/lot-new-photo-preview.js",
+      "source_sha256": "4eb714bcd8c6954bb64351961c0f5adfa756b147986b013992ebd34b9117d8a9",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/lot-photo-preview.js",
+      "source_sha256": "26270ec14512e47f22f29c62e7ecaf6b9399640cd5dc53ca53bcaa0b86b9144d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/lot-unsaved-warning.js",
+      "source_sha256": "a3fc3106a20c10ab4bd90226b2fe79bd984b9a4bde156ceb32823a3e46ad2aae",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "eae2680e7ac663906348b0480a92433625c8cc77b5ac267f071fcf529ab0ceb9",
+      "remote_sha256": "4befc74e69a1cf2b8d178a6f0452dd6d98f590eeabd7d997c216d2019576494a"
+    },
+    {
+      "path": "private/images.php",
+      "source_sha256": "3055874263d199f6f49b6bddadacf34ad4ff4edeb051502fdf8f8e423a59e827",
+      "remote_sha256": "fafea6f340312ea811b39140281277cef766f80a008517f32138eb1638334b9b"
+    },
+    {
+      "path": "private/lot_form.php",
+      "source_sha256": "1ea3805c3698c1478ed5f5df28b7113a2d4fb5097578783103ab8ee3bdf79c17",
+      "remote_sha256": "b57df3588c1a165c2a4146f63cc6747d1a240374fe15612eb41f65448b45817d"
+    }
+  ]
+}

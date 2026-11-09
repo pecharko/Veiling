@@ -78,7 +78,7 @@ function add_lot_image(int $lotId, string $source, string $origName, int $order 
   $pdo = db();
   $count = $pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id = ?');
   $count->execute([$lotId]);
-  if ((int)$count->fetchColumn() >= 16) throw new RuntimeException('Maximaal 16 foto’s per kavel.');
+  if ((int)$count->fetchColumn() >= 3) throw new RuntimeException('Maximaal 3 foto’s per kavel.');
   $path = store_image($source, $origName);
   try {
     $st = $pdo->prepare('INSERT INTO lot_images (lot_id, path, sort_order, source_name) VALUES (?,?,?,?)');

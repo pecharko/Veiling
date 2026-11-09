@@ -30,7 +30,7 @@ function claim(bool $ok, string $message): void {
   if (!$ok) throw new RuntimeException("FAILED {$message}");
   echo "PASS {$message}\n";
 }
-function request_page(string $url, ?array $data = null, bool $multipart = false): array {
+function request_page(string $url, ?array $data = null, bool $multipart = false, array $headers = []): array {
   global $base, $jar;
   $ch = curl_init($base . $url);
   curl_setopt_array($ch, [
@@ -41,6 +41,7 @@ function request_page(string $url, ?array $data = null, bool $multipart = false)
     CURLOPT_CONNECTTIMEOUT => 4,
     CURLOPT_TIMEOUT => 15,
     CURLOPT_HEADER => false,
+    CURLOPT_HTTPHEADER => $headers,
   ]);
   if ($data !== null) {
     curl_setopt($ch, CURLOPT_POST, true);
@@ -66,6 +67,10 @@ function by_number(int $nr): array|false {
 }
 
 try {
+  claim(money('850.50') === '€ 850,50'
+      && money('1234.56') === '€ 1.234,56'
+      && money('100') === '€ 100,00',
+    'Public price formatting always shows exactly two decimal digits');
   [$status] = request_page('/admin/fotos-bulk.php');
   claim($status === 404, 'Unauthenticated bulk import GET returns 404');
   [$status] = request_page('/admin/fotos-bulk.php', ['action' => 'process']);
@@ -83,6 +88,22 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
+  $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
+  claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
+      && str_contains($html, 'class="secondary lot-editor-cancel"')
+      && substr_count($html, 'button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button>') === 2
+      && !str_contains($html, 'Wijzigingen opslaan →'),
+      'New lot displays top cancel and both Kavel opslaan actions; bottom actions follow photos');
+
+  $publicationPos = strpos($html, 'class="lot-editor-card lot-editor-publication"');
+  $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
+  $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
+  claim($publicationPos !== false && $layoutPos !== false && $basicPos !== false
+      && $publicationPos < $layoutPos && $layoutPos < $basicPos
+      && substr_count($html, '<h2>Publicatie</h2>') === 1,
+      'New lot publication appears once, full-width, before basic information');
+
   // A concurrent snapshot/restore owns the MySQL lock: valid POST must
   // fail closed before either SQL or photo-file mutations.
   catalog_data_lock(db(), 0);
@@ -123,6 +144,25 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
+  [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
+  claim(!str_contains($existingLayout, '<h2>Kavelinformatie</h2>')
+      && !str_contains($existingLayout, 'class="lot-editor-side"')
+      && str_contains($existingLayout, 'class="lot-editor-layout lot-editor-layout--single"'),
+    'Existing lot has no redundant information card or unused side column');
+
+  claim($status === 200
+      && str_contains($existingLayout, 'class="lot-editor-card lot-editor-publication"')
+      && strpos($existingLayout, '<h2>Publicatie</h2>') < strpos($existingLayout, '<h2>Basisinformatie</h2>')
+      && substr_count($existingLayout, '<h2>Publicatie</h2>') === 1,
+      'Existing lot publication appears once before basic information');
+  $editPhotoPos = strpos($existingLayout, 'id="lot-photo-grid"');
+  $editActionsPos = strrpos($existingLayout, 'class="lot-editor-bottom"');
+  claim($status === 200 && $editPhotoPos !== false && $editActionsPos !== false
+      && $editActionsPos > $editPhotoPos
+      && substr_count($existingLayout, '>Wijzigingen opslaan</button>') === 2
+      && str_contains($existingLayout, 'class="secondary lot-editor-cancel"')
+      && str_contains($existingLayout, 'button form="lot-editor-form" class="primary" type="submit">Wijzigingen opslaan</button>'),
+    'Edit lot top cancel and save label, bottom actions below photo gallery');
   [$status, $html] = request_page('/admin/kavel.php?id=' . $id, $invalid);
   claim($status === 200 && str_contains($html, 'value="Gewijzigde maar niet opgeslagen titel"'), 'Edit error retains changed title');
   claim(by_number(10)['title'] === 'Originele titel', 'Invalid edit did not change saved title');
@@ -160,8 +200,62 @@ try {
   $st->execute([(int)by_number(20)['id']]);
   $imagePath = (string)$st->fetchColumn();
   claim($imagePath !== '' && is_file(dirname(__DIR__) . '/catalogus-public/' . $imagePath), 'Photo DB and file linked');
-  // Keep workspace clean after check.
-  @unlink(dirname(__DIR__) . '/catalogus-public/' . $imagePath);
+  // Regression: adding photos to an EXISTING lot through the real HTTP endpoint,
+  // then saving the lot's other fields, must preserve the DB rows and physical files.
+  $existingLotId = (int)by_number(20)['id'];
+  $storedPhotoPaths = [$imagePath];
+  [$status, $existingEditor] = request_page('/admin/kavel.php?id='.$existingLotId);
+  claim($status === 200 && str_contains($existingEditor, 'lot-photo-upload-form'),
+    'Existing lot editor exposes the independent photo upload form');
+  for ($expectedCount = 2; $expectedCount <= 3; ++$expectedCount) {
+    [$status, $json] = request_page('/admin/kavel.php?id='.$existingLotId, [
+      'csrf' => token($existingEditor), 'action' => 'add-photo', 'id' => (string)$existingLotId,
+      'photos[0]' => new CURLFile($fixtures . '/valid.png', 'image/png', 'extra-'.$expectedCount.'.png'),
+    ], true, ['Accept: application/json']);
+    $payload = json_decode($json, true);
+    claim($status === 200 && is_array($payload) && ($payload['ok'] ?? false) === true
+        && (int)($payload['count'] ?? 0) === $expectedCount
+        && (int)($payload['photo_id'] ?? 0) > 0,
+      'Existing lot accepts photo '.$expectedCount.' and confirms persisted count');
+    $photoRows = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+    $photoRows->execute([$existingLotId]);
+    $storedPhotoPaths = $photoRows->fetchAll(PDO::FETCH_COLUMN);
+    claim(count($storedPhotoPaths) === $expectedCount
+        && count(array_filter($storedPhotoPaths, static fn($path) =>
+          is_file(dirname(__DIR__) . '/catalogus-public/' . $path))) === $expectedCount,
+      'Existing lot image rows and files persist after photo '.$expectedCount);
+    [$status, $existingEditor] = request_page('/admin/kavel.php?id='.$existingLotId);
+    claim($status === 200 && substr_count($existingEditor, 'alt="Kavelfoto"') === $expectedCount,
+      'Existing lot renders all saved photos after reopening');
+  }
+  [$status, $limitJson] = request_page('/admin/kavel.php?id='.$existingLotId, [
+    'csrf' => token($existingEditor), 'action' => 'add-photo', 'id' => (string)$existingLotId,
+    'photos[0]' => new CURLFile($fixtures . '/valid.png', 'image/png', 'fourth.png'),
+  ], true, ['Accept: application/json']);
+  $limitResult = json_decode($limitJson, true);
+  claim($status === 422 && ($limitResult['ok'] ?? null) === false
+      && str_contains((string)($limitResult['error'] ?? ''), 'Maximaal 3'),
+    'Existing lot refuses a fourth photo via the actual upload endpoint');
+  [$status] = request_page('/admin/kavel.php?id='.$existingLotId, [
+    'csrf' => token($existingEditor), 'action' => 'save', 'id' => (string)$existingLotId,
+    'lot_number' => '20', 'title' => 'Kavel bijgewerkt na foto-upload',
+    'category' => 'Overige', 'sale_location' => 'markt', 'status' => 'draft',
+  ]);
+  claim($status === 303 && by_number(20)['title'] === 'Kavel bijgewerkt na foto-upload',
+    'Saving existing lot data succeeds after photo uploads');
+  $photoRows = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+  $photoRows->execute([$existingLotId]);
+  $savedAfterEdit = $photoRows->fetchAll(PDO::FETCH_COLUMN);
+  [$status, $reopened] = request_page('/admin/kavel.php?id='.$existingLotId);
+  claim($status === 200 && $savedAfterEdit === $storedPhotoPaths
+      && substr_count($reopened, 'alt="Kavelfoto"') === 3
+      && count(array_filter($savedAfterEdit, static fn($path) =>
+        is_file(dirname(__DIR__) . '/catalogus-public/' . $path))) === 3,
+    'All three photos survive lot save and editor reopen');
+  // Only remove image files created by this disposable localhost test.
+  foreach ($storedPhotoPaths as $storedPhotoPath) {
+    @unlink(dirname(__DIR__) . '/catalogus-public/' . $storedPhotoPath);
+  }
 
   $bad = $valid;
   $bad['lot_number'] = '30'; $bad['title'] = 'Inhoud geen foto';
@@ -329,6 +423,20 @@ try {
   claim($artistStored && $artistStored['artist_name']==='Jan Jans'
     && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
     'Both artist fields stored');
+  [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
+  claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
+      && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
+    'Existing lot reload shows the saved artist name and escaped hyperlink');
+  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
+    'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
+    'artist_name'=>'Jan Jans', 'artist_url'=>'https://example.org/artist?x=1&y=2',
+    'status'=>'draft', 'sale_location'=>'markt'
+  ]);
+  claim($status===303 && by_number(750000)['title']==='Kunstwerk met bijgewerkte titel'
+      && by_number(750000)['artist_name']==='Jan Jans'
+      && by_number(750000)['artist_url']==='https://example.org/artist?x=1&y=2',
+    'Artist metadata survives saving unrelated lot fields');
   $artistPost['id']=(string)$artistStored['id'];
   $artistPost['artist_name']='';
   [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);

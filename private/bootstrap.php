@@ -65,7 +65,7 @@ function require_public_site_online(): void {
 }
 
 function money(mixed $amount): string {
-  return '€ ' . number_format((float)$amount, 0, ',', '.');
+  return '€ ' . number_format((float)$amount, 2, ',', '.');
 }
 function estimate(array $lot): string {
   $market = $lot['market_price'] ?? null;
