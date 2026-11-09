@@ -4,6 +4,7 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_once dirname(__DIR__) . '/private/catalog_preview_modes.php';
 require_once dirname(__DIR__) . '/private/lot_artist.php';
+require_once dirname(__DIR__) . '/private/catalog_popular_lots.php';
 if (is_post() && array_key_exists('admin_preview_action', $_POST)) {
   require_auth();
   check_csrf();
@@ -67,36 +68,15 @@ if ($published) {
   $st->bindValue($i, $offset, PDO::PARAM_INT);
   $st->execute();
   $rows = $st->fetchAll();
-  // Read-only popularity over the last seven UTC calendar days, including today.
-  // Sum active raw views and already-archived daily lot totals without exposing visitor IDs.
-  // Missing statistics should never prevent the public catalogue from loading.
+  // The admin dashboard and public tags share one read-only ranking.
   try {
-    $popularSql = "SELECT l.id AS lot_id, l.sale_location, SUM(v.views) AS total_views
-      FROM (
-        SELECT lot_id, SUM(views) AS views FROM visitor_stats_daily
-        WHERE page_kind='lot' AND visit_date BETWEEN UTC_DATE() - INTERVAL 6 DAY AND UTC_DATE()
-        GROUP BY lot_id
-        UNION ALL
-        SELECT lot_id, SUM(views) AS views FROM visitor_stats_lot_totals
-        WHERE visit_date BETWEEN UTC_DATE() - INTERVAL 6 DAY AND UTC_DATE()
-        GROUP BY lot_id
-      ) v INNER JOIN lots l ON l.id=v.lot_id
-      WHERE l.status IN ('published','sold')
-      GROUP BY l.id, l.sale_location
-      HAVING SUM(v.views) > 0
-      ORDER BY total_views DESC, l.id ASC";
-    $rankedLots = $pdo->query($popularSql)->fetchAll(PDO::FETCH_ASSOC);
-    $popularCounts = ['veiling'=>0, 'markt'=>0, 'alle'=>0];
-    foreach ($rankedLots as $popularLot) {
-      $group = $splitPreview ? (string)$popularLot['sale_location'] : 'alle';
-      if (!isset($popularCounts[$group]) || $popularCounts[$group] >= 5) continue;
-      $popularLotIds[(int)$popularLot['lot_id']] = true;
-      $popularCounts[$group]++;
-      if (!$splitPreview && $popularCounts['alle'] === 5) break;
-      if ($splitPreview && $popularCounts['veiling'] === 5 && $popularCounts['markt'] === 5) break;
+    foreach (catalog_popular_lots($pdo, $splitPreview) as $popularGroup) {
+      foreach ($popularGroup as $popularLot) {
+        $popularLotIds[(int)$popularLot['lot_id']] = true;
+      }
     }
   } catch (PDOException $exception) {
-    // Analytics may not be installed or available: render without popularity tags.
+    // Missing or unavailable analytics do not block the catalogue.
     error_log('Popular lot statistics unavailable.');
   }
 }
