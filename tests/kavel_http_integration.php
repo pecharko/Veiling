@@ -30,7 +30,7 @@ function claim(bool $ok, string $message): void {
   if (!$ok) throw new RuntimeException("FAILED {$message}");
   echo "PASS {$message}\n";
 }
-function request_page(string $url, ?array $data = null, bool $multipart = false): array {
+function request_page(string $url, ?array $data = null, bool $multipart = false, array $headers = []): array {
   global $base, $jar;
   $ch = curl_init($base . $url);
   curl_setopt_array($ch, [
@@ -41,6 +41,7 @@ function request_page(string $url, ?array $data = null, bool $multipart = false)
     CURLOPT_CONNECTTIMEOUT => 4,
     CURLOPT_TIMEOUT => 15,
     CURLOPT_HEADER => false,
+    CURLOPT_HTTPHEADER => $headers,
   ]);
   if ($data !== null) {
     curl_setopt($ch, CURLOPT_POST, true);
@@ -160,8 +161,62 @@ try {
   $st->execute([(int)by_number(20)['id']]);
   $imagePath = (string)$st->fetchColumn();
   claim($imagePath !== '' && is_file(dirname(__DIR__) . '/catalogus-public/' . $imagePath), 'Photo DB and file linked');
-  // Keep workspace clean after check.
-  @unlink(dirname(__DIR__) . '/catalogus-public/' . $imagePath);
+  // Regression: adding photos to an EXISTING lot through the real HTTP endpoint,
+  // then saving the lot's other fields, must preserve the DB rows and physical files.
+  $existingLotId = (int)by_number(20)['id'];
+  $storedPhotoPaths = [$imagePath];
+  [$status, $existingEditor] = request_page('/admin/kavel.php?id='.$existingLotId);
+  claim($status === 200 && str_contains($existingEditor, 'lot-photo-upload-form'),
+    'Existing lot editor exposes the independent photo upload form');
+  for ($expectedCount = 2; $expectedCount <= 3; ++$expectedCount) {
+    [$status, $json] = request_page('/admin/kavel.php?id='.$existingLotId, [
+      'csrf' => token($existingEditor), 'action' => 'add-photo', 'id' => (string)$existingLotId,
+      'photos[0]' => new CURLFile($fixtures . '/valid.png', 'image/png', 'extra-'.$expectedCount.'.png'),
+    ], true, ['Accept: application/json']);
+    $payload = json_decode($json, true);
+    claim($status === 200 && is_array($payload) && ($payload['ok'] ?? false) === true
+        && (int)($payload['count'] ?? 0) === $expectedCount
+        && (int)($payload['photo_id'] ?? 0) > 0,
+      'Existing lot accepts photo '.$expectedCount.' and confirms persisted count');
+    $photoRows = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+    $photoRows->execute([$existingLotId]);
+    $storedPhotoPaths = $photoRows->fetchAll(PDO::FETCH_COLUMN);
+    claim(count($storedPhotoPaths) === $expectedCount
+        && count(array_filter($storedPhotoPaths, static fn($path) =>
+          is_file(dirname(__DIR__) . '/catalogus-public/' . $path))) === $expectedCount,
+      'Existing lot image rows and files persist after photo '.$expectedCount);
+    [$status, $existingEditor] = request_page('/admin/kavel.php?id='.$existingLotId);
+    claim($status === 200 && substr_count($existingEditor, 'alt="Kavelfoto"') === $expectedCount,
+      'Existing lot renders all saved photos after reopening');
+  }
+  [$status, $limitJson] = request_page('/admin/kavel.php?id='.$existingLotId, [
+    'csrf' => token($existingEditor), 'action' => 'add-photo', 'id' => (string)$existingLotId,
+    'photos[0]' => new CURLFile($fixtures . '/valid.png', 'image/png', 'fourth.png'),
+  ], true, ['Accept: application/json']);
+  $limitResult = json_decode($limitJson, true);
+  claim($status === 422 && ($limitResult['ok'] ?? null) === false
+      && str_contains((string)($limitResult['error'] ?? ''), 'Maximaal 3'),
+    'Existing lot refuses a fourth photo via the actual upload endpoint');
+  [$status] = request_page('/admin/kavel.php?id='.$existingLotId, [
+    'csrf' => token($existingEditor), 'action' => 'save', 'id' => (string)$existingLotId,
+    'lot_number' => '20', 'title' => 'Kavel bijgewerkt na foto-upload',
+    'category' => 'Overige', 'sale_location' => 'markt', 'status' => 'draft',
+  ]);
+  claim($status === 303 && by_number(20)['title'] === 'Kavel bijgewerkt na foto-upload',
+    'Saving existing lot data succeeds after photo uploads');
+  $photoRows = db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+  $photoRows->execute([$existingLotId]);
+  $savedAfterEdit = $photoRows->fetchAll(PDO::FETCH_COLUMN);
+  [$status, $reopened] = request_page('/admin/kavel.php?id='.$existingLotId);
+  claim($status === 200 && $savedAfterEdit === $storedPhotoPaths
+      && substr_count($reopened, 'alt="Kavelfoto"') === 3
+      && count(array_filter($savedAfterEdit, static fn($path) =>
+        is_file(dirname(__DIR__) . '/catalogus-public/' . $path))) === 3,
+    'All three photos survive lot save and editor reopen');
+  // Only remove image files created by this disposable localhost test.
+  foreach ($storedPhotoPaths as $storedPhotoPath) {
+    @unlink(dirname(__DIR__) . '/catalogus-public/' . $storedPhotoPath);
+  }
 
   $bad = $valid;
   $bad['lot_number'] = '30'; $bad['title'] = 'Inhoud geen foto';
