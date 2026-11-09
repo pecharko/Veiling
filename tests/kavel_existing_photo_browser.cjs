@@ -25,7 +25,7 @@ const { chromium } = require('playwright');
     await page.locator('input[name="title"]').fill('Browser photo persistence fixture');
     await Promise.all([
       page.waitForURL(/\/admin\/kavel\.php\?id=\d+/),
-      page.locator('#lot-editor-form button[type="submit"]').click(),
+      page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
     ]);
     assert.equal(await page.locator('#lot-editor-form .lot-editor-side').count(), 0,
       'Existing lot has no redundant information side panel');
@@ -108,7 +108,7 @@ const { chromium } = require('playwright');
       if (n === 1) {
         await Promise.all([
           page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-          page.locator('#lot-editor-form button[type="submit"]').click(),
+          page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
         ]);
         assert(delayedFirstUpload, 'The slow-upload race must actually be exercised');
         assert.equal(await page.locator('input[name="title"]').inputValue(), 'Edited while photo upload runs',
@@ -134,7 +134,7 @@ const { chromium } = require('playwright');
     await page.locator('input[name="title"]').fill('Saved with three photos');
     await Promise.all([
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
-      page.locator('#lot-editor-form button[type="submit"]').click(),
+      page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
     ]);
     await page.reload();
     assert.equal(await page.locator('input[name="title"]').inputValue(), 'Saved with three photos');
