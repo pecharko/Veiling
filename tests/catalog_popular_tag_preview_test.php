@@ -18,11 +18,11 @@ popular_assert(str_contains($helper, 'FROM visitor_stats_daily') && str_contains
     && str_contains($helper, "page_kind='lot'") && str_contains($helper, 'UNION ALL'), 'Only raw and archived lot views');
 popular_assert(str_contains($helper, "l.status IN ('published','sold')") && str_contains($helper, 'HAVING SUM(v.views) > 0'), 'Only published, viewed lots');
 popular_assert(str_contains($helper, 'ORDER BY total_views DESC, l.id ASC') && str_contains($helper, 'count($groups[$group]) >= 5'), 'Stable top-five per group');
-popular_assert(str_contains($helper, "$group = $splitActive ? (string)$lot['sale_location'] : 'alle';"), 'Separate veiling and markt rankings');
+popular_assert(str_contains($helper, '$group = $splitActive ? (string)$lot[\'sale_location\'] : \'alle\';'), 'Separate veiling and markt rankings');
 popular_assert(str_contains($catalog, 'catalog_popular_lots($pdo, $splitPreview)'), 'Public catalog uses shared ranking');
 popular_assert(str_contains($catalog, 'isset($popularLotIds[(int)$lot[\'id\']])'), 'Public badge checks ranked IDs');
 popular_assert(str_contains($admin, 'catalog_popular_lots($pdo, $popularSplitActive)'), 'Admin uses identical shared ranking');
-popular_assert(str_contains($admin, "$popularSplitActive = (int)(settings()['catalog_split_active'] ?? 0) === 1;"), 'Admin follows real split activation');
+popular_assert(str_contains($admin, '$popularSplitActive = (int)(settings()[\'catalog_split_active\'] ?? 0) === 1;'), 'Admin follows real split activation');
 popular_assert(str_contains($admin, 'Veiling — top 5') && str_contains($admin, 'Marktplaats — top 5'), 'Admin displays both groups');
 popular_assert(str_contains($admin, "title'])?></a>") && str_contains($admin, "total_views"), 'Admin links to lot and shows view counts');
 popular_assert(str_contains($admin, "Nog geen bekeken kavels"), 'Empty groups clearly explained');
