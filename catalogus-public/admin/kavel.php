@@ -301,7 +301,7 @@ if ($error === $cancelAuctionWarning) {
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
             <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
@@ -395,6 +395,32 @@ if ($error === $cancelAuctionWarning) {
   <?php endif; ?>
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
+<script>
+(function () {
+  'use strict';
+  const form = document.getElementById('lot-editor-form');
+  const title = form && form.elements.namedItem('title');
+  const warning = document.getElementById('lot-title-error');
+  if (!(title instanceof HTMLInputElement) || !warning) return;
+  const message = 'De titel mag maximaal 50 tekens bevatten.';
+  function validateTitle() {
+    const tooLong = Array.from(title.value.trim()).length > 50;
+    warning.hidden = !tooLong;
+    title.setCustomValidity(tooLong ? message : '');
+    title.setAttribute('aria-invalid', tooLong ? 'true' : 'false');
+    return !tooLong;
+  }
+  title.addEventListener('input', validateTitle);
+  form.addEventListener('submit', function (event) {
+    if (!validateTitle()) {
+      event.preventDefault();
+      title.reportValidity();
+      title.focus();
+    }
+  });
+  validateTitle();
+})();
+</script>
 <script>
 (function () {
   'use strict';
