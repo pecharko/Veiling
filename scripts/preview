@@ -110,6 +110,7 @@ case "${1:-}" in
         dev/preview/node_modules/.bin/playwright install chromium
       fi
     fi
+    node tests/lot_photo_upload_target_test.cjs
     node dev/preview/visual_test.cjs
     ;;
   status)
