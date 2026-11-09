@@ -19,6 +19,21 @@ const { chromium } = require('playwright');
       page.locator('button[type=submit]').click(),
     ]);
     await page.goto(base + '/admin/kavel.php');
+    // Reproduces the reported issue: a pristine new-lot form must cancel
+    // immediately, even though it contains an empty file picker.
+    const pristineDialogs = [];
+    const capturePristineDialog = async dialog => {
+      pristineDialogs.push(dialog.message());
+      await dialog.accept();
+    };
+    page.on('dialog', capturePristineDialog);
+    await Promise.all([
+      page.waitForURL('**/admin/index.php'),
+      page.locator('.lot-editor-toolbar-actions a.lot-editor-cancel').click(),
+    ]);
+    page.off('dialog', capturePristineDialog);
+    assert.equal(pristineDialogs.length, 0, 'Pristine new lot must cancel without unsaved warning');
+    await page.goto(base + '/admin/kavel.php');
     const publication = page.locator('#lot-editor-form .lot-editor-publication');
     const basics = page.locator('#lot-editor-form .lot-editor-main .lot-editor-card').first();
     assert.equal(await publication.count(), 1, 'Publication card is unique on new lot');
