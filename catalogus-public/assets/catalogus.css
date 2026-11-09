@@ -147,3 +147,14 @@ body{background:#fffaf6;color:var(--ink)}
    Preserve the complete title for the lot detail and accessible link. */
 .lot-card h3{min-height:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lot-card h3 a{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Prevent unbroken legacy text from expanding the two-column detail card. */
+.detail-page-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
+.detail-page-grid .detail-gallery,.detail-page-grid .detail-copy{min-width:0;max-width:100%}
+.detail-page-grid .detail-copy h1,.detail-page-grid .detail-subtitle,.detail-page-grid .detail-description,.detail-page-grid .detail-specs{max-width:100%;overflow-wrap:anywhere;word-break:normal}
+@media(max-width:800px){.detail-page-grid{grid-template-columns:minmax(0,1fr)}}
+/* Artist credits: label plus clipped name on one row at every viewport size. */
+.lot-artist,.detail-artist{display:flex;align-items:baseline;gap:.3em;max-width:100%;min-width:0}
+.lot-artist-label{flex:0 0 auto;white-space:nowrap}
+.lot-artist-name{display:block;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;overflow-wrap:normal}
+.lot-artist-name a{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
