@@ -55,8 +55,8 @@ if(is_post()){
           }
           $added=count($photos)-count($failed);
           flash($failed
-            ? $added.' foto(\'s) toegevoegd; '.count($failed).' foto(\'s) konden niet verwerkt worden.'
-            : $added.' foto(\'s) toegevoegd.', $failed?'warning':'success');
+            ? $added.' foto(’s) toegevoegd; '.count($failed).' foto(’s) konden niet verwerkt worden.'
+            : $added.' foto(’s) toegevoegd.', $failed?'warning':'success');
         }
       }
     } catch (RuntimeException $ex) {
