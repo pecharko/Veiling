@@ -282,8 +282,8 @@ if ($error === $cancelAuctionWarning) {
     <div><a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a><p class="lot-editor-hint">Beheer gegevens, waardering, publicatie en foto's op één plek.</p></div>
     <div class="lot-editor-toolbar-actions">
       <?php if($lot && $d['status']==='published'): ?><a class="secondary" href="<?=e(url('kavel.php',['nr'=>$d['lot_number']]))?>" target="_blank" rel="noopener">Bekijk online ↗</a><?php endif; ?>
-      <?php if(!$lot): ?><a class="secondary lot-editor-cancel" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php endif; ?>
-      <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?>
+      <a class="secondary lot-editor-cancel" href="<?=e(url('admin/index.php'))?>">Annuleren</a>
+      <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit"><?=$lot?'Wijzigingen opslaan':'Kavel opslaan'?></button><?php endif; ?>
     </div>
   </div>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
@@ -316,9 +316,6 @@ if ($error === $cancelAuctionWarning) {
       </div>
     </div>
     </fieldset>
-    <?php if($lot): ?>
-    <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button class="primary" type="submit">Wijzigingen opslaan →</button><?php endif; ?></div>
-    <?php endif; ?>
   </form>
   <?php if(!$lot): ?>
   <section class="lot-editor-card lot-editor-photos">
@@ -392,6 +389,7 @@ if ($error === $cancelAuctionWarning) {
     <script src="<?=e(url('admin/lot-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-photo-preview.js'), 0, 12)]))?>" defer></script>
     <?php endif; ?>
   </section>
+  <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Wijzigingen opslaan</button><?php endif; ?></div>
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
