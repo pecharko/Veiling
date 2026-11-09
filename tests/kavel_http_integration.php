@@ -151,6 +151,14 @@ try {
       && strpos($existingLayout, '<h2>Publicatie</h2>') < strpos($existingLayout, '<h2>Basisinformatie</h2>')
       && substr_count($existingLayout, '<h2>Publicatie</h2>') === 1,
       'Existing lot publication appears once before basic information');
+  $editPhotoPos = strpos($existingLayout, 'id="lot-photo-grid"');
+  $editActionsPos = strrpos($existingLayout, 'class="lot-editor-bottom"');
+  claim($status === 200 && $editPhotoPos !== false && $editActionsPos !== false
+      && $editActionsPos > $editPhotoPos
+      && substr_count($existingLayout, '>Wijzigingen opslaan</button>') === 2
+      && str_contains($existingLayout, 'class="secondary lot-editor-cancel"')
+      && str_contains($existingLayout, 'button form="lot-editor-form" class="primary" type="submit">Wijzigingen opslaan</button>'),
+    'Edit lot top cancel and save label, bottom actions below photo gallery');
   [$status, $html] = request_page('/admin/kavel.php?id=' . $id, $invalid);
   claim($status === 200 && str_contains($html, 'value="Gewijzigde maar niet opgeslagen titel"'), 'Edit error retains changed title');
   claim(by_number(10)['title'] === 'Originele titel', 'Invalid edit did not change saved title');
