@@ -32,7 +32,32 @@ if (!$artistNameExists) {
     $pdo->exec($migration);
     echo "Artist fields added to isolated preview; existing lots and photos retained.\n";
 }
+// Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
+// Both active and archived sources are seeded to exercise the real seven-day ranking.
+function preview_seed_popularity(PDO $pdo): void {
+    foreach (['visitor_stats.sql', 'visitor_stats_aggregates.sql'] as $schemaFile) {
+        $ddl = file_get_contents(dirname(__DIR__, 2) . '/database/' . $schemaFile);
+        if (!is_string($ddl) || preg_match_all('/CREATE TABLE IF NOT EXISTS[\\s\\S]*?;/i', $ddl, $statements) < 1) {
+            throw new RuntimeException('Preview analytics fixture schema missing.');
+        }
+        foreach ($statements[0] as $statement) $pdo->exec($statement);
+    }
+    $raw = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_daily')->fetchColumn();
+    $archived = (int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_lot_totals')->fetchColumn();
+    if ($raw > 0 || $archived > 0) return; // Keep any existing local test data.
+    $lots = $pdo->query("SELECT id, lot_number FROM lots WHERE lot_number IN (101,102,103,105) AND status IN ('published','sold')")->fetchAll(PDO::FETCH_ASSOC);
+    $insertArchived = $pdo->prepare('INSERT IGNORE INTO visitor_stats_lot_totals (visit_date,lot_id,visitor_days,views) VALUES (UTC_DATE() - INTERVAL 4 DAY, ?, ?, ?)');
+    $insertRaw = $pdo->prepare("INSERT IGNORE INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views) VALUES (UTC_DATE(),?,'lot',?,?)");
+    foreach ($lots as $lot) {
+        $number = (int)$lot['lot_number'];
+        $score = [101=>18, 102=>13, 103=>10, 105=>6][$number];
+        $insertArchived->execute([(int)$lot['id'], 2, $score]);
+        $insertRaw->execute([hash('sha256', 'fake-preview-visitor-' . $number, true), (int)$lot['id'], 2]);
+    }
+    if ($lots) echo "Fictieve populaire kavels voorbereid voor de lokale preview.\\n";
+}
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
+    preview_seed_popularity($pdo);
     echo "Preview fixtures already present.\n";
     return;
 }
@@ -51,6 +76,7 @@ try {
     ];
     foreach ($samples as $row) $insert->execute($row);
     $pdo->commit();
+    preview_seed_popularity($pdo);
     echo "Six synthetic lots and preview admin prepared.\n";
 } catch (Throwable $e) {
     $pdo->rollBack();
