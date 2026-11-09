@@ -5,6 +5,7 @@ require dirname(__DIR__, 2) . '/private/images.php';
 require_once dirname(__DIR__, 2) . '/private/photo_delete_safety.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
+require_once dirname(__DIR__, 2) . '/private/lot_artist.php';
 require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_auth();
@@ -125,6 +126,14 @@ if(is_post()){
     $nr=(int)($_POST['lot_number']??0);
     $title=mb_substr(trim((string)($_POST['title']??'')),0,250);
     $subtitle=mb_substr(trim((string)($_POST['subtitle']??'')),0,250);
+    try {
+      if (!is_string($_POST['artist_name'] ?? '') || !is_string($_POST['artist_url'] ?? '')) {
+        throw new InvalidArgumentException('Ongeldige invoer voor kunstenaar.');
+      }
+      [$artistName, $artistUrl] = lot_artist_validate($_POST['artist_name'] ?? '', $_POST['artist_url'] ?? '');
+    } catch (InvalidArgumentException $ex) {
+      $error = $ex->getMessage();
+    }
     $category=mb_substr(trim((string)($_POST['category']??'Overige')),0,120);
     $description=mb_substr(trim((string)($_POST['description']??'')),0,30000);
     $details=mb_substr(trim((string)($_POST['details']??'')),0,10000);
@@ -137,7 +146,8 @@ if(is_post()){
       ? $submittedStatus : (string)($lot['status'] ?? 'draft');
     $auctionOnly = !empty($_POST['auction_only']);
     $saleLocation=(string)($_POST['sale_location']??'markt');
-    if($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
+    if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
+    elseif($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
     elseif($title==='')$error='Een titel is verplicht.';
@@ -179,9 +189,9 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
-          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)');}
+          $values=[$nr,$title,$subtitle,$artistName,$artistUrl,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,artist_name=?,artist_url=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
+          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,artist_name,artist_url,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
@@ -232,7 +242,7 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'Overige','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','artist_name'=>'','artist_url'=>'','category'=>'Overige','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
@@ -291,6 +301,9 @@ if ($error === $cancelAuctionWarning) {
             <label>Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
             <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
+            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
+            <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
+            <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
@@ -382,4 +395,69 @@ if ($error === $cancelAuctionWarning) {
   <?php endif; ?>
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js'))?>" defer></script>
+<script>
+(function () {
+  'use strict';
+  const form = document.getElementById('lot-editor-form');
+  if (!form) return;
+  const name = form.elements.namedItem('artist_name');
+  const link = form.elements.namedItem('artist_url');
+  if (!(name instanceof HTMLInputElement) || !(link instanceof HTMLInputElement)) return;
+
+  function normalizedArtistLink(value) {
+    const trimmed = value.trim();
+    // Only a domain beginning with www. gets an implicit HTTPS prefix.
+    if (/^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#][^\s]*)?$/i.test(trimmed)) {
+      return 'https://' + trimmed;
+    }
+    return trimmed;
+  }
+
+  function validateArtistLink() {
+    const value = normalizedArtistLink(link.value);
+    let message = '';
+    if (value && !name.value.trim()) {
+      message = 'Vul eerst de naam van de kunstenaar in.';
+    } else if (value) {
+      try {
+        const url = new URL(value);
+        if (!/^https?:\/\//i.test(value) ||
+            !['http:', 'https:'].includes(url.protocol) ||
+            !url.hostname || url.username || url.password ||
+            /[\s\x00-\x1f\x7f]/.test(value) ||
+            value.length > 2048) {
+          message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
+        }
+      } catch (_) {
+        message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
+      }
+    }
+    link.setCustomValidity(message);
+    link.setAttribute('aria-invalid', message ? 'true' : 'false');
+    return !message;
+  }
+
+  function completeArtistLink() {
+    if (validateArtistLink() && link.value.trim()) {
+      link.value = normalizedArtistLink(link.value);
+    }
+  }
+
+  name.addEventListener('input', validateArtistLink);
+  link.addEventListener('input', validateArtistLink);
+  link.addEventListener('blur', function () {
+    completeArtistLink();
+    if (!validateArtistLink()) link.reportValidity();
+  });
+  form.addEventListener('submit', function (event) {
+    completeArtistLink();
+    if (!validateArtistLink()) {
+      event.preventDefault();
+      link.reportValidity();
+      link.focus();
+    }
+  });
+  validateArtistLink();
+})();
+</script>
 <?php admin_bottom(); ?>
