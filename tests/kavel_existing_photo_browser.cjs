@@ -55,6 +55,13 @@ const { chromium } = require('playwright');
     const image = Buffer.from(png, 'base64');
     assert(image.length < 1024, 'Test PNG must fit the CI upload size limit');
     const savedPhotos = () => page.locator('#lot-photo-grid .lot-editor-photo:not(.lot-editor-photo-add) img');
+    const addPhotoInput = page.locator('#lot-photo-grid .lot-editor-photo-add input[type=file]').first();
+    assert.equal(await addPhotoInput.evaluate(el => getComputedStyle(el).opacity), '0',
+      'Native file-input text is invisible within the photo-add tile');
+    const fileChooserWait = page.waitForEvent('filechooser');
+    await addPhotoInput.click();
+    const fileChooser = await fileChooserWait;
+    assert.equal(fileChooser.isMultiple(), false, 'Photo tile still opens a single-file picker');
 
     // Delay the first upload to reproduce clicking "Save" before the HTTP
     // response confirms photo persistence (the reported user regression).
