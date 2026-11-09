@@ -278,7 +278,10 @@ if ($error === $cancelAuctionWarning) {
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
-    <div class="lot-editor-layout">
+        <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
+          <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
+        </section>
+    <div class="lot-editor-layout <?=$lot?'':'lot-editor-layout--single'?>">
       <div class="lot-editor-main">
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>
           <div class="lot-editor-fields lot-editor-two">
@@ -298,9 +301,6 @@ if ($error === $cancelAuctionWarning) {
         </section>
       </div>
       <aside class="lot-editor-side">
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
-          <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
-        </section>
         <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Aangemaakt door</dt><dd><?=e($creatorLabel)?></dd><dt>Huidige status</dt><dd><?=e(['draft'=>'Concept','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?></dd></dl></section><?php endif; ?>
       </aside>
     </div>
