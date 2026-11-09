@@ -84,6 +84,14 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  $publicationPos = strpos($html, 'class="lot-editor-card lot-editor-publication"');
+  $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
+  $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
+  claim($publicationPos !== false && $layoutPos !== false && $basicPos !== false
+      && $publicationPos < $layoutPos && $layoutPos < $basicPos
+      && substr_count($html, '<h2>Publicatie</h2>') === 1,
+      'New lot publication appears once, full-width, before basic information');
+
   // A concurrent snapshot/restore owns the MySQL lock: valid POST must
   // fail closed before either SQL or photo-file mutations.
   catalog_data_lock(db(), 0);
@@ -124,6 +132,12 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
+  [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
+  claim($status === 200
+      && str_contains($existingLayout, 'class="lot-editor-card lot-editor-publication"')
+      && strpos($existingLayout, '<h2>Publicatie</h2>') < strpos($existingLayout, '<h2>Basisinformatie</h2>')
+      && substr_count($existingLayout, '<h2>Publicatie</h2>') === 1,
+      'Existing lot publication appears once before basic information');
   [$status, $html] = request_page('/admin/kavel.php?id=' . $id, $invalid);
   claim($status === 200 && str_contains($html, 'value="Gewijzigde maar niet opgeslagen titel"'), 'Edit error retains changed title');
   claim(by_number(10)['title'] === 'Originele titel', 'Invalid edit did not change saved title');
