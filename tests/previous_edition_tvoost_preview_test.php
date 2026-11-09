@@ -18,6 +18,7 @@ assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=2'), 'Cac
 assert_reportage(str_contains($css, '.impression-video{display:grid;') && str_contains($css, 'aspect-ratio:16/9'), 'Responsive feature');
 assert_reportage(str_contains($css, '@media(max-width:720px){.impression-video{grid-template-columns:1fr;'), 'Mobile feature');
 assert_reportage(str_contains($page, 'impression-gallery-grid') && str_contains($page, 'impression-next shell'), 'Original photos and CTA retained');
-assert_reportage(strpos($page, 'class="impression-video shell"') > strpos($page, 'class="impression-gallery shell"')
-    && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-next shell"'), 'Video after photos and before next edition');
+assert_reportage(strpos($page, '<main id="impressie">') < strpos($page, 'class="impression-video shell"')
+    && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-hero shell"')
+    && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-gallery shell"'), 'TV Oost section first in page content, above hero and photo gallery');
 echo "PASS: TV Oost previous edition feature link, accessible, responsive and preserves gallery.\n";
