@@ -39,7 +39,20 @@ const { chromium } = require('playwright');
       'Category field is immediately below the sale location in the right column');
     assert(auctionCheckbox.x < saleField.x && auctionCheckbox.y > lotField.y + lotField.height,
       'Auction-only checkbox stays below lot number in the left column');
+    assert.equal(await page.locator('.lot-editor-toolbar-actions a.lot-editor-cancel').count(), 1,
+      'New lot offers Annuleren next to the top save button');
+    assert.equal(await page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').count(), 1,
+      'Top save button still submits the lot form');
+    assert.equal(await page.locator('#lot-editor-form .lot-editor-bottom').count(), 0,
+      'New lot has no early action buttons above the photo tiles');
+    assert.equal(await page.locator('.lot-editor-bottom button[form="lot-editor-form"]').count(), 1,
+      'Bottom action submits the lot form from below the photos');
+    assert.equal(await page.locator('.lot-editor-bottom button[form="lot-editor-form"]').textContent(), 'Kavel opslaan');
     assert.equal(await page.locator('#lot-new-photo-grid').count(), 1, 'New lot has photo tiles');
+    const photoCard = await page.locator('#lot-new-photo-grid').boundingBox();
+    const bottomActions = await page.locator('.lot-editor-bottom').boundingBox();
+    assert(photoCard && bottomActions && bottomActions.y >= photoCard.y + photoCard.height,
+      'Bottom actions are visually beneath photo tiles');
     assert.equal(await page.locator('.lot-editor-uploader').count(), 0, 'Old multipicker is removed');
     const input = () => page.locator('#lot-new-photo-grid .lot-editor-photo-add:not(.is-selected) input[type=file]');
     const tiles = () => page.locator('#lot-new-photo-grid .lot-editor-photo-add.is-selected');
@@ -77,7 +90,7 @@ const { chromium } = require('playwright');
     await page.locator('#lot-editor-form input[name=title]').fill('CI new-lot photo tiles');
     await Promise.all([
       page.waitForURL(/\/admin\/kavel\.php\?id=\d+/, { timeout: 15000 }),
-      page.locator('#lot-editor-form button[type=submit]').click(),
+      page.locator('.lot-editor-bottom button[form="lot-editor-form"]').click(),
     ]);
     assert.equal(await page.locator('#lot-photo-grid .lot-editor-photo:not(.lot-editor-photo-add) img').count(), 3,
       'Three saved photos appear after creating the lot');
