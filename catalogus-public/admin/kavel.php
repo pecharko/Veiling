@@ -147,6 +147,7 @@ if(is_post()){
     $auctionOnly = !empty($_POST['auction_only']);
     $saleLocation=(string)($_POST['sale_location']??'markt');
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
+    elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
     elseif($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -300,7 +301,7 @@ if ($error === $cancelAuctionWarning) {
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
             <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
