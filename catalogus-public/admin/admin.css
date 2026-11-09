@@ -128,13 +128,13 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-photo img {width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;margin-bottom:10px}
 /* New-photo tile shares the same gallery cell and frame as saved photos. */
 .lot-editor-photo-add {display:flex;flex-direction:column;gap:10px;margin:0;min-width:0}
-.lot-editor-photo-add-picker {display:flex;flex:1;min-height:148px;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:2px dashed #decac0;border-radius:8px;background:#fffaf7;text-align:center;padding:12px 8px;color:var(--ed-muted);cursor:pointer}
+.lot-editor-photo-add-picker {position:relative;overflow:hidden;display:flex;flex:1;min-height:148px;flex-direction:column;align-items:center;justify-content:center;gap:7px;border:2px dashed #decac0;border-radius:8px;background:#fffaf7;text-align:center;padding:12px 8px;color:var(--ed-muted);cursor:pointer}
 .lot-editor-photo-add-picker:hover,.lot-editor-photo-add-picker:focus-within {border-color:var(--wine);background:#fff3ed}
 .lot-editor-photo-add-picker .lot-editor-upload-icon {width:42px;height:42px;font-size:26px}
 .lot-editor-photo-add-picker strong {color:var(--wine);font-size:13px}
 .lot-editor-photo-add-help {font-size:10px;line-height:1.35}
-.lot-editor-photo-add-picker input[type=file] {display:block;width:100%;max-width:100%;min-width:0;font-size:10px;color:var(--ed-muted)}
-.lot-editor-photo-add-picker input[type=file]::file-selector-button {max-width:100%;font-size:10px;cursor:pointer}
+/* Keep the native file input keyboard-accessible without showing its browser label. */
+.lot-editor-photo-add-picker input[type=file] {position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
 .lot-editor-photo-add-submit.primary {width:100%;min-height:42px;padding:8px 5px;font-size:11px;line-height:1.3;white-space:normal}
 /* Selected photo appears in-place; a new picker tile is appended until three are used. */
 .lot-editor-photo-add .lot-editor-photo-add-picker[hidden],
