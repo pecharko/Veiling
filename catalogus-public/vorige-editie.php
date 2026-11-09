@@ -63,15 +63,15 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <section class="impression-video shell" aria-labelledby="impression-video-title">
     <div class="impression-video-intro">
       <p class="impression-eyebrow">IN DE KIJKER · TV OOST</p>
-      <h2 id="impression-video-title">Alderande vzw:<br><em>10 jaar soepkar.</em></h2>
+      <h2 id="impression-video-title">Alderande vzw:<br><em>een nieuwe soepkar.</em></h2>
       <p>TV Oost bracht een reportage over tien jaar soepkar in Lokeren en de gloednieuwe soepkar van Alderande vzw. Bekijk het verhaal bij de oorspronkelijke uitgever.</p>
     </div>
-    <a class="impression-video-card" href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982" target="_blank" rel="noopener noreferrer" aria-label="Bekijk de TV Oost-reportage over de soepkar van Alderande vzw (opent in een nieuw tabblad)">
+    <a class="impression-video-card" href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982" aria-label="Bekijk de TV Oost-reportage over de soepkar van Alderande vzw (opent in hetzelfde tabblad)">
       <span class="impression-video-play" aria-hidden="true">▶</span>
       <span class="impression-video-card-copy">
         <span class="impression-video-kicker">REPORTAGE · TV OOST</span>
         <strong>Bekijk de reportage</strong>
-        <span>Opent bij TV Oost <span aria-hidden="true">↗</span></span>
+        <span>Opent bij TV Oost in hetzelfde tabblad</span>
       </span>
     </a>
   </section>
