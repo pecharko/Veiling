@@ -11,16 +11,20 @@
   const supported = new Set(['image/jpeg', 'image/png', 'image/webp']);
   let busy = false;
   const lotForm = document.getElementById('lot-editor-form');
-  const saveButtons = [...document.querySelectorAll('button[form="lot-editor-form"], #lot-editor-form button[type="submit"]')];
-  const setUploadBusy = (isBusy) => {
-    busy = isBusy;
-    saveButtons.forEach(button => { button.disabled = isBusy; });
-  };
+  // A save pressed during upload is queued, not silently ignored or allowed
+  // to cancel the request before the server has persisted the photo.
+  let queuedSave = false;
+  let photoUploadFailed = false;
+  const setUploadBusy = (isBusy) => { busy = isBusy; };
   if (lotForm) {
     lotForm.addEventListener('submit', event => {
       if (busy) {
         event.preventDefault();
-        status.textContent = 'De foto wordt nog opgeslagen. Sla de kavelgegevens op zodra de upload is afgerond.';
+        queuedSave = true;
+        status.textContent = 'Foto wordt eerst opgeslagen; daarna worden de kavelgegevens bewaard.';
+      } else if (photoUploadFailed) {
+        event.preventDefault();
+        status.textContent = 'De foto is NIET opgeslagen. Verwijder het foutieve voorbeeld of vernieuw de pagina voordat je de kavelgegevens bewaart.';
       }
     });
   }
@@ -62,6 +66,7 @@
       return;
     }
 
+    photoUploadFailed = false;
     setUploadBusy(true);
     const objectUrl = URL.createObjectURL(file);
     const img = document.createElement('img');
@@ -116,6 +121,8 @@
     } catch (error) {
       // Retain the preview on failure, instead of making it disappear briefly.
       // Do not automatically retry an ambiguous network response.
+      photoUploadFailed = true;
+      queuedSave = false;
       tile.classList.add('lot-editor-photo-error');
       const dismiss = document.createElement('button');
       dismiss.type = 'button';
@@ -124,6 +131,7 @@
       dismiss.addEventListener('click', () => {
         URL.revokeObjectURL(objectUrl);
         tile.remove();
+        photoUploadFailed = Boolean(grid.querySelector('.lot-editor-photo-error'));
         sync();
       });
       tile.append(dismiss);
@@ -131,6 +139,10 @@
     } finally {
       setUploadBusy(false);
       sync();
+      if (queuedSave && !photoUploadFailed && lotForm) {
+        queuedSave = false;
+        lotForm.requestSubmit();
+      }
     }
   });
   sync();
