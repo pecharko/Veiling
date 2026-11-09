@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: sh scripts/preview start|test|status|stop
+# Usage: sh scripts/preview start|test|status|diagnose|stop
 set -eu
 ROOT=$(CDPATH= cd "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
@@ -17,6 +17,42 @@ check_config() {
   fi
 }
 dc() { docker compose --project-name "$PROJECT" -f "$COMPOSE" "$@"; }
+# Read-only diagnostic: a reused Compose project can still mount another worktree.
+# This explains stale UI even after the preview branch was fast-forwarded.
+diagnose_preview() {
+  command -v docker >/dev/null 2>&1 || { echo 'STOP: Docker CLI ontbreekt.' >&2; return 1; }
+  docker info >/dev/null 2>&1 || { echo 'STOP: Docker Engine draait niet. Start Docker Desktop.' >&2; return 1; }
+  printf 'Huidige worktree: %s\n' "$ROOT"
+  printf 'Huidige branch: %s\n' "$(git branch --show-current)"
+  printf 'Huidige commit: %s\n' "$(git rev-parse HEAD)"
+  cid=$(dc ps -q preview-web)
+  if [ -z "$cid" ]; then
+    echo 'STOP: preview-web container draait niet. Geen actieve code te controleren.' >&2
+    return 1
+  fi
+  mounted=$(docker inspect "$cid" --format '{{range .Mounts}}{{if eq .Destination "/app"}}{{.Source}}{{end}}{{end}}')
+  printf 'Docker /app bron: %s\n' "$mounted"
+  if [ -z "$mounted" ]; then
+    echo 'STOP: geen bind mount op /app gevonden.' >&2
+    return 1
+  fi
+  if command -v shasum >/dev/null 2>&1; then
+    local_php=$(shasum -a 256 "$ROOT/catalogus-public/admin/kavel.php" | awk '{print $1}')
+    local_js=$(shasum -a 256 "$ROOT/catalogus-public/admin/lot-photo-preview.js" | awk '{print $1}')
+  else
+    command -v sha256sum >/dev/null 2>&1 || { echo 'STOP: sha256 tool ontbreekt.' >&2; return 1; }
+    local_php=$(sha256sum "$ROOT/catalogus-public/admin/kavel.php" | awk '{print $1}')
+    local_js=$(sha256sum "$ROOT/catalogus-public/admin/lot-photo-preview.js" | awk '{print $1}')
+  fi
+  live_php=$(dc exec -T preview-web php -r 'echo hash_file("sha256", "/app/catalogus-public/admin/kavel.php");')
+  live_js=$(dc exec -T preview-web php -r 'echo hash_file("sha256", "/app/catalogus-public/admin/lot-photo-preview.js");')
+  if [ "$local_php" != "$live_php" ] || [ "$local_js" != "$live_js" ]; then
+    echo 'FOUT: de actieve Docker-container voert NIET dezelfde kavel- en uploadcode uit als deze worktree.' >&2
+    echo 'Controleer eerst de /app bron en bewaar bestaande lokale uploads voordat je containers hermaakt.' >&2
+    return 1
+  fi
+  echo 'OK: Docker gebruikt dezelfde kavel- en uploadcode als deze worktree.'
+}
 case "${1:-}" in
   start)
     command -v docker >/dev/null || { echo 'Docker Desktop is required.' >&2; exit 1; }
@@ -42,6 +78,7 @@ case "${1:-}" in
     ;;
   test)
     check_config
+    diagnose_preview
     command -v npm >/dev/null || { echo 'Node.js/npm required for Playwright.' >&2; exit 1; }
     if [ ! -x dev/preview/node_modules/.bin/playwright ]; then
       npm --prefix dev/preview install --no-save --no-package-lock --no-audit --no-fund playwright@1.57.0
@@ -77,6 +114,10 @@ case "${1:-}" in
     ;;
   status)
     dc ps
+    diagnose_preview
+    ;;
+  diagnose)
+    diagnose_preview
     ;;
   stop)
     check_config
@@ -85,7 +126,7 @@ case "${1:-}" in
     echo 'Synthetic database removed; local preview stopped.'
     ;;
   *)
-    echo 'Usage: sh scripts/preview start|test|status|stop' >&2
+    echo 'Usage: sh scripts/preview start|test|status|diagnose|stop' >&2
     exit 2
     ;;
 esac
