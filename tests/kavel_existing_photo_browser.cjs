@@ -65,7 +65,7 @@ const { chromium } = require('playwright');
 
     await page.locator('input[name="title"]').fill('Saved with three photos');
     await Promise.all([
-      page.waitForURL(editorUrl),
+      page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
       page.locator('button[form="lot-editor-form"]').click(),
     ]);
     await page.reload();
