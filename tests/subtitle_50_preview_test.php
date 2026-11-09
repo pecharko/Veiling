@@ -6,7 +6,7 @@ if (!is_string($editor)) throw new RuntimeException('Editor not readable');
 function subtitle_check(bool $ok, string $message): void {
   if (!$ok) throw new RuntimeException($message);
 }
-subtitle_check(str_contains($editor, '<label class="lot-full">Ondertitel<input type="text" name="subtitle"'), 'Subtitle label and HTML field');
+subtitle_check(str_contains($editor, '<label class="lot-full">Ondertitel<input type="text" name="subtitle"') && str_contains($editor, 'name="subtitle" value="<?=e($d[\'subtitle\'])?>" maxlength="50"'), 'Subtitle label and enforced 50-character HTML limit');
 subtitle_check(!str_contains($editor, 'Ondertitel / maker / materiaal'), 'Outdated label removed');
 subtitle_check(str_contains($editor, 'id="lot-subtitle-error"'), 'Accessible inline length warning');
 subtitle_check(str_contains($editor, "const subtitleMessage = 'De ondertitel mag maximaal 50 tekens bevatten.'"), 'Exact message');
