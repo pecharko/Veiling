@@ -44,17 +44,40 @@ const { chromium } = require('playwright');
     assert(image.length < 1024, 'Test PNG must fit the CI upload size limit');
     const savedPhotos = () => page.locator('#lot-photo-grid .lot-editor-photo:not(.lot-editor-photo-add) img');
 
+    // Delay the first upload to reproduce clicking "Save" before the HTTP
+    // response confirms photo persistence (the reported user regression).
+    let delayedFirstUpload = false;
+    await page.route('**/admin/kavel.php?id=*', async route => {
+      const req = route.request();
+      if (!delayedFirstUpload && req.method() === 'POST' &&
+          req.headers()['accept']?.includes('application/json')) {
+        delayedFirstUpload = true;
+        await new Promise(resolve => setTimeout(resolve, 700));
+      }
+      await route.continue();
+    });
     for (let n = 1; n <= 3; n++) {
+      if (n === 1) await page.locator('input[name="title"]').fill('Edited while photo upload runs');
       await page.locator('#lot-photo-grid .lot-editor-photo-add input[type=file]').setInputFiles({
         name: 'browser-upload-' + n + '.png',
         mimeType: 'image/png',
         buffer: image,
       });
-      await page.waitForFunction(
-        () => document.getElementById('lot-photo-upload-status')?.textContent?.includes('Foto opgeslagen.'),
-        null,
-        { timeout: 15000 },
-      );
+      if (n === 1) {
+        await Promise.all([
+          page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
+          page.locator('button[form="lot-editor-form"]').click(),
+        ]);
+        assert(delayedFirstUpload, 'The slow-upload race must actually be exercised');
+        assert.equal(await page.locator('input[name="title"]').inputValue(), 'Edited while photo upload runs',
+          'Save queued during photo upload must preserve edited lot fields');
+      } else {
+        await page.waitForFunction(
+          () => document.getElementById('lot-photo-upload-status')?.textContent?.includes('Foto opgeslagen.'),
+          null,
+          { timeout: 15000 },
+        );
+      }
       assert.equal(await savedPhotos().count(), n, 'Upload ' + n + ' must appear as a saved photo');
       await page.reload();
       assert.equal(await savedPhotos().count(), n, 'Photo ' + n + ' survives reopening the existing lot');
