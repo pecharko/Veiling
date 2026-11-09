@@ -303,7 +303,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
-            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
+            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" placeholder="Naam van de kunstenaar" aria-describedby="lot-artist-error"><span id="lot-artist-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De naam van de kunstenaar mag maximaal 50 tekens bevatten.</span></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
             <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
           </div>
@@ -419,6 +419,27 @@ if ($error === $cancelAuctionWarning) {
     }
   });
   validateTitle();
+  const artist = form.elements.namedItem('artist_name');
+  const artistWarning = document.getElementById('lot-artist-error');
+  if (artist instanceof HTMLInputElement && artistWarning) {
+    const artistMessage = 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.';
+    function validateArtistName() {
+      const tooLong = Array.from(artist.value.trim()).length > 50;
+      artistWarning.hidden = !tooLong;
+      artist.setCustomValidity(tooLong ? artistMessage : '');
+      artist.setAttribute('aria-invalid', tooLong ? 'true' : 'false');
+      return !tooLong;
+    }
+    artist.addEventListener('input', validateArtistName);
+    form.addEventListener('submit', function (event) {
+      if (!validateArtistName()) {
+        event.preventDefault();
+        artist.reportValidity();
+        artist.focus();
+      }
+    });
+    validateArtistName();
+  }
 })();
 </script>
 <script>
