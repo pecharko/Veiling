@@ -301,18 +301,41 @@ if ($error === $cancelAuctionWarning) {
         <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
           <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
         </section>
-        <?php if(!$lot): ?>
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Foto's toevoegen</h2><p>Voeg meerdere beelden tegelijk toe.</p></div></div>
-          <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · maximaal 3 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
-          <p class="lot-editor-help">Foto's worden toegevoegd wanneer je het kavel opslaat.</p>
-        </section>
-        <?php endif; ?>
         <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Aangemaakt door</dt><dd><?=e($creatorLabel)?></dd><dt>Huidige status</dt><dd><?=e(['draft'=>'Concept','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?></dd></dl></section><?php endif; ?>
       </aside>
     </div>
     </fieldset>
     <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button class="primary" type="submit">Wijzigingen opslaan →</button><?php endif; ?></div>
   </form>
+  <?php if(!$lot): ?>
+  <section class="lot-editor-card lot-editor-photos">
+    <div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>Selecteer maximaal 3 foto's. Ze verschijnen meteen als voorbeeld en worden opgeslagen zodra je het nieuwe kavel bewaart.</p></div></div>
+    <div class="lot-editor-photo-grid" id="lot-new-photo-grid" data-max-photos="3">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-editor-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </div>
+    <div class="lot-editor-photo-upload-actions">
+      <p class="lot-editor-help" id="lot-new-photo-status" role="status" aria-live="polite">Foto's worden opgeslagen wanneer je op Wijzigingen opslaan klikt.</p>
+    </div>
+    <template id="lot-new-photo-picker-template">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-editor-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </template>
+    <script src="<?=e(url('admin/lot-new-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-new-photo-preview.js'), 0, 12)]))?>" defer></script>
+  </section>
+  <?php endif; ?>
   <?php if($lot): ?>
   <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg hier foto's toe of verwijder bestaande foto's.</p></div></div>
     <?php if($canEditLot && count($images)<3): ?>
