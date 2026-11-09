@@ -33,6 +33,25 @@ const { chromium } = require('playwright');
       'Existing lot fields take the available page width');
     const editorUrl = page.url();
     assert.match(editorUrl, /\/admin\/kavel\.php\?id=\d+/);
+    const toolbarCancel = page.locator('.lot-editor-toolbar-actions a.lot-editor-cancel');
+    const toolbarSave = page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]');
+    const bottomSave = page.locator('.lot-editor-bottom button[form="lot-editor-form"]');
+    assert.equal(await toolbarCancel.count(), 1, 'Existing lot offers Annuleren at the top');
+    assert.equal((await toolbarSave.textContent()).trim(), 'Wijzigingen opslaan',
+      'Existing lot top button has the requested label');
+    assert.equal((await bottomSave.textContent()).trim(), 'Wijzigingen opslaan',
+      'Existing lot bottom button saves the correct form');
+    const galleryBounds = await page.locator('#lot-photo-grid').boundingBox();
+    const bottomBounds = await page.locator('.lot-editor-bottom').boundingBox();
+    assert(galleryBounds && bottomBounds && bottomBounds.y > galleryBounds.y + galleryBounds.height,
+      'Existing lot action buttons are visually below the photo gallery');
+    await page.locator('input[name="title"]').fill('Temporary edit before cancel');
+    page.once('dialog', dialog => {
+      assert.match(dialog.message(), /wijzigingen.*niet zijn opgeslagen/i);
+      return dialog.dismiss();
+    });
+    await toolbarCancel.click();
+    assert.equal(page.url(), editorUrl, 'Cancelling an edit warning stays on the lot editor');
     // Regression: the hidden input name="action" shadows HTMLFormElement.action.
     // The real upload must target this editor URL, never that input element.
     const uploadForm = page.locator('#lot-photo-upload-form');
