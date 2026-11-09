@@ -313,7 +313,6 @@ if ($error === $cancelAuctionWarning) {
     </div>
     <?php if($canEditLot && count($images)<3): ?>
     <div class="lot-editor-photo-upload-actions">
-      <button form="lot-photo-upload-form" class="primary" type="submit" id="lot-photo-upload-submit">Geselecteerde foto's toevoegen</button>
       <p class="lot-editor-help" id="lot-photo-upload-status" role="status" aria-live="polite"></p>
     </div>
     <template id="lot-photo-picker-template">
@@ -332,4 +331,5 @@ if ($error === $cancelAuctionWarning) {
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
+<script src="<?=e(url('admin/lot-unsaved-warning.js'))?>" defer></script>
 <?php admin_bottom(); ?>
