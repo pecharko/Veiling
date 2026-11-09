@@ -398,6 +398,20 @@ try {
   claim($artistStored && $artistStored['artist_name']==='Jan Jans'
     && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
     'Both artist fields stored');
+  [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
+  claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
+      && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
+    'Existing lot reload shows the saved artist name and escaped hyperlink');
+  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
+    'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
+    'artist_name'=>'Jan Jans', 'artist_url'=>'https://example.org/artist?x=1&y=2',
+    'status'=>'draft', 'sale_location'=>'markt'
+  ]);
+  claim($status===303 && by_number(750000)['title']==='Kunstwerk met bijgewerkte titel'
+      && by_number(750000)['artist_name']==='Jan Jans'
+      && by_number(750000)['artist_url']==='https://example.org/artist?x=1&y=2',
+    'Artist metadata survives saving unrelated lot fields');
   $artistPost['id']=(string)$artistStored['id'];
   $artistPost['artist_name']='';
   [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
