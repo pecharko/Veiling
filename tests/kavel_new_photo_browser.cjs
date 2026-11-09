@@ -28,6 +28,17 @@ const { chromium } = require('playwright');
     const basicRect = await basics.boundingBox();
     assert(publicationRect && basicRect && publicationRect.y + publicationRect.height < basicRect.y,
       'Publication card appears above basic information');
+    const lotField = await page.locator('#lot-editor-form input[name="lot_number"]').boundingBox();
+    const saleField = await page.locator('#lot-editor-form select[name="sale_location"]').boundingBox();
+    const categoryField = await page.locator('#lot-editor-form input[name="category"]').boundingBox();
+    const auctionCheckbox = await page.locator('#lot-editor-form input[name="auction_only"]').boundingBox();
+    assert(lotField && saleField && categoryField && auctionCheckbox, 'Basic information inputs are visible');
+    assert(Math.abs(lotField.y - saleField.y) <= 2,
+      'Lot number and sale location input controls are vertically aligned');
+    assert(Math.abs(categoryField.x - saleField.x) <= 2 && categoryField.y > saleField.y + saleField.height,
+      'Category field is immediately below the sale location in the right column');
+    assert(auctionCheckbox.x < saleField.x && auctionCheckbox.y > lotField.y + lotField.height,
+      'Auction-only checkbox stays below lot number in the left column');
     assert.equal(await page.locator('#lot-new-photo-grid').count(), 1, 'New lot has photo tiles');
     assert.equal(await page.locator('.lot-editor-uploader').count(), 0, 'Old multipicker is removed');
     const input = () => page.locator('#lot-new-photo-grid .lot-editor-photo-add:not(.is-selected) input[type=file]');
