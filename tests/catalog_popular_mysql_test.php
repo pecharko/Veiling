@@ -29,6 +29,10 @@ foreach (['veiling','markt'] as $kind) {
     $recordActive->execute([hash('sha256', 'popularity-ci-'.$id, true), $id, 10]);
   }
 }
+// An eight-day-old spike must not promote a kavel into the seven-day top five.
+$oldDay = $pdo->prepare('INSERT INTO visitor_stats_lot_totals (visit_date,lot_id,visitor_days,views) VALUES (UTC_DATE() - INTERVAL 7 DAY,?,2,50000)');
+$oldDay->execute([$ids['veiling'][5]]);
+$oldDay->execute([$ids['markt'][5]]);
 $all = catalog_popular_lots($pdo, false);
 if (array_keys($all) !== ['alle'] || count($all['alle']) !== 5) throw new RuntimeException('Expected single overall top five');
 $groups = catalog_popular_lots($pdo, true);
