@@ -93,12 +93,18 @@ function stored_admin_role(): string {
   $st->execute([$_SESSION['admin_id']]);
   return (string)$st->fetchColumn();
 }
+function admin_role_switch_targets(string $stored): array {
+  return match ($stored) {
+    'administrator' => ['administrator', 'assistant', 'veilingmeester'],
+    'veilingmeester' => ['veilingmeester', 'assistant'],
+    default => [],
+  };
+}
 function effective_admin_role(): string {
   $stored = stored_admin_role();
-  if ($stored !== 'administrator') return $stored;
-  $override = $_SESSION['admin_view_role'] ?? 'administrator';
-  return in_array($override, ['administrator', 'assistant', 'veilingmeester'], true)
-    ? $override : 'administrator';
+  $override = $_SESSION['admin_view_role'] ?? $stored;
+  return is_string($override) && in_array($override, admin_role_switch_targets($stored), true)
+    ? $override : $stored;
 }
 function can_edit_auction(): bool {
   return in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true);
@@ -125,8 +131,8 @@ function require_auth(): void {
   if (str_contains($script, '/admin/') && $role !== 'administrator') {
     $page = basename($script);
     $allowed = ['index.php', 'kavel.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
-    // Only a real administrator can switch roles, regardless of simulated role.
-    if (stored_admin_role() === 'administrator') $allowed[] = 'rol-wissel.php';
+    // The original administrator or veilingmeester can always restore their role.
+    if (admin_role_switch_targets(stored_admin_role()) !== []) $allowed[] = 'rol-wissel.php';
     if (!in_array($page, $allowed, true)) {
       http_response_code(403);
       exit('Geen toegang tot dit beheeronderdeel.');
@@ -244,7 +250,7 @@ function admin_top(string $title): void {
   $logout = e(url('admin/logout.php'));
   $users = e(url('admin/gebruikers.php'));
   $isAdministrator = effective_admin_role() === 'administrator';
-  $isOriginalAdministrator = stored_admin_role() === 'administrator';
+  $canSwitchRole = admin_role_switch_targets(stored_admin_role()) !== [];
   $roleSwitch = e(url('admin/rol-wissel.php'));
   $rolesHelp = e(url('admin/rollen.php'));
   $activeRole = effective_admin_role();
@@ -252,7 +258,7 @@ function admin_top(string $title): void {
   $activeRoleLabel = e($roleLabels[$activeRole] ?? $activeRole);
   $roleIndicator = '<span class="admin-active-role" aria-label="Actieve rol: ' . $activeRoleLabel . '">Rol: ' . $activeRoleLabel . '</span>';
   $reportIssue = '<a class="admin-report-issue" href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer" aria-label="Probleem of verbetering melden op GitHub (opent in nieuw tabblad)">⚠ Probleem melden</a>';
-  $roleSwitchNav = $isOriginalAdministrator ? '<a href="' . $roleSwitch . '">Rol wisselen (' . e(effective_admin_role()) . ')</a>' : '';
+  $roleSwitchNav = $canSwitchRole ? '<a href="' . $roleSwitch . '">Rol wisselen (' . e(effective_admin_role()) . ')</a>' : '';
   echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><div class="admin-brand-row"><a href="' . $home . '" class="admin-logo">Website Beheer</a>' . $roleIndicator . $reportIssue . '</div><nav><a href="' . $home . '">Kavels</a><a href="' . $edit . '">Nieuw kavel</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . $publicPreview . '<a href="' . $rolesHelp . '">Rollen &amp; rechten</a>' . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
