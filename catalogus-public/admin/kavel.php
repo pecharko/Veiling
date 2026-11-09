@@ -311,7 +311,7 @@ if ($error === $cancelAuctionWarning) {
           <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e($d['market_price'])?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e($d['starting_bid'])?>" placeholder="0"></label></div>
+          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
         </section>
       </div>
     </div>
