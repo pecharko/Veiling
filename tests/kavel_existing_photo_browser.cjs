@@ -27,6 +27,10 @@ const { chromium } = require('playwright');
       page.waitForURL(/\/admin\/kavel\.php\?id=\d+/),
       page.locator('#lot-editor-form button[type="submit"]').click(),
     ]);
+    assert.equal(await page.locator('#lot-editor-form .lot-editor-side').count(), 0,
+      'Existing lot has no redundant information side panel');
+    assert.equal(await page.locator('#lot-editor-form .lot-editor-layout--single').count(), 1,
+      'Existing lot fields take the available page width');
     const editorUrl = page.url();
     assert.match(editorUrl, /\/admin\/kavel\.php\?id=\d+/);
     // Regression: the hidden input name="action" shadows HTMLFormElement.action.
