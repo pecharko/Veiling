@@ -34,35 +34,62 @@ if(is_post()){
   }
   $action=(string)($_POST['action']??'save');
   if($action==='add-photo' && $lot){
+    $ajax = str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+    $uploaded = 0;
+    $uploadError = '';
     try {
       $photos=photo_files($_FILES['photos']??[]);
-      if (!$photos) {
-        flash('Kies minstens één foto om toe te voegen.', 'warning');
+      if (count($photos) !== 1 && $ajax) {
+        $uploadError='Selecteer precies één foto.';
+      } elseif (!$photos) {
+        $uploadError='Kies minstens één foto om toe te voegen.';
       } else {
         $countSt=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
         $countSt->execute([$id]);
         $available=max(0,3-(int)$countSt->fetchColumn());
         if (count($photos)>$available) {
-          flash('Er is onvoldoende ruimte: maximaal 3 foto’s per kavel.', 'warning');
+          $uploadError='Maximaal 3 foto’s per kavel.';
         } else {
-          $failed=[];
           foreach($photos as $i=>$photo){
-            try { add_lot_image($id,$photo['tmp'],$photo['name'],100+$i); }
-            catch(Throwable $ex) {
+            try {
+              add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);
+              $uploaded++;
+            } catch(Throwable $ex) {
               error_log('[Kavel foto toevoegen] '.$ex->getMessage());
-              $failed[]=$photo['name'];
+              $uploadError='Foto kon niet worden verwerkt. Controleer het bestand en de lokale serverlogs.';
+              break;
             }
           }
-          $added=count($photos)-count($failed);
-          flash($failed
-            ? $added.' foto(’s) toegevoegd; '.count($failed).' foto(’s) konden niet verwerkt worden.'
-            : $added.' foto(’s) toegevoegd.', $failed?'warning':'success');
         }
       }
     } catch (RuntimeException $ex) {
       error_log('[Kavel foto-upload] '.$ex->getMessage());
-      flash('Foto-upload mislukt. Controleer de gekozen bestanden.', 'warning');
+      $uploadError='Foto-upload mislukt. Controleer het bestand en de lokale serverlogs.';
     }
+    if ($ajax) {
+      // The response reports actual DB state: never infer success from a redirect.
+      header('Content-Type: application/json; charset=utf-8');
+      header('Cache-Control: no-store, private');
+      header('X-Content-Type-Options: nosniff');
+      if ($uploaded !== 1 || $uploadError !== '') {
+        http_response_code(422);
+        echo json_encode(['ok'=>false,'error'=>$uploadError ?: 'Foto kon niet worden opgeslagen.'], JSON_UNESCAPED_UNICODE);
+      } else {
+        $lastPhotoSt=$pdo->prepare('SELECT id,path FROM lot_images WHERE lot_id=? ORDER BY id DESC LIMIT 1');
+        $lastPhotoSt->execute([$id]);
+        $savedPhoto=$lastPhotoSt->fetch();
+        if (!$savedPhoto) {
+          http_response_code(500);
+          echo json_encode(['ok'=>false,'error'=>'Foto opgeslagen, maar kon niet worden opgehaald. Vernieuw de pagina.'], JSON_UNESCAPED_UNICODE);
+        } else {
+          $countSt=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+          $countSt->execute([$id]);
+          echo json_encode(['ok'=>true,'photo_id'=>(int)$savedPhoto['id'],'image_url'=>url((string)$savedPhoto['path']),'count'=>(int)$countSt->fetchColumn()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+      }
+      exit;
+    }
+    flash($uploadError !== '' ? $uploadError : $uploaded.' foto(’s) toegevoegd.', $uploadError !== '' ? 'warning' : 'success');
     redirect('admin/kavel.php',['id'=>$id]);
   }
   if($action==='remove-photo'){
