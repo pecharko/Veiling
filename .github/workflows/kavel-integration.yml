@@ -152,8 +152,9 @@ jobs:
           done
           php tests/artist_url_inline_validation_test.php
           php tests/artist_public_link_style_test.php
-          python3 scripts/shared_ovh_release.py plan catalog-title-one-line-20261109
           php tests/catalog_lot_title_contract_test.php
+          php tests/artist_name_50_preview_test.php
+          python3 scripts/shared_ovh_release.py plan lot-detail-artist-50-20261109
           node tests/lot_photo_upload_target_test.cjs
           node tests/lot_unsaved_warning_test.cjs
           php tests/lot_form_test.php

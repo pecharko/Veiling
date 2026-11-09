@@ -88,8 +88,9 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
-  claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"'),
-      'New lot title input is limited to 50 characters');
+  claim(str_contains($html, 'name="title"') && str_contains($html, 'id="lot-title-error"')
+      && str_contains($html, 'De titel mag maximaal 50 tekens bevatten.'),
+      'New lot title shows the fifty-character validation message');
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save',
     'lot_number' => '876542', 'title' => str_repeat('X', 51),
@@ -97,6 +98,13 @@ try {
   claim($titleStatus === 200 && str_contains($tooLongTitlePage, 'maximaal 50 tekens')
       && !by_number(876542),
       'Server rejects a 51-character title without inserting a lot');
+  [$artistStatus, $tooLongArtistPage] = request_page('/admin/kavel.php', [
+    'csrf' => token($html), 'action' => 'save',
+    'lot_number' => '876541', 'title' => 'Test kunstenaar', 'artist_name' => str_repeat('A', 51),
+  ]);
+  claim($artistStatus === 200 && str_contains($tooLongArtistPage, 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.')
+      && !by_number(876541), 'Server rejects 51-character artist without inserting a lot');
+  claim(str_contains($html, 'id="lot-artist-error"'), 'New lot displays artist length warning container');
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
   claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
