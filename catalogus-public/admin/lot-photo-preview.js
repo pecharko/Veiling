@@ -10,6 +10,20 @@
   const maximum = Number(grid.dataset.maxPhotos);
   const supported = new Set(['image/jpeg', 'image/png', 'image/webp']);
   let busy = false;
+  const lotForm = document.getElementById('lot-editor-form');
+  const saveButtons = [...document.querySelectorAll('button[form="lot-editor-form"], #lot-editor-form button[type="submit"]')];
+  const setUploadBusy = (isBusy) => {
+    busy = isBusy;
+    saveButtons.forEach(button => { button.disabled = isBusy; });
+  };
+  if (lotForm) {
+    lotForm.addEventListener('submit', event => {
+      if (busy) {
+        event.preventDefault();
+        status.textContent = 'De foto wordt nog opgeslagen. Sla de kavelgegevens op zodra de upload is afgerond.';
+      }
+    });
+  }
   const picker = () => grid.querySelector('.lot-editor-photo-add:not(.is-selected)');
   const sync = () => {
     const saved = Number(grid.dataset.existingCount);
@@ -48,7 +62,7 @@
       return;
     }
 
-    busy = true;
+    setUploadBusy(true);
     const objectUrl = URL.createObjectURL(file);
     const img = document.createElement('img');
     img.src = objectUrl;
@@ -115,7 +129,7 @@
       tile.append(dismiss);
       status.textContent = 'Upload niet bevestigd: ' + error.message + ' Controleer de melding en vernieuw zo nodig de pagina.';
     } finally {
-      busy = false;
+      setUploadBusy(false);
       sync();
     }
   });
