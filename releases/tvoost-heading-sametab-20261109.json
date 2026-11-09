@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "0b567d8858c38b67f5be93fc9a10b4add77b065a6b60a92aa42faf107d3054f3",
+      "remote_sha256": "efc7079ecd220426a775330f2d978a26632126aae2950d54b705d30c4f988b6b"
+    }
+  ]
+}
