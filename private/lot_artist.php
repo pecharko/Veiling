@@ -5,8 +5,8 @@ declare(strict_types=1);
 function lot_artist_validate(string $name, string $link): array {
   $name = trim($name);
   $link = trim($link);
-  if (mb_strlen($name, 'UTF-8') > 250) {
-    throw new InvalidArgumentException('De naam van de kunstenaar is te lang (maximaal 250 tekens).');
+  if (mb_strlen($name, 'UTF-8') > 50) {
+    throw new InvalidArgumentException('De naam van de kunstenaar mag maximaal 50 tekens bevatten.');
   }
   if ($link === '') return [$name, ''];
   // A familiar www-address is completed to an HTTPS hyperlink on save.
@@ -42,7 +42,7 @@ function lot_artist_markup(array $lot): string {
   $url = trim((string)($lot['artist_url'] ?? ''));
   if ($url === '') return $safeName;
   try {
-    [, $url] = lot_artist_validate($name, $url);
+    [, $url] = lot_artist_validate(mb_substr($name, 0, 50, 'UTF-8'), $url);
   } catch (InvalidArgumentException) {
     return $safeName;
   }
