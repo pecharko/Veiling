@@ -145,3 +145,16 @@ body{background:#fffaf6;color:var(--ink)}
    Keep the full original title in the markup for accessibility and detail view. */
 .lot-card h3{min-height:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lot-card h3 a{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Keep unusually long lot details inside the detail card on every viewport.
+   Grid children must be shrinkable; content remains fully readable. */
+.detail-page-grid{grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr)}
+.detail-page-grid .detail-gallery,
+.detail-page-grid .detail-copy{min-width:0;max-width:100%}
+.detail-page-grid .detail-copy h1,
+.detail-page-grid .detail-artist,
+.detail-page-grid .detail-artist a,
+.detail-page-grid .detail-subtitle,
+.detail-page-grid .detail-description,
+.detail-page-grid .detail-specs{max-width:100%;overflow-wrap:anywhere;word-break:normal}
+@media(max-width:800px){.detail-page-grid{grid-template-columns:minmax(0,1fr)}}
