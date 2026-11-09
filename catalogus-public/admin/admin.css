@@ -140,6 +140,8 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-photo-add .lot-editor-photo-add-picker[hidden],
 .lot-editor-photo-upload-actions [hidden] {display:none!important}
 .lot-editor-photo-add.is-selected {display:flex;flex-direction:column;gap:0}
+.lot-editor-photo-add.lot-editor-photo-error {border-color:#d46b76;background:#fff4f4}
+.lot-editor-photo-add.lot-editor-photo-error .lot-editor-remove-photo {margin-top:auto}
 .lot-editor-photo-add.is-selected img {width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block;margin-bottom:10px}
 .lot-editor-photo-add.is-selected .lot-editor-remove-photo {margin-top:auto}
 .lot-editor-photo-upload-actions {display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:14px}
