@@ -4,6 +4,7 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_once dirname(__DIR__) . '/private/catalog_preview_modes.php';
 require_once dirname(__DIR__) . '/private/lot_artist.php';
+require_once dirname(__DIR__) . '/private/catalog_popular_lots.php';
 if (is_post() && array_key_exists('admin_preview_action', $_POST)) {
   require_auth();
   check_csrf();
@@ -48,6 +49,7 @@ if ($onlyFavorites) {
 }
 $order = $splitPreview && $splitSection === 'veiling' ? 'l.auction_number IS NULL, l.auction_number ASC, l.lot_number ASC' : 'l.lot_number ASC';
 $rows = []; $total = 0; $totalPublic = 0; $splitCounts = ['veiling'=>0,'markt'=>0];
+$popularLotIds = [];
 if ($published) {
   $pdo = db();
   $totalPublic = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status IN ('published','sold')")->fetchColumn();
@@ -66,6 +68,14 @@ if ($published) {
   $st->bindValue($i, $offset, PDO::PARAM_INT);
   $st->execute();
   $rows = $st->fetchAll();
+  // One shared, read-only popularity ranking for public badges and admin statistics.
+  try {
+    foreach (catalog_popular_lots($pdo, $splitPreview) as $popularGroup) {
+      foreach ($popularGroup as $popularLot) $popularLotIds[(int)$popularLot['lot_id']] = true;
+    }
+  } catch (PDOException $exception) {
+    error_log('Popular lot statistics unavailable.');
+  }
 }
 function page_link(int $number): string {
   $p = [];
@@ -81,7 +91,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=188"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <?php admin_preview_banner(); ?>
   <header class="site-header front-header" id="top">
@@ -188,7 +198,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <div class="catalog-status"><div><span class="result-count"><?=e((string)$total)?> kavels</span> <span class="status-separator">/</span><span class="status-caption">Pagina <?=e((string)$page)?> van <?=e((string)($pages ?? 1))?></span></div><div class="status-actions"><a class="chip <?=$onlyFavorites?'selected':''?>" id="favoritesOnly" href="<?=e(url('index.php',['favorieten'=>1]))?>">♡ Mijn favorieten</a></div></div>
     <?php if (!$rows): ?><div class="empty-state"><span class="empty-art">◌</span><h3>Geen kavels in dit overzicht</h3><p>Er zijn momenteel geen kavels beschikbaar in dit overzicht.</p></div>
     <?php else: ?><div class="catalog-grid"><?php foreach($rows as $lot): ?>
-    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge<?= $splitPreview && $splitSection === 'veiling' ? ' lot-badge--auction-bottom' : '' ?>">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if ($splitPreview && $splitSection === "veiling" && !empty($lot["auction_number"])): ?><span class="lot-preview-number">VEILINGNR. <?= (int)$lot["auction_number"] ?></span><?php endif; ?><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>" title="<?=e($lot['title'])?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><?php if (!empty($lot['artist_name'])): ?><p class="lot-artist"><span class="lot-artist-label">Kunstenaar:</span> <span class="lot-artist-name" title="<?=e($lot['artist_name'])?>"><?=e($lot['artist_name'])?></span></p><?php endif; ?><div class="lot-footer"><?php if (($previewPrice = catalog_preview_price($lot, $splitPreview)) !== null): ?><div class="lot-estimate"><small><?=e($previewPrice["label"])?></small><strong><?=e($previewPrice["amount"])?></strong></div><?php endif; ?><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
+    <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge<?= $splitPreview && $splitSection === 'veiling' ? ' lot-badge--auction-bottom' : '' ?>">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if (isset($popularLotIds[(int)$lot['id']])): ?><span class="lot-popular-tag<?= $lot['status'] === 'sold' ? ' lot-popular-tag--sold' : '' ?>">Populair</span><?php endif; ?><?php if ($splitPreview && $splitSection === "veiling" && !empty($lot["auction_number"])): ?><span class="lot-preview-number">VEILINGNR. <?= (int)$lot["auction_number"] ?></span><?php endif; ?><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>" title="<?=e($lot['title'])?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><?php if (!empty($lot['artist_name'])): ?><p class="lot-artist"><span class="lot-artist-label">Kunstenaar:</span> <span class="lot-artist-name" title="<?=e($lot['artist_name'])?>"><?=e($lot['artist_name'])?></span></p><?php endif; ?><div class="lot-footer"><?php if (($previewPrice = catalog_preview_price($lot, $splitPreview)) !== null): ?><div class="lot-estimate"><small><?=e($previewPrice["label"])?></small><strong><?=e($previewPrice["amount"])?></strong></div><?php endif; ?><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
     <?php endforeach; ?></div>
     <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
