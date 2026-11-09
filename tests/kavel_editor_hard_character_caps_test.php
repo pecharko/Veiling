@@ -10,13 +10,14 @@ foreach ([
   'category' => 120,
   'artist_url' => 2048,
 ] as $field => $limit) {
-  if (!preg_match('~<input\\b[^>]*\\bname="' . preg_quote($field, '~') . '"[^>]*\\bmaxlength="' . $limit . '"~', $editor)) {
-    throw new RuntimeException("Missing browser max length on $field ($limit)");
+  // PHP template values contain ?>, so do not use an [^>]* match over the input tag.
+  if (!str_contains($editor, 'name="' . $field . '" value="<?=e($d[\'' . $field . '\'])?>" maxlength="' . $limit . '"')) {
+    throw new RuntimeException("Missing native input maxlength on $field ($limit)");
   }
 }
 foreach (['description' => 250, 'details' => 100] as $field => $limit) {
-  if (!preg_match('~<textarea\\b[^>]*\\bname="' . preg_quote($field, '~') . '"[^>]*\\bmaxlength="' . $limit . '"~', $editor)) {
-    throw new RuntimeException("Missing textarea max length on $field ($limit)");
+  if (!str_contains($editor, 'name="' . $field . '" rows="' . ($field === 'description' ? '6' : '4') . '" maxlength="' . $limit . '"')) {
+    throw new RuntimeException("Missing native textarea maxlength on $field ($limit)");
   }
 }
 foreach (['lot-title-error', 'lot-subtitle-error', 'lot-artist-error', 'function validateTitle()', 'function validateSubtitle()', 'function validateArtistName()'] as $obsolete) {
@@ -31,5 +32,6 @@ if (!str_contains($editor, "elseif(mb_strlen(\$subtitle)>50)")) throw new Runtim
 if (!str_contains($editor, "elseif(mb_strlen(\$description)>250)")) throw new RuntimeException('Server description validation missing');
 if (!str_contains($editor, "elseif(mb_strlen(\$details)>100)")) throw new RuntimeException('Server details validation missing');
 if (!str_contains($editor, "elseif(mb_strlen(\$title)>50)")) throw new RuntimeException('Server title validation missing');
-if (!str_contains($editor, "mb_strlen(\$artistName, 'UTF-8') > 50")) throw new RuntimeException('Server artist validation missing');
+$artistValidator = file_get_contents(dirname(__DIR__) . '/private/lot_artist.php');
+if (!is_string($artistValidator) || !str_contains($artistValidator, 'maximaal 50 tekens')) throw new RuntimeException('Server artist validation missing');
 echo "PASS: hard browser character caps for all seven limited editor text fields.\n";
