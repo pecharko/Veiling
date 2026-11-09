@@ -72,11 +72,8 @@
       grid.dataset.existingCount = updatedGrid.dataset.existingCount;
       status.textContent = 'Foto toegevoegd.';
     } catch (error) {
-      // Keep the preview and original input so the user can retry or choose again.
-      tile.classList.remove('is-selected');
-      img.remove();
-      tile.querySelector('.lot-editor-photo-add-picker').hidden = false;
-      input.value = '';
+      // Remove the failed preview; sync restores exactly one upload tile.
+      tile.remove();
       status.textContent = 'Upload mislukt. Kies de foto opnieuw. (' + error.message + ')';
     } finally {
       URL.revokeObjectURL(objectUrl);
