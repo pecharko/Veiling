@@ -142,3 +142,8 @@ body{background:#fffaf6;color:var(--ink)}
 .lot-artist-name a:hover{color:#103e7e;text-decoration-thickness:2px}
 .lot-artist-name a:focus-visible{outline:3px solid #1856a3;outline-offset:3px;border-radius:2px}
 .lot-artist-label{font-size:.82em;line-height:1.4;color:#58645e}
+
+/* Truncate only the catalog-card title to a single row on all screen sizes.
+   Preserve the complete title for the lot detail and accessible link. */
+.lot-card h3{min-height:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lot-card h3 a{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
