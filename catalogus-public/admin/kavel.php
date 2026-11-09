@@ -138,8 +138,8 @@ if(is_post()){
       $error = $ex->getMessage();
     }
     $category=mb_substr(trim((string)($_POST['category']??'Overige')),0,120);
-    $description=mb_substr(trim((string)($_POST['description']??'')),0,30000);
-    $details=mb_substr(trim((string)($_POST['details']??'')),0,10000);
+    $description=mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['description']??''))),0,30000);
+    $details=mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['details']??''))),0,10000);
     $marketPrice=trim((string)($_POST['market_price']??''));
     $startingBid=trim((string)($_POST['starting_bid']??''));
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
@@ -307,9 +307,9 @@ if ($error === $cancelAuctionWarning) {
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
             <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
-            <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie" aria-describedby="lot-subtitle-error"><span id="lot-subtitle-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De ondertitel mag maximaal 50 tekens bevatten.</span></label>
-            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar" aria-describedby="lot-artist-error"><span id="lot-artist-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De naam van de kunstenaar mag maximaal 50 tekens bevatten.</span></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
+            <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
+            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
             <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
           </div>
@@ -401,39 +401,7 @@ if ($error === $cancelAuctionWarning) {
   <?php endif; ?>
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
-<script>
-(function () {
-  'use strict';
-  const form = document.getElementById('lot-editor-form');
-  if (!form) return;
-  const limit = 50;
-  for (const [fieldName, warningId, message] of [
-    ['title', 'lot-title-error', 'De titel mag maximaal 50 tekens bevatten.'],
-    ['subtitle', 'lot-subtitle-error', 'De ondertitel mag maximaal 50 tekens bevatten.'],
-    ['artist_name', 'lot-artist-error', 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.']
-  ]) {
-    const input = form.elements.namedItem(fieldName);
-    const warning = document.getElementById(warningId);
-    if (!(input instanceof HTMLInputElement) || !warning) continue;
-    function validate() {
-      const tooLong = Array.from(input.value.trim()).length > limit;
-      input.setCustomValidity(tooLong ? message : '');
-      input.setAttribute('aria-invalid', tooLong ? 'true' : 'false');
-      warning.hidden = !tooLong;
-      return !tooLong;
-    }
-    input.addEventListener('input', validate);
-    form.addEventListener('submit', event => {
-      if (!validate()) {
-        event.preventDefault();
-        input.reportValidity();
-        input.focus();
-      }
-    });
-    validate();
-  }
-})();
-</script>
+
 <script>
 (function () {
   'use strict';
