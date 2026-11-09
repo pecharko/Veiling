@@ -65,4 +65,10 @@ $badStatus = lot_form_values($defaults, null, ['status' => 'unknown', 'title' =>
 check_value('draft', $badStatus['status'], 'Onbekende status nooit selecteren');
 check_value('', $badStatus['title'], 'Array als formulierveld niet accepteren');
 
-echo "lot_form_values: alle 13 controles geslaagd\n";
+check_value('', lot_price_input_value(null), 'Lege prijs blijft leeg');
+check_value('850.00', lot_price_input_value('850.00'), 'Gehele prijs heeft twee decimalen');
+check_value('850.50', lot_price_input_value('850.5'), 'Prijs met centen blijft intact');
+check_value('12.34', lot_price_input_value('12.34'), 'Startbod met centen blijft intact');
+check_value('850.5', lot_price_input_value('850.5', true), 'POST na fout blijft onveranderd');
+check_value('-1', lot_price_input_value('-1', true), 'Ongeldige POST-waarde blijft corrigeerbaar');
+echo "lot_form_values en prijsvelden: controles geslaagd\n";
