@@ -118,20 +118,6 @@ try {
     claim($limitStatus === 200 && str_contains($limitPage, $message) && !by_number($number),
       'Server rejects excessive text without inserting a lot: ' . $field);
   }
-  // Browsers count one newline as one character but send CRLF over HTTP.
-  // A full textarea including a newline must save without a false 251/101 error.
-  $fullDescription = str_repeat('D', 124) . "\r\n" . str_repeat('D', 125);
-  $fullDetails = str_repeat('S', 49) . "\r\n" . str_repeat('S', 50);
-  [$newlineStatus] = request_page('/admin/kavel.php', [
-    'csrf' => token($html), 'action' => 'save', 'lot_number' => '876537',
-    'title' => 'Regelafbreking limieten', 'description' => $fullDescription,
-    'details' => $fullDetails,
-  ]);
-  $newlineLot = by_number(876537);
-  claim($newlineStatus === 303 && $newlineLot
-      && $newlineLot['description'] === str_repeat('D', 124) . "\n" . str_repeat('D', 125)
-      && $newlineLot['details'] === str_repeat('S', 49) . "\n" . str_repeat('S', 50),
-      'CRLF at HTML maxlength does not cause false server length validation');
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
   claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
@@ -492,6 +478,20 @@ try {
   claim($status===303 && by_number(750000)['artist_name']==='Nieuwe kunstenaar'
     && by_number(750000)['artist_url']==='', 'Artist link can be removed while keeping name');
 
+  // Browsers count one newline as one character but send CRLF over HTTP.
+  // A full textarea including a newline must save without a false 251/101 error.
+  $fullDescription = str_repeat('D', 124) . "\r\n" . str_repeat('D', 125);
+  $fullDetails = str_repeat('S', 49) . "\r\n" . str_repeat('S', 50);
+  [$newlineStatus] = request_page('/admin/kavel.php', [
+    'csrf' => token($html), 'action' => 'save', 'lot_number' => '876537',
+    'title' => 'Regelafbreking limieten', 'description' => $fullDescription,
+    'details' => $fullDetails,
+  ]);
+  $newlineLot = by_number(876537);
+  claim($newlineStatus === 303 && $newlineLot
+      && $newlineLot['description'] === str_repeat('D', 124) . "\n" . str_repeat('D', 125)
+      && $newlineLot['details'] === str_repeat('S', 49) . "\n" . str_repeat('S', 50),
+      'CRLF at HTML maxlength does not cause false server length validation');
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
   claim($status === 405, 'Authenticated GET logout is rejected without destroying session');
