@@ -67,6 +67,10 @@ function by_number(int $nr): array|false {
 }
 
 try {
+  claim(money('850.50') === '€ 850,50'
+      && money('1234.56') === '€ 1.234,56'
+      && money('100') === '€ 100,00',
+    'Public price formatting always shows exactly two decimal digits');
   [$status] = request_page('/admin/fotos-bulk.php');
   claim($status === 404, 'Unauthenticated bulk import GET returns 404');
   [$status] = request_page('/admin/fotos-bulk.php', ['action' => 'process']);
