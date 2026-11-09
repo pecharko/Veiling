@@ -171,4 +171,4 @@ body{background:#fffaf6;color:var(--ink)}
 
 /* Clear field headings above description and specifications on lot detail pages. */
 .detail-page-grid .detail-field-label{display:block;margin:0 0 7px;font-size:12px;font-weight:700;letter-spacing:.02em;color:#425b50;line-height:1.4}
-.detail-page-grid .detail-field-value{min-width:0;max-width:100%;overflow-wrap:anywhere}
+.detail-page-grid .detail-field-value{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;line-height:1.55}
