@@ -1,4 +1,4 @@
-/* Show a chosen photo immediately and upload it without a second confirmation. */
+/* Automatic single-photo upload: display server-confirmed state without reloading the lot form. */
 (() => {
   'use strict';
   const grid = document.getElementById('lot-photo-grid');
@@ -10,18 +10,24 @@
   const maximum = Number(grid.dataset.maxPhotos);
   const supported = new Set(['image/jpeg', 'image/png', 'image/webp']);
   let busy = false;
-  const pending = () => [...grid.querySelectorAll('.lot-editor-photo-add.is-selected')];
   const picker = () => grid.querySelector('.lot-editor-photo-add:not(.is-selected)');
   const sync = () => {
-    const existing = Number(grid.dataset.existingCount);
-    const count = pending().length;
-    if (existing + count < maximum && !picker()) {
+    const saved = Number(grid.dataset.existingCount);
+    const pending = grid.querySelectorAll('.lot-editor-photo-add.is-selected').length;
+    if (saved + pending < maximum && !picker()) {
       grid.appendChild(template.content.firstElementChild.cloneNode(true));
     }
-    if (existing + count >= maximum && picker()) picker().remove();
+    if (saved + pending >= maximum && picker()) picker().remove();
     grid.querySelectorAll('.lot-editor-photo-add:not(.is-selected) input[type=file]').forEach(input => {
       input.disabled = busy;
     });
+  };
+  const hidden = (name, value) => {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    return input;
   };
 
   grid.addEventListener('change', async (event) => {
@@ -43,7 +49,6 @@
     }
 
     busy = true;
-    const oldCount = Number(grid.dataset.existingCount);
     const objectUrl = URL.createObjectURL(file);
     const img = document.createElement('img');
     img.src = objectUrl;
@@ -55,26 +60,58 @@
     sync();
 
     try {
-      // Preserve edited lot fields: only the independent photo form is sent.
+      // Explicitly append the chosen file: a picker outside the form must not
+      // depend on browser-specific form-owner association behavior.
+      const payload = new FormData(form);
+      payload.delete('photos[]');
+      payload.append('photos[]', file, file.name);
       const response = await fetch(form.action || location.href, {
         method: 'POST',
-        body: new FormData(form),
+        body: payload,
+        headers: { 'Accept': 'application/json' },
         credentials: 'same-origin',
         cache: 'no-store',
       });
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
-      const updatedGrid = page.getElementById('lot-photo-grid');
-      if (!updatedGrid || Number(updatedGrid.dataset.existingCount) <= oldCount) {
-        throw new Error('Foto kon niet worden opgeslagen.');
+      const result = await response.json();
+      if (!response.ok || result.ok !== true || !Number.isInteger(result.photo_id) ||
+          typeof result.image_url !== 'string' || !result.image_url.startsWith('/')) {
+        throw new Error(result.error || 'Upload niet bevestigd door de server.');
       }
-      grid.innerHTML = updatedGrid.innerHTML;
-      grid.dataset.existingCount = updatedGrid.dataset.existingCount;
-      status.textContent = 'Foto toegevoegd.';
+      const savedForm = document.createElement('form');
+      savedForm.method = 'post';
+      savedForm.append(hidden('csrf', String(new FormData(form).get('csrf') || '')));
+      savedForm.append(hidden('id', String(new FormData(form).get('id') || '')));
+      savedForm.append(hidden('action', 'remove-photo'));
+      savedForm.append(hidden('photo_id', String(result.photo_id)));
+      const remove = document.createElement('button');
+      remove.type = 'submit';
+      remove.className = 'lot-editor-remove-photo';
+      remove.textContent = 'Foto verwijderen';
+      savedForm.addEventListener('submit', event => {
+        if (!confirm('Deze foto verwijderen?')) event.preventDefault();
+      });
+      savedForm.append(remove);
+      img.src = result.image_url;
+      img.alt = 'Kavelfoto';
+      tile.querySelector('.lot-editor-photo-add-picker').remove();
+      tile.classList.remove('lot-editor-photo-add', 'is-selected');
+      tile.append(savedForm);
+      grid.dataset.existingCount = String(result.count);
+      status.textContent = 'Foto opgeslagen.';
     } catch (error) {
-      // Remove the failed preview; sync restores exactly one upload tile.
-      tile.remove();
-      status.textContent = 'Upload mislukt. Kies de foto opnieuw. (' + error.message + ')';
+      // Retain the preview on failure, instead of making it disappear briefly.
+      // Do not automatically retry an ambiguous network response.
+      tile.classList.add('lot-editor-photo-error');
+      const dismiss = document.createElement('button');
+      dismiss.type = 'button';
+      dismiss.className = 'lot-editor-remove-photo';
+      dismiss.textContent = 'Voorbeeld verwijderen';
+      dismiss.addEventListener('click', () => {
+        tile.remove();
+        sync();
+      });
+      tile.append(dismiss);
+      status.textContent = 'Upload niet bevestigd: ' + error.message + ' Controleer de melding en vernieuw zo nodig de pagina.';
     } finally {
       URL.revokeObjectURL(objectUrl);
       busy = false;
