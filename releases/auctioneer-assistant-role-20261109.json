@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "d6f5425d27f299560229b9de2ffcd265ed7048cefd8702c2a5ed1e6e5acf00e5",
+      "remote_sha256": "eae2680e7ac663906348b0480a92433625c8cc77b5ac267f071fcf529ab0ceb9"
+    },
+    {
+      "path": "catalogus-public/admin/rol-wissel.php",
+      "source_sha256": "8a52dbfa77a4582e3cb7c42a94a0c7278d5f2531238335c15dbc848e678209b4",
+      "remote_sha256": "00a975f88df1fe1dec004a1ba3714e4a071ccb1f7034bc8a205968785352066a"
+    },
+    {
+      "path": "catalogus-public/admin/rollen.php",
+      "source_sha256": "32a36e285f472bc1a36cbe4e6880d6c785e75babc5b8ad2b54c4a2028185e1d6",
+      "remote_sha256": "8b52a41e3c93f9880272df8611a1dd7d8680f5af938673a723eb31312d5b6215"
+    }
+  ]
+}
