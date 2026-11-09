@@ -22,7 +22,7 @@
     }
     status.textContent = selected
       ? selected + ' van maximaal ' + maximum + ' foto(’s) geselecteerd. Ze worden samen met het nieuwe kavel opgeslagen.'
-      : 'Foto\'s worden opgeslagen wanneer je op Wijzigingen opslaan klikt.';
+      : 'Foto\'s worden opgeslagen wanneer je op Kavel opslaan klikt.';
   };
 
   grid.addEventListener('change', event => {
