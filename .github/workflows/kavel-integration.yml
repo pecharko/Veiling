@@ -156,7 +156,6 @@ jobs:
           php tests/artist_name_50_preview_test.php
           php tests/catalog_editor_detail_release_contract_test.php
           php tests/catalog_popular_tag_release_test.php
-          python3 scripts/shared_ovh_release.py plan catalog-editor-detail-20261109
           python3 scripts/shared_ovh_release.py plan catalog-popular-editor-polish-20261109
           node tests/lot_photo_upload_target_test.cjs
           node tests/lot_unsaved_warning_test.cjs
