@@ -172,3 +172,18 @@ body{background:#fffaf6;color:var(--ink)}
 /* Clear field headings above description and specifications on lot detail pages. */
 .detail-page-grid .detail-field-label{display:block;margin:0 0 7px;font-size:12px;font-weight:700;letter-spacing:.02em;color:#425b50;line-height:1.4}
 .detail-page-grid .detail-field-value{min-width:0;max-width:100%;overflow-wrap:anywhere;white-space:normal;line-height:1.55}
+
+/* Lot navigation sits at viewport mid-height instead of below the detail card. */
+.detail-side-nav a{position:fixed;top:50%;transform:translateY(-50%);z-index:20;display:flex;align-items:center;justify-content:center;gap:9px;min-height:56px;padding:10px 14px;background:#fffaf6;border:1px solid #e6d7cb;border-radius:10px;color:var(--wine,#8a001b);box-shadow:0 6px 20px rgba(30,30,30,.11);font-size:16px;font-weight:700;line-height:1.25;text-decoration:none}
+.detail-side-nav-prev{left:12px}
+.detail-side-nav-next{right:12px}
+.detail-side-nav-arrow{font-size:32px;line-height:1;font-weight:700}
+.detail-side-nav a:hover{background:#fff0e9;text-decoration:none}
+.detail-side-nav a:focus-visible{outline:3px solid #1856a3;outline-offset:3px}
+.detail-bottom-nav{justify-content:center}
+@media(max-width:800px){
+  .detail-side-nav a{font-size:12px;gap:4px;min-height:46px;max-width:110px;padding:8px 6px;border-radius:8px}
+  .detail-side-nav-arrow{font-size:26px}
+  .detail-side-nav-prev{left:4px}
+  .detail-side-nav-next{right:4px}
+}
