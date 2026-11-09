@@ -295,11 +295,11 @@ if ($error === $cancelAuctionWarning) {
       <div class="lot-editor-main">
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>
           <div class="lot-editor-fields lot-editor-two">
-            <label>Lotnummer <span class="lot-required">*</span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
+            <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
-            <label class="lot-full"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
-            <label>Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
+            <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
+            <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
