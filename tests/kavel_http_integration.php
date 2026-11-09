@@ -105,6 +105,18 @@ try {
   claim($artistStatus === 200 && str_contains($tooLongArtistPage, 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.')
       && !by_number(876541), 'Server rejects 51-character artist without inserting a lot');
   claim(str_contains($html, 'id="lot-artist-error"'), 'New lot displays artist length warning container');
+  foreach ([
+    ['subtitle', 51, 'De ondertitel mag maximaal 50 tekens bevatten.', 876540],
+    ['description', 251, 'De beschrijving mag maximaal 250 tekens bevatten.', 876539],
+    ['details', 101, 'Details, afmetingen en staat mogen maximaal 100 tekens bevatten.', 876538],
+  ] as [$field, $length, $message, $number]) {
+    [$limitStatus, $limitPage] = request_page('/admin/kavel.php', [
+      'csrf' => token($html), 'action' => 'save', 'lot_number' => (string)$number,
+      'title' => 'Limietcontrole', $field => str_repeat('X', $length),
+    ]);
+    claim($limitStatus === 200 && str_contains($limitPage, $message) && !by_number($number),
+      'Server rejects excessive text without inserting a lot: ' . $field);
+  }
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
   claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
