@@ -34,6 +34,65 @@ if(is_post()){
     exit('Geen rechten om kavels aan te maken.');
   }
   $action=(string)($_POST['action']??'save');
+  if($action==='add-photo' && $lot){
+    $ajax = str_contains((string)($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json');
+    $uploaded = 0;
+    $uploadError = '';
+    try {
+      $photos=photo_files($_FILES['photos']??[]);
+      if (count($photos) !== 1 && $ajax) {
+        $uploadError='Selecteer precies één foto.';
+      } elseif (!$photos) {
+        $uploadError='Kies minstens één foto om toe te voegen.';
+      } else {
+        $countSt=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+        $countSt->execute([$id]);
+        $available=max(0,3-(int)$countSt->fetchColumn());
+        if (count($photos)>$available) {
+          $uploadError='Maximaal 3 foto’s per kavel.';
+        } else {
+          foreach($photos as $i=>$photo){
+            try {
+              add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);
+              $uploaded++;
+            } catch(Throwable $ex) {
+              error_log('[Kavel foto toevoegen] '.$ex->getMessage());
+              $uploadError='Foto kon niet worden verwerkt. Controleer het bestand en de lokale serverlogs.';
+              break;
+            }
+          }
+        }
+      }
+    } catch (RuntimeException $ex) {
+      error_log('[Kavel foto-upload] '.$ex->getMessage());
+      $uploadError='Foto-upload mislukt. Controleer het bestand en de lokale serverlogs.';
+    }
+    if ($ajax) {
+      // The response reports actual DB state: never infer success from a redirect.
+      header('Content-Type: application/json; charset=utf-8');
+      header('Cache-Control: no-store, private');
+      header('X-Content-Type-Options: nosniff');
+      if ($uploaded !== 1 || $uploadError !== '') {
+        http_response_code(422);
+        echo json_encode(['ok'=>false,'error'=>$uploadError ?: 'Foto kon niet worden opgeslagen.'], JSON_UNESCAPED_UNICODE);
+      } else {
+        $lastPhotoSt=$pdo->prepare('SELECT id,path FROM lot_images WHERE lot_id=? ORDER BY id DESC LIMIT 1');
+        $lastPhotoSt->execute([$id]);
+        $savedPhoto=$lastPhotoSt->fetch();
+        if (!$savedPhoto) {
+          http_response_code(500);
+          echo json_encode(['ok'=>false,'error'=>'Foto opgeslagen, maar kon niet worden opgehaald. Vernieuw de pagina.'], JSON_UNESCAPED_UNICODE);
+        } else {
+          $countSt=$pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+          $countSt->execute([$id]);
+          echo json_encode(['ok'=>true,'photo_id'=>(int)$savedPhoto['id'],'image_url'=>url((string)$savedPhoto['path']),'count'=>(int)$countSt->fetchColumn()], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+      }
+      exit;
+    }
+    flash($uploadError !== '' ? $uploadError : $uploaded.' foto(’s) toegevoegd.', $uploadError !== '' ? 'warning' : 'success');
+    redirect('admin/kavel.php',['id'=>$id]);
+  }
   if($action==='remove-photo'){
     $photoId=(int)($_POST['photo_id']??0);
     $get=$pdo->prepare('SELECT path FROM lot_images WHERE id=? AND lot_id=?');$get->execute([$photoId,$id]);$photo=$get->fetch();
@@ -102,6 +161,17 @@ if(is_post()){
       }catch(RuntimeException $ex){
         error_log('[Kavel foto-upload] '.$ex->getMessage());
         $error='Foto-upload mislukt; het kavel is niet opgeslagen.';
+      }
+      if (!$error && $photos) {
+        $existingPhotoCount = 0;
+        if ($id) {
+          $photoCountSt = $pdo->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+          $photoCountSt->execute([$id]);
+          $existingPhotoCount = (int)$photoCountSt->fetchColumn();
+        }
+        if ($existingPhotoCount + count($photos) > 3) {
+          $error = 'Maximaal 3 foto’s per kavel. Het kavel is niet opgeslagen.';
+        }
       }
       if(!$error){
         try{
@@ -212,21 +282,25 @@ if ($error === $cancelAuctionWarning) {
     <div><a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a><p class="lot-editor-hint">Beheer gegevens, waardering, publicatie en foto's op één plek.</p></div>
     <div class="lot-editor-toolbar-actions">
       <?php if($lot && $d['status']==='published'): ?><a class="secondary" href="<?=e(url('kavel.php',['nr'=>$d['lot_number']]))?>" target="_blank" rel="noopener">Bekijk online ↗</a><?php endif; ?>
-      <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?>
+      <a class="secondary lot-editor-cancel" href="<?=e(url('admin/index.php'))?>">Annuleren</a>
+      <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit"><?=$lot?'Wijzigingen opslaan':'Kavel opslaan'?></button><?php endif; ?>
     </div>
   </div>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
-    <div class="lot-editor-layout">
+        <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
+          <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
+        </section>
+    <div class="lot-editor-layout lot-editor-layout--single">
       <div class="lot-editor-main">
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>
           <div class="lot-editor-fields lot-editor-two">
-            <label>Lotnummer <span class="lot-required">*</span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
+            <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
-            <label class="lot-full"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
-            <label>Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full">Titel <span class="lot-required">*</span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
+            <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
+            <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="250" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="250" placeholder="Naam van de kunstenaar"></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
@@ -237,30 +311,89 @@ if ($error === $cancelAuctionWarning) {
           <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e($d['market_price'])?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e($d['starting_bid'])?>" placeholder="0"></label></div>
+          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
         </section>
       </div>
-      <aside class="lot-editor-side">
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
-          <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
-        </section>
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><div><h2>Foto's toevoegen</h2><p>Voeg meerdere beelden tegelijk toe.</p></div></div>
-          <label class="lot-editor-uploader"><span class="lot-editor-upload-icon">＋</span><strong>Kies je foto's</strong><span>JPG, PNG of WebP · maximaal 16 MB en 48 MP per foto · automatische verkleining tot 1800 px · 16 per kavel</span><input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple></label>
-          <p class="lot-editor-help">Foto's worden toegevoegd wanneer je het kavel opslaat.</p>
-        </section>
-        <?php if($lot): ?><section class="lot-editor-card"><h2>Kavelinformatie</h2><dl class="lot-editor-facts"><dt>Lotnummer</dt><dd><?=e(str_pad((string)$d['lot_number'],3,'0',STR_PAD_LEFT))?></dd><dt>Verkoopplaats</dt><dd><?=e($d['sale_location'])?></dd><?php if($d['sale_location']==='veiling'): ?><dt>Veilingsnummer</dt><dd><?=e((string)($d['auction_number'] ?: 'Automatisch bij opslaan'))?></dd><?php endif; ?><dt>Aantal foto's</dt><dd><?=count($images)?></dd><dt>Aangemaakt door</dt><dd><?=e($creatorLabel)?></dd><dt>Huidige status</dt><dd><?=e(['draft'=>'Concept','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?></dd></dl></section><?php endif; ?>
-      </aside>
     </div>
     </fieldset>
-    <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button class="primary" type="submit">Wijzigingen opslaan →</button><?php endif; ?></div>
   </form>
-  <?php if($lot): ?>
-  <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg extra foto’s hierboven toe en sla het kavel opnieuw op.</p></div></div>
-    <div class="lot-editor-photo-grid"><?php foreach($images as $photo): ?><div class="lot-editor-photo"><img src="<?=e(url($photo['path']))?>" alt="Kavelfoto"><?php if($canEditLot): ?><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form><?php endif; ?></div><?php endforeach; ?><?php if(!$images): ?><p class="lot-editor-empty">Nog geen foto's toegevoegd. Upload foto's via het paneel hierboven.</p><?php endif; ?></div>
+  <?php if(!$lot): ?>
+  <section class="lot-editor-card lot-editor-photos">
+    <div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>Selecteer maximaal 3 foto's. Ze verschijnen meteen als voorbeeld en worden opgeslagen zodra je het nieuwe kavel bewaart.</p></div></div>
+    <div class="lot-editor-photo-grid" id="lot-new-photo-grid" data-max-photos="3">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-editor-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </div>
+    <div class="lot-editor-photo-upload-actions">
+      <p class="lot-editor-help" id="lot-new-photo-status" role="status" aria-live="polite">Foto's worden opgeslagen wanneer je op Kavel opslaan klikt.</p>
+    </div>
+    <template id="lot-new-photo-picker-template">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-editor-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </template>
+    <script src="<?=e(url('admin/lot-new-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-new-photo-preview.js'), 0, 12)]))?>" defer></script>
   </section>
+  <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?></div>
+  <?php endif; ?>
+  <?php if($lot): ?>
+  <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg hier foto's toe of verwijder bestaande foto's.</p></div></div>
+    <?php if($canEditLot && count($images)<3): ?>
+    <form id="lot-photo-upload-form" method="post" enctype="multipart/form-data">
+      <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="add-photo">
+    </form>
+    <?php endif; ?>
+    <div class="lot-editor-photo-grid" id="lot-photo-grid" data-existing-count="<?=count($images)?>" data-max-photos="3">
+      <?php foreach($images as $photo): ?>
+      <div class="lot-editor-photo">
+        <img src="<?=e(url($photo['path']))?>" alt="Kavelfoto">
+        <?php if($canEditLot): ?><form method="post" onsubmit="return confirm('Deze foto verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="remove-photo"><input type="hidden" name="photo_id" value="<?=(int)$photo['id']?>"><button class="lot-editor-remove-photo" type="submit">Foto verwijderen</button></form><?php endif; ?>
+      </div>
+      <?php endforeach; ?>
+      <?php if($canEditLot && count($images)<3): ?>
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-photo-upload-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+      <?php endif; ?>
+    </div>
+    <?php if($canEditLot && count($images)<3): ?>
+    <div class="lot-editor-photo-upload-actions">
+      <p class="lot-editor-help" id="lot-photo-upload-status" role="status" aria-live="polite"></p>
+    </div>
+    <template id="lot-photo-picker-template">
+      <div class="lot-editor-photo lot-editor-photo-add">
+        <label class="lot-editor-photo-add-picker">
+          <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+          <strong>Foto toevoegen</strong>
+          <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+          <input type="file" name="photos[]" form="lot-photo-upload-form" accept="image/jpeg,image/png,image/webp" aria-label="Foto selecteren">
+        </label>
+      </div>
+    </template>
+    <script src="<?=e(url('admin/lot-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-photo-preview.js'), 0, 12)]))?>" defer></script>
+    <?php endif; ?>
+  </section>
+  <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Wijzigingen opslaan</button><?php endif; ?></div>
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
   <?php endif; ?>
 </div>
+<script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
 <script>
 (function () {
   'use strict';
