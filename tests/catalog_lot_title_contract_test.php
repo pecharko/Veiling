@@ -19,8 +19,8 @@ verify_title(str_contains($catalog, 'title="<?=e($lot[\'title\'])?>"'),
     'Full existing title is still accessible on hover');
 verify_title(str_contains($catalog, '><?=e($lot[\'title\'])?></a></h3>'),
     'Full existing title is retained in the HTML and database');
-verify_title(str_contains($editor, 'name="title"') && str_contains($editor, 'maxlength="50"'),
-    'Title input has a fifty character browser limit');
+verify_title(str_contains($editor, 'name="title"') && str_contains($editor, "['title', 'lot-title-error'") && str_contains($editor, 'De titel mag maximaal 50 tekens bevatten.'),
+    'Title input shows a clear inline fifty-character warning');
 verify_title(str_contains($editor, 'mb_strlen($title)>50') && str_contains($editor, 'maximaal 50 tekens'),
     'Server validates the limit before writing');
 verify_title(!str_contains($editor, '$title=mb_substr(trim((string)($_POST[\'title\']??\'\')),0,50)'),
