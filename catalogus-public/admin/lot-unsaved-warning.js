@@ -8,6 +8,10 @@
     const entries = [];
     for (const [name, value] of new FormData(form).entries()) {
       if (name === 'csrf_token' || name === 'csrf') continue;
+      // An empty file picker contributes a synthetic File to FormData.
+      // Its lastModified can change between snapshots, even when the user
+      // hasn't selected anything. It must not count as an unsaved change.
+      if (value instanceof File && value.name === '' && value.size === 0) continue;
       const normalized = value instanceof File
         ? value.name + ':' + value.size + ':' + value.lastModified
         : String(value);
