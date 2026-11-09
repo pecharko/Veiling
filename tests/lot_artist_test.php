@@ -44,3 +44,5 @@ artist_check(is_string($editor) && str_contains($editor,'lot_artist_validate(')
   && str_contains($editor,'name="artist_name"') && str_contains($editor,'name="artist_url"'),
   'Editor must validate and show both artist fields');
 echo "PASS lot artist validation and safe public markup\n";
+
+require __DIR__ . '/artist_public_link_style_test.php';
