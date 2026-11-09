@@ -149,6 +149,8 @@ if(is_post()){
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
     elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
     elseif(mb_strlen($subtitle)>50)$error='De ondertitel mag maximaal 50 tekens bevatten.';
+    elseif(mb_strlen($description)>250)$error='De beschrijving mag maximaal 250 tekens bevatten.';
+    elseif(mb_strlen($details)>100)$error='Details, afmetingen en staat mogen maximaal 100 tekens bevatten.';
     elseif($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -310,7 +312,7 @@ if ($error === $cancelAuctionWarning) {
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
-          <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" maxlength="30000" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" maxlength="10000" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
+          <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" maxlength="250" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" maxlength="100" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
           <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
