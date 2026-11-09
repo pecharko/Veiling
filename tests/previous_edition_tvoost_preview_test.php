@@ -17,7 +17,7 @@ assert_reportage(!str_contains($page, '<iframe') && !str_contains($page, '<video
 assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=3'), 'Cache busting');
 assert_reportage(str_contains($css, '.impression-video{display:grid;') && str_contains($css, 'aspect-ratio:16/9'), 'Responsive feature');
 assert_reportage(str_contains($css, "url('vorige-editie-soepkar-tegel.webp')"), 'Local soup cart thumbnail used by video card');
-assert_reportage(str_contains($css, '@media(max-width:720px){.impression-video{grid-template-columns:1fr;'), 'Mobile feature');
+assert_reportage(str_contains($css, '@media(max-width:900px){.impression-video{grid-template-columns:1fr;'), 'Mobile feature');
 assert_reportage(str_contains($page, 'impression-gallery-grid') && str_contains($page, 'impression-next shell'), 'Original photos and CTA retained');
 assert_reportage(strpos($page, '<main id="impressie">') < strpos($page, 'class="impression-video shell"')
     && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-hero shell"')
