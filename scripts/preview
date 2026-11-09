@@ -20,6 +20,7 @@ dc() { docker compose --project-name "$PROJECT" -f "$COMPOSE" "$@"; }
 # Read-only diagnostic: a reused Compose project can still mount another worktree.
 # This explains stale UI even after the preview branch was fast-forwarded.
 diagnose_preview() {
+  check_config
   command -v docker >/dev/null 2>&1 || { echo 'STOP: Docker CLI ontbreekt.' >&2; return 1; }
   docker info >/dev/null 2>&1 || { echo 'STOP: Docker Engine draait niet. Start Docker Desktop.' >&2; return 1; }
   printf 'Huidige worktree: %s\n' "$ROOT"
@@ -52,6 +53,28 @@ diagnose_preview() {
     return 1
   fi
   echo 'OK: Docker gebruikt dezelfde kavel- en uploadcode als deze worktree.'
+  # Read-only check: the mounted code may be current while its isolated MySQL
+  # fixture still lacks the newer artist columns.
+  if ! dc exec -T preview-web php -r '
+    require "private/bootstrap.php";
+    if (getenv("LOCAL_PREVIEW_ISOLATED") !== "1"
+        || cfg("setup_key") !== "local-preview-only-nonproduction"
+        || db()->query("SELECT DATABASE()")->fetchColumn() !== "auction_test") {
+      fwrite(STDERR, "STOP: database valt buiten de geïsoleerde preview.\n");
+      exit(1);
+    }
+    foreach (["artist_name", "artist_url"] as $field) {
+      $st = db()->query("SHOW COLUMNS FROM lots LIKE " . db()->quote($field));
+      if (!$st->fetch()) {
+        fwrite(STDERR, "ONTBREEKT: lots." . $field . ". Voer uit: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml exec preview-web php dev/preview/seed.php\n");
+        exit(1);
+      }
+    }
+    echo "OK: kunstenaarsvelden aanwezig in geïsoleerde previewdatabase.\n";
+  '; then
+    return 1
+  fi
+
 }
 case "${1:-}" in
   start)
