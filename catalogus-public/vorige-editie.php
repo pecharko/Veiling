@@ -39,7 +39,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=1">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=2">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -92,6 +92,21 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <div class="impression-gallery-grid">
       <?php for ($i = 3; $i < count($photos); $i++): impression_photo($photos[$i], $i); endfor; ?>
     </div>
+  </section>
+  <section class="impression-video shell" aria-labelledby="impression-video-title">
+    <div class="impression-video-intro">
+      <p class="impression-eyebrow">IN DE KIJKER · TV OOST</p>
+      <h2 id="impression-video-title">Alderande vzw:<br><em>10 jaar soepkar.</em></h2>
+      <p>TV Oost bracht een reportage over tien jaar soepkar in Lokeren en de gloednieuwe soepkar van Alderande vzw. Bekijk het verhaal bij de oorspronkelijke uitgever.</p>
+    </div>
+    <a class="impression-video-card" href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982" target="_blank" rel="noopener noreferrer" aria-label="Bekijk de TV Oost-reportage over de soepkar van Alderande vzw (opent in een nieuw tabblad)">
+      <span class="impression-video-play" aria-hidden="true">▶</span>
+      <span class="impression-video-card-copy">
+        <span class="impression-video-kicker">REPORTAGE · TV OOST</span>
+        <strong>Bekijk de reportage</strong>
+        <span>Opent bij TV Oost <span aria-hidden="true">↗</span></span>
+      </span>
+    </a>
   </section>
   <section class="impression-next shell" aria-labelledby="next-title">
     <p class="impression-eyebrow">HET VERHAAL GAAT VERDER</p>
