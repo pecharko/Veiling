@@ -84,6 +84,14 @@ try {
 
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
+  $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
+  $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
+  claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
+      && str_contains($html, 'class="secondary lot-editor-cancel"')
+      && substr_count($html, 'button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button>') === 2
+      && !str_contains($html, 'Wijzigingen opslaan →'),
+      'New lot displays top cancel and both Kavel opslaan actions; bottom actions follow photos');
+
   $publicationPos = strpos($html, 'class="lot-editor-card lot-editor-publication"');
   $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
   $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
