@@ -151,6 +151,9 @@ if(is_post()){
     $saleLocation=(string)($_POST['sale_location']??'markt');
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
     elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
+    elseif(mb_strlen($subtitle)>50)$error='De ondertitel mag maximaal 50 tekens bevatten.';
+    elseif(mb_strlen($description)>250)$error='De beschrijving mag maximaal 250 tekens bevatten.';
+    elseif(mb_strlen($details)>100)$error='Details, afmetingen en staat mogen maximaal 100 tekens bevatten.';
     elseif($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -304,15 +307,15 @@ if ($error === $cancelAuctionWarning) {
             <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
             <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
-            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
-            <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
-            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" placeholder="Naam van de kunstenaar" aria-describedby="lot-artist-error"><span id="lot-artist-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De naam van de kunstenaar mag maximaal 50 tekens bevatten.</span></label>
+            <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
+            <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie" aria-describedby="lot-subtitle-error"><span id="lot-subtitle-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De ondertitel mag maximaal 50 tekens bevatten.</span></label>
+            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar" aria-describedby="lot-artist-error"><span id="lot-artist-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De naam van de kunstenaar mag maximaal 50 tekens bevatten.</span></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
             <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
-          <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
+          <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" maxlength="250" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" maxlength="100" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
           <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
@@ -406,6 +409,7 @@ if ($error === $cancelAuctionWarning) {
   const limit = 50;
   for (const [fieldName, warningId, message] of [
     ['title', 'lot-title-error', 'De titel mag maximaal 50 tekens bevatten.'],
+    ['subtitle', 'lot-subtitle-error', 'De ondertitel mag maximaal 50 tekens bevatten.'],
     ['artist_name', 'lot-artist-error', 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.']
   ]) {
     const input = form.elements.namedItem(fieldName);
