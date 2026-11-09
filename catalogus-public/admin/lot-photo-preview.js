@@ -84,7 +84,10 @@
       const payload = new FormData(form);
       payload.delete('photos[]');
       payload.append('photos[]', file, file.name);
-      const response = await fetch(form.action || location.href, {
+      // A hidden input named 'action' shadows HTMLFormElement.action in browsers.
+      // Read the actual attribute; an absent action posts to the current editor URL.
+      const uploadUrl = form.getAttribute('action') || window.location.href;
+      const response = await fetch(uploadUrl, {
         method: 'POST',
         body: payload,
         headers: { 'Accept': 'application/json' },
