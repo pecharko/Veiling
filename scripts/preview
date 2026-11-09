@@ -134,6 +134,7 @@ case "${1:-}" in
       fi
     fi
     node tests/lot_photo_upload_target_test.cjs
+    node tests/lot_unsaved_warning_test.cjs
     node dev/preview/visual_test.cjs
     ;;
   status)
