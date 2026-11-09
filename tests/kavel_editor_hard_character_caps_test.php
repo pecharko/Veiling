@@ -14,7 +14,7 @@ foreach ([
     throw new RuntimeException("Missing browser max length on $field ($limit)");
   }
 }
-foreach (['description' => 30000, 'details' => 10000] as $field => $limit) {
+foreach (['description' => 250, 'details' => 100] as $field => $limit) {
   if (!preg_match('~<textarea\\b[^>]*\\bname="' . preg_quote($field, '~') . '"[^>]*\\bmaxlength="' . $limit . '"~', $editor)) {
     throw new RuntimeException("Missing textarea max length on $field ($limit)");
   }
@@ -25,6 +25,8 @@ foreach (['title', 'subtitle', 'artist_name'] as $field) {
   }
 }
 if (!str_contains($editor, "elseif(mb_strlen(\$subtitle)>50)")) throw new RuntimeException('Server subtitle validation missing');
+if (!str_contains($editor, "elseif(mb_strlen(\$description)>250)")) throw new RuntimeException('Server description validation missing');
+if (!str_contains($editor, "elseif(mb_strlen(\$details)>100)")) throw new RuntimeException('Server details validation missing');
 if (!str_contains($editor, "elseif(mb_strlen(\$title)>50)")) throw new RuntimeException('Server title validation missing');
 if (!str_contains($editor, "mb_strlen(\$artistName, 'UTF-8') > 50")) throw new RuntimeException('Server artist validation missing');
 echo "PASS: hard browser character caps for all seven limited editor text fields.\n";
