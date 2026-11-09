@@ -148,6 +148,7 @@ if(is_post()){
     $saleLocation=(string)($_POST['sale_location']??'markt');
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
     elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
+    elseif(mb_strlen($subtitle)>50)$error='De ondertitel mag maximaal 50 tekens bevatten.';
     elseif($nr<1 || $nr>999999)$error='Vul een geldig lotnummer in.';
     elseif(!in_array($saleLocation,['markt','veiling'],true))$error='Kies een geldige verkoopplaats.';
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -302,7 +303,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-category">Categorie<input type="text" name="category" value="<?=e($d['category'])?>" maxlength="120" placeholder="Kunst, lifestyle, vintage …"></label>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" required placeholder="Bijvoorbeeld: Champagnepakket" aria-describedby="lot-title-error"><span id="lot-title-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De titel mag maximaal 50 tekens bevatten.</span></label>
-            <label class="lot-full">Ondertitel / maker / materiaal<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="250" placeholder="Aanvullende informatie"></label>
+            <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" placeholder="Aanvullende informatie" aria-describedby="lot-subtitle-error"><span id="lot-subtitle-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De ondertitel mag maximaal 50 tekens bevatten.</span></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" placeholder="Naam van de kunstenaar" aria-describedby="lot-artist-error"><span id="lot-artist-error" class="lot-editor-help" role="status" aria-live="polite" hidden>De naam van de kunstenaar mag maximaal 50 tekens bevatten.</span></label>
             <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
             <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
@@ -419,6 +420,27 @@ if ($error === $cancelAuctionWarning) {
     }
   });
   validateTitle();
+  const subtitle = form.elements.namedItem('subtitle');
+  const subtitleWarning = document.getElementById('lot-subtitle-error');
+  if (subtitle instanceof HTMLInputElement && subtitleWarning) {
+    const subtitleMessage = 'De ondertitel mag maximaal 50 tekens bevatten.';
+    function validateSubtitle() {
+      const tooLong = Array.from(subtitle.value.trim()).length > 50;
+      subtitleWarning.hidden = !tooLong;
+      subtitle.setCustomValidity(tooLong ? subtitleMessage : '');
+      subtitle.setAttribute('aria-invalid', tooLong ? 'true' : 'false');
+      return !tooLong;
+    }
+    subtitle.addEventListener('input', validateSubtitle);
+    form.addEventListener('submit', function (event) {
+      if (!validateSubtitle()) {
+        event.preventDefault();
+        subtitle.reportValidity();
+        subtitle.focus();
+      }
+    });
+    validateSubtitle();
+  }
   const artist = form.elements.namedItem('artist_name');
   const artistWarning = document.getElementById('lot-artist-error');
   if (artist instanceof HTMLInputElement && artistWarning) {
