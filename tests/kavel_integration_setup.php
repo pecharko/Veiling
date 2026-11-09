@@ -89,6 +89,21 @@ $ddl = [
   ) ENGINE=InnoDB",
 ];
 foreach ($ddl as $sql) $pdo->exec($sql);
+// Exercise the exact reviewed artist migration on the disposable MySQL 8.4 database.
+$artistMigration = file_get_contents($dir . '/database/migrations/20261108_lot_artist_fields.sql');
+if (!is_string($artistMigration) || !str_contains($artistMigration, 'chk_lots_artist_url_requires_name')) {
+  throw new RuntimeException('Artist migration fixture is missing.');
+}
+$pdo->exec($artistMigration);
+$artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
+if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
+try {
+  $pdo->exec("INSERT INTO lots (lot_number,title,description,details,artist_url) VALUES (999999,'Invalid','','','https://example.org/')");
+  throw new RuntimeException('Artist URL without name bypassed database constraint');
+} catch (PDOException $expected) {
+  if ((int)($expected->errorInfo[1] ?? 0) !== 3819) throw $expected;
+}
+
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.
