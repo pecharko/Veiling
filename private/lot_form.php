@@ -21,6 +21,17 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
   return $values;
 }
 
+/**
+ * Show saved DECIMAL euro amounts with exactly two digits after the separator.
+ * type=number requires a dot in its HTML value, even in Dutch locales.
+ * On validation errors preserve exactly what was submitted for correction.
+ */
+function lot_price_input_value(mixed $value, bool $submitted = false): string {
+  if ($value === null || $value === '') return '';
+  if ($submitted || !is_numeric($value)) return (string)$value;
+  return number_format((float)$value, 2, '.', '');
+}
+
 /** Suggest the next lot number after the highest existing one (1..999999). */
 function first_available_lot_number(iterable $existingNumbers): ?int {
   $maximum = 0;
