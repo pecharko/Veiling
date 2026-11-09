@@ -5,6 +5,9 @@ require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
+// Plaats de MP4 pas op de server na schriftelijke publicatietoestemming van TV Oost.
+$reportageMp4 = 'assets/video/tvoost-alderande-soepkar.mp4';
+$reportageAvailable = is_file(__DIR__ . '/' . $reportageMp4);
 $photos = [
   ['zaal', 'Samen in de zaal', 'Bezoekers in de rode theaterstoelen tijdens de vorige veiling', 1600, 1200],
   ['kijkmoment', 'Bijzondere stukken ontdekken', 'Schilderijen en andere kavels uitgestald tijdens het kijkmoment', 1600, 900],
@@ -39,7 +42,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=187">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=2">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=3">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -97,8 +100,17 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <div class="impression-video-intro">
       <p class="impression-eyebrow">IN DE KIJKER · TV OOST</p>
       <h2 id="impression-video-title">Alderande vzw:<br><em>10 jaar soepkar.</em></h2>
-      <p>TV Oost bracht een reportage over tien jaar soepkar in Lokeren en de gloednieuwe soepkar van Alderande vzw. Bekijk het verhaal bij de oorspronkelijke uitgever.</p>
+      <p>TV Oost bracht een reportage over tien jaar soepkar in Lokeren en de gloednieuwe soepkar van Alderande vzw. <?= $reportageAvailable ? 'Bekijk de reportage rechtstreeks op onze website.' : 'Bekijk het verhaal voorlopig bij de oorspronkelijke uitgever.' ?></p>
     </div>
+    <?php if ($reportageAvailable): ?>
+      <div class="impression-video-player">
+        <video controls preload="metadata" playsinline aria-label="TV Oost-reportage over tien jaar soepkar bij Alderande vzw">
+          <source src="<?=e(url($reportageMp4))?>" type="video/mp4">
+          Uw browser ondersteunt deze video niet. Bekijk de reportage via <a href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982">TV Oost</a>.
+        </video>
+        <p>Reportage: TV Oost · Gepubliceerd met toestemming. <a href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982" target="_blank" rel="noopener noreferrer">Originele reportage</a></p>
+      </div>
+    <?php else: ?>
     <a class="impression-video-card" href="https://www.tvoost.be/nieuws/alderande-vzw-in-lokeren-viert-tien-jaar-soepkar-met-een-gloednieuwe-soepkar-209982" target="_blank" rel="noopener noreferrer" aria-label="Bekijk de TV Oost-reportage over de soepkar van Alderande vzw (opent in een nieuw tabblad)">
       <span class="impression-video-play" aria-hidden="true">▶</span>
       <span class="impression-video-card-copy">
@@ -107,6 +119,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
         <span>Opent bij TV Oost <span aria-hidden="true">↗</span></span>
       </span>
     </a>
+    <?php endif; ?>
   </section>
   <section class="impression-next shell" aria-labelledby="next-title">
     <p class="impression-eyebrow">HET VERHAAL GAAT VERDER</p>
