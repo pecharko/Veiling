@@ -282,6 +282,7 @@ if ($error === $cancelAuctionWarning) {
     <div><a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a><p class="lot-editor-hint">Beheer gegevens, waardering, publicatie en foto's op één plek.</p></div>
     <div class="lot-editor-toolbar-actions">
       <?php if($lot && $d['status']==='published'): ?><a class="secondary" href="<?=e(url('kavel.php',['nr'=>$d['lot_number']]))?>" target="_blank" rel="noopener">Bekijk online ↗</a><?php endif; ?>
+      <?php if(!$lot): ?><a class="secondary lot-editor-cancel" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php endif; ?>
       <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?>
     </div>
   </div>
@@ -318,7 +319,9 @@ if ($error === $cancelAuctionWarning) {
       </aside>
     </div>
     </fieldset>
+    <?php if($lot): ?>
     <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button class="primary" type="submit">Wijzigingen opslaan →</button><?php endif; ?></div>
+    <?php endif; ?>
   </form>
   <?php if(!$lot): ?>
   <section class="lot-editor-card lot-editor-photos">
@@ -334,7 +337,7 @@ if ($error === $cancelAuctionWarning) {
       </div>
     </div>
     <div class="lot-editor-photo-upload-actions">
-      <p class="lot-editor-help" id="lot-new-photo-status" role="status" aria-live="polite">Foto's worden opgeslagen wanneer je op Wijzigingen opslaan klikt.</p>
+      <p class="lot-editor-help" id="lot-new-photo-status" role="status" aria-live="polite">Foto's worden opgeslagen wanneer je op Kavel opslaan klikt.</p>
     </div>
     <template id="lot-new-photo-picker-template">
       <div class="lot-editor-photo lot-editor-photo-add">
@@ -348,6 +351,7 @@ if ($error === $cancelAuctionWarning) {
     </template>
     <script src="<?=e(url('admin/lot-new-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-new-photo-preview.js'), 0, 12)]))?>" defer></script>
   </section>
+  <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Kavel opslaan</button><?php endif; ?></div>
   <?php endif; ?>
   <?php if($lot): ?>
   <section class="lot-editor-card lot-editor-photos"><div class="lot-editor-card-header"><div><h2>Foto's bij dit kavel</h2><p>De foto met het laagste volgnummer verschijnt als hoofdfoto. Voeg hier foto's toe of verwijder bestaande foto's.</p></div></div>
