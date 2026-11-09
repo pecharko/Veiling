@@ -18,8 +18,8 @@ popular_assert(str_contains($index, 'HAVING SUM(v.views) > 0'), 'Never mark lots
 popular_assert(str_contains($index, "\$group = \$splitPreview ? (string)\$popularLot['sale_location'] : 'alle';"), 'Separate sale-location groups when split');
 popular_assert(str_contains($index, "\$popularCounts = ['veiling'=>0, 'markt'=>0, 'alle'=>0];"), 'Independent group counters');
 popular_assert(str_contains($index, "\$popularCounts[\$group] >= 5"), 'No more than five per group');
-popular_assert(str_contains($index, "\\$popularLotIds[(int)\$popularLot['lot_id']] = true;"), 'Ranking keyed by stable database lot ID');
-popular_assert(str_contains($index, 'isset(\\$popularLotIds[(int)$lot[\'id\']])'), 'Tag only on ranked catalog cards, regardless of page');
+popular_assert(str_contains($index, "\$popularLotIds[(int)\$popularLot['lot_id']] = true;"), 'Ranking keyed by stable database lot ID');
+popular_assert(str_contains($index, 'isset($popularLotIds[(int)$lot[\'id\']])'), 'Tag only on ranked catalog cards, regardless of page');
 popular_assert(str_contains($index, '>Populair</span>'), 'Populair tag shown in lot cover');
 popular_assert(str_contains($index, 'catch (PDOException $exception)'), 'Missing statistics fail safely');
 popular_assert(str_contains($css, '.lot-popular-tag{position:absolute;top:12px;right:12px;'), 'Visible, non-obscuring card tag');
