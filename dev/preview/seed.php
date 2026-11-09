@@ -17,6 +17,21 @@ $pdo = db();
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
 }
+// Bring existing isolated previews forward to the reviewed artist schema
+// without reseeding lots, deleting uploaded photos, or touching production.
+$artistNameExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch();
+$artistUrlExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_url'")->fetch();
+if ($artistNameExists !== $artistUrlExists) {
+    throw new RuntimeException('Partial artist schema in preview; refusing an automatic repair.');
+}
+if (!$artistNameExists) {
+    $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261108_lot_artist_fields.sql');
+    if (!is_string($migration) || !str_contains($migration, 'chk_lots_artist_url_requires_name')) {
+        throw new RuntimeException('Reviewed artist migration file missing.');
+    }
+    $pdo->exec($migration);
+    echo "Artist fields added to isolated preview; existing lots and photos retained.\n";
+}
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
     echo "Preview fixtures already present.\n";
     return;
