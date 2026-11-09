@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "96bba143d3934f169463978573ee22bf03046068013ee4c9bdbbe8a794d977d0",
+      "remote_sha256": "93573d8d7af62076ad68aba1d376c6db6a210317d8a134633c26d0b3445eddae"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "e828bd951fadddbe40bed3db625054708b7d6713c070239c1939295d1ed1c6c7",
+      "remote_sha256": "6ce1b355d44321a26a5302ffafbbdafbc4661728515585f3fab0570df784651e"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "6bc6697a94468562095e4814db0b4766021c81ebecec0e0dd9c7d0be34633b71",
+      "remote_sha256": "e4ac72ea20b2f4b09dfb85a6fc44021a5d94439af916b84c8e02d72949e2b550"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "7c4ef6349ac3e777f3e801787ce6d0c26499c6af8054ea594f8fb34a1c291628",
+      "remote_sha256": "638acf07d87ecc0a13eeb85ba4c0b2875ffb6c8512c52e4bb82b21a5f88c6ae2"
+    },
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "88012144b33a7b57bc1458242c00515bfe3d4948b1a3d6be86396ef2172e721d",
+      "remote_sha256": "acaf96e3418bf7a11bdf760a1d2ed442e9e22f63c9ddcc71d883a53e62cf7b14"
+    },
+    {
+      "path": "private/catalog_popular_lots.php",
+      "source_sha256": "2783186df321a567d470a121605059e940221f732cf486d89394d7c185f4019f",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
