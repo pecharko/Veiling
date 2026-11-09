@@ -120,8 +120,8 @@ try {
   }
   // Browsers count one newline as one character but send CRLF over HTTP.
   // A full textarea including a newline must save without a false 251/101 error.
-  $fullDescription = str_repeat('D', 249) . "\r\n";
-  $fullDetails = str_repeat('S', 99) . "\r\n";
+  $fullDescription = str_repeat('D', 124) . "\r\n" . str_repeat('D', 125);
+  $fullDetails = str_repeat('S', 49) . "\r\n" . str_repeat('S', 50);
   [$newlineStatus] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save', 'lot_number' => '876537',
     'title' => 'Regelafbreking limieten', 'description' => $fullDescription,
@@ -129,8 +129,8 @@ try {
   ]);
   $newlineLot = by_number(876537);
   claim($newlineStatus === 303 && $newlineLot
-      && $newlineLot['description'] === str_repeat('D', 249)
-      && $newlineLot['details'] === str_repeat('S', 99),
+      && $newlineLot['description'] === str_repeat('D', 124) . "\n" . str_repeat('D', 125)
+      && $newlineLot['details'] === str_repeat('S', 49) . "\n" . str_repeat('S', 50),
       'CRLF at HTML maxlength does not cause false server length validation');
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
