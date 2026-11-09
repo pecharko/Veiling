@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "db5216e17a6dbc3841c24fc140b01c53a1b2db54c13e393f82c4627362a2af73",
+      "remote_sha256": "91aaa35922c283221b2635a616c11f87bc43f6f7887823e946ec4ec41d47d69a"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "99a8b6e89ba0a85506c0c5d978ead9066c2c2de6c97da335bee75af11f54d7b5",
+      "remote_sha256": "f0f772b920d437e1e6eff2ff6bb594b6559c9b803ee3dd172a92f877f7fb1785"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "7ed45c402f51518c6769a91174337702baf5b8fc2fba8fbf8f43d8c994f171dc",
+      "remote_sha256": "39586f85bd831ce6573d5e021cd1bd178554b8946382fd1d58c37c8ae07464b8"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "288982dfdeecb531549f68817b1ddba4ba9f5f0b550c201398627129054851ee",
+      "remote_sha256": "f3869324ff3c8db52c7b75af5baf4d667abf75d2fe7df981ca8d64ce12256c13"
+    }
+  ]
+}
