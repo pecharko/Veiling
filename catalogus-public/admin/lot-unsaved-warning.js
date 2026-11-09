@@ -17,7 +17,7 @@
   };
   const original = snapshot();
 
-  document.querySelectorAll('.lot-editor-back, .lot-editor-bottom a[href]').forEach(link => {
+  document.querySelectorAll('.lot-editor-back, .lot-editor-toolbar-actions .lot-editor-cancel, .lot-editor-bottom a[href]').forEach(link => {
     link.addEventListener('click', (event) => {
       if (snapshot() !== original &&
           !window.confirm('Je hebt wijzigingen die nog niet zijn opgeslagen. Wil je terug naar de kavels zonder deze wijzigingen te bewaren?')) {
