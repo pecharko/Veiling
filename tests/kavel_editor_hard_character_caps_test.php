@@ -19,9 +19,12 @@ foreach (['description' => 250, 'details' => 100] as $field => $limit) {
     throw new RuntimeException("Missing textarea max length on $field ($limit)");
   }
 }
-foreach (['title', 'subtitle', 'artist_name'] as $field) {
-  if (!str_contains($editor, "name=\"$field\"") || !str_contains($editor, "lot-" . ($field === 'artist_name' ? 'artist' : $field) . "-error")) {
-    throw new RuntimeException("Missing existing inline validation for $field");
+foreach (['lot-title-error', 'lot-subtitle-error', 'lot-artist-error', 'function validateTitle()', 'function validateSubtitle()', 'function validateArtistName()'] as $obsolete) {
+  if (str_contains($editor, $obsolete)) throw new RuntimeException("Redundant UI length error remains: $obsolete");
+}
+foreach (['description', 'details'] as $field) {
+  if (!str_contains($editor, 'str_replace(["\\r\\n", "\\r"], "\\n", (string)($_POST[\'' . $field . '\']??\'\'))')) {
+    throw new RuntimeException("Missing line-ending normalization: $field");
   }
 }
 if (!str_contains($editor, "elseif(mb_strlen(\$subtitle)>50)")) throw new RuntimeException('Server subtitle validation missing');
