@@ -113,6 +113,14 @@ $pdo->exec($categoryMigration);
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_categories')->fetchColumn() !== 2) {
   throw new RuntimeException('Category fixture did not create two initial categories.');
 }
+// Apply the exact proposed schema ONLY in the disposable MySQL CI database.
+$bankMigration = file_get_contents($dir . '/database/migrations/20261110_lot_bank_fields.sql');
+if (!is_string($bankMigration) || !str_contains($bankMigration, 'ADD COLUMN bank_account_iban')) {
+  throw new RuntimeException('Bank fields migration is missing.');
+}
+$pdo->exec($bankMigration);
+$bankColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('bank_account_name','bank_account_iban')")->fetchAll();
+if (count($bankColumns) !== 2) throw new RuntimeException('Bank schema did not create both fields');
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.

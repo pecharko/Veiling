@@ -147,10 +147,16 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          # Validate the old manifest against the ORIGINAL release commit.
+          # The current PR base legitimately contains later updates to kavel.php.
+          # Never rewrite or silently rebind owner-approved historical hashes.
+          HISTORICAL_RELEASE_SHA=10e134168a74e3fb0abb59b2aed2cd4247a481ee
           git cat-file -e "$BASE_SHA^{commit}"
+          git cat-file -e "$HISTORICAL_RELEASE_SHA^{commit}"
+          git merge-base --is-ancestor "$HISTORICAL_RELEASE_SHA" "$BASE_SHA"
           historical_dir="$(mktemp -d "$RUNNER_TEMP/historical-release.XXXXXXXX")"
           trap 'git worktree remove --force "$historical_dir" 2>/dev/null || true' EXIT
-          git worktree add --detach "$historical_dir" "$BASE_SHA"
+          git worktree add --detach "$historical_dir" "$HISTORICAL_RELEASE_SHA"
           (cd "$historical_dir" && python3 scripts/shared_ovh_release.py plan catalog-popular-editor-polish-20261109)
 
       - name: Test real HTTP login, editor errors and photo uploads

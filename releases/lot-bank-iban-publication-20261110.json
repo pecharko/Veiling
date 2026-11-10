@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "cd20951a2347c8f374aed3b58037c5fa08e5f46fabf641a6ecdc0cf5d272d602",
+      "remote_sha256": "63f32d39636d2a97582fc70b8a78680c0f96be051d8df9c166456220f25130db"
+    },
+    {
+      "path": "private/lot_bank.php",
+      "source_sha256": "67df2eb8c483e2e253f3bddde435bef746ca0f84d145696a839ea78b27b2192b",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}

@@ -8,7 +8,7 @@ const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
  'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
- 'lots'=>['id','lot_number','title','subtitle','artist_name','artist_url','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
+ 'lots'=>['id','lot_number','title','subtitle','artist_name','artist_url','bank_account_name','bank_account_iban','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'login_attempts'=>['id','ip_hash','attempted_at'],
 ];
