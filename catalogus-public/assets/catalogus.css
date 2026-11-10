@@ -184,3 +184,8 @@ body{background:#fffaf6;color:var(--ink)}
 .lot-popular-tag{position:absolute;top:12px;right:12px;z-index:3;display:inline-flex;align-items:center;justify-content:center;padding:7px 11px;border-radius:7px;background:#f7edd5;color:#684216;border:1px solid #d6b16c;font-size:11px;font-weight:850;letter-spacing:.045em;line-height:1.25;box-shadow:0 2px 10px rgba(30,25,12,.14)}
 .lot-popular-tag--sold{top:88px}
 @media(max-width:800px){.lot-popular-tag{top:9px;right:9px;padding:6px 8px;font-size:10px}.lot-popular-tag--sold{top:75px}}
+
+/* On the lot detail photo, keep equally sized badges in opposing top corners. */
+.main-photo .detail-sold-badge{position:absolute;top:47px;left:14px;right:auto;z-index:4;margin:0}
+.main-photo .detail-popular-tag{position:absolute;top:20px;right:14px;z-index:3;min-width:118px;padding:12px 16px 11px;border-radius:2px;font-size:13px;line-height:1.2;letter-spacing:.07em;text-transform:uppercase;pointer-events:none}
+@media(max-width:800px){.main-photo .detail-sold-badge{top:39px;left:10px;min-width:100px;padding:9px 9px;font-size:10px}.main-photo .detail-popular-tag{top:16px;right:10px;min-width:100px;padding:9px 9px;font-size:10px}}
