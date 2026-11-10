@@ -394,14 +394,16 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
-  claim($status===200 && !str_contains($ownForm,'alleen-lezen'), 'Assistant may open own draft for editing');
+  claim($status===200 && !str_contains($ownForm,'alleen-lezen') && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant can edit own draft without viewing publication');
+  [$assistantNewStatus, $assistantNewForm] = request_page('/admin/kavel.php');
+  claim($assistantNewStatus===200 && !str_contains($assistantNewForm,'<h2>Publicatie</h2>'), 'Assistant cannot view publication while creating a lot');
   $csrfAssistant = token($ownForm);
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
     'csrf'=>$csrfAssistant,'action'=>'save','id'=>(string)by_number(401)['id'],
-    'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'markt'
+    'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'veiling'
   ]);
-  claim($status===303 && by_number(401)['title']==='Own edited' && by_number(401)['status']==='draft',
-    'Assistant edits own draft but cannot publish by forged POST');
+  claim($status===303 && by_number(401)['title']==='Own edited' && by_number(401)['status']==='draft' && by_number(401)['sale_location']==='markt',
+    'Assistant cannot publish or forge auction location via POST');
   [$status, $otherForm] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id']);
   claim($status===200 && str_contains($otherForm,'alleen-lezen'), 'Other assistant draft is read-only');
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id'], [
@@ -447,16 +449,28 @@ try {
   claim($status===200 && str_contains($artistError, 'http- of https-link')
     && !by_number(750000), 'Unsafe artist URL rejected before database write');
   $artistPost['artist_url']='https://example.org/artist?x=1&y=2';
+  $artistPost['bank_account_name']='Kunstkring Lokeren';
+  $artistPost['bank_account_iban']='BE68 5390 0754 7035';
+  [$status, $badIban] = request_page('/admin/kavel.php', $artistPost);
+  claim($status===200 && str_contains($badIban,'IBAN-controlegetal') && !by_number(750000),
+    'Invalid IBAN checksum rejects lot save without mutation');
+  $artistPost['bank_account_iban']='BE68 5390 0754 7034';
   [$status] = request_page('/admin/kavel.php', $artistPost);
   claim($status===303, 'Valid artist link and name accepted');
   $artistStored=by_number(750000);
   claim($artistStored && $artistStored['artist_name']==='Jan Jans'
     && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
     'Both artist fields stored');
+  claim($artistStored['bank_account_name']==='Kunstkring Lokeren'
+      && $artistStored['bank_account_iban']==='BE68539007547034',
+    'Private account holder and canonical IBAN saved');
   [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
   claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
       && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
     'Existing lot reload shows the saved artist name and escaped hyperlink');
+  claim(str_contains($persistedEditor,'name="bank_account_name" value="Kunstkring Lokeren"')
+      && str_contains($persistedEditor,'name="bank_account_iban" value="BE68539007547034"'),
+    'Existing lot reload shows private bank fields');
   [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
     'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
     'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
@@ -467,6 +481,9 @@ try {
       && by_number(750000)['artist_name']==='Jan Jans'
       && by_number(750000)['artist_url']==='https://example.org/artist?x=1&y=2',
     'Artist metadata survives saving unrelated lot fields');
+  claim(by_number(750000)['bank_account_name']==='Kunstkring Lokeren'
+      && by_number(750000)['bank_account_iban']==='BE68539007547034',
+    'Omitting bank fields from a legacy POST preserves existing bank data');
   $artistPost['id']=(string)$artistStored['id'];
   $artistPost['artist_name']='';
   [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
