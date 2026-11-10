@@ -43,7 +43,7 @@ if ($categoriesTable === false) {
         || !str_contains($migration, "UPDATE lots SET category='' WHERE category<>'';")) {
         throw new RuntimeException('Reviewed category migration missing in local preview.');
     }
-    $migration = preg_replace('/^\\s*--[^\\n]*$/m', '', $migration);
+    $migration = preg_replace('/^\s*--[^\n]*$/m', '', $migration);
     foreach (explode(';', (string)$migration) as $statement) {
         if (trim($statement) !== '') $pdo->exec($statement);
     }
