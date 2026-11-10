@@ -95,6 +95,17 @@ if (!is_string($artistMigration) || !str_contains($artistMigration, 'chk_lots_ar
   throw new RuntimeException('Artist migration fixture is missing.');
 }
 $pdo->exec($artistMigration);
+// Apply the proposed one-time category migration to the isolated test database.
+$categorySql = file_get_contents($dir . '/database/migrations/20261110_lot_categories.sql');
+if (!is_string($categorySql) || !str_contains($categorySql, "UPDATE lots SET category=''")) {
+  throw new RuntimeException('Missing reviewed categories migration');
+}
+$categorySql = preg_replace('/^\s*--[^\n]*$/m', '', $categorySql);
+foreach (explode(';', (string)$categorySql) as $statement) {
+  if (trim($statement) !== '') $pdo->exec($statement);
+}
+$seeded = $pdo->query('SELECT name FROM lot_categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+if ($seeded !== ['Moderne Kunst','Oude Meesters']) throw new RuntimeException('Incorrect category seed data');
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
 try {
