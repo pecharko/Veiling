@@ -30,20 +30,37 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Verify isolated protected release guards offline
         run: |
           python3 -B -m unittest discover -s tests -p deploy_artist_snapshot_test.py -v
-          if test -f releases/artist-snapshot-20261108.json; then
-            python3 -B -m scripts.deploy_artist_snapshot plan
-          else
-            echo 'Awaiting authenticated independent read-only OVH baseline and same-PR manifest'
-          fi
+          # The artist snapshot release is historical. Any new snapshots.php
+          # source must use its own protected release and immutable manifest.
+          # Verify the artist manifest against its original approved code,
+          # not against a newer legitimate snapshots.php revision.
+          HISTORIC_ARTIST_SHA=ad4892a6a1115fd05d4be4151a9eebac17b4dc50
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          git merge-base --is-ancestor "$HISTORIC_ARTIST_SHA" "$BASE_SHA"
+          history="$(mktemp -d "$RUNNER_TEMP/artist-snapshot.XXXXXXXX")"
+          trap 'git worktree remove --force "$history" 2>/dev/null || true' EXIT
+          git worktree add --detach "$history" "$HISTORIC_ARTIST_SHA"
+          (cd "$history" && python3 -B -m scripts.deploy_artist_snapshot plan)
       - name: Verify four-file artist runtime manifest, immutable scope and source hashes
         run: |
-          python3 -B -m scripts.shared_ovh_release plan artist-fields-20261108
-          python3 - <<'PY'
+          HISTORIC_ARTIST_SHA=ad4892a6a1115fd05d4be4151a9eebac17b4dc50
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          git merge-base --is-ancestor "$HISTORIC_ARTIST_SHA" "$BASE_SHA"
+          history="$(mktemp -d "$RUNNER_TEMP/artist-runtime.XXXXXXXX")"
+          trap 'git worktree remove --force "$history" 2>/dev/null || true' EXIT
+          git worktree add --detach "$history" "$HISTORIC_ARTIST_SHA"
+          (cd "$history" && python3 -B -m scripts.shared_ovh_release plan artist-fields-20261108)
+          python3 - "$history" <<'PY'
+          import subprocess
+          from pathlib import Path
+          import sys
+          historical_root = Path(sys.argv[1])
           from scripts.shared_ovh_release import load_manifest
-          manifest, payload, remotes = load_manifest('artist-fields-20261108')
+          manifest, payload, remotes = load_manifest('artist-fields-20261108', source_root=historical_root)
           assert list(payload) == [
               'catalogus-public/admin/kavel.php',
               'private/lot_artist.php',
