@@ -108,10 +108,9 @@ try {
   $publicationPos = strpos($html, 'class="lot-editor-card lot-editor-publication"');
   $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
   $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
-  claim($publicationPos !== false && $layoutPos !== false && $basicPos !== false
-      && $publicationPos < $layoutPos && $layoutPos < $basicPos
-      && substr_count($html, '<h2>Publicatie</h2>') === 1,
-      'New lot publication appears once, full-width, before basic information');
+  claim($publicationPos === false && $layoutPos !== false && $basicPos !== false
+      && $layoutPos < $basicPos && !str_contains($html,'<h2>Publicatie</h2>'),
+      'New lot hides publication; the editor still renders basic information');
 
   // A concurrent snapshot/restore owns the MySQL lock: valid POST must
   // fail closed before either SQL or photo-file mutations.
@@ -155,6 +154,40 @@ try {
 
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
+
+  // Isolated category CRUD: roles, rename propagation and deletion while in use.
+  [$categoryStatus, $categoryPage] = request_page('/admin/categorieen.php');
+  claim($categoryStatus === 200 && str_contains($categoryPage, 'Moderne Kunst')
+      && str_contains($categoryPage, 'Oude Meesters'),
+      'Administrator can manage the initial categories');
+  $categoryCsrf = token($categoryPage);
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'add', 'name'=>'Tijdelijke categorie']);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE name='Tijdelijke categorie'")->fetchColumn() === 1,
+      'Administrator adds a category');
+  $tempId = (int)db()->query("SELECT id FROM lot_categories WHERE name='Tijdelijke categorie'")->fetchColumn();
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'rename', 'category_id'=>(string)$tempId, 'name'=>'Tijdelijke naam']);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE name='Tijdelijke naam'")->fetchColumn() === 1,
+      'Administrator renames an unused category');
+  db()->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['Tijdelijke naam',$id]);
+  [$categoryStatus, $categoryPage] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'delete', 'category_id'=>(string)$tempId]);
+  claim($categoryStatus === 200 && str_contains($categoryPage, 'Verwijderen kan alleen')
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 1,
+      'Deletion is refused while a lot uses the category');
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'rename', 'category_id'=>(string)$tempId, 'name'=>'Categorie hernoemd']);
+  claim($categoryStatus === 303 && by_number(10)['category'] === 'Categorie hernoemd',
+      'Renaming a category propagates to linked lots');
+  db()->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['',$id]);
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'delete', 'category_id'=>(string)$tempId]);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 0,
+      'Unused category can be deleted');
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
   [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
   claim(!str_contains($existingLayout, '<h2>Kavelinformatie</h2>')
