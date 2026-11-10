@@ -108,9 +108,9 @@ try {
   $publicationPos = strpos($html, 'class="lot-editor-card lot-editor-publication"');
   $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
   $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
-  claim($publicationPos === false && $layoutPos !== false && $basicPos !== false
-      && $layoutPos < $basicPos && !str_contains($html,'<h2>Publicatie</h2>'),
-      'New lot hides publication; the editor still renders basic information');
+  claim($publicationPos !== false && $layoutPos !== false && $basicPos !== false
+      && $publicationPos < $basicPos && $layoutPos < $basicPos && str_contains($html,'<h2>Publicatie</h2>'),
+      'Administrator sees publication even while creating a lot');
 
   // A concurrent snapshot/restore owns the MySQL lock: valid POST must
   // fail closed before either SQL or photo-file mutations.
@@ -127,9 +127,10 @@ try {
     catalog_data_unlock(db());
   }
 
-  claim(!str_contains($html,'<h2>Publicatie</h2>') && str_contains($html, '<select name="category">')
-      && str_contains($html,'>Moderne Kunst</option>') && str_contains($html,'>Oude Meesters</option>'),
-      'New lot has a fixed categories dropdown and no publication settings');
+  claim(str_contains($html,'<h2>Publicatie</h2>') && str_contains($html, '<select name="category">')
+      && str_contains($html,'>Moderne Kunst</option>') && str_contains($html,'>Oude Meesters</option>')
+      && !str_contains($html,'name="sale_location"'),
+      'Administrator new lot shows publication, categories, and fixed initial sale location');
   claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
@@ -322,20 +323,34 @@ try {
 
   // Auction numbers are unique and monotonically assigned in the isolated MySQL fixture.
   [$status, $form] = request_page('/admin/kavel.php');
-  claim($status === 200 && str_contains($form, 'name="sale_location"'), 'Sale location selector visible');
+  claim($status === 200 && !str_contains($form, 'name="sale_location"'), 'New lot has fixed sale location');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'301',
     'title'=>'Auction one', 'sale_location'=>'veiling'
   ]);
+  claim($status===303 && by_number(301)['sale_location']==='markt' && by_number(301)['auction_number']===null,
+    'New lot is always created on Markt even if sale location is forged');
+  [$status, $form] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id']);
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id'], [
+    'csrf'=>token($form), 'action'=>'save', 'id'=>(string)by_number(301)['id'],
+    'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
   claim($status===303 && (int)by_number(301)['auction_number']===1,
-    'First auction assignment starts at 1');
+    'First auction assignment after creation starts at 1');
   [$status, $form] = request_page('/admin/kavel.php');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'302',
     'title'=>'Auction two', 'sale_location'=>'veiling'
   ]);
+  claim($status===303 && by_number(302)['auction_number']===null,
+    'Second lot also starts on Markt');
+  [$status, $form] = request_page('/admin/kavel.php?id='.(int)by_number(302)['id']);
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(302)['id'], [
+    'csrf'=>token($form), 'action'=>'save', 'id'=>(string)by_number(302)['id'],
+    'lot_number'=>'302', 'title'=>'Auction two', 'sale_location'=>'veiling'
+  ]);
   claim($status===303 && (int)by_number(302)['auction_number']===2,
-    'Second auction number increments');
+    'Second auction number increments after assignment');
   $auctionId=(int)by_number(301)['id'];
   [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
   [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
@@ -411,14 +426,19 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
-  claim($status===200 && !str_contains($ownForm,'alleen-lezen'), 'Assistant may open own draft for editing');
+  claim($status===200 && !str_contains($ownForm,'alleen-lezen')
+    && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
+  [$status, $assistantNewForm] = request_page('/admin/kavel.php');
+  claim($status===200 && !str_contains($assistantNewForm,'<h2>Publicatie</h2>'),
+    'Assistant cannot see publication when creating a lot');
   $csrfAssistant = token($ownForm);
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
     'csrf'=>$csrfAssistant,'action'=>'save','id'=>(string)by_number(401)['id'],
-    'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'markt'
+    'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'veiling'
   ]);
-  claim($status===303 && by_number(401)['title']==='Own edited' && by_number(401)['status']==='draft',
-    'Assistant edits own draft but cannot publish by forged POST');
+  claim($status===303 && by_number(401)['title']==='Own edited'
+    && by_number(401)['status']==='draft' && by_number(401)['sale_location']==='markt',
+    'Assistant edits own draft but cannot publish or change sale location by forged POST');
   [$status, $otherForm] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id']);
   claim($status===200 && str_contains($otherForm,'alleen-lezen'), 'Other assistant draft is read-only');
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id'], [
