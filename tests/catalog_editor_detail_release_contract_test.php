@@ -12,9 +12,10 @@ if (!is_string($editor) || !is_string($catalog) || !is_string($detail) || !is_st
 function preview_assert(bool $valid, string $message): void {
   if (!$valid) throw new RuntimeException($message);
 }
-foreach (['title'=>50,'subtitle'=>50,'artist_name'=>50,'category'=>120,'artist_url'=>2048] as $field=>$limit) {
+foreach (['title'=>50,'subtitle'=>50,'artist_name'=>50,'artist_url'=>2048] as $field=>$limit) {
   preview_assert((bool)preg_match('~name="'.preg_quote($field,'~').'" value="[^\\n]*?" maxlength="'.$limit.'"~', $editor), "$field HTML limit");
 }
+preview_assert(str_contains($editor, '<select name="category">') && str_contains($editor, 'lot_category_exists($pdo,$category)'), 'Category select and server validation');
 foreach (['description'=>250,'details'=>100] as $field=>$limit) {
   preview_assert((bool)preg_match('~<textarea\\b[^>]*\\bname="'.preg_quote($field,'~').'"[^>]*\\bmaxlength="'.$limit.'"~', $editor), "$field textarea HTML limit");
   preview_assert(str_contains($editor, 'elseif(mb_strlen($'.$field.')>'.$limit.')'), "$field server validation");
