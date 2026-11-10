@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/snapshots.php",
+      "source_sha256": "531d7d90b7974390aba9c4df8c7adf52ba8c0fc315d1efa4df6cab688559d761",
+      "remote_sha256": "5fd295b4fca196fff5c5b60518698a1159181df62a69f8fb1bb9ec15f81b7980"
+    }
+  ]
+}
