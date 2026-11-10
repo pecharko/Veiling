@@ -79,6 +79,8 @@ jobs:
       - name: Checkout PR code
         if: needs.impact.outputs.run == 'true'
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up PHP 8.2 with isolated test dependencies
         if: needs.impact.outputs.run == 'true'
@@ -134,6 +136,23 @@ jobs:
           npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/preview-browser" playwright@1.57.0
           "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps --only-shell chromium
 
+      # Historical release attestations are checked against the immutable base,
+      # not against new source files in the PR. Never substitute PR source
+      # digests into an older, owner-bound release manifest.
+      - name: Validate historical release against immutable PR base
+        if: needs.impact.outputs.run == 'true' && github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          git cat-file -e "$BASE_SHA^{commit}"
+          historical_dir="$(mktemp -d "$RUNNER_TEMP/historical-release.XXXXXXXX")"
+          trap 'git worktree remove --force "$historical_dir" 2>/dev/null || true' EXIT
+          git worktree add --detach "$historical_dir" "$BASE_SHA"
+          (cd "$historical_dir" && python3 scripts/shared_ovh_release.py plan catalog-popular-editor-polish-20261109)
+
       - name: Test real HTTP login, editor errors and photo uploads
         if: needs.impact.outputs.run == 'true'
         shell: bash
@@ -156,7 +175,6 @@ jobs:
           php tests/artist_name_50_preview_test.php
           php tests/catalog_editor_detail_release_contract_test.php
           php tests/catalog_popular_tag_release_test.php
-          python3 scripts/shared_ovh_release.py plan catalog-popular-editor-polish-20261109
           node tests/lot_photo_upload_target_test.cjs
           node tests/lot_unsaved_warning_test.cjs
           php tests/lot_form_test.php
