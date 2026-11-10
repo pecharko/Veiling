@@ -46,31 +46,72 @@ try {
 }
 admin_top('Categorieën beheren');
 ?>
-<div class="card category-manager">
-  <div class="category-manager-head"><div><h2>Categorieën</h2><p>Hernoemen past ook alle gekoppelde kavels aan. Verwijderen kan alleen wanneer de categorie niet gebruikt wordt.</p></div><a class="secondary" href="<?=e(url('admin/kavel.php'))?>">Terug naar kavels</a></div>
-  <?php if ($error): ?><p class="alert error" role="alert"><?=e($error)?></p><?php endif; ?>
-  <h3>Nieuwe categorie</h3>
-  <form class="category-manager-add" method="post">
-    <?=csrf_field()?><input type="hidden" name="action" value="add">
-    <label>Naam<input name="name" type="text" maxlength="120" required placeholder="Naam van de categorie"></label>
-    <button class="primary" type="submit">Toevoegen</button>
-  </form>
-  <h3>Bestaande categorieën</h3>
-  <?php foreach($categories as $category): ?>
-    <div class="category-manager-row">
-      <form method="post" class="category-manager-add">
-        <?=csrf_field()?><input type="hidden" name="action" value="rename"><input type="hidden" name="category_id" value="<?=(int)$category['id']?>">
-        <label>Naam<input name="name" type="text" maxlength="120" required value="<?=e($category['name'])?>"></label>
-        <button class="secondary" type="submit">Naam wijzigen</button>
-      </form>
-      <form method="post" class="category-manager-actions">
-        <?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="category_id" value="<?=(int)$category['id']?>">
-        <span><?= (int)$category['lot_count'] ?> kavel(s)</span>
-        <button class="secondary" type="submit" <?=(int)$category['lot_count']>0?'disabled title="Categorie is in gebruik"':''?>>Verwijderen</button>
-      </form>
+<div class="category-manager">
+  <div class="category-manager-toolbar">
+    <div>
+      <a class="lot-editor-back" href="<?=e(url('admin/index.php'))?>">← Terug naar kavels</a>
+      <p class="category-manager-intro">Beheer de vaste categorieën voor de veilingcatalogus. Wijzigingen zijn meteen beschikbaar bij het bewerken van kavels.</p>
     </div>
-  <?php endforeach; ?>
-  <?php if (!$categories): ?><p>Er zijn nog geen categorieën.</p><?php endif; ?>
-  <p class="lot-editor-help">Keer terug naar het kavelvenster en vernieuw de pagina om nieuwe categorieën in de keuzelijst te zien.</p>
+    <div class="category-manager-total" aria-label="<?=count($categories)?> categorieën">
+      <strong><?=count($categories)?></strong><span>Categorieën</span>
+    </div>
+  </div>
+  <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
+  <div class="category-manager-grid">
+    <section class="lot-editor-card category-manager-card" aria-labelledby="category-add-heading">
+      <div class="lot-editor-card-header">
+        <span class="lot-editor-step" aria-hidden="true">01</span>
+        <div><h2 id="category-add-heading">Categorie toevoegen</h2><p>Voeg een nieuwe categorie toe aan de keuzelijst voor kavels.</p></div>
+      </div>
+      <form class="category-manager-create-form" method="post">
+        <?=csrf_field()?>
+        <input type="hidden" name="action" value="add">
+        <label for="category-new-name">Naam categorie</label>
+        <input id="category-new-name" name="name" type="text" maxlength="120" required placeholder="Bijvoorbeeld: Fotografie">
+        <button class="primary" type="submit">Categorie toevoegen</button>
+      </form>
+    </section>
+    <section class="lot-editor-card category-manager-card" aria-labelledby="category-list-heading">
+      <div class="lot-editor-card-header">
+        <span class="lot-editor-step" aria-hidden="true">02</span>
+        <div><h2 id="category-list-heading">Bestaande categorieën</h2><p>Wijzig een naam of verwijder een ongebruikte categorie.</p></div>
+      </div>
+      <?php if (!$categories): ?>
+        <p class="category-manager-empty">Er zijn nog geen categorieën. Voeg hiernaast je eerste categorie toe.</p>
+      <?php else: ?>
+        <div class="category-manager-list">
+          <?php foreach ($categories as $category): ?>
+            <?php $categoryUsed = (int)$category['lot_count'] > 0; ?>
+            <div class="category-manager-item">
+              <div class="category-manager-item-header">
+                <strong class="category-manager-name"><?=e($category['name'])?></strong>
+                <span class="category-manager-usage <?=$categoryUsed?'is-used':'is-unused'?>"><?= (int)$category['lot_count'] ?> kavel(s)</span>
+              </div>
+              <div class="category-manager-item-actions">
+                <form method="post" class="category-manager-rename">
+                  <?=csrf_field()?>
+                  <input type="hidden" name="action" value="rename">
+                  <input type="hidden" name="category_id" value="<?=(int)$category['id']?>">
+                  <label for="category-name-<?=(int)$category['id']?>">Naam wijzigen</label>
+                  <div class="category-manager-rename-controls">
+                    <input id="category-name-<?=(int)$category['id']?>" name="name" type="text" maxlength="120" required value="<?=e($category['name'])?>">
+                    <button class="secondary" type="submit">Opslaan</button>
+                  </div>
+                </form>
+                <form method="post" class="category-manager-delete">
+                  <?=csrf_field()?>
+                  <input type="hidden" name="action" value="delete">
+                  <input type="hidden" name="category_id" value="<?=(int)$category['id']?>">
+                  <button class="secondary category-manager-delete-button" type="submit" <?=$categoryUsed?'disabled title="Categorie is in gebruik"':''?>>Verwijderen</button>
+                </form>
+              </div>
+              <?php if ($categoryUsed): ?><p class="category-manager-item-note">Verwijderen is niet mogelijk zolang een kavel deze categorie gebruikt.</p><?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php endif; ?>
+    </section>
+  </div>
+  <p class="category-manager-footnote">Werk je nog in een ander tabblad aan een kavel? Vernieuw dat tabblad om nieuwe categorienamen in de keuzelijst te zien.</p>
 </div>
 <?php admin_bottom(); ?>
