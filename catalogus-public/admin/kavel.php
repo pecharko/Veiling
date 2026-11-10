@@ -143,10 +143,10 @@ if(is_post()){
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
-    $status = lot_can_change_publication($role)
-      ? $submittedStatus : (string)($lot['status'] ?? 'draft');
+    $status = !$id ? 'draft' : (lot_can_change_publication($role)
+      ? $submittedStatus : (string)($lot['status'] ?? 'draft'));
     $auctionOnly = !empty($_POST['auction_only']);
-    $saleLocation=(string)($_POST['sale_location']??'markt');
+    $saleLocation=$id ? (string)($_POST['sale_location']??'markt') : 'markt';
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
     elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
     elseif(mb_strlen($subtitle)>50)$error='De ondertitel mag maximaal 50 tekens bevatten.';
@@ -294,9 +294,11 @@ if ($error === $cancelAuctionWarning) {
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
+        <?php if ($lot): ?>
         <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
           <div class="lot-editor-fields lot-editor-two"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><p class="lot-editor-help lot-full">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
         </section>
+        <?php endif; ?>
     <div class="lot-editor-layout lot-editor-layout--single">
       <div class="lot-editor-main">
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">01</span><div><h2>Basisinformatie</h2><p>De belangrijkste gegevens die bezoekers in de catalogus zien.</p></div></div>

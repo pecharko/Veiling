@@ -4,6 +4,16 @@ declare(strict_types=1);
 /** Publication fields must have status left and sale location right, without altering POST handling. */
 $source = file_get_contents(dirname(__DIR__).'/catalogus-public/admin/kavel.php');
 if (!is_string($source)) throw new RuntimeException('Missing kavel editor');
+// Only existing lots render the publication panel; new lots cannot bypass defaults.
+if (!str_contains($source, '<?php if ($lot): ?>'."\n".'        <section class="lot-editor-card lot-editor-publication">')) {
+    throw new RuntimeException('Publication card must be hidden when creating a new lot');
+}
+if (!str_contains($source, '        </section>'."\n".'        <?php endif; ?>'."\n".'    <div class="lot-editor-layout lot-editor-layout--single">')) {
+    throw new RuntimeException('Publication guard must not hide the basic information form');
+}
+if (!str_contains($source, "\$status = !\$id ? 'draft'") || !str_contains($source, "\$saleLocation=\$id ? (string)(\$_POST['sale_location']??'markt') : 'markt';")) {
+    throw new RuntimeException('New lots must be saved as draft and on Markt, even if POST fields are forged');
+}
 $pub = strpos($source, '<section class="lot-editor-card lot-editor-publication">');
 $end = $pub === false ? false : strpos($source, '</section>', $pub);
 $basic = strpos($source, '<h2>Basisinformatie</h2>');
