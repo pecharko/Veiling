@@ -19,7 +19,8 @@ detail_popular_assert(
     'Detail and catalog must use identical top-five groups'
 );
 detail_popular_assert(
-    str_contains($detail, "(int)$popularLot['lot_id'] === (int)$lot['id']") &&
+    str_contains($detail, '=== (int)$lot[\'id\']') &&
+    str_contains($detail, 'foreach ($popularGroup as $popularLot)') &&
     str_contains($detail, 'if ($isPopular)') &&
     str_contains($detail, 'class="lot-popular-tag detail-popular-tag"'),
     'Detail badge must appear only for ranked lot ID'
