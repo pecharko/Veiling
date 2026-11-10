@@ -106,6 +106,15 @@ foreach (explode(';', (string)$categorySql) as $statement) {
 }
 $seeded = $pdo->query('SELECT name FROM lot_categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 if ($seeded !== ['Moderne Kunst','Oude Meesters']) throw new RuntimeException('Incorrect category seed data');
+// Apply reviewed bank fields only to disposable integration database.
+$bankMigration = file_get_contents($dir . '/database/migrations/20261110_lot_bank_fields.sql');
+if (!is_string($bankMigration) || !str_contains($bankMigration, 'ADD COLUMN bank_account_iban')) {
+  throw new RuntimeException('Bank fields fixture is missing.');
+}
+$pdo->exec($bankMigration);
+if (count($pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('bank_account_name','bank_account_iban')")->fetchAll()) !== 2) {
+  throw new RuntimeException('Bank fields fixture missing database columns.');
+}
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
 try {
