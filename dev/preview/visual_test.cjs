@@ -38,6 +38,29 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `admin-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No admin overflow ${width}`);
     }
+    // The auction-only toggle is above the lot number on both responsive widths.
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const newLot = await page.goto(base + '/admin/kavel.php');
+      assert.equal(newLot.status(), 200, 'New lot editor loads');
+      const flag = page.locator('.lot-editor-auction-flag');
+      assert.equal(await flag.count(), 1, 'Exactly one auction-only checkbox');
+      assert.equal(await flag.locator('input[name="auction_only"]').count(), 1);
+      const flagBounds = await flag.boundingBox();
+      const lotBounds = await page.locator('input[name="lot_number"]').boundingBox();
+      assert.ok(flagBounds && lotBounds && flagBounds.y < lotBounds.y, 'Auction-only precedes lot number');
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No new lot overflow ${width}`);
+      await page.screenshot({path:path.join(output,`new-lot-${width}.png`),fullPage:true,animations:'disabled'});
+
+      const manager = await page.goto(base + '/admin/categorieen.php');
+      assert.equal(manager.status(), 200, 'Category manager loads');
+      assert.equal(await page.locator('.category-manager-card').count(), 2, 'Two aligned admin panels');
+      assert.equal(await page.locator('.category-manager-item').count(), 2, 'Initial categories are visible');
+      assert.match(await page.locator('.category-manager-list').textContent(), /Moderne Kunst/);
+      assert.match(await page.locator('.category-manager-list').textContent(), /Oude Meesters/);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No category manager overflow ${width}`);
+      await page.screenshot({path:path.join(output,`categories-${width}.png`),fullPage:true,animations:'disabled'});
+    }
     // Persist the split via Veilinginfo and inspect it without an admin session.
     await page.goto(base + '/admin/instellingen.php');
     const splitToggle = page.locator('input[name="catalog_split_active"]');
