@@ -101,6 +101,9 @@ case "${1:-}" in
     fi
     check_config
     dc up -d --build --wait
+    # Existing running containers need the new schema as well; never recreate/delete preview volumes.
+    dc exec -T preview-web php dev/preview/seed.php
+    diagnose_preview
     printf 'Local preview: http://localhost:8080\nAdmin: http://localhost:8080/admin/login.php\n'
     printf 'Synthetic login: ci-admin@example.invalid / ci-password-not-a-real-secret\n'
     ;;

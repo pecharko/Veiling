@@ -33,7 +33,17 @@ if (is_post()) {
     $error='Bewaren mislukt. Controleer of de categorienaam al bestaat.';
   }
 }
-$categories=$pdo->query('SELECT c.id,c.name,(SELECT COUNT(*) FROM lots l WHERE l.category=c.name) AS lot_count FROM lot_categories c ORDER BY c.name')->fetchAll();
+try {
+  $categories=$pdo->query('SELECT c.id,c.name,(SELECT COUNT(*) FROM lots l WHERE l.category=c.name) AS lot_count FROM lot_categories c ORDER BY c.name')->fetchAll();
+} catch (PDOException $ex) {
+  // Do not automatically migrate a database when merely viewing this page.
+  error_log('[Categoriebeheer laden] '.$ex->getMessage());
+  http_response_code(503);
+  admin_top('Categorieën beheren');
+  echo '<div class="alert warning" role="alert"><strong>Categoriebeheer is nog niet beschikbaar.</strong> De categoriegegevens ontbreken of zijn niet toegankelijk. In de geïsoleerde lokale preview: voer <code>sh scripts/preview start</code> uit om de testdatabase veilig bij te werken. Er wordt niets op productie gewijzigd.</div>';
+  admin_bottom();
+  exit;
+}
 admin_top('Categorieën beheren');
 ?>
 <div class="card category-manager">
