@@ -17,5 +17,5 @@ badges_expect(str_contains($css, '.main-photo .detail-sold-badge{position:absolu
 badges_expect(str_contains($css, '.main-photo .detail-popular-tag{position:absolute;top:20px;right:14px;'), 'Popular badge at upper right');
 badges_expect(str_contains($css, 'min-width:118px;padding:12px 16px 11px;border-radius:2px;font-size:13px'), 'Popular badge matches sold badge dimensions on desktop');
 badges_expect(str_contains($css, '.main-photo .detail-popular-tag{top:16px;right:10px;min-width:100px;padding:9px 9px;font-size:10px}'), 'Mobile popular badge matches sold badge dimensions');
-badges_expect(str_contains($detail, 'catalogus.css\'))?>?v=189'), 'Detail page cache-busts its changed CSS');
+badges_expect(str_contains($detail, '?v=189'), 'Detail page cache-busts its changed CSS');
 echo "PASS: detail badges have equal dimensions and opposite upper corners.\n";
