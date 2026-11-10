@@ -75,6 +75,13 @@ diagnose_preview() {
       fwrite(STDERR, "ONTBREEKT: lot_categories in preview-MySQL. Voer uit: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml exec -T preview-web php dev/preview/seed.php\\n");
       exit(1);
     }
+    try {
+      $names = db()->query("SELECT c.id,c.name,(SELECT COUNT(*) FROM lots l WHERE l.category=c.name) AS lot_count FROM lot_categories c ORDER BY c.name")->fetchAll(PDO::FETCH_ASSOC);
+      echo "OK: categoriebeheerquery werkt (" . count($names) . " categorieën).\\n";
+    } catch (PDOException $ex) {
+      fwrite(STDERR, "FOUT categoriebeheerquery: " . $ex->getMessage() . "\\n");
+      exit(1);
+    }
     echo "OK: kunstenaarsvelden en categorieën aanwezig in geïsoleerde previewdatabase.\\n";
   '; then
     return 1
