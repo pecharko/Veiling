@@ -54,6 +54,20 @@ if ($categoriesTable === false) {
         throw new RuntimeException('Partial category schema in preview; refusing automatic repair.');
     }
 }
+// Apply the bank migration only in the isolated synthetic preview database.
+$bankNameExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_name'")->fetch();
+$bankIbanExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_iban'")->fetch();
+if ($bankNameExists !== $bankIbanExists) {
+    throw new RuntimeException('Partial bank schema in preview; refusing automatic repair.');
+}
+if (!$bankNameExists) {
+    $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261110_lot_bank_fields.sql');
+    if (!is_string($migration) || !str_contains($migration, 'ADD COLUMN bank_account_iban')) {
+        throw new RuntimeException('Bank account migration missing in isolated preview.');
+    }
+    $pdo->exec($migration);
+    echo "Bank fields added to isolated preview.\n";
+}
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
 // Both active and archived sources are seeded to exercise the real seven-day ranking.
 function preview_seed_popularity(PDO $pdo): void {
