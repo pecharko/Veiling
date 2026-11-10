@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "63f32d39636d2a97582fc70b8a78680c0f96be051d8df9c166456220f25130db",
+      "remote_sha256": "6bc6697a94468562095e4814db0b4766021c81ebecec0e0dd9c7d0be34633b71"
+    },
+    {
+      "path": "catalogus-public/admin/categorieen.php",
+      "source_sha256": "921292643ad3f1319d01c6d15b3dc8f023b3f58870794804ded5455c691b8409",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "07399cca84769ff11eedc21de63b36a30c7d8e911bfd4474ca3d51ab32eec775",
+      "remote_sha256": "94e14ecd13d74ada039e533d8067a4376e6602924796afd8e1320e71740f6c65"
+    },
+    {
+      "path": "private/lot_categories.php",
+      "source_sha256": "74692f1d9a1117a8185a470ef9cd4b64a5a56ffffd963bce43ef2fd4031e0352",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "3ada5ad7cae581ccf608c22a9c11e5169cd573db86daacbda3497e7b34651733",
+      "remote_sha256": "d6f5425d27f299560229b9de2ffcd265ed7048cefd8702c2a5ed1e6e5acf00e5"
+    }
+  ]
+}
