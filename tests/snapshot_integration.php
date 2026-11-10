@@ -223,7 +223,7 @@ $legacyZip = new ZipArchive();
 if ($legacyZip->open(snap_path($legacyName)) !== true) throw new RuntimeException('Cannot open legacy test ZIP');
 $legacyDb = json_decode($legacyZip->getFromName('database.json'), true, 512, JSON_THROW_ON_ERROR);
 foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
-    foreach (['market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url'] as $newColumn) unset($legacyLot[$newColumn]);
+    foreach (['market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url','bank_account_name','bank_account_iban'] as $newColumn) unset($legacyLot[$newColumn]);
 }
 unset($legacyLot);
 foreach ($legacyDb['tables']['admins'] as &$legacyAdmin) unset($legacyAdmin['name']);
@@ -235,7 +235,7 @@ $legacyZip->addFromString('database.json', $legacyJson);
 $legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
 $legacyZip->close();
 assert_throws(fn() => snap_verified($legacyName), 'Ongeldige kolommen bij lots',
-              'Old snapshot missing lot metadata is not supported');
+              'Old snapshot missing bank fields and other lot metadata is not supported');
 assert_throws(fn() => snap_restore($pdo, $legacyName), 'Ongeldige kolommen bij lots',
               'Old snapshot restore rejected before database or photos change');
 verify($pdo->query('SELECT artist_name FROM lots WHERE lot_number=101')->fetchColumn() === 'Jan Jans',
