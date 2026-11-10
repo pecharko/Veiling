@@ -484,20 +484,33 @@ try {
   claim($status===200 && str_contains($artistError, 'http- of https-link')
     && !by_number(750000), 'Unsafe artist URL rejected before database write');
   $artistPost['artist_url']='https://example.org/artist?x=1&y=2';
+  $artistPost['bank_account_name']='Kunstkring Lokeren';
+  $artistPost['bank_account_iban']='BE68 5390 0754 7035';
+  [$status, $bankError] = request_page('/admin/kavel.php', $artistPost);
+  claim($status===200 && str_contains($bankError, 'IBAN-controlegetal')
+      && !by_number(750000), 'Invalid IBAN checksum blocks lot saving');
+  $artistPost['bank_account_iban']='BE68 5390 0754 7034';
   [$status] = request_page('/admin/kavel.php', $artistPost);
   claim($status===303, 'Valid artist link and name accepted');
   $artistStored=by_number(750000);
   claim($artistStored && $artistStored['artist_name']==='Jan Jans'
     && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
     'Both artist fields stored');
+  claim($artistStored['bank_account_name']==='Kunstkring Lokeren'
+    && $artistStored['bank_account_iban']==='BE68539007547034',
+    'Account holder and normalized IBAN persisted in private lot columns');
   [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
   claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
       && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
     'Existing lot reload shows the saved artist name and escaped hyperlink');
+  claim(str_contains($persistedEditor,'name="bank_account_name" value="Kunstkring Lokeren"')
+    && str_contains($persistedEditor,'name="bank_account_iban" value="BE68539007547034"'),
+    'Private bank fields reload in kavel editor');
   [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
     'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
     'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
     'artist_name'=>'Jan Jans', 'artist_url'=>'https://example.org/artist?x=1&y=2',
+    'bank_account_name'=>'Kunstkring Lokeren', 'bank_account_iban'=>'BE68539007547034',
     'status'=>'draft', 'sale_location'=>'markt'
   ]);
   claim($status===303 && by_number(750000)['title']==='Kunstwerk met bijgewerkte titel'
