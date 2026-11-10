@@ -162,7 +162,7 @@ try {
   $invalid = [
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
     'lot_number' => '99', 'title' => 'Nieuwe titel <&>',
-    'category' => 'Design', 'description' => 'Niet opgeslagen',
+    'category' => 'Moderne Kunst', 'description' => 'Niet opgeslagen',
     'market_price' => '-1', 'starting_bid' => '100', 'status' => 'published',
   ];
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
@@ -207,7 +207,7 @@ try {
   file_put_contents($fixtures . '/big.txt', str_repeat('x', 2200));
   $valid = [
     'csrf' => $csrf, 'action' => 'save', 'id' => '0', 'lot_number' => '20',
-    'title' => 'Upload te groot', 'category' => 'Overige',
+    'title' => 'Upload te groot', 'category' => 'Moderne Kunst',
     'description' => '', 'details' => '', 'estimate_min' => '', 'estimate_max' => '', 'status' => 'draft',
   ];
   $big = $valid;
@@ -269,7 +269,7 @@ try {
   [$status] = request_page('/admin/kavel.php?id='.$existingLotId, [
     'csrf' => token($existingEditor), 'action' => 'save', 'id' => (string)$existingLotId,
     'lot_number' => '20', 'title' => 'Kavel bijgewerkt na foto-upload',
-    'category' => 'Overige', 'sale_location' => 'markt', 'status' => 'draft',
+    'category' => 'Moderne Kunst', 'sale_location' => 'markt', 'status' => 'draft',
   ]);
   claim($status === 303 && by_number(20)['title'] === 'Kavel bijgewerkt na foto-upload',
     'Saving existing lot data succeeds after photo uploads');

@@ -104,6 +104,15 @@ try {
   if ((int)($expected->errorInfo[1] ?? 0) !== 3819) throw $expected;
 }
 
+// Apply the proposed category migration only in the disposable CI database.
+$categoryMigration = file_get_contents($dir . '/database/migrations/20261110_lot_categories.sql');
+if (!is_string($categoryMigration) || !str_contains($categoryMigration, 'CREATE TABLE lot_categories')) {
+  throw new RuntimeException('Missing reviewed category migration fixture.');
+}
+$pdo->exec($categoryMigration);
+if ((int)$pdo->query('SELECT COUNT(*) FROM lot_categories')->fetchColumn() !== 2) {
+  throw new RuntimeException('Category fixture did not create two initial categories.');
+}
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.

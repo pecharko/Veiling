@@ -133,6 +133,7 @@ function require_auth(): void {
     $allowed = ['index.php', 'kavel.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
     // The original administrator or veilingmeester can always restore their role.
     if (admin_role_switch_targets(stored_admin_role()) !== []) $allowed[] = 'rol-wissel.php';
+    if ($role === 'veilingmeester') $allowed[] = 'categorieen.php';
     if (!in_array($page, $allowed, true)) {
       http_response_code(403);
       exit('Geen toegang tot dit beheeronderdeel.');

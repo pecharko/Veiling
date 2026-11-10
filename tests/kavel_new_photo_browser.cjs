@@ -43,17 +43,19 @@ const { chromium } = require('playwright');
     const basicRect = await basics.boundingBox();
     assert(publicationRect && basicRect && publicationRect.y + publicationRect.height < basicRect.y,
       'Publication card appears above basic information');
-    const lotField = await page.locator('#lot-editor-form input[name="lot_number"]').boundingBox();
-    const saleField = await page.locator('#lot-editor-form select[name="sale_location"]').boundingBox();
-    const categoryField = await page.locator('#lot-editor-form input[name="category"]').boundingBox();
-    const auctionCheckbox = await page.locator('#lot-editor-form input[name="auction_only"]').boundingBox();
-    assert(lotField && saleField && categoryField && auctionCheckbox, 'Basic information inputs are visible');
-    assert(Math.abs(lotField.y - saleField.y) <= 2,
-      'Lot number and sale location input controls are vertically aligned');
-    assert(Math.abs(categoryField.x - saleField.x) <= 2 && categoryField.y > saleField.y + saleField.height,
-      'Category field is immediately below the sale location in the right column');
-    assert(auctionCheckbox.x < saleField.x && auctionCheckbox.y > lotField.y + lotField.height,
-      'Auction-only checkbox stays below lot number in the left column');
+    const lotField = await basics.locator('input[name="lot_number"]').boundingBox();
+    const saleField = await publication.locator('select[name="sale_location"]').boundingBox();
+    const categoryField = await basics.locator('select[name="category"]').boundingBox();
+    const auctionCheckbox = await basics.locator('input[name="auction_only"]').boundingBox();
+    assert(lotField && saleField && categoryField && auctionCheckbox, 'Lot editor controls are visible');
+    assert.equal(await basics.locator('[name="sale_location"]').count(), 0,
+      'Sale location is in publication, not basic information');
+    assert(saleField.y + saleField.height < basicRect.y,
+      'Sale location appears in the publication card above basic information');
+    assert(Math.abs(lotField.y - categoryField.y) <= 2 && categoryField.x > lotField.x,
+      'Category select is aligned beside lot number');
+    assert(auctionCheckbox.y + auctionCheckbox.height < lotField.y,
+      'Auction-only checkbox appears above lot number');
     assert.equal(await page.locator('.lot-editor-toolbar-actions a.lot-editor-cancel').count(), 1,
       'New lot offers Annuleren next to the top save button');
     assert.equal(await page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').count(), 1,
