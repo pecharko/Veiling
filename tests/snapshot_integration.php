@@ -38,8 +38,8 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
 $pdo->exec("UPDATE admins SET name='CI Beheerder'");
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
-$pdo->prepare("INSERT INTO lots (lot_number,title,artist_name,artist_url,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?)")
-    ->execute([101,'Kunstwerk voor snapshot','Jan Jans','https://example.org/artist','Beschrijving','Details','published','veiling',1]);
+$pdo->prepare("INSERT INTO lots (lot_number,title,artist_name,artist_url,bank_account_name,bank_account_iban,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+    ->execute([101,'Kunstwerk voor snapshot','Jan Jans','https://example.org/artist','Test-Rekeninghouder','BE68539007547034','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
@@ -162,7 +162,9 @@ verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
 
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
-$restoredLot=$pdo->query('SELECT sale_location,auction_number,artist_name,artist_url FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+$restoredLot=$pdo->query('SELECT sale_location,auction_number,artist_name,artist_url,bank_account_name,bank_account_iban FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($restoredLot['bank_account_name']==='Test-Rekeninghouder' && $restoredLot['bank_account_iban']==='BE68539007547034',
+       'Private bank details are restored intact from catalog snapshot');
 verify($restoredLot['artist_name']==='Jan Jans' && $restoredLot['artist_url']==='https://example.org/artist',
        'Snapshot restore retains artist name and hyperlink');
 verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
