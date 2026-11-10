@@ -34,7 +34,7 @@ if (is_post()) {
   }
 }
 try {
-  $categories=$pdo->query('SELECT c.id,c.name,(SELECT COUNT(*) FROM lots l WHERE l.category=c.name) AS lot_count FROM lot_categories c ORDER BY c.name')->fetchAll();
+  $categories=lot_category_list_with_usage($pdo);
 } catch (PDOException $ex) {
   // Do not automatically migrate a database when merely viewing this page.
   error_log('[Categoriebeheer laden] '.$ex->getMessage());

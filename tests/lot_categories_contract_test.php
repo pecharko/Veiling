@@ -18,6 +18,10 @@ categoryCheck(str_contains($page,'if (!lot_category_can_manage(effective_admin_r
 categoryCheck(str_contains($roles,"if (\$role === 'veilingmeester') \$allowed[] = 'categorieen.php';"), 'Only veilingmeester and administrator can navigate to management');
 categoryCheck(str_contains($logic,"'administrator', 'veilingmeester'"), 'Role policy source');
 categoryCheck(str_contains($logic,'SELECT COUNT(*) FROM lots WHERE category=?'), 'Delete blocks used categories');
+categoryCheck(str_contains($logic, 'SELECT id,name FROM lot_categories ORDER BY name'), 'Category list uses single-table query');
+categoryCheck(str_contains($page, 'lot_category_list_with_usage($pdo)'), 'Management page uses collation-safe counting');
+categoryCheck(!str_contains($page, 'l.category=c.name'), 'Management must not compare differently collated columns');
+categoryCheck(str_contains(file_get_contents($root.'/scripts/preview'), 'lot_category_list_with_usage(db())'), 'Local preview diagnosis uses the same safe query');
 categoryCheck(str_contains($logic,'UPDATE lots SET category=? WHERE category=?'), 'Rename propagates to linked lots');
 categoryCheck(str_contains($sql,"('Moderne Kunst'), ('Oude Meesters')") && str_contains($sql,"UPDATE lots SET category='' WHERE category<>'';"), 'Migration seeds and clears legacy categories');
 require $root.'/private/lot_categories.php';

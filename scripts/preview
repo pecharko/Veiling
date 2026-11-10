@@ -76,7 +76,8 @@ diagnose_preview() {
       exit(1);
     }
     try {
-      $names = db()->query("SELECT c.id,c.name,(SELECT COUNT(*) FROM lots l WHERE l.category=c.name) AS lot_count FROM lot_categories c ORDER BY c.name")->fetchAll(PDO::FETCH_ASSOC);
+      require_once "private/lot_categories.php";
+      $names = lot_category_list_with_usage(db());
       echo "OK: categoriebeheerquery werkt (" . count($names) . " categorieën).\\n";
     } catch (PDOException $ex) {
       fwrite(STDERR, "FOUT categoriebeheerquery: " . $ex->getMessage() . "\\n");

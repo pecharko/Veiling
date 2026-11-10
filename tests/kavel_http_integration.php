@@ -176,8 +176,10 @@ try {
   [$categoryStatus, $categoryPage] = request_page('/admin/categorieen.php', [
       'csrf'=>$categoryCsrf, 'action'=>'delete', 'category_id'=>(string)$tempId]);
   claim($categoryStatus === 200 && str_contains($categoryPage, 'Verwijderen kan alleen')
+      && str_contains($categoryPage, '1 kavel(s)')
+      && str_contains($categoryPage, 'disabled title="Categorie is in gebruik"')
       && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 1,
-      'Deletion is refused while a lot uses the category');
+      'Usage count is correct and deletion is refused while a lot uses the category');
   [$categoryStatus] = request_page('/admin/categorieen.php', [
       'csrf'=>$categoryCsrf, 'action'=>'rename', 'category_id'=>(string)$tempId, 'name'=>'Categorie hernoemd']);
   claim($categoryStatus === 303 && by_number(10)['category'] === 'Categorie hernoemd',

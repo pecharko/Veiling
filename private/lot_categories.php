@@ -10,6 +10,23 @@ function lot_category_names(PDO $pdo): array {
   return $pdo->query('SELECT name FROM lot_categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 }
 
+
+/**
+ * Count lots using each category without comparing two columns with
+ * potentially different MySQL utf8mb4 collations. The parameter comparison
+ * inherits lots.category's collation; no schema edits or data writes needed.
+ */
+function lot_category_list_with_usage(PDO $pdo): array {
+  $categories = $pdo->query('SELECT id,name FROM lot_categories ORDER BY name')->fetchAll(PDO::FETCH_ASSOC);
+  $count = $pdo->prepare('SELECT COUNT(*) FROM lots WHERE category=?');
+  foreach ($categories as $index => $category) {
+    $count->execute([(string)$category['name']]);
+    $categories[$index]['lot_count'] = (int)$count->fetchColumn();
+    $count->closeCursor();
+  }
+  return $categories;
+}
+
 function lot_category_exists(PDO $pdo, string $name): bool {
   $st=$pdo->prepare('SELECT 1 FROM lot_categories WHERE name=? LIMIT 1');
   $st->execute([$name]);
