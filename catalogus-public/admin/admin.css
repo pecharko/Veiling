@@ -221,3 +221,10 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .admin-brand-row .admin-report-issue:hover{text-decoration:underline;background:rgba(0,0,0,.24)}
 .admin-brand-row .admin-report-issue:focus-visible{outline:3px solid #e9c77b;outline-offset:3px}
 @media(max-width:650px){.admin-brand-row{flex-wrap:wrap}.admin-brand-row .admin-report-issue{font-size:11px;padding:5px 8px}}
+
+/* Lot category picker: keep its edit action directly beside the select. */
+.lot-editor-category-control{display:flex;align-items:flex-end;gap:10px;min-width:0}
+.lot-editor-category-control .lot-editor-category{flex:1;min-width:0}
+.lot-editor-category-edit{display:inline-flex;align-items:center;justify-content:center;min-height:49px;white-space:nowrap;padding:11px 15px}
+@media(max-width:420px){.lot-editor-category-control{flex-wrap:wrap}.lot-editor-category-edit{min-height:40px}}
+.category-manager{max-width:880px}.category-manager form{margin:0}.category-manager-head{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap}.category-manager-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid #e9ddd4;padding:14px 0}.category-manager-row label{flex:1 1 220px}.category-manager-row input{width:100%;min-height:44px}.category-manager-actions{display:flex;align-items:center;gap:8px}.category-manager .category-manager-add{display:flex;align-items:end;gap:12px;flex-wrap:wrap}.category-manager .category-manager-add label{flex:1 1 240px}
