@@ -32,6 +32,28 @@ if (!$artistNameExists) {
     $pdo->exec($migration);
     echo "Artist fields added to isolated preview; existing lots and photos retained.\n";
 }
+// Apply the reviewed category migration only to the isolated, synthetic preview DB.
+// This preserves existing test lots/photos and clears old category assignments once.
+$categoriesTable = $pdo->query("SHOW TABLES LIKE 'lot_categories'")->fetchColumn();
+if ($categoriesTable === false) {
+    $migrationPath = dirname(__DIR__, 2) . '/database/migrations/20261110_lot_categories.sql';
+    $migration = file_get_contents($migrationPath);
+    if (!is_string($migration)
+        || !str_contains($migration, "VALUES ('Moderne Kunst'), ('Oude Meesters')")
+        || !str_contains($migration, "UPDATE lots SET category='' WHERE category<>'';")) {
+        throw new RuntimeException('Reviewed category migration missing in local preview.');
+    }
+    $migration = preg_replace('/^\\s*--[^\\n]*$/m', '', $migration);
+    foreach (explode(';', (string)$migration) as $statement) {
+        if (trim($statement) !== '') $pdo->exec($statement);
+    }
+    echo "Managed categories added to isolated preview; previous lot categories cleared once.\\n";
+} else {
+    $columns = $pdo->query("SHOW COLUMNS FROM lot_categories")->fetchAll(PDO::FETCH_COLUMN);
+    if (!in_array('id', $columns, true) || !in_array('name', $columns, true)) {
+        throw new RuntimeException('Partial category schema in preview; refusing automatic repair.');
+    }
+}
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
 // Both active and archived sources are seeded to exercise the real seven-day ranking.
 function preview_seed_popularity(PDO $pdo): void {
