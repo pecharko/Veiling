@@ -589,6 +589,31 @@ try {
     && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
+  // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
+  db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
+  $foreignSellerId=(int)db()->lastInsertId();
+  [$forbiddenView] = request_page('/admin/verkoper.php?id='.$foreignSellerId);
+  claim($forbiddenView===403, 'Assistant cannot open unrelated seller editor');
+  [$forbiddenSave] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
+    'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_id'=>(string)$foreignSellerId,
+    'seller_type'=>'particulier','name'=>'FORGED','email'=>'ander@example.invalid',
+    'street'=>'Teststraat','house_number'=>'8','postal_code'=>'9160','municipality'=>'Lokeren'
+  ]);
+  claim($forbiddenSave===403 && db()->query('SELECT name FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==='Andere maker',
+    'Assistant cannot change unrelated seller even by forged POST');
+  [$forbiddenDelete] = request_page('/admin/verkopers.php', [
+    'csrf'=>token($sellerAssistantForm),'action'=>'delete','seller_id'=>(string)$foreignSellerId
+  ]);
+  claim($forbiddenDelete===403 && db()->query('SELECT COUNT(*) FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==1,
+    'Assistant cannot delete unrelated seller');
+  [$forbiddenImage] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
+    'csrf'=>token($sellerAssistantForm),'action'=>'delete-photo','seller_id'=>(string)$foreignSellerId,
+    'image_kind'=>'portrait','slot'=>'1'
+  ]);
+  claim($forbiddenImage===403, 'Assistant cannot perform photo actions on unrelated seller');
+  [$assistantListStatus, $assistantListPage]=request_page('/admin/verkopers.php');
+  claim($assistantListStatus===200 && str_contains($assistantListPage,'Alleen bekijken'),
+    'Unowned seller is read-only in assistant seller overview');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
   claim($masterListStatus===200 && str_contains($masterListPage,'Aangemaakt door / op'),
