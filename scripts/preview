@@ -75,6 +75,12 @@ diagnose_preview() {
       fwrite(STDERR, "ONTBREEKT: lot_categories in preview-MySQL. Voer uit: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml exec -T preview-web php dev/preview/seed.php\\n");
       exit(1);
     }
+    $sellerTable = db()->query("SHOW TABLES LIKE " . db()->quote("lot_sellers"))->fetchColumn();
+    $sellerColumn = db()->query("SHOW COLUMNS FROM lots LIKE " . db()->quote("seller_id"))->fetch();
+    if ($sellerTable === false || !$sellerColumn) {
+      fwrite(STDERR, "ONTBREEKT: verkopersschema in de geïsoleerde preview. Start de preview opnieuw met sh scripts/preview start.\\n");
+      exit(1);
+    }
     try {
       require_once "private/lot_categories.php";
       $names = lot_category_list_with_usage(db());
