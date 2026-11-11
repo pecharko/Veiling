@@ -5,11 +5,9 @@ require dirname(__DIR__, 2) . '/private/images.php';
 require_once dirname(__DIR__, 2) . '/private/photo_delete_safety.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
-require_once dirname(__DIR__, 2) . '/private/lot_artist.php';
 require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_once dirname(__DIR__, 2) . '/private/lot_categories.php';
-require_once dirname(__DIR__, 2) . '/private/lot_bank.php';
 require_once dirname(__DIR__, 2) . '/private/lot_sellers.php';
 require_auth();
 $pdo=db();
@@ -129,19 +127,6 @@ if(is_post()){
     $nr=(int)($_POST['lot_number']??0);
     $title=mb_substr(trim((string)($_POST['title']??'')),0,250);
     $subtitle=mb_substr(trim((string)($_POST['subtitle']??'')),0,250);
-    try {
-      if (!is_string($_POST['artist_name'] ?? '') || !is_string($_POST['artist_url'] ?? '')) {
-        throw new InvalidArgumentException('Ongeldige invoer voor kunstenaar.');
-      }
-      [$artistName, $artistUrl] = lot_artist_validate($_POST['artist_name'] ?? '', $_POST['artist_url'] ?? '');
-    } catch (InvalidArgumentException $ex) {
-      $error = $ex->getMessage();
-    }
-    try {
-      [$bankAccountName, $bankAccountIban] = lot_bank_validate($_POST['bank_account_name'] ?? '', $_POST['bank_account_iban'] ?? '');
-    } catch (InvalidArgumentException $ex) {
-      if ($error === '') $error = $ex->getMessage();
-    }
     $categoryInput = $_POST['category'] ?? '';
     $category = is_string($categoryInput) ? trim($categoryInput) : '';
     if (!is_string($categoryInput) && $error === '') $error = 'Ongeldige categorie.';
@@ -217,9 +202,9 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$artistName,$artistUrl,$bankAccountName,$bankAccountIban,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,artist_name=?,artist_url=?,bank_account_name=?,bank_account_iban=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');}
-          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,artist_name,artist_url,bank_account_name,bank_account_iban,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');}
+          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
@@ -270,7 +255,7 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','artist_name'=>'','artist_url'=>'','bank_account_name'=>'','bank_account_iban'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
@@ -332,15 +317,9 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
-            <label class="lot-full">Verkoper<select name="seller_id"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label>
+            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php'))?>" target="_blank" rel="noopener" aria-label="Nieuwe verkoper aanmaken (opent in nieuw tabblad)">+ Nieuwe verkoper</a><?php endif; ?></div>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
-            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar"></label>
-            <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
-            <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
-            <label>Naam bankrekeningnummer<input type="text" name="bank_account_name" value="<?=e($d['bank_account_name'])?>" maxlength="100" autocomplete="off" placeholder="Naam rekeninghouder"></label>
-            <label>Bankrekeningnummer<input type="text" name="bank_account_iban" value="<?=e($d['bank_account_iban'])?>" maxlength="42" autocomplete="off" inputmode="text" spellcheck="false" aria-describedby="bank-iban-help" placeholder="BE68 5390 0754 7034"></label>
-            <p id="bank-iban-help" class="lot-full lot-editor-help">Optioneel. Vul een geldig IBAN in; spaties zijn toegestaan. De controle gebeurt ook bij het bewaren.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
