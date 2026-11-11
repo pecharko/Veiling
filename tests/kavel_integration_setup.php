@@ -172,6 +172,17 @@ if ($pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch()
     || $pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_iban'")->fetch()) {
   throw new RuntimeException('Obsolete per-lot seller metadata remains after dedup');
 }
+// Audit schema is exercised only in disposable auction_test MySQL.
+$lotAuditSql=file_get_contents($dir.'/database/migrations/20261111_lot_audit.sql');
+if (!is_string($lotAuditSql) || !str_contains($lotAuditSql,'ADD COLUMN last_edited_at')) {
+  throw new RuntimeException('Reviewed lot audit schema missing');
+}
+$lotAuditSql=preg_replace('/^\s*--[^\n]*$/m','',$lotAuditSql);
+$pdo->exec(trim((string)$lotAuditSql));
+if (!$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_by_admin_id'")->fetch()
+    || !$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_at'")->fetch()) {
+  throw new RuntimeException('Lot audit schema missing in disposable MySQL');
+}
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.
