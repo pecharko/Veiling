@@ -18,6 +18,9 @@ $sellerSchemaAlreadyPresent = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'se
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN is_site_online TINYINT(1) NOT NULL DEFAULT 1");
 }
+if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'show_report_issue_link'")->fetch()) {
+    $pdo->exec("ALTER TABLE settings ADD COLUMN show_report_issue_link TINYINT(1) NOT NULL DEFAULT 0");
+}
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
 }
