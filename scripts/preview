@@ -63,10 +63,9 @@ diagnose_preview() {
       fwrite(STDERR, "STOP: database valt buiten de geïsoleerde preview.\n");
       exit(1);
     }
-    foreach (["artist_name", "artist_url"] as $field) {
-      $st = db()->query("SHOW COLUMNS FROM lots LIKE " . db()->quote($field));
-      if (!$st->fetch()) {
-        fwrite(STDERR, "ONTBREEKT: lots." . $field . ". Voer uit: docker compose --project-name veiling-local-ui-preview -f dev/preview/compose.yaml exec preview-web php dev/preview/seed.php\n");
+    foreach (["artist_name", "artist_url", "bank_account_name", "bank_account_iban"] as $field) {
+      if (db()->query("SHOW COLUMNS FROM lots LIKE " . db()->quote($field))->fetch()) {
+        fwrite(STDERR, "VEROUDERD: lots." . $field . ". Voer de verkopersmigratie uit met sh scripts/preview start.\n");
         exit(1);
       }
     }
@@ -89,7 +88,7 @@ diagnose_preview() {
       fwrite(STDERR, "FOUT categoriebeheerquery: " . $ex->getMessage() . "\\n");
       exit(1);
     }
-    echo "OK: kunstenaarsvelden en categorieën aanwezig in geïsoleerde previewdatabase.\\n";
+    echo "OK: centraal verkopersbeheer en categorieën aanwezig in geïsoleerde previewdatabase.\\n";
   '; then
     return 1
   fi
