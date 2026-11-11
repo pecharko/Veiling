@@ -78,7 +78,7 @@ admin_top('Verkopers beheren');
         <label>Huisnummer <input name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
         <label>Postcode <input name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
         <label>Gemeente <input name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
-        <label>Naam bankrekeninghouder <input name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
+        <label>Naam bankrekeningnummer <input name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
         <label>IBAN <input name="bank_account_iban" maxlength="42" autocomplete="off" spellcheck="false" value="<?=e((string)$values['bank_account_iban'])?>" placeholder="BE68 5390 0754 7034"></label>
         <div class="seller-artist-fields" id="seller-artist-fields" <?=$values['seller_type']==='kunstenaar'?'':'hidden'?>>
           <label>Kunstenaarsnaam <input name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
