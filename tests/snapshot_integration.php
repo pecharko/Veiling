@@ -38,9 +38,12 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
 $pdo->exec("UPDATE admins SET name='CI Beheerder'");
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
+$pdo->prepare("INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES ('kunstenaar','Fictieve maker','maker@example.invalid','Teststraat','2','9160','Lokeren','Fictieve maker','BE68539007547034','Demo','https://example.org/')")->execute();
+$sellerId=(int)$pdo->lastInsertId();
 $pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?)")
     ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
+$pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
 $originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
@@ -86,6 +89,9 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
+verify($snapshot['format']==='41lokeren-v3-sellers' && count($snapshot['tables']['lot_sellers'])===1
+  && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId,
+  'Snapshot v3 stores seller details and reference in one consistent archive');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
        'Snapshot contains sale location and auction number');
 verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original),
@@ -160,6 +166,9 @@ verify((fileperms($uploads) & 0005) === 0005,
 verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
        'Restored photo subdirectories are readable and traversable by webserver');
 
+verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetchColumn()===$sellerId
+    && (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===1,
+    'Restore preserves seller records and lot foreign keys');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
 $restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
@@ -208,38 +217,7 @@ verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetch
        'New schema restore recovers the offline state');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
-// Simulate a verified pre-#185 archive with no new lot metadata.
-$legacyName = 'snapshot-20990102-000000-deadbeefcafe.zip';
-if (!copy(snap_path($name), snap_path($legacyName))) throw new RuntimeException('Could not prepare legacy snapshot');
-$legacyZip = new ZipArchive();
-if ($legacyZip->open(snap_path($legacyName)) !== true) throw new RuntimeException('Cannot open legacy test ZIP');
-$legacyDb = json_decode($legacyZip->getFromName('database.json'), true, 512, JSON_THROW_ON_ERROR);
-foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
-    foreach (['market_price','starting_bid','auction_only','created_by_admin_id'] as $newColumn) unset($legacyLot[$newColumn]);
-}
-unset($legacyLot);
-foreach ($legacyDb['tables']['admins'] as &$legacyAdmin) unset($legacyAdmin['name']);
-unset($legacyAdmin);
-$legacyJson = json_encode($legacyDb, JSON_THROW_ON_ERROR);
-$legacyManifest = json_decode($legacyZip->getFromName('manifest.json'), true, 512, JSON_THROW_ON_ERROR);
-$legacyManifest['sha256']['database.json'] = hash('sha256', $legacyJson);
-$legacyZip->addFromString('database.json', $legacyJson);
-$legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
-$legacyZip->close();
-[$verifiedLegacy] = snap_verified($legacyName);
-verify(!array_key_exists('name', $verifiedLegacy['tables']['admins'][0]),
-       'Legacy snapshot without admin names validates with correct checksums');
-verify(!array_key_exists('auction_only', $verifiedLegacy['tables']['lots'][0]),
-       'Old lot snapshot without #185 columns validates with correct checksums');
-$pdo->exec("UPDATE lots SET market_price=123, starting_bid=45, auction_only=1 WHERE lot_number=101");
-snap_restore($pdo, $legacyName);
-verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === '',
-       'Legacy snapshot restore leaves administrator name blank rather than using email');
-$legacyRestored = $pdo->query('SELECT market_price, starting_bid, auction_only, created_by_admin_id FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
-verify($legacyRestored['market_price'] === null && $legacyRestored['starting_bid'] === null
-       && (int)$legacyRestored['auction_only'] === 0 && $legacyRestored['created_by_admin_id'] === null,
-       'Legacy restore safely defaults unknown valuations, ownership and auction-only flag');
-if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
+// Old snapshots are intentionally unsupported after this schema migration.
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
