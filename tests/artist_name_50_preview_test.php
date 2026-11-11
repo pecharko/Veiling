@@ -18,7 +18,9 @@ $admin = file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/kavel.php
 $css = file_get_contents(dirname(__DIR__) . '/catalogus-public/assets/catalogus.css');
 $catalog = file_get_contents(dirname(__DIR__) . '/catalogus-public/index.php');
 $detail = file_get_contents(dirname(__DIR__) . '/catalogus-public/kavel.php');
-assert_artist(str_contains($admin, 'name="artist_name" value="<?=e($d[\'artist_name\'])?>" maxlength="50"'), 'Native editor input cap');
+$sellerEditor = file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/verkoper.php');
+assert_artist(str_contains($sellerEditor, 'name="artist_name" maxlength="50"'), 'Artist name limit belongs to central seller editor');
+assert_artist(!str_contains($admin, 'name="artist_name"'), 'Lot editor has no duplicate artist name field');
 assert_artist(!str_contains($admin, 'artist.setCustomValidity(tooLong ? artistMessage :'), 'No redundant JavaScript length error');
 assert_artist(str_contains($css, '.lot-artist-name{display:block;flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'), 'Single-line truncation');
 assert_artist(str_contains($catalog, 'class="lot-artist-name" title='), 'Catalog accessible full artist name');
