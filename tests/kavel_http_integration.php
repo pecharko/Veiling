@@ -109,7 +109,8 @@ try {
     'name'=>'Demo kunstenaar','email'=>'demo@example.invalid','street'=>'Fictieve straat',
     'house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
     'bank_account_name'=>'Demo kunstenaar','bank_account_iban'=>'BE68 5390 0754 7034',
-    'artist_name'=>'Demo Art','artist_url'=>'www.example.org'
+    'artist_name'=>'Demo Art','artist_url'=>'www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling'
   ]);
   $sellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Demo kunstenaar'")->fetchColumn();
   claim($sellerStatus === 303 && $sellerId>0, 'Administrator creates artist seller');
@@ -120,6 +121,26 @@ try {
   [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
   claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
     'Seller form preloads existing data');
+  claim(str_contains($sellerEditPage,'name="artist_intro"')
+    && str_contains($sellerEditPage,'name="photo_portrait_1"'),
+    'Artist editor exposes biography and optional portrait field');
+  $artistFixture=$fixtures.'/artist-work.png';
+  $artistImage=imagecreatetruecolor(64,64);
+  imagefill($artistImage,0,0,imagecolorallocate($artistImage,20,100,80));
+  imagepng($artistImage,$artistFixture);
+  imagedestroy($artistImage);
+  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'artist_name'=>'Demo Art','artist_url'=>'www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling',
+    'photo_work_1'=>new CURLFile($artistFixture,'image/png','fictief-werk.png')
+  ],true);
+  $imagePath=(string)db()->query('SELECT path FROM seller_images WHERE seller_id='.$sellerId." AND image_kind='work' AND slot=1")->fetchColumn();
+  claim($sellerStatus===303 && $imagePath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$imagePath)
+    && db()->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve korte voorstelling',
+    'Artist introduction and first work photo saved with seller');
   [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
@@ -128,7 +149,9 @@ try {
   ]);
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
   claim($sellerStatus===303 && $sellerRecord['seller_type']==='particulier'
-    && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']==='',
+    && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']===''
+    && $sellerRecord['artist_intro']===''
+    && (int)db()->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===0,
     'Seller can change type and private artist fields are cleared');
   [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
