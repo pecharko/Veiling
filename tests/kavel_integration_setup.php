@@ -120,7 +120,7 @@ $sellerSql = file_get_contents($dir . '/database/migrations/20261111_lot_sellers
 if (!is_string($sellerSql) || !str_contains($sellerSql, 'fk_lots_seller')) {
   throw new RuntimeException('Missing reviewed seller migration');
 }
-$sellerSql = preg_replace('/^\\s*--[^\\n]*$/m', '', $sellerSql);
+$sellerSql = preg_replace('/^\s*--[^\n]*$/m', '', $sellerSql);
 foreach (explode(';', (string)$sellerSql) as $statement) {
   if (trim($statement) !== '') $pdo->exec($statement);
 }
