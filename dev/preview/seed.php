@@ -96,9 +96,9 @@ if ($oldArtist) {
         || !str_contains($dedup,'DROP COLUMN bank_account_iban')) {
         throw new RuntimeException('Reviewed seller dedup migration missing.');
     }
-    $dedup = preg_replace('/^\\s*--[^\\n]*$/m', '', $dedup);
+    $dedup = preg_replace('/^\s*--[^\n]*$/m', '', $dedup);
     $pdo->exec(trim((string)$dedup));
-    echo "Old per-lot seller fields removed only in isolated preview.\\n";
+    echo "Old per-lot seller fields removed only in isolated preview.\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
