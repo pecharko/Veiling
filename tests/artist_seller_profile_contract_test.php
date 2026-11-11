@@ -37,6 +37,9 @@ $base=['seller_type'=>'kunstenaar','name'=>'Fictieve maker','email'=>'maker@exam
   'artist_name'=>'Maker','artist_url'=>'https://example.org/'];
 $valid=seller_clean($base+['artist_intro'=>str_repeat('A',500)]);
 if (mb_strlen($valid['artist_intro'])!==500) throw new RuntimeException('500-character artist intro rejected');
+$multiline=seller_clean($base+['artist_intro'=>"Eerste regel\r\nTweede regel"]);
+if ($multiline['artist_intro']!=="Eerste regel\nTweede regel")
+  throw new RuntimeException('Multiline artist introduction should normalize line endings');
 try {
   seller_clean($base+['artist_intro'=>str_repeat('A',501)]);
   throw new RuntimeException('501-character artist intro accepted');
