@@ -545,72 +545,51 @@ try {
     by_number(401)['status']==='draft' && by_number(401)['title']==='Own edited',
     'Auction-only on market aborts entire publication transaction');
 
-  // Artist metadata: validate before SQL, persist, and retain input on error.
-  [$status, $artistForm] = request_page('/admin/kavel.php');
-  claim($status===200, 'Artist editor loads');
-  $csrf = token($artistForm);
-  claim(str_contains($artistForm, 'name="artist_name"') && str_contains($artistForm, 'name="artist_url"'),
-    'New lot editor exposes both artist fields');
-  $artistPost = [
-    'csrf'=>$csrf, 'action'=>'save', 'id'=>'0',
-    'lot_number'=>'750000', 'title'=>'Kunstwerk met maker',
-    'artist_name'=>'', 'artist_url'=>'https://example.org/kunst',
-    'status'=>'draft', 'sale_location'=>'markt'
+  // A lot now stores only the seller foreign key; private bank data is not duplicated.
+  [$status, $newSellerForm] = request_page('/admin/verkoper.php');
+  $sellerCreate=[
+    'csrf'=>token($newSellerForm),'action'=>'save','seller_type'=>'kunstenaar',
+    'name'=>'Fictieve maker','email'=>'maker@example.invalid','street'=>'Teststraat',
+    'house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Fictieve maker','bank_account_iban'=>'BE68 5390 0754 7034',
+    'artist_name'=>'Demo artiest','artist_url'=>'https://example.org/artist'
   ];
-  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($artistError, 'Vul eerst de naam van de kunstenaar')
-    && str_contains($artistError,'name="artist_url" value="https://example.org/kunst"')
-    && !by_number(750000), 'Artist URL without name is rejected and retained, no lot created');
-  $artistPost['artist_name']='Jan Jans';
-  $artistPost['artist_url']='javascript:alert(1)';
-  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($artistError, 'http- of https-link')
-    && !by_number(750000), 'Unsafe artist URL rejected before database write');
-  $artistPost['artist_url']='https://example.org/artist?x=1&y=2';
-  $artistPost['bank_account_name']='Kunstkring Lokeren';
-  $artistPost['bank_account_iban']='BE68 5390 0754 7035';
-  [$status, $bankError] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($bankError, 'IBAN-controlegetal')
-      && !by_number(750000), 'Invalid IBAN checksum blocks lot saving');
-  $artistPost['bank_account_iban']='BE68 5390 0754 7034';
-  [$status] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===303, 'Valid artist link and name accepted');
+  [$status] = request_page('/admin/verkoper.php',$sellerCreate);
+  $artistSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve maker'")->fetchColumn();
+  claim($status===303 && $artistSellerId>0,'Artist seller created in private seller registry');
+  [$status, $artistForm] = request_page('/admin/kavel.php');
+  claim($status===200 && str_contains($artistForm,'name="seller_id"')
+    && str_contains($artistForm,'+ Nieuwe verkoper')
+    && !str_contains($artistForm,'name="artist_name"')
+    && !str_contains($artistForm,'name="bank_account_iban"'),
+    'Lot form uses seller selector and private seller creation link only');
+  $artistPost=[
+    'csrf'=>token($artistForm),'action'=>'save','id'=>'0',
+    'lot_number'=>'750000','title'=>'Kunstwerk met maker',
+    'seller_id'=>(string)$artistSellerId,'status'=>'draft','sale_location'=>'markt'
+  ];
+  [$status] = request_page('/admin/kavel.php',$artistPost);
   $artistStored=by_number(750000);
-  claim($artistStored && $artistStored['artist_name']==='Jan Jans'
-    && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
-    'Both artist fields stored');
-  claim($artistStored['bank_account_name']==='Kunstkring Lokeren'
-    && $artistStored['bank_account_iban']==='BE68539007547034',
-    'Account holder and normalized IBAN persisted in private lot columns');
-  [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
-  claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
-      && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
-    'Existing lot reload shows the saved artist name and escaped hyperlink');
-  claim(str_contains($persistedEditor,'name="bank_account_name" value="Kunstkring Lokeren"')
-    && str_contains($persistedEditor,'name="bank_account_iban" value="BE68539007547034"'),
-    'Private bank fields reload in kavel editor');
+  claim($status===303 && $artistStored && (int)$artistStored['seller_id']===$artistSellerId,
+    'Lot persists only its referenced seller ID');
+  [$status, $artistEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
+  claim($status===200 && str_contains($artistEditor,'value="'.$artistSellerId.'" selected'),
+    'Existing lot reload selects the linked seller');
   [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
-    'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
-    'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
-    'artist_name'=>'Jan Jans', 'artist_url'=>'https://example.org/artist?x=1&y=2',
-    'bank_account_name'=>'Kunstkring Lokeren', 'bank_account_iban'=>'BE68539007547034',
-    'status'=>'draft', 'sale_location'=>'markt'
+    'csrf'=>token($artistEditor),'action'=>'save','id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000','title'=>'Updated seller lot','seller_id'=>'999999',
+    'status'=>'draft','sale_location'=>'markt'
   ]);
-  claim($status===303 && by_number(750000)['title']==='Kunstwerk met bijgewerkte titel'
-      && by_number(750000)['artist_name']==='Jan Jans'
-      && by_number(750000)['artist_url']==='https://example.org/artist?x=1&y=2',
-    'Artist metadata survives saving unrelated lot fields');
-  $artistPost['id']=(string)$artistStored['id'];
-  $artistPost['artist_name']='';
-  [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
-  claim($status===200 && by_number(750000)['artist_name']==='Jan Jans',
-    'Cannot clear artist name while a URL remains');
-  $artistPost['artist_name']='Nieuwe kunstenaar';
-  $artistPost['artist_url']='';
-  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
-  claim($status===303 && by_number(750000)['artist_name']==='Nieuwe kunstenaar'
-    && by_number(750000)['artist_url']==='', 'Artist link can be removed while keeping name');
-
+  claim($status===200 && (int)by_number(750000)['seller_id']===$artistSellerId,
+    'Forged seller ID rejected without changing lot');
+  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
+    'csrf'=>token($artistEditor),'action'=>'save','id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000','title'=>'Updated seller lot','seller_id'=>(string)$artistSellerId,
+    'status'=>'draft','sale_location'=>'markt'
+  ]);
+  claim($status===303 && by_number(750000)['title']==='Updated seller lot'
+    && (int)by_number(750000)['seller_id']===$artistSellerId,
+    'Unrelated lot edit preserves linked seller');
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
   claim($status === 405, 'Authenticated GET logout is rejected without destroying session');
