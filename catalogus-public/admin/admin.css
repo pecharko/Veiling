@@ -327,3 +327,20 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
   .seller-editor-card{padding:16px}
   .seller-field-wide{grid-column:auto}
 }
+
+/* Private artist profile additions - same card design as seller and lot editors. */
+.seller-introduction{margin-top:18px}
+.seller-introduction label{display:block;font-weight:650;color:#29473e;font-size:13px;margin-bottom:8px}
+.seller-introduction textarea{display:block;width:100%;max-width:100%;border:1px solid #d6ddd5;background:#fff;border-radius:9px;padding:12px 13px;color:#1e382f;font:inherit;resize:vertical}
+.seller-introduction textarea:focus{outline:3px solid rgba(239,133,134,.18);border-color:var(--wine)}
+.seller-gallery{margin-top:24px;border-top:1px solid #ecdfd6;padding-top:20px}
+.seller-gallery h4{color:#29473e;font-size:15px;margin:0 0 12px}
+.seller-photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.seller-photo-slot{border:1px solid #e5dcd5;background:#fff;border-radius:10px;padding:12px;min-width:0}
+.seller-photo-slot img{display:block;max-width:100%;width:100%;height:160px;object-fit:contain;border-radius:6px;background:#f7f7f5;margin-bottom:12px}
+.seller-photo-slot label{display:block;font-weight:650;font-size:13px;color:#29473e}
+.seller-photo-slot input{display:block;margin-top:8px;font-size:12px;max-width:100%;width:100%}
+.seller-photo-delete-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.seller-photo-delete button{color:#922b37;border-color:#e6c8cd}
+.seller-optional{font-size:12px;color:#63766e;font-weight:400}
+@media(max-width:650px){.seller-photo-grid{grid-template-columns:1fr}.seller-photo-slot img{height:220px}}
