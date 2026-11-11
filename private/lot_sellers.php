@@ -7,6 +7,12 @@ require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
 function seller_can_manage(string $role): bool { return in_array($role,['administrator','veilingmeester','assistant'],true); }
+function seller_audit_time(?string $utc): string {
+  if ($utc===null || $utc==='') return 'Niet geregistreerd';
+  $when=new DateTimeImmutable($utc,new DateTimeZone('UTC'));
+  return $when->setTimezone(new DateTimeZone('Europe/Brussels'))->format('d/m/Y H:i');
+}
+
 
 function seller_clean(mixed $input): array {
   if (!is_array($input)) throw new InvalidArgumentException('Ongeldige verkopersgegevens.');
