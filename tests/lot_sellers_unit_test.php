@@ -12,11 +12,16 @@ $normal=seller_clean([
 checkSeller($normal['name']==='Fictieve kunstenaar','Seller name normalized');
 checkSeller($normal['bank_account_iban']==='BE68539007547034','Seller IBAN checksum/normalization');
 checkSeller($normal['artist_url']==='https://www.example.org','Artist URL normalized');
+checkSeller($normal['mobile_number']==='', 'Mobile is optional for artists');
 $base=[
   'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'persoon@example.invalid',
   'street'=>'Teststraat','house_number'=>'2','postal_code'=>'9160','municipality'=>'Lokeren',
   'bank_account_name'=>'Demo particulier','bank_account_iban'=>'BE68 5390 0754 7034',
 ];
+$mobileSeller=seller_clean(array_merge($base,['mobile_number'=>'0470 12 34 56']));
+checkSeller($mobileSeller['mobile_number']==='+32470123456', 'Mobile number normalized on seller save');
+$internationalSeller=seller_clean(array_merge($base,['mobile_number'=>'+44 7700 900123']));
+checkSeller($internationalSeller['mobile_number']==='+447700900123', 'International mobile number accepted');
 $private=seller_clean($base+['artist_name'=>'Should not be retained','artist_url'=>'https://example.org']);
 checkSeller($private['artist_name']==='' && $private['artist_url']==='','Private seller cannot retain artist fields');
 $withoutBank=seller_clean(array_merge($base,['bank_account_name'=>'','bank_account_iban'=>'']));
@@ -29,6 +34,7 @@ checkSeller($onlyIban['bank_account_iban']==='BE68539007547034',
 foreach ([
   ['seller_type'=>'unknown','name'=>'Demo'],
   array_merge($base,['email'=>'not-an-email']),
+  array_merge($base,['mobile_number'=>'02 123 45 67']),
   array_merge($base,['bank_account_iban'=>'BE68 5390 0754 7035']),
   array_merge($base,['street'=>'']),
   array_merge($base,['house_number'=>'']),
