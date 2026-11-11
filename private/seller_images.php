@@ -3,7 +3,7 @@ declare(strict_types=1);
 require_once __DIR__.'/images.php';
 require_once __DIR__.'/photo_delete_safety.php';
 
-/** Only call within administrator-only requests holding the catalog mutex. */
+/** Call only from authenticated seller management while holding the catalog mutex. */
 function seller_image_rows(PDO $pdo,int $sellerId): array {
   $st=$pdo->prepare('SELECT id,seller_id,image_kind,slot,path FROM seller_images WHERE seller_id=? ORDER BY image_kind,slot');
   $st->execute([$sellerId]);
@@ -14,7 +14,7 @@ function seller_image_check(string $kind,int $slot): void {
     throw new InvalidArgumentException('Ongeldige fotopositie.');
   }
 }
-function seller_image_upload(PDO $pdo,int $sellerId,string $kind,int $slot,array $file): void {
+function seller_image_upload(PDO $pdo,int $sellerId,string $kind,int $slot,array $file,?int $actorId=null): void {
   seller_image_check($kind,$slot);
   if (($file['error']??UPLOAD_ERR_NO_FILE)!==UPLOAD_ERR_OK
       || !isset($file['tmp_name']) || !is_string($file['tmp_name'])
@@ -34,6 +34,7 @@ function seller_image_upload(PDO $pdo,int $sellerId,string $kind,int $slot,array
     $save=$pdo->prepare('INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,?,?,?)
       ON DUPLICATE KEY UPDATE path=VALUES(path)');
     $save->execute([$sellerId,$kind,$slot,$path]);
+    if ($actorId!==null) $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$actorId,$sellerId]);
     $pdo->commit();
   } catch (Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
@@ -44,7 +45,7 @@ function seller_image_upload(PDO $pdo,int $sellerId,string $kind,int $slot,array
     catalog_safe_unlink_photo($previous,dirname(__DIR__).'/catalogus-public');
   }
 }
-function seller_image_delete(PDO $pdo,int $sellerId,string $kind,int $slot): void {
+function seller_image_delete(PDO $pdo,int $sellerId,string $kind,int $slot,?int $actorId=null): void {
   seller_image_check($kind,$slot);
   $pdo->beginTransaction();
   try {
@@ -53,6 +54,7 @@ function seller_image_delete(PDO $pdo,int $sellerId,string $kind,int $slot): voi
     $path=$st->fetchColumn();
     if ($path===false) throw new InvalidArgumentException('Foto niet gevonden.');
     $pdo->prepare('DELETE FROM seller_images WHERE seller_id=? AND image_kind=? AND slot=?')->execute([$sellerId,$kind,$slot]);
+    if ($actorId!==null) $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$actorId,$sellerId]);
     $pdo->commit();
   } catch (Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
