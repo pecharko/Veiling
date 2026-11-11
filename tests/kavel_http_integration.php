@@ -533,6 +533,50 @@ try {
   ]);
   claim($status===303 && (int)by_number(302)['auction_number']===2,
     'Second auction number increments after assignment');
+  // Reordering changes both the moved lot and every shifted lot: audit both.
+  $auctionAuditActor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  db()->exec("UPDATE lots SET last_edited_at='2020-01-01 00:00:00' WHERE lot_number IN (301,302)");
+  [$orderPageStatus,$orderPage]=request_page('/admin/veiling-organisatie.php');
+  claim($orderPageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$orderPage,$orderMatch)===1,
+    'Auction order editor exposes a consistent version token');
+  [$moveStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($orderPage),'lot_id'=>(string)by_number(302)['id'],
+    'position'=>'1','order_version'=>$orderMatch[1]
+  ]);
+  $moved=by_number(302);
+  $shifted=by_number(301);
+  claim($moveStatus===303 && (int)$moved['auction_number']===1
+    && (int)$shifted['auction_number']===2
+    && (int)$moved['last_edited_by_admin_id']===$auctionAuditActor
+    && (int)$shifted['last_edited_by_admin_id']===$auctionAuditActor
+    && $moved['last_edited_at']!=='2020-01-01 00:00:00'
+    && $shifted['last_edited_at']!=='2020-01-01 00:00:00',
+    'Moved and shifted auction numbers both record a real last editor and time');
+  db()->exec("UPDATE lots SET last_edited_at='2020-01-02 00:00:00' WHERE lot_number IN (301,302)");
+  [$noMovePageStatus,$noMovePage]=request_page('/admin/veiling-organisatie.php');
+  claim($noMovePageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$noMovePage,$noMoveMatch)===1,
+    'Auction order version available for no-op validation');
+  [$samePositionStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($noMovePage),'lot_id'=>(string)by_number(302)['id'],
+    'position'=>'1','order_version'=>$noMoveMatch[1]
+  ]);
+  claim($samePositionStatus===303
+    && by_number(301)['last_edited_at']==='2020-01-02 00:00:00'
+    && by_number(302)['last_edited_at']==='2020-01-02 00:00:00',
+    'Saving unchanged auction order does not advance lot audit');
+  [$restorePageStatus,$restorePage]=request_page('/admin/veiling-organisatie.php');
+  claim($restorePageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$restorePage,$restoreMatch)===1,
+    'Auction order version available for restoring synthetic order');
+  [$restoreStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($restorePage),'lot_id'=>(string)by_number(301)['id'],
+    'position'=>'1','order_version'=>$restoreMatch[1]
+  ]);
+  claim($restoreStatus===303 && (int)by_number(301)['auction_number']===1
+    && (int)by_number(302)['auction_number']===2,
+    'Restoring test auction order maintains consistent numbering');
   $auctionId=(int)by_number(301)['id'];
   [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
   [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
