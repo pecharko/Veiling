@@ -6,7 +6,7 @@ require_once __DIR__ . '/seller_mobile.php';
 require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
-function seller_can_manage(string $role): bool { return $role === 'administrator'; }
+function seller_can_manage(string $role): bool { return in_array($role,['administrator','veilingmeester','assistant'],true); }
 
 function seller_clean(mixed $input): array {
   if (!is_array($input)) throw new InvalidArgumentException('Ongeldige verkopersgegevens.');
@@ -47,7 +47,7 @@ function seller_clean(mixed $input): array {
 }
 
 function seller_list(PDO $pdo): array {
-  return $pdo->query('SELECT s.*, (SELECT COUNT(*) FROM lots l WHERE l.seller_id=s.id) AS lot_count FROM lot_sellers s ORDER BY s.name,s.id')->fetchAll(PDO::FETCH_ASSOC);
+  return $pdo->query("SELECT s.*, COALESCE(NULLIF(creator.name,''),creator.email) AS creator_name, COALESCE(NULLIF(editor.name,''),editor.email) AS editor_name, (SELECT COUNT(*) FROM lots l WHERE l.seller_id=s.id) AS lot_count FROM lot_sellers s LEFT JOIN admins creator ON creator.id=s.created_by_admin_id LEFT JOIN admins editor ON editor.id=s.updated_by_admin_id ORDER BY s.name,s.id")->fetchAll(PDO::FETCH_ASSOC);
 }
 
 function seller_choices(PDO $pdo): array {
@@ -62,7 +62,8 @@ function seller_valid_id(PDO $pdo, ?int $id): bool {
 }
 
 /** Caller must have checked admin role, CSRF and catalog mutex. */
-function seller_save(PDO $pdo, ?int $id, array $input): int {
+function seller_save(PDO $pdo, ?int $id, array $input, int $actorId): int {
+  if ($actorId<1) throw new InvalidArgumentException('Ongeldige ingelogde beheerder.');
   $data=seller_clean($input);
   $keys=array_keys($data);
   $pdo->beginTransaction();
@@ -72,11 +73,11 @@ function seller_save(PDO $pdo, ?int $id, array $input): int {
       $check->execute([$id]);
       if (!$check->fetchColumn()) throw new InvalidArgumentException('Verkoper niet gevonden.');
       $sets=implode(',',array_map(static fn($key)=>$key.'=?',$keys));
-      $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.' WHERE id=?');
-      $stmt->execute([...array_values($data),$id]);
+      $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
+      $stmt->execute([...array_values($data),$actorId,$id]);
     } else {
-      $stmt=$pdo->prepare('INSERT INTO lot_sellers ('.implode(',',$keys).') VALUES ('.implode(',',array_fill(0,count($keys),'?')).')');
-      $stmt->execute(array_values($data));
+      $stmt=$pdo->prepare('INSERT INTO lot_sellers ('.implode(',',$keys).',created_by_admin_id,created_at,updated_by_admin_id,updated_at) VALUES ('.implode(',',array_fill(0,count($keys),'?')).',?,UTC_TIMESTAMP(),?,UTC_TIMESTAMP())');
+      $stmt->execute([...array_values($data),$actorId,$actorId]);
       $id=(int)$pdo->lastInsertId();
     }
     $pdo->commit();
