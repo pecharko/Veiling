@@ -22,10 +22,17 @@ function seller_clean(mixed $input): array {
     }
     $fields[$key]=$value;
   }
-  if ($fields['name']==='') throw new InvalidArgumentException('Naam is verplicht.');
-  if ($fields['email']!=='' && filter_var($fields['email'],FILTER_VALIDATE_EMAIL)===false) throw new InvalidArgumentException('Vul een geldig e-mailadres in.');
+  $requiredLabels = ['name'=>'Naam','email'=>'E-mail','street'=>'Straat','house_number'=>'Huisnummer',
+    'postal_code'=>'Postcode','municipality'=>'Gemeente','bank_account_name'=>'Naam bankrekeningnummer',
+    'bank_account_iban'=>'IBAN'];
+  foreach ($requiredLabels as $key=>$label) {
+    if ($fields[$key]==='') throw new InvalidArgumentException($label.' is verplicht.');
+  }
+  if (filter_var($fields['email'],FILTER_VALIDATE_EMAIL)===false) throw new InvalidArgumentException('Vul een geldig e-mailadres in.');
   [$fields['bank_account_name'],$fields['bank_account_iban']]=lot_bank_validate($fields['bank_account_name'],$fields['bank_account_iban']);
   if ($type==='kunstenaar') {
+    if ($fields['artist_name']==='') throw new InvalidArgumentException('Kunstenaarsnaam is verplicht voor een kunstenaar.');
+    if ($fields['artist_url']==='') throw new InvalidArgumentException('Website kunstenaar is verplicht voor een kunstenaar.');
     [$fields['artist_name'],$fields['artist_url']]=lot_artist_validate($fields['artist_name'],$fields['artist_url']);
   } else {
     $fields['artist_name']='';
