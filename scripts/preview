@@ -80,8 +80,8 @@ diagnose_preview() {
       fwrite(STDERR, "ONTBREEKT: verkopersschema in de geïsoleerde preview. Start de preview opnieuw met sh scripts/preview start.\\n");
       exit(1);
     }
-    if (!db()->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_intro'")->fetch()
-        || db()->query("SHOW TABLES LIKE 'seller_images'")->fetchColumn()===false) {
+    if (!db()->query("SHOW COLUMNS FROM lot_sellers LIKE " . db()->quote("artist_intro"))->fetch()
+        || db()->query("SHOW TABLES LIKE " . db()->quote("seller_images"))->fetchColumn()===false) {
       fwrite(STDERR, "ONTBREEKT: kunstenaarsintroductie of foto-opslag. Voer sh scripts/preview start uit.\n");
       exit(1);
     }
