@@ -124,6 +124,17 @@ $sellerSql = preg_replace('/^\s*--[^\n]*$/m', '', $sellerSql);
 foreach (explode(';', (string)$sellerSql) as $statement) {
   if (trim($statement) !== '') $pdo->exec($statement);
 }
+// Artist profile schema is additive; use only the disposable auction_test database.
+$artistProfileSql=file_get_contents($dir.'/database/migrations/20261111_seller_artist_profile.sql');
+if (!is_string($artistProfileSql) || !str_contains($artistProfileSql,'fk_seller_images_seller')) {
+  throw new RuntimeException('Artist profile migration fixture missing.');
+}
+$artistProfileSql=preg_replace('/^\\s*--[^\\n]*$/m','',$artistProfileSql);
+foreach(explode(';',(string)$artistProfileSql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_intro'")->fetch()
+    || !$pdo->query("SHOW TABLES LIKE 'seller_images'")->fetchColumn()) {
+  throw new RuntimeException('Artist profile schema missing in isolated test database');
+}
 // Exercise legacy artist constraint before the agreed destructive seller-dedup migration.
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
