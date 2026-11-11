@@ -89,7 +89,7 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v3-sellers' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId))===1
+verify($snapshot['format']==='41lokeren-v4-artists' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId,
   'Snapshot v3 stores seller details and reference in one consistent archive');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
