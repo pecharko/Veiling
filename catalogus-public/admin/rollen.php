@@ -16,6 +16,7 @@ admin_top('Rollen & rechten');
         <tr><td>Conceptkavel van een andere maker bewerken of verwijderen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Kavel publiceren of publicatie terugdraaien</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Gepubliceerd kavel bewerken, foto's wijzigen of verwijderen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
+        <tr><td>Verkopers en kunstenaars toevoegen, bewerken en verwijderen (inclusief contact- en bankgegevens)</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingorganisatie bekijken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingvolgorde wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Gebruikersbeheer, instellingen, statistieken, back-ups en systeemcheck</td><td>Ja</td><td>Nee</td><td>Nee</td></tr>
