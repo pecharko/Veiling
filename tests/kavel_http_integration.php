@@ -129,8 +129,9 @@ try {
 
   claim(str_contains($html,'<h2>Publicatie</h2>') && str_contains($html, '<select name="category">')
       && str_contains($html,'>Moderne Kunst</option>') && str_contains($html,'>Oude Meesters</option>')
-      && !str_contains($html,'name="sale_location"'),
-      'Administrator new lot shows publication, categories, and fixed initial sale location');
+      && str_contains($html,'<select name="status">')
+      && str_contains($html,'<select name="sale_location">'),
+      'Administrator can choose publication status and sale location for a new lot');
   claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
