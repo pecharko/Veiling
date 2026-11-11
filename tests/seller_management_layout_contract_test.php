@@ -30,6 +30,12 @@ foreach ([
 ] as $required) {
   if (!str_contains($editor,$required)) throw new RuntimeException('Missing seller editor element: '.$required);
 }
+foreach (['email','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url'] as $field) {
+  if (!preg_match('/<input(?=[^>]*name="'.preg_quote($field,'/').'")(?=[^>]*\\brequired\\b)[^>]*>/s', $editor))
+    throw new RuntimeException('Required seller input missing: '.$field);
+}
+if (!str_contains($editor,'input.required=artist') || !str_contains($editor,'input.disabled=!artist'))
+  throw new RuntimeException('Artist required fields must toggle with seller type');
 if (str_contains($overview,'id="seller-form"') || str_contains($overview,'name="bank_account_iban"')
     || str_contains($overview,'seller_save(')) throw new RuntimeException('Seller overview must not embed new/edit form.');
 if (!str_contains($overview,'require_administrator()')) throw new RuntimeException('Seller overview must remain admin-only.');
