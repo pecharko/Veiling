@@ -68,3 +68,31 @@ function compact_auction_numbers(PDO $pdo): void {
     if ((int)$row['auction_number'] !== $expected) $update->execute([$expected, (int)$row['id']]);
   }
 }
+
+/**
+ * Compare the effective values of a lot to its persisted row. Normalize MySQL
+ * DECIMAL(,2), nullable foreign keys and integer flags to avoid marking a
+ * visually unchanged form as a modification.
+ */
+function lot_effective_fields_changed(array $stored, array $values): bool {
+  $keys=['lot_number','title','subtitle','category','description','details',
+    'market_price','starting_bid','auction_only','status','sale_location',
+    'auction_number','seller_id'];
+  if (count($values)!==count($keys)) throw new InvalidArgumentException('Ongeldige kavelvergelijking.');
+  foreach ($keys as $i=>$key) {
+    $old=$stored[$key]??null;
+    $next=$values[$i];
+    if (in_array($key,['market_price','starting_bid'],true)) {
+      $old=($old===null||$old==='')?null:number_format((float)$old,2,'.','');
+      $next=($next===null||$next==='')?null:number_format((float)$next,2,'.','');
+    } elseif (in_array($key,['lot_number','auction_only','auction_number','seller_id'],true)) {
+      $old=($old===null||$old==='')?null:(int)$old;
+      $next=($next===null||$next==='')?null:(int)$next;
+    } else {
+      $old=(string)($old??'');
+      $next=(string)($next??'');
+    }
+    if ($old!==$next) return true;
+  }
+  return false;
+}
