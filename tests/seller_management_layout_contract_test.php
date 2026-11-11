@@ -24,7 +24,7 @@ foreach ([
   'class="seller-form-actions"',
   'id="seller-artist-fields"',
   'name="bank_account_iban"',
-  'seller_save($pdo,$editId,$_POST)',
+  'seller_save($pdo,$editId,$_POST,(int)$_SESSION[\'admin_id\'])',
   'Terug naar verkopers',
   'require_auth()',
 ] as $required) {
