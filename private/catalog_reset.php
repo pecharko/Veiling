@@ -5,7 +5,7 @@ require_once __DIR__.'/photo_delete_safety.php';
 /**
  * Destructive, explicit administrator operation.
  * Caller holds the catalog advisory mutex and has checked CSRF/role/confirmation.
- * Snapshot ZIP files are not touched. DB deletion and registry reset are atomic.
+ * Snapshot ZIP files are not touched. Lots, sellers and registry reset are atomic.
  */
 function reset_catalog_lots(PDO $pdo): array {
   if ($pdo->inTransaction()) throw new LogicException('Catalog reset requires a new transaction.');
@@ -14,11 +14,15 @@ function reset_catalog_lots(PDO $pdo): array {
     $pdo->beginTransaction();
     $paths = $pdo->query('SELECT path FROM lot_images')->fetchAll(PDO::FETCH_COLUMN);
     $count = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
+    $sellerCount = (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn();
     $pdo->exec('DELETE FROM lot_images');
     $pdo->exec('DELETE FROM lots');
+    // After deleting all lots, their FK references no longer prevent deleting sellers.
+    // Keep sellers in the same transaction so a failure restores everything.
+    $pdo->exec('DELETE FROM lot_sellers');
     $pdo->exec('DELETE FROM issued_lot_numbers');
     $pdo->commit();
-    return ['deleted' => $count, 'paths' => $paths];
+    return ['deleted' => $count, 'sellers_deleted' => $sellerCount, 'paths' => $paths];
   } catch (Throwable $e) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     throw $e;
