@@ -124,6 +124,7 @@ $sellerSql = preg_replace('/^\s*--[^\n]*$/m', '', $sellerSql);
 foreach (explode(';', (string)$sellerSql) as $statement) {
   if (trim($statement) !== '') $pdo->exec($statement);
 }
+// Exercise legacy artist constraint before the agreed destructive seller-dedup migration.
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
 try {
@@ -133,6 +134,15 @@ try {
   if ((int)($expected->errorInfo[1] ?? 0) !== 3819) throw $expected;
 }
 
+// Option B approved: only remove these four obsolete lot metadata columns in isolated CI.
+$dropSql = file_get_contents($dir . '/database/migrations/20261111_lot_seller_dedup.sql');
+if (!is_string($dropSql) || !str_contains($dropSql, 'DROP COLUMN bank_account_iban')) throw new RuntimeException('Dedup migration missing');
+$dropSql = preg_replace('/^\s*--[^\n]*$/m', '', $dropSql);
+$pdo->exec(trim((string)$dropSql));
+if ($pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch()
+    || $pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_iban'")->fetch()) {
+  throw new RuntimeException('Obsolete per-lot seller metadata remains after dedup');
+}
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.
