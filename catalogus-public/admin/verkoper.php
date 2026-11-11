@@ -53,7 +53,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   </div>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
-    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Vul de gegevens van een kunstenaar of particulier in.</p></div></div>
+    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle velden zijn verplicht. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
     <form method="post" class="seller-manager-form">
       <?=csrf_field()?>
       <input type="hidden" name="action" value="save">
@@ -63,26 +63,26 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         <div class="seller-fields-grid">
           <label>Type verkoper<select name="seller_type" id="seller-type" required><option value="particulier" <?=$values['seller_type']==='particulier'?'selected':''?>>Particulier</option><option value="kunstenaar" <?=$values['seller_type']==='kunstenaar'?'selected':''?>>Kunstenaar</option></select></label>
           <label>Naam <span class="lot-required">*</span><input name="name" maxlength="150" required value="<?=e((string)$values['name'])?>"></label>
-          <label class="seller-field-wide">E-mail<input name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
-          <label>Straat<input name="street" maxlength="150" value="<?=e((string)$values['street'])?>"></label>
-          <label>Huisnummer<input name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
-          <label>Postcode<input name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
-          <label>Gemeente<input name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
+          <label class="seller-field-wide">E-mail <span class="lot-required">*</span><input required name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
+          <label>Straat <span class="lot-required">*</span><input required name="street" maxlength="150" value="<?=e((string)$values['street'])?>"></label>
+          <label>Huisnummer <span class="lot-required">*</span><input required name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
+          <label>Postcode <span class="lot-required">*</span><input required name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
+          <label>Gemeente <span class="lot-required">*</span><input required name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
         </div>
       </div>
       <div class="seller-fields-section">
         <h3>Bankgegevens <span class="seller-private-label">Privé</span></h3>
         <div class="seller-fields-grid">
-          <label>Naam bankrekeningnummer<input name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
-          <label>IBAN<input name="bank_account_iban" maxlength="42" autocomplete="off" spellcheck="false" value="<?=e((string)$values['bank_account_iban'])?>" placeholder="BE68 5390 0754 7034"></label>
+          <label>Naam bankrekeningnummer <span class="lot-required">*</span><input required name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
+          <label>IBAN <span class="lot-required">*</span><input required name="bank_account_iban" maxlength="42" autocomplete="off" spellcheck="false" value="<?=e((string)$values['bank_account_iban'])?>" placeholder="BE68 5390 0754 7034"></label>
         </div>
         <p class="lot-editor-help">Het IBAN wordt bij het opslaan gecontroleerd en verschijnt niet in de publieke catalogus.</p>
       </div>
       <div class="seller-fields-section seller-artist-fields" id="seller-artist-fields" <?=$values['seller_type']==='kunstenaar'?'':'hidden'?>>
         <h3>Kunstenaarsgegevens</h3>
         <div class="seller-fields-grid">
-          <label>Kunstenaarsnaam<input name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
-          <label>Website kunstenaar<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
+          <label>Kunstenaarsnaam <span class="lot-required">*</span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
+          <label>Website kunstenaar <span class="lot-required">*</span><input required name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
         </div>
       </div>
       <div class="seller-form-actions">
@@ -97,7 +97,14 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   const type=document.getElementById('seller-type');
   const fields=document.getElementById('seller-artist-fields');
   if (!type || !fields) return;
-  function sync() { fields.hidden=type.value!=='kunstenaar'; }
+  function sync() {
+    const artist=type.value==='kunstenaar';
+    fields.hidden=!artist;
+    fields.querySelectorAll('input').forEach(input => {
+      input.required=artist;
+      input.disabled=!artist;
+    });
+  }
   type.addEventListener('change', sync);
   sync();
 }());
