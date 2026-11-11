@@ -3,6 +3,7 @@ declare(strict_types=1);
 // Offline contract: character caps, preserved database columns, catalog overflow and detail field labels.
 $root = dirname(__DIR__);
 $editor = file_get_contents($root . '/catalogus-public/admin/kavel.php');
+$sellerEditor = file_get_contents($root . '/catalogus-public/admin/verkoper.php');
 $catalog = file_get_contents($root . '/catalogus-public/index.php');
 $detail = file_get_contents($root . '/catalogus-public/kavel.php');
 $css = file_get_contents($root . '/catalogus-public/assets/catalogus.css');
@@ -12,9 +13,14 @@ if (!is_string($editor) || !is_string($catalog) || !is_string($detail) || !is_st
 function preview_assert(bool $valid, string $message): void {
   if (!$valid) throw new RuntimeException($message);
 }
-foreach (['title'=>50,'subtitle'=>50,'artist_name'=>50,'artist_url'=>2048] as $field=>$limit) {
+foreach (['title'=>50,'subtitle'=>50] as $field=>$limit) {
   preview_assert((bool)preg_match('~name="'.preg_quote($field,'~').'" value="[^\\n]*?" maxlength="'.$limit.'"~', $editor), "$field HTML limit");
 }
+foreach (['artist_name'=>50,'artist_url'=>2048] as $field=>$limit) {
+  preview_assert((bool)preg_match('~name="'.preg_quote($field,'~').'" maxlength="'.$limit.'"~', $sellerEditor), "$field seller editor cap");
+}
+preview_assert(!str_contains($editor,'name="artist_name"') && !str_contains($editor,'name="artist_url"'),
+  'Artist fields reside in seller registry');
 preview_assert(str_contains($editor, '<select name="category">') && str_contains($editor, 'lot_category_exists($pdo,$category)'), 'Category select and server validation');
 foreach (['description'=>250,'details'=>100] as $field=>$limit) {
   preview_assert((bool)preg_match('~<textarea\\b[^>]*\\bname="'.preg_quote($field,'~').'"[^>]*\\bmaxlength="'.$limit.'"~', $editor), "$field textarea HTML limit");

@@ -40,9 +40,13 @@ foreach (['catalogus-public/index.php', 'catalogus-public/kavel.php'] as $page) 
     'Public page must display linked artist name: '.$page);
 }
 $editor=file_get_contents($root.'/catalogus-public/admin/kavel.php');
-artist_check(is_string($editor) && str_contains($editor,'lot_artist_validate(')
-  && str_contains($editor,'name="artist_name"') && str_contains($editor,'name="artist_url"'),
-  'Editor must validate and show both artist fields');
+$sellerEditor=file_get_contents($root.'/catalogus-public/admin/verkoper.php');
+$sellerValidation=file_get_contents($root.'/private/lot_sellers.php');
+artist_check(is_string($sellerEditor) && str_contains($sellerEditor,'name="artist_name"')
+  && str_contains($sellerEditor,'name="artist_url"')
+  && str_contains($sellerValidation,'lot_artist_validate(')
+  && !str_contains($editor,'name="artist_name"'),
+  'Artist fields must be validated in central seller editor, never duplicated in lot');
 echo "PASS lot artist validation and safe public markup\n";
 
 require __DIR__ . '/artist_public_link_style_test.php';

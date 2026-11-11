@@ -29,6 +29,8 @@ bank_check(mb_strlen(lot_bank_validate(str_repeat('A', 100), '')[0]) === 100,
   '100-character holder accepted');
 $root = dirname(__DIR__);
 $editor = file_get_contents($root . '/catalogus-public/admin/kavel.php');
+$sellerEditor = file_get_contents($root . '/catalogus-public/admin/verkoper.php');
+$sellerValidation = file_get_contents($root . '/private/lot_sellers.php');
 $migration = file_get_contents($root . '/database/migrations/20261110_lot_bank_fields.sql');
 $public = file_get_contents($root . '/catalogus-public/index.php');
 $detail = file_get_contents($root . '/catalogus-public/kavel.php');
@@ -38,15 +40,14 @@ bank_check(str_contains($editor,'if (lot_can_change_publication(effective_admin_
   'Publication box must be role gated');
 bank_check(str_contains($editor,'lot_can_change_publication($role)'),
   'Publication and sale-location POST authorization must be server-side');
-bank_check(str_contains($editor,'name="bank_account_name"') &&
-  str_contains($editor,'maxlength="100"') &&
-  str_contains($editor,'>Bankrekeningnummer<input') &&
-  !str_contains($editor,'>Banknummer<input'),
-  'Requested field names and 100-character browser limit');
-bank_check(str_contains($editor,'lot_bank_validate(') &&
-  str_contains($editor,'bank_account_iban=?') &&
-  str_contains($editor,'bank_account_name=?'),
-  'Editor validates and persists bank details');
+bank_check(!str_contains($editor,'name="bank_account_name"') && !str_contains($editor,'name="bank_account_iban"'),
+  'Lot editor delegates seller bank details to central registry');
+bank_check(str_contains($sellerEditor,'name="bank_account_name"')
+  && str_contains($sellerEditor,'maxlength="100"')
+  && str_contains($sellerEditor,'name="bank_account_iban"'),
+  'Seller editor contains optional bank holder and IBAN fields');
+bank_check(str_contains($sellerValidation,'lot_bank_validate('),
+  'Seller save validates bank details server-side');
 bank_check(str_contains($migration,'bank_account_name VARCHAR(100)') &&
   str_contains($migration,'bank_account_iban VARCHAR(34)'),
   'Migration uses bounded private text columns');
