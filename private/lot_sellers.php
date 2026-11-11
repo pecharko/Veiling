@@ -17,8 +17,10 @@ function seller_clean(mixed $input): array {
   foreach ($limits as $key=>$limit) {
     $value=$input[$key] ?? '';
     if (!is_string($value)) throw new InvalidArgumentException('Ongeldige invoer.');
+    if ($key==='artist_intro') $value=str_replace(["\r\n","\r"],"\n",$value);
     $value=trim($value);
-    if (mb_strlen($value,'UTF-8')>$limit || preg_match('/[\x00-\x1F\x7F]/u',$value)) {
+    $controlPattern=$key==='artist_intro' ? '/[\x00-\x09\x0B-\x1F\x7F]/u' : '/[\x00-\x1F\x7F]/u';
+    if (mb_strlen($value,'UTF-8')>$limit || preg_match($controlPattern,$value)) {
       throw new InvalidArgumentException('Ongeldige of te lange invoer voor '.str_replace('_',' ',$key).'.');
     }
     $fields[$key]=$value;
