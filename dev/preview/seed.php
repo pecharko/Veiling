@@ -102,9 +102,9 @@ if ($oldArtist) {
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
-    $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,municipality,artist_name,artist_url) VALUES (?,?,?,?,?,?)');
-    $seller->execute(['kunstenaar','Voorbeeldkunstenaar','kunst@example.invalid','Lokeren','Fictieve Ateliernaam','https://example.org']);
-    $seller->execute(['particulier','Voorbeeldparticulier','particulier@example.invalid','Lokeren','','']);
+    $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    $seller->execute(['kunstenaar','Voorbeeldkunstenaar','kunst@example.invalid','Voorbeeldstraat','1','9160','Lokeren','Voorbeeldkunstenaar','BE68539007547034','Fictieve Ateliernaam','https://example.org']);
+    $seller->execute(['particulier','Voorbeeldparticulier','particulier@example.invalid','Voorbeeldstraat','2','9160','Lokeren','Voorbeeldparticulier','BE68539007547034','','']);
     echo "Two synthetic sellers added to local preview.\n";
 }
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
