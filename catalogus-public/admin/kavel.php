@@ -208,10 +208,17 @@ if(is_post()){
             $auctionNumber = next_auction_number($pdo);
           }
           $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');}
-          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
-          $st->execute($values);
-          if(!$id)$id=(int)$pdo->lastInsertId();
+          $lotFieldsChanged=!$id || lot_effective_fields_changed($lot,$values);
+          if($id){
+            if($lotFieldsChanged) {
+              $st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');
+              $st->execute([...$values,$id]);
+            }
+          } else {
+            $st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $st->execute([...$values,(int)$_SESSION['admin_id']]);
+            $id=(int)$pdo->lastInsertId();
+          }
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
           $pdo->commit();
           $failed=[];
@@ -219,7 +226,9 @@ if(is_post()){
             try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
             catch(Throwable $ex){error_log('[Kavel foto] '.$ex->getMessage());$failed[]=$photo['name'].': verwerking mislukt';}
           }
-          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
+          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
+            : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
+            $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
