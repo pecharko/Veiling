@@ -61,7 +61,7 @@ if ($published) {
   $pages = max(1, (int)ceil($total / $perPage));
   $page = min($page, $pages);
   $offset = ($page - 1) * $perPage;
-  $st = $pdo->prepare('SELECT l.*, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l WHERE ' . $whereSql . ' ORDER BY ' . $order . ' LIMIT ? OFFSET ?');
+  $st = $pdo->prepare('SELECT l.*, CASE WHEN seller.seller_type='kunstenaar' THEN seller.artist_name ELSE '' END AS artist_name, CASE WHEN seller.seller_type='kunstenaar' THEN seller.artist_url ELSE '' END AS artist_url, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id WHERE ' . $whereSql . ' ORDER BY ' . $order . ' LIMIT ? OFFSET ?');
   $i = 1;
   foreach ($params as $param) $st->bindValue($i++, $param, is_int($param) ? PDO::PARAM_INT : PDO::PARAM_STR);
   $st->bindValue($i++, $perPage, PDO::PARAM_INT);
