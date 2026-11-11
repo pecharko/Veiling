@@ -9,6 +9,11 @@ const { chromium } = require('playwright');
   }
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
+  // These synthetic lots deliberately have no seller. Accept the explicit
+  // donation/no-payout confirmation; retain separate unsaved-change dialogs.
+  page.on('dialog', dialog => {
+    if (/geen verkoper geselecteerd/i.test(dialog.message())) return dialog.accept();
+  });
   const base = 'http://localhost:8090';
   try {
     await page.goto(base + '/admin/login.php');
