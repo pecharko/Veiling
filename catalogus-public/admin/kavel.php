@@ -262,6 +262,15 @@ if ($lot && !empty($lot['created_by_admin_id'])) {
   $creatorName = $creatorSt->fetchColumn();
   $creatorLabel = $creatorName === false ? 'Account niet meer aanwezig' : admin_name_label((string)$creatorName);
 }
+$lastEditorLabel='Nog niet gewijzigd';
+if ($lot && !empty($lot['last_edited_by_admin_id'])) {
+  $editorSt=$pdo->prepare('SELECT name,email FROM admins WHERE id=?');
+  $editorSt->execute([(int)$lot['last_edited_by_admin_id']]);
+  $editorRecord=$editorSt->fetch(PDO::FETCH_ASSOC);
+  $lastEditorLabel=$editorRecord
+    ? admin_name_label((string)($editorRecord['name']?:$editorRecord['email']))
+    : 'Account niet meer aanwezig';
+}
 $suggestedNumber = '';
 if (str_starts_with($error, 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.')) {
   $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
@@ -324,6 +333,12 @@ if ($error === $cancelAuctionWarning) {
       <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit"><?=$lot?'Wijzigingen opslaan':'Kavel opslaan'?></button><?php endif; ?>
     </div>
   </div>
+  <?php if($lot): ?>
+    <div class="lot-audit-summary" aria-label="Bewerkingsgeschiedenis">
+      <span><strong>Aangemaakt door:</strong> <?=e($creatorLabel)?> · <?=e(lot_audit_label((string)($lot['created_at']??'')))?> (Brussel)</span>
+      <span><strong>Laatste wijziging:</strong> <?=e($lastEditorLabel)?> · <?=e(lot_audit_label($lot['last_edited_at']??null))?><?=!empty($lot['last_edited_at'])?' (Brussel)':''?></span>
+    </div>
+  <?php endif; ?>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save"><input type="hidden" name="donation_confirmed" value="0">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
