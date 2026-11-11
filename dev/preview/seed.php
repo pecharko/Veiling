@@ -109,9 +109,9 @@ if (!$introPresent) {
     if (!is_string($sql) || !str_contains($sql,'fk_seller_images_seller') || !str_contains($sql,'artist_intro VARCHAR(500)')) {
         throw new RuntimeException('Reviewed artist profile migration missing.');
     }
-    $sql=preg_replace('/^\\s*--[^\\n]*$/m','',$sql);
+    $sql=preg_replace('/^\s*--[^\n]*$/m','',$sql);
     foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
-    echo "Artist biography and image slots added to isolated preview.\\n";
+    echo "Artist biography and image slots added to isolated preview.\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
