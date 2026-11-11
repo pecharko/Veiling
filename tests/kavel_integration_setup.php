@@ -129,7 +129,7 @@ $artistProfileSql=file_get_contents($dir.'/database/migrations/20261111_seller_a
 if (!is_string($artistProfileSql) || !str_contains($artistProfileSql,'fk_seller_images_seller')) {
   throw new RuntimeException('Artist profile migration fixture missing.');
 }
-$artistProfileSql=preg_replace('/^\\s*--[^\\n]*$/m','',$artistProfileSql);
+$artistProfileSql=preg_replace('/^\s*--[^\n]*$/m','',$artistProfileSql);
 foreach(explode(';',(string)$artistProfileSql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_intro'")->fetch()
     || !$pdo->query("SHOW TABLES LIKE 'seller_images'")->fetchColumn()) {
