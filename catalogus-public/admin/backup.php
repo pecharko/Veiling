@@ -46,7 +46,7 @@ if(is_post()){
     // while files from the deleted catalog are being removed.
     $failed=reset_catalog_photo_files($result['paths'], dirname(__DIR__));
    }finally{catalog_data_unlock($pdo);}
-   flash($result['deleted'].' kavels verwijderd. Volgend kavelnummer is 1.'.($failed?' Waarschuwing: '.$failed.' fotobestanden konden niet worden verwijderd.':''),$failed?'warning':'success');
+   flash($result['deleted'].' kavels en '.$result['sellers_deleted'].' verkopers verwijderd. Volgend kavelnummer is 1.'.($failed?' Waarschuwing: '.$failed.' fotobestanden konden niet worden verwijderd.':''),$failed?'warning':'success');
    redirect('admin/backup.php');
   }
   elseif($action==='delete'){
@@ -92,8 +92,8 @@ admin_top('Back-up & herstel');
 <?php if(effective_admin_role()==='administrator'):?>
 <section class="backup-card" aria-label="Volledige kavelreset">
 <h2>Alle kavels verwijderen en nummering herstarten</h2>
-<div class="backup-warning"><strong>Onomkeerbare beheeractie.</strong> Verwijdert alle kavels en hun fotoreferenties en wist alle uitgegeven gewone kavelnummers, zodat het volgende nieuwe kavel nummer 1 krijgt. Veilingsnummers beginnen eveneens opnieuw bij 1. Bestaande snapshot-ZIP's en beheerdersaccounts blijven bestaan. Herstel van een oude snapshot kan kavels terugbrengen; voer geen reset uit tijdens andere catalogusbewerkingen.</div>
-<form method="post" onsubmit="return confirm('ALLE kavels en alle nummerreservaties definitief wissen? Dit kan niet ongedaan worden gemaakt zonder afzonderlijk herstel.');">
+<div class="backup-warning"><strong>Onomkeerbare beheeractie.</strong> Verwijdert alle kavels, alle verkopers (inclusief hun contact- en bankgegevens) en de fotoreferenties en wist alle uitgegeven gewone kavelnummers, zodat het volgende nieuwe kavel nummer 1 krijgt. Veilingsnummers beginnen eveneens opnieuw bij 1. Bestaande snapshot-ZIP's en beheerdersaccounts blijven bestaan. Herstel van een oude snapshot kan kavels terugbrengen; voer geen reset uit tijdens andere catalogusbewerkingen.</div>
+<form method="post" onsubmit="return confirm('ALLE kavels, ALLE verkopers en alle nummerreservaties definitief wissen? Dit kan niet ongedaan worden gemaakt zonder afzonderlijk herstel.');">
 <?=csrf_field()?><input type="hidden" name="action" value="reset-lots">
 <label for="reset-lots-confirm">Typ WIS ALLE KAVELS EN HERSTART OP 1</label>
 <input class="backup-confirm" name="confirm" id="reset-lots-confirm" required autocomplete="off" placeholder="WIS ALLE KAVELS EN HERSTART OP 1">
