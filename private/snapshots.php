@@ -8,7 +8,7 @@ const SNAP_TABLES = ['settings','admins','lot_sellers','lots','lot_images','sell
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
  'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
- 'lot_sellers'=>['id','seller_type','name','email','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url','artist_intro'],
+ 'lot_sellers'=>['id','seller_type','name','email','mobile_number','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url','artist_intro'],
  'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'seller_images'=>['id','seller_id','image_kind','slot','path','created_at'],
@@ -87,7 +87,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
   // The catalog snapshot never captures visitor statistics, even when geo is installed.
-  $format='41lokeren-v4-artists';
+  $format='41lokeren-v5-seller-mobile';
   $payload=['format'=>$format,'created_at'=>gmdate('c'),'tables'=>$rows];
   $data=json_encode($payload,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
   if(strlen($data)>30*1024*1024)throw new RuntimeException('Snapshotdatabase te groot.');
@@ -120,7 +120,7 @@ function snap_verified(string $name): array {
   $m=$zip->getFromName('manifest.json');$d=$zip->getFromName('database.json');
   if($m===false||$d===false||strlen($d)>30*1024*1024)throw new RuntimeException('Ongeldige snapshotinhoud.');
   $manifest=json_decode($m,true,512,JSON_THROW_ON_ERROR);$database=json_decode($d,true,512,JSON_THROW_ON_ERROR);
-  if(($database['format']??null)!=='41lokeren-v4-artists'||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
+  if(($database['format']??null)!=='41lokeren-v5-seller-mobile'||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
   if(!isset($database['tables'])||array_keys($database['tables'])!==SNAP_TABLES)throw new RuntimeException('Onvolledige databasetabellen.');
   $hashes=$manifest['sha256']??null;if(!is_array($hashes)||count($hashes)>20000||!isset($hashes['database.json']))throw new RuntimeException('Ongeldige bestandslijst.');
   if(!hash_equals($hashes['database.json'],hash('sha256',$d)))throw new RuntimeException('Database checksum ongeldig.');
@@ -147,7 +147,7 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_require_clear();
   catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
-  if(($database['format']??null)!=='41lokeren-v4-artists')throw new RuntimeException('Oude snapshots worden na de verkopersmigratie niet ondersteund.');
+  if(($database['format']??null)!=='41lokeren-v5-seller-mobile')throw new RuntimeException('Oude snapshots worden na de verkopersmigratie niet ondersteund.');
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
   if(!mkdir($stage,0700))throw new RuntimeException('Kan tijdelijke fotomap niet maken.');
   $zip=new ZipArchive();if($zip->open(snap_path($name))!==true)throw new RuntimeException('Kan snapshot niet openen.');
