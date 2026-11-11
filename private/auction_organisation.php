@@ -21,8 +21,9 @@ function auction_move_ids(array $ids, int $lotId, int $position): array {
  * Clearing to NULL first avoids temporary collisions with the UNIQUE index.
  * A failure rolls back both phases, preserving original numbers.
  */
-function auction_apply_order(PDO $pdo, array $ids, ?int $actorId=null): void {
+function auction_apply_order(PDO $pdo, array $ids, int $actorId): void {
   if (!$pdo->inTransaction()) throw new LogicException('Transactie vereist.');
+  if ($actorId<1) throw new InvalidArgumentException('Ingelogde bewerker vereist voor wijziging van veilingsnummers.');
   if (count($ids) !== count(array_unique($ids)) || count($ids) > 999999) {
     throw new InvalidArgumentException('Ongeldige veilingvolgorde.');
   }
@@ -32,6 +33,7 @@ function auction_apply_order(PDO $pdo, array $ids, ?int $actorId=null): void {
   foreach ($ids as $i => $id) {
     $update->execute([$i + 1, $id]);
     if ($update->rowCount() !== 1) throw new RuntimeException('Veiling is tussentijds gewijzigd.');
-    if ($actorId!==null && (int)($previous[$id]??0)!==$i+1) lot_audit_touch($pdo,(int)$id,$actorId);
+    // Log the effective before/after change, including every shifted neighbor.
+    if ((int)($previous[$id]??0)!==$i+1) lot_audit_touch($pdo,(int)$id,$actorId);
   }
 }
