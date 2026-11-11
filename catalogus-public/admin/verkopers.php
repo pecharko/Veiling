@@ -76,8 +76,8 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
               <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
-              <td class="seller-audit"><strong><?=e($r['creator_name'] ?: 'Onbekend')?></strong><small><?=e($r['created_at'] ? gmdate('d/m/Y H:i',strtotime($r['created_at'])).' UTC' : 'Niet geregistreerd')?></small></td>
-              <td class="seller-audit"><strong><?=e($r['editor_name'] ?: 'Onbekend')?></strong><small><?=e($r['updated_at'] ? gmdate('d/m/Y H:i',strtotime($r['updated_at'])).' UTC' : 'Niet geregistreerd')?></small></td>
+              <td class="seller-audit"><strong><?=e($r['creator_name'] ?: 'Onbekend')?></strong><small><?=e($r['created_at'] ? seller_audit_time((string)$r['created_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
+              <td class="seller-audit"><strong><?=e($r['editor_name'] ?: 'Onbekend')?></strong><small><?=e($r['updated_at'] ? seller_audit_time((string)$r['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
               <td><div class="seller-row-actions">
                 <a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a>
                 <form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form>
