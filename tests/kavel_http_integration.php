@@ -89,9 +89,13 @@ try {
   // Private seller CRUD with fake contacts and IBAN, before any lots are created.
   [$sellerStatus, $sellerPage] = request_page('/admin/verkopers.php');
   claim($sellerStatus === 200 && str_contains($sellerPage, 'Verkopers beheren')
-      && str_contains($sellerPage, 'name="bank_account_iban"'), 'Administrator can open private seller management');
-  $sellerCsrf=token($sellerPage);
-  [$sellerStatus] = request_page('/admin/verkopers.php', [
+      && !str_contains($sellerPage, 'name="bank_account_iban"')
+      && !str_contains($sellerPage, 'id="seller-form"'), 'Seller overview has no embedded form');
+  [$sellerStatus, $newSellerPage] = request_page('/admin/verkoper.php');
+  claim($sellerStatus===200 && str_contains($newSellerPage, 'name="bank_account_iban"')
+      && str_contains($newSellerPage,'Terug naar verkopers'), 'New seller opens dedicated page');
+  $sellerCsrf=token($newSellerPage);
+  [$sellerStatus] = request_page('/admin/verkoper.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'kunstenaar',
     'name'=>'Demo kunstenaar','email'=>'demo@example.invalid','street'=>'Fictieve straat',
     'house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
@@ -104,10 +108,10 @@ try {
   claim($sellerRecord['bank_account_iban']==='BE68539007547034'
     && $sellerRecord['artist_url']==='https://www.example.org',
     'Seller IBAN and artist URL normalized on save');
-  [$sellerStatus, $sellerEditPage] = request_page('/admin/verkopers.php?id='.$sellerId);
+  [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
   claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
     'Seller form preloads existing data');
-  [$sellerStatus] = request_page('/admin/verkopers.php', [
+  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
     'bank_account_name'=>'Demo particulier','bank_account_iban'=>'BE68 5390 0754 7034'
@@ -116,7 +120,7 @@ try {
   claim($sellerStatus===303 && $sellerRecord['seller_type']==='particulier'
     && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']==='',
     'Seller can change type and private artist fields are cleared');
-  [$sellerStatus, $badSellerPage] = request_page('/admin/verkopers.php', [
+  [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier',
     'email'=>'bad-email','bank_account_iban'=>'BE68 5390 0754 7035'
@@ -130,7 +134,7 @@ try {
   claim($sellerStatus===303
     && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE id=$sellerId")->fetchColumn()===0,
     'Unused seller can be removed');
-  [$sellerStatus] = request_page('/admin/verkopers.php', [
+  [$sellerStatus] = request_page('/admin/verkoper.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier',
     'name'=>'Kavelverkoper Demo','email'=>'kavel@example.invalid'
   ]);
@@ -490,6 +494,8 @@ try {
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$sellerForbidden] = request_page('/admin/verkopers.php');
   claim($sellerForbidden===403, 'Assistant cannot access private seller management');
+  [$sellerFormForbidden] = request_page('/admin/verkoper.php');
+  claim($sellerFormForbidden===403, 'Assistant cannot open private seller editor');
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200 && !str_contains($ownForm,'alleen-lezen')
     && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
