@@ -96,7 +96,7 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
 verify($snapshot['format']==='41lokeren-v4-artists' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
-  && count($snapshot['tables']['seller_images'])===1
+  && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId,
   'Snapshot v3 stores seller details and reference in one consistent archive');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
