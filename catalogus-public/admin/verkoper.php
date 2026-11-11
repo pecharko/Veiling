@@ -7,6 +7,8 @@ require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
 $pdo=db();
 $error='';
+$actorId=(int)$_SESSION['admin_id'];
+$actorRole=effective_admin_role();
 $fromLot=($_GET['from_lot']??'')==='1';
 $returnLotId=filter_var($_GET['lot_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
 $returnLotId=$returnLotId===false?0:(int)$returnLotId;
@@ -18,6 +20,8 @@ if (isset($_GET['id'])) {
   if ($editId===false) { http_response_code(404); exit('Verkoper niet gevonden.'); }
 }
 $values=$defaults;
+// Check ownership on every edit view and before any write, including photo actions.
+if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
 if (is_post()) {
   check_csrf();
   $action=(string)($_POST['action']??'');
@@ -38,7 +42,7 @@ if (is_post()) {
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
       redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
-    $savedId=seller_save($pdo,$editId,$_POST,(int)$_SESSION['admin_id']);
+    $savedId=seller_save($pdo,$editId,$_POST,$actorId,$actorRole);
     if ($values['seller_type']!=='kunstenaar') seller_image_clear($pdo,$savedId);
     // Accept photo uploads together with the seller form, including creation.
     $failed=[];
