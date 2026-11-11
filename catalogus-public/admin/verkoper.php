@@ -6,6 +6,10 @@ require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_administrator();
 $pdo=db();
 $error='';
+$fromLot=($_GET['from_lot']??'')==='1';
+$returnLotId=filter_var($_GET['lot_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+$returnLotId=$returnLotId===false?0:(int)$returnLotId;
+$returnLotUrl=url('admin/kavel.php',$returnLotId>0?['id'=>$returnLotId]:[]);
 $defaults=['seller_type'=>'particulier','name'=>'','email'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>''];
 $editId=null;
 if (isset($_GET['id'])) {
@@ -22,7 +26,10 @@ if (is_post()) {
   $values=array_merge($defaults,array_intersect_key($_POST,$defaults));
   try {
     catalog_lock_for_request($pdo);
-    seller_save($pdo,$editId,$_POST);
+    $savedId=seller_save($pdo,$editId,$_POST);
+    if ($fromLot) {
+      redirect('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
+    }
     flash('Verkoper opgeslagen.');
     redirect('admin/verkopers.php');
   } catch (InvalidArgumentException $ex) {
@@ -44,16 +51,40 @@ if (is_post()) {
     exit('Verkopersbeheer is momenteel niet beschikbaar.');
   }
 }
+if ($fromLot && ($_GET['completed']??'')==='1' && filter_var($_GET['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])!==false) {
+  $completedSellerId=(int)$_GET['seller_id'];
+  admin_top('Verkoper opgeslagen');
+  ?>
+  <div class="seller-manager seller-editor-page">
+    <div class="lot-editor-card seller-editor-card">
+      <h2>Verkoper opgeslagen</h2>
+      <p>Keer terug naar het kavelformulier om verder te werken. De nieuw aangemaakte verkoper wordt automatisch geselecteerd.</p>
+      <a class="primary" href="<?=e($returnLotUrl)?>">Terug naar kavel</a>
+    </div>
+  </div>
+  <script>
+  (() => {
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage({type:'lot-seller-created',sellerId:<?= $completedSellerId ?>},window.location.origin);
+      window.opener.focus();
+      window.close();
+    }
+  })();
+  </script>
+  <?php
+  admin_bottom();
+  exit;
+}
 admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
 ?>
 <div class="seller-manager seller-editor-page">
   <div class="seller-editor-toolbar">
-    <div><a class="lot-editor-back" href="<?=e(url('admin/verkopers.php'))?>">← Terug naar verkopers</a>
+    <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':'Terug naar verkopers'?></a>
       <p class="dashboard-subtitle">Beheer persoonsgegevens en bankgegevens op één afgeschermde plek.</p></div>
   </div>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
-    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle velden zijn verplicht. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
+    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
     <form method="post" class="seller-manager-form">
       <?=csrf_field()?>
       <input type="hidden" name="action" value="save">
@@ -73,10 +104,10 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <div class="seller-fields-section">
         <h3>Bankgegevens <span class="seller-private-label">Privé</span></h3>
         <div class="seller-fields-grid">
-          <label>Naam bankrekeningnummer <span class="lot-required">*</span><input required name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
-          <label>IBAN <span class="lot-required">*</span><input required name="bank_account_iban" maxlength="42" autocomplete="off" spellcheck="false" value="<?=e((string)$values['bank_account_iban'])?>" placeholder="BE68 5390 0754 7034"></label>
+          <label>Naam bankrekeningnummer <span class="seller-optional">(optioneel)</span><input name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
+          <label>IBAN <span class="seller-optional">(optioneel)</span><input name="bank_account_iban" maxlength="42" autocomplete="off" spellcheck="false" value="<?=e((string)$values['bank_account_iban'])?>" placeholder="BE68 5390 0754 7034"></label>
         </div>
-        <p class="lot-editor-help">Het IBAN wordt bij het opslaan gecontroleerd en verschijnt niet in de publieke catalogus.</p>
+        <p class="lot-editor-help">Bankgegevens mogen leeg blijven. Een ingevuld IBAN wordt bij het opslaan gecontroleerd en verschijnt niet in de publieke catalogus.</p>
       </div>
       <div class="seller-fields-section seller-artist-fields" id="seller-artist-fields" <?=$values['seller_type']==='kunstenaar'?'':'hidden'?>>
         <h3>Kunstenaarsgegevens</h3>
@@ -86,7 +117,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         </div>
       </div>
       <div class="seller-form-actions">
-        <a class="secondary" href="<?=e(url('admin/verkopers.php'))?>">Annuleren</a>
+        <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
         <button class="primary" type="submit">Verkoper opslaan</button>
       </div>
     </form>
@@ -94,6 +125,15 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
 </div>
 <script>
 (function () {
+  document.querySelectorAll('[data-return-to-lot]').forEach(link => {
+    link.addEventListener('click', event => {
+      if (window.opener && !window.opener.closed && window.opener.location.origin===window.location.origin) {
+        event.preventDefault();
+        window.opener.focus();
+        window.close();
+      }
+    });
+  });
   const type=document.getElementById('seller-type');
   const fields=document.getElementById('seller-artist-fields');
   if (!type || !fields) return;
