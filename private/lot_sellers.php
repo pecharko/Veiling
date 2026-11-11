@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/lot_bank.php';
 require_once __DIR__ . '/lot_artist.php';
+require_once __DIR__ . '/seller_mobile.php';
 require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
@@ -12,7 +13,7 @@ function seller_clean(mixed $input): array {
   $types = ['kunstenaar','particulier'];
   $type = $input['seller_type'] ?? '';
   if (!is_string($type) || !in_array($type, $types, true)) throw new InvalidArgumentException('Kies kunstenaar of particulier.');
-  $limits = ['name'=>150,'email'=>254,'street'=>150,'house_number'=>20,'postal_code'=>20,'municipality'=>120,'bank_account_name'=>100,'bank_account_iban'=>42,'artist_name'=>50,'artist_url'=>2048,'artist_intro'=>500];
+  $limits = ['name'=>150,'email'=>254,'mobile_number'=>30,'street'=>150,'house_number'=>20,'postal_code'=>20,'municipality'=>120,'bank_account_name'=>100,'bank_account_iban'=>42,'artist_name'=>50,'artist_url'=>2048,'artist_intro'=>500];
   $fields = [];
   foreach ($limits as $key=>$limit) {
     $value=$input[$key] ?? '';
@@ -31,6 +32,7 @@ function seller_clean(mixed $input): array {
     if ($fields[$key]==='') throw new InvalidArgumentException($label.' is verplicht.');
   }
   if (filter_var($fields['email'],FILTER_VALIDATE_EMAIL)===false) throw new InvalidArgumentException('Vul een geldig e-mailadres in.');
+  $fields['mobile_number']=seller_mobile_validate($fields['mobile_number']);
   [$fields['bank_account_name'],$fields['bank_account_iban']]=lot_bank_validate($fields['bank_account_name'],$fields['bank_account_iban']);
   if ($type==='kunstenaar') {
     if ($fields['artist_name']==='') throw new InvalidArgumentException('Kunstenaarsnaam is verplicht voor een kunstenaar.');
