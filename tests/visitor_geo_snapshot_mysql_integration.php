@@ -29,7 +29,7 @@ try {
     $expected=sg_payload($pdo);$digest=visitor_geo_snapshot_digest($expected);
     $name=snap_create($pdo);$names[]=$name;
     [$snapshot]=snap_verified($name);
-    sg_check($snapshot['format']==='41lokeren-v5-seller-mobile','Snapshots use the seller-aware format regardless of analytics schema');
+    sg_check($snapshot['format']==='41lokeren-v6-seller-audit','Snapshots use the seller-aware format regardless of analytics schema');
     sg_check(!array_key_exists('analytics',$snapshot),'Catalog snapshot omits all visitor and geographic analytics');
     sg_check(recovery_compare_database($pdo,$snapshot)['matches_target'],'Recovery comparison checks catalog data only');
 
