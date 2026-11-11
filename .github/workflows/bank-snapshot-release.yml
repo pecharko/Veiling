@@ -33,11 +33,42 @@ jobs:
       - name: Verify dedicated bank snapshot release guards offline
         run: |
           python3 -B -m unittest discover -s tests -p deploy_bank_snapshot_test.py -v
-          if test -f releases/bank-snapshot-20261110.json; then
-            python3 -B -m scripts.deploy_bank_snapshot plan
-          else
-            echo 'Awaiting authenticated independent read-only OVH baseline and same-PR manifest'
-          fi
+          python3 -B -m unittest discover -s tests -p bank_snapshot_workflow_routing_test.py -v
+          # Historical manifests are immutable. Validate an exact legacy source
+          # with the existing bank gate; separately review v7 without ever
+          # changing the historical manifest or its production deploy path.
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+          import subprocess
+          import sys
+
+          source = Path('private/snapshots.php').read_bytes()
+          legacy_manifest = Path('releases/bank-snapshot-20261110.json')
+          if not legacy_manifest.is_file():
+              raise SystemExit('Historical bank snapshot manifest missing')
+          legacy = json.loads(legacy_manifest.read_text(encoding='utf-8'))
+          entries = legacy.get('files', [])
+          if len(entries) != 1 or entries[0].get('path') != 'private/snapshots.php':
+              raise SystemExit('Historical bank snapshot manifest invalid')
+          expected = entries[0]['source_sha256']
+          if hashlib.sha256(source).hexdigest() == expected:
+              subprocess.run([sys.executable, '-B', '-m', 'scripts.deploy_bank_snapshot', 'plan'], check=True)
+          elif b'41lokeren-v7-lot-audit' in source:
+              # The v7 route is review-only. The original bank production
+              # dispatch remains guarded by its exact historical source SHA.
+              subprocess.run([sys.executable, '-B', '-m', 'unittest', 'discover', '-s',
+                              'tests', '-p', 'deploy_lot_audit_snapshot_v7_test.py', '-v'], check=True)
+              v7_manifest = Path('releases/lot-audit-snapshot-v7-20261111.json')
+              if v7_manifest.exists():
+                  subprocess.run([sys.executable, '-B', '-m',
+                                  'scripts.deploy_lot_audit_snapshot_v7', 'plan'], check=True)
+              else:
+                  print('v7 reviewed offline; independent OVH baseline and v7 release manifest still required')
+          else:
+              raise SystemExit('Unrecognized protected snapshot source drift')
+          PY
       - name: Verify shared OVH denylist never changed
         run: |
           python3 - <<'PY'

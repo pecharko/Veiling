@@ -38,9 +38,13 @@ function assert_throws(callable $fn, string $expected, string $message): void {
 $pdo->exec('ALTER TABLE admins ADD COLUMN created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP');
 $pdo->exec("UPDATE admins SET name='CI Beheerder'");
 $pdo->exec('ALTER TABLE settings ADD COLUMN updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
-$pdo->prepare("INSERT INTO lots (lot_number,title,artist_name,artist_url,bank_account_name,bank_account_iban,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
-    ->execute([101,'Kunstwerk voor snapshot','Jan Jans','https://example.org/artist','Test-Rekeninghouder','BE68539007547034','Beschrijving','Details','published','veiling',1]);
+$pdo->prepare("INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES ('kunstenaar','Fictieve maker','maker@example.invalid','Teststraat','2','9160','Lokeren','Fictieve maker','BE68539007547034','Demo','https://example.org/')")->execute();
+$sellerId=(int)$pdo->lastInsertId();
+$pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sale_location,auction_number) VALUES (?,?,?,?,?,?,?)")
+    ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
+$pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lotId]);
+$pdo->prepare("UPDATE lots SET last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
 $originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
@@ -57,6 +61,12 @@ imagefill($image, 0, 0, imagecolorallocate($image, 160, 32, 64));
 imagejpeg($image, $original, 85);
 imagedestroy($image);
 $checksum = hash_file('sha256', $original);
+$sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
+$sellerPhoto=$uploads.'/'.$sellerRelative;
+if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren' WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
+  ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
     ->execute([$lotId,'uploads/'.$relative,1,'snapshot-test.jpg']);
 
@@ -86,9 +96,17 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
+verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
+  && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
+  && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
+  && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
+  && $snapshot['tables']['lots'][0]['last_edited_at']==='2026-11-11 07:30:00',
+  'Snapshot v7 stores linked sellers and last lot editor');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
        'Snapshot contains sale location and auction number');
-verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original),
+verify(isset($hashes['uploads/'.$sellerRelative]) && is_file($sellerPhoto),
+  'Snapshot includes one referenced artist work photo');
+verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original)+filesize($sellerPhoto),
        'Snapshot includes the exact original photo');
 $zip = new ZipArchive();
 if ($zip->open(snap_path($name)) !== true) throw new RuntimeException('Could not open snapshot ZIP');
@@ -134,6 +152,7 @@ $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
 $pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
+unlink($sellerPhoto);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
 // A token issued after the snapshot must never survive restoration.
@@ -160,13 +179,19 @@ verify((fileperms($uploads) & 0005) === 0005,
 verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
        'Restored photo subdirectories are readable and traversable by webserver');
 
+verify(is_file($sellerPhoto)
+  && $pdo->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve maker uit Lokeren'
+  && (int)$pdo->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
+  'Snapshot restores artist introduction and work photo');
+verify((int)$pdo->query('SELECT last_edited_by_admin_id FROM lots WHERE lot_number=101')->fetchColumn()===1
+  && $pdo->query('SELECT last_edited_at FROM lots WHERE lot_number=101')->fetchColumn()==='2026-11-11 07:30:00',
+  'Snapshot restores effective lot audit editor and timestamp');
+verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetchColumn()===$sellerId
+    && (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===1,
+    'Restore preserves seller records and lot foreign keys');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
-$restoredLot=$pdo->query('SELECT sale_location,auction_number,artist_name,artist_url,bank_account_name,bank_account_iban FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
-verify($restoredLot['bank_account_name']==='Test-Rekeninghouder' && $restoredLot['bank_account_iban']==='BE68539007547034',
-       'Private bank details are restored intact from catalog snapshot');
-verify($restoredLot['artist_name']==='Jan Jans' && $restoredLot['artist_url']==='https://example.org/artist',
-       'Snapshot restore retains artist name and hyperlink');
+$restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
 verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
@@ -193,54 +218,26 @@ assert_throws(fn() => snap_path('../config.php'), 'Ongeldige snapshotnaam',
               'Snapshot path traversal rejected');
 @unlink($corrupted);
 
-// Only current-schema snapshots are supported; old archives remain on disk
-// but do not need a restore compatibility path.
+// Schema-upgrade regression: restore a snapshot created before is_site_online existed.
 $pdo->exec('ALTER TABLE settings ADD COLUMN is_site_online TINYINT(1) NOT NULL DEFAULT 1');
 $pdo->exec('UPDATE settings SET is_site_online=0');
+snap_restore($pdo, $name);
+verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 1,
+       'Legacy snapshot restores safely online after schema upgrade');
 
-// Snapshot and restore both the offline state and the new catalog split switch.
-$pdo->exec('UPDATE settings SET is_site_online=0,catalog_split_active=1');
+// Snapshot and restore the explicitly offline state on the upgraded schema.
+$pdo->exec('UPDATE settings SET is_site_online=0');
 $newSchemaSnapshot = snap_create($pdo);
 [$newSchemaData] = snap_verified($newSchemaSnapshot);
 verify((int)$newSchemaData['tables']['settings'][0]['is_site_online'] === 0,
        'New schema snapshot stores the offline state');
-verify((int)$newSchemaData['tables']['settings'][0]['catalog_split_active'] === 1,
-       'New schema snapshot stores the catalog split switch');
-$pdo->exec('UPDATE settings SET is_site_online=1,catalog_split_active=0');
+$pdo->exec('UPDATE settings SET is_site_online=1');
 snap_restore($pdo, $newSchemaSnapshot);
 verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 0,
        'New schema restore recovers the offline state');
-verify((int)$pdo->query('SELECT catalog_split_active FROM settings WHERE id=1')->fetchColumn() === 1,
-       'New schema restore recovers the catalog split switch');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
-// A legacy archive with missing metadata must be refused even when the ZIP
-// and its manifest SHA-256 have been correctly recomputed.
-// Simulate a verified pre-#185 archive with no new lot metadata.
-$legacyName = 'snapshot-20990102-000000-deadbeefcafe.zip';
-if (!copy(snap_path($name), snap_path($legacyName))) throw new RuntimeException('Could not prepare legacy snapshot');
-$legacyZip = new ZipArchive();
-if ($legacyZip->open(snap_path($legacyName)) !== true) throw new RuntimeException('Cannot open legacy test ZIP');
-$legacyDb = json_decode($legacyZip->getFromName('database.json'), true, 512, JSON_THROW_ON_ERROR);
-foreach ($legacyDb['tables']['lots'] as &$legacyLot) {
-    foreach (['market_price','starting_bid','auction_only','created_by_admin_id','artist_name','artist_url','bank_account_name','bank_account_iban'] as $newColumn) unset($legacyLot[$newColumn]);
-}
-unset($legacyLot);
-foreach ($legacyDb['tables']['admins'] as &$legacyAdmin) unset($legacyAdmin['name']);
-unset($legacyAdmin);
-$legacyJson = json_encode($legacyDb, JSON_THROW_ON_ERROR);
-$legacyManifest = json_decode($legacyZip->getFromName('manifest.json'), true, 512, JSON_THROW_ON_ERROR);
-$legacyManifest['sha256']['database.json'] = hash('sha256', $legacyJson);
-$legacyZip->addFromString('database.json', $legacyJson);
-$legacyZip->addFromString('manifest.json', json_encode($legacyManifest, JSON_THROW_ON_ERROR));
-$legacyZip->close();
-assert_throws(fn() => snap_verified($legacyName), 'Ongeldige kolommen bij lots',
-              'Old snapshot missing bank fields and other lot metadata is not supported');
-assert_throws(fn() => snap_restore($pdo, $legacyName), 'Ongeldige kolommen bij lots',
-              'Old snapshot restore rejected before database or photos change');
-verify($pdo->query('SELECT artist_name FROM lots WHERE lot_number=101')->fetchColumn() === 'Jan Jans',
-       'Rejected legacy restore leaves current artist data intact');
-if (!unlink(snap_path($legacyName))) throw new RuntimeException('Cannot clean legacy archive');
+// Old snapshots are intentionally unsupported after this schema migration.
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";

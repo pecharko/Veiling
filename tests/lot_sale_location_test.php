@@ -14,11 +14,11 @@ check(str_contains($editor,'next_auction_number($pdo)'),'auction number assigned
 check(str_contains($editor,'str_contains($detail,\'uq_lots_auction_number\')'),'auction duplicate is diagnosed separately');
 check(str_contains($editor,'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.'),'lot duplicate is permanently reserved');
 check(str_contains($editor, "\$auctionNumber = \$saleLocation === 'markt' ? null"),'market clears auction number');
-check(str_contains($editor, 'compact_auction_numbers($pdo)'),'market transfer compacts auction order');
+check(str_contains($editor, 'compact_auction_numbers($pdo,(int)$_SESSION[\'admin_id\'])'),'market transfer compacts auction order');
 check(str_contains($editor, '$pdo->beginTransaction()'),'auction changes are transactional');
 check(str_contains($editor, '$pdo->commit()'),'auction changes commit atomically');
 check(str_contains($editor, '$pdo->rollBack()'),'auction changes roll back on failure');
-check(str_contains($editor, 'if ($lot[\'auction_number\'] !== null) compact_auction_numbers($pdo);'),'auction delete compacts numbering');
+check(str_contains($editor, 'if ($lot[\'auction_number\'] !== null) compact_auction_numbers($pdo,(int)$_SESSION[\'admin_id\']);'),'auction delete compacts numbering');
 check(str_contains($editor, "DELETE FROM lots WHERE id=?"),'auction lot deletion is permitted');
 $migration=file_get_contents(dirname(__DIR__).'/database/lot_sale_location_migration.sql');
 check(str_contains($migration,'UNIQUE KEY uq_lots_auction_number'),'unique index present');

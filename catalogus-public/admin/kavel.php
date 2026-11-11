@@ -5,11 +5,11 @@ require dirname(__DIR__, 2) . '/private/images.php';
 require_once dirname(__DIR__, 2) . '/private/photo_delete_safety.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
 require dirname(__DIR__, 2) . '/private/lot_form.php';
-require_once dirname(__DIR__, 2) . '/private/lot_artist.php';
 require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_once dirname(__DIR__, 2) . '/private/lot_categories.php';
-require_once dirname(__DIR__, 2) . '/private/lot_bank.php';
+require_once dirname(__DIR__, 2) . '/private/lot_sellers.php';
+require_once dirname(__DIR__, 2) . '/private/lot_audit.php';
 require_auth();
 $pdo=db();
 $id=max(0,(int)($_GET['id']??$_POST['id']??0));
@@ -56,6 +56,7 @@ if(is_post()){
           foreach($photos as $i=>$photo){
             try {
               add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);
+              lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
               $uploaded++;
             } catch(Throwable $ex) {
               error_log('[Kavel foto toevoegen] '.$ex->getMessage());
@@ -99,7 +100,12 @@ if(is_post()){
     $photoId=(int)($_POST['photo_id']??0);
     $get=$pdo->prepare('SELECT path FROM lot_images WHERE id=? AND lot_id=?');$get->execute([$photoId,$id]);$photo=$get->fetch();
     if($photo){
-      $pdo->prepare('DELETE FROM lot_images WHERE id=? AND lot_id=?')->execute([$photoId,$id]);
+      $pdo->beginTransaction();
+      try {
+        $pdo->prepare('DELETE FROM lot_images WHERE id=? AND lot_id=?')->execute([$photoId,$id]);
+        lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
+        $pdo->commit();
+      } catch(Throwable $ex) { if($pdo->inTransaction()) $pdo->rollBack(); throw $ex; }
       if(str_starts_with($photo['path'],'uploads/') && preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~',$photo['path']))@unlink(dirname(__DIR__).'/'.$photo['path']);
       flash('Foto verwijderd.');
     }
@@ -112,7 +118,7 @@ if(is_post()){
       $pdo->beginTransaction();
       $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
       $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
-      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo);
+      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo,(int)$_SESSION['admin_id']);
       $pdo->commit();
     } catch (Throwable $ex) {
       if ($pdo->inTransaction()) $pdo->rollBack();
@@ -128,34 +134,27 @@ if(is_post()){
     $nr=(int)($_POST['lot_number']??0);
     $title=mb_substr(trim((string)($_POST['title']??'')),0,250);
     $subtitle=mb_substr(trim((string)($_POST['subtitle']??'')),0,250);
-    try {
-      if (!is_string($_POST['artist_name'] ?? '') || !is_string($_POST['artist_url'] ?? '')) {
-        throw new InvalidArgumentException('Ongeldige invoer voor kunstenaar.');
-      }
-      [$artistName, $artistUrl] = lot_artist_validate($_POST['artist_name'] ?? '', $_POST['artist_url'] ?? '');
-      if (mb_strlen($artistName, 'UTF-8') > 50) {
-        throw new InvalidArgumentException('De naam van de kunstenaar mag maximaal 50 tekens bevatten.');
-      }
-    } catch (InvalidArgumentException $ex) {
-      $error = $ex->getMessage();
-    }
-    try {
-      // Keep existing private bank metadata when an older client omits the fields.
-      // An explicit empty string is the only way to clear an existing value.
-      [$bankAccountName, $bankAccountIban] = lot_bank_validate(
-        $_POST['bank_account_name'] ?? ($lot['bank_account_name'] ?? ''),
-        $_POST['bank_account_iban'] ?? ($lot['bank_account_iban'] ?? '')
-      );
-    } catch (InvalidArgumentException $ex) {
-      if ($error === '') $error = $ex->getMessage();
-    }
     $categoryInput = $_POST['category'] ?? '';
     $category = is_string($categoryInput) ? trim($categoryInput) : '';
     if (!is_string($categoryInput) && $error === '') $error = 'Ongeldige categorie.';
+    // Browsers submit textarea line endings as CRLF; normalize to LF before length checks.
     $description=mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['description']??''))),0,30000);
     $details=mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['details']??''))),0,10000);
     $marketPrice=trim((string)($_POST['market_price']??''));
     $startingBid=trim((string)($_POST['starting_bid']??''));
+    $rawSeller=$_POST['seller_id'] ?? '';
+    $sellerId=null;
+    if ($rawSeller !== '') {
+      $parsedSeller=filter_var($rawSeller,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+      if ($parsedSeller===false || !seller_valid_id($pdo,(int)$parsedSeller)) {
+        if ($error==='') $error='Kies een bestaande verkoper.';
+      } else $sellerId=(int)$parsedSeller;
+    }
+    // Every seller-less lot is a donation with no payout. Require explicit
+    // acknowledgement even if client-side JavaScript is disabled or bypassed.
+    if ($rawSeller==='' && ($_POST['donation_confirmed']??'')!=='1' && $error==='') {
+      $error='Er is geen verkoper geselecteerd. Deze kavel wordt beschouwd als geschonken voor de veiling; er zal geen uitbetaling gebeuren naar de schenker. Bevestig dit om op te slaan.';
+    }
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
@@ -215,19 +214,29 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$artistName,$artistUrl,$bankAccountName,$bankAccountIban,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,artist_name=?,artist_url=?,bank_account_name=?,bank_account_iban=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
-          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,artist_name,artist_url,bank_account_name,bank_account_iban,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
-          $st->execute($values);
-          if(!$id)$id=(int)$pdo->lastInsertId();
-          if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
+          $lotFieldsChanged=!$id || lot_effective_fields_changed($lot,$values);
+          if($id){
+            if($lotFieldsChanged) {
+              $st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');
+              $st->execute([...$values,$id]);
+              lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
+            }
+          } else {
+            $st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $st->execute([...$values,(int)$_SESSION['admin_id']]);
+            $id=(int)$pdo->lastInsertId();
+          }
+          if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo,(int)$_SESSION['admin_id']);
           $pdo->commit();
           $failed=[];
           foreach($photos as $i=>$photo){
-            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
+            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);}
             catch(Throwable $ex){error_log('[Kavel foto] '.$ex->getMessage());$failed[]=$photo['name'].': verwerking mislukt';}
           }
-          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed):"Kavel en foto's bewaard.", $failed?'warning':'success');
+          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
+            : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
+            $failed?'warning':'success');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
@@ -253,6 +262,15 @@ if ($lot && !empty($lot['created_by_admin_id'])) {
   $creatorName = $creatorSt->fetchColumn();
   $creatorLabel = $creatorName === false ? 'Account niet meer aanwezig' : admin_name_label((string)$creatorName);
 }
+$lastEditorLabel='Nog niet gewijzigd';
+if ($lot && !empty($lot['last_edited_by_admin_id'])) {
+  $editorSt=$pdo->prepare('SELECT name,email FROM admins WHERE id=?');
+  $editorSt->execute([(int)$lot['last_edited_by_admin_id']]);
+  $editorRecord=$editorSt->fetch(PDO::FETCH_ASSOC);
+  $lastEditorLabel=$editorRecord
+    ? admin_name_label((string)($editorRecord['name']?:$editorRecord['email']))
+    : 'Account niet meer aanwezig';
+}
 $suggestedNumber = '';
 if (str_starts_with($error, 'Dit lotnummer is al uitgegeven en kan niet worden hergebruikt.')) {
   $highestNumber = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
@@ -268,12 +286,14 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','artist_name'=>'','artist_url'=>'','bank_account_name'=>'','bank_account_iban'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
-$availableCategories = lot_category_names($pdo);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
 $canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
+$availableCategories = lot_category_names($pdo);
+try { $availableSellers=seller_choices($pdo); }
+catch (PDOException $ex) { error_log('[Kavel verkopers] Laden mislukt.'); $availableSellers=[]; }
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een eigen conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
 $cancelAuctionWarning = 'Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -313,14 +333,18 @@ if ($error === $cancelAuctionWarning) {
       <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit"><?=$lot?'Wijzigingen opslaan':'Kavel opslaan'?></button><?php endif; ?>
     </div>
   </div>
+  <?php if($lot): ?>
+    <div class="lot-audit-summary" aria-label="Bewerkingsgeschiedenis">
+      <span><strong>Aangemaakt door:</strong> <?=e($creatorLabel)?> · <?=e(lot_audit_label((string)($lot['created_at']??'')))?> (Brussel)</span>
+      <span><strong>Laatste wijziging:</strong> <?=e($lastEditorLabel)?> · <?=e(lot_audit_label($lot['last_edited_at']??null))?><?=!empty($lot['last_edited_at'])?' (Brussel)':''?></span>
+    </div>
+  <?php endif; ?>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
-    <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
+    <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save"><input type="hidden" name="donation_confirmed" value="0">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
         <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
-          <div class="lot-editor-fields"><?php if(lot_can_change_publication(effective_admin_role()) && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?>
-            <label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label>
-            <p class="lot-editor-help">Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
+          <div class="lot-editor-fields lot-editor-two"><?php if($canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><p class="lot-editor-help lot-full">Nieuwe kavels staan standaard als concept op Markt. Administrator en Veilingmeester kunnen de publicatiestatus en verkoopplaats meteen aanpassen. Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
         </section>
         <?php endif; ?>
     <div class="lot-editor-layout lot-editor-layout--single">
@@ -330,14 +354,9 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
+            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a id="lot-create-seller" class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe verkoper aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe verkoper</a><?php endif; ?></div>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
-            <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar"></label>
-            <label>Hyperlink kunstenaar<input type="text" inputmode="url" name="artist_url" value="<?=e($d['artist_url'])?>" maxlength="2048" placeholder="https://website-van-kunstenaar.be/" aria-describedby="artist-link-help"></label>
-            <p id="artist-link-help" class="lot-full">Optioneel. Ook www.marf.be mag: dit wordt automatisch https://www.marf.be. Vul ook de kunstenaarsnaam in.</p>
-            <label>Naam bankrekeningnummer<input type="text" name="bank_account_name" value="<?=e($d['bank_account_name'])?>" maxlength="100" autocomplete="off" placeholder="Naam rekeninghouder"></label>
-            <label>Bankrekeningnummer<input type="text" name="bank_account_iban" value="<?=e($d['bank_account_iban'])?>" maxlength="42" autocomplete="off" inputmode="text" spellcheck="false" aria-describedby="bank-iban-help" placeholder="BE68 5390 0754 7034"></label>
-            <p id="bank-iban-help" class="lot-full lot-editor-help">Optioneel. Vul een geldig IBAN in; spaties zijn toegestaan. De controle gebeurt bij het bewaren.</p>
           </div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
@@ -429,68 +448,67 @@ if ($error === $cancelAuctionWarning) {
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
 
 <script>
-(function () {
+(() => {
   'use strict';
-  const form = document.getElementById('lot-editor-form');
-  if (!form) return;
-  const name = form.elements.namedItem('artist_name');
-  const link = form.elements.namedItem('artist_url');
-  if (!(name instanceof HTMLInputElement) || !(link instanceof HTMLInputElement)) return;
-
-  function normalizedArtistLink(value) {
-    const trimmed = value.trim();
-    // Only a domain beginning with www. gets an implicit HTTPS prefix.
-    if (/^www\.[a-z0-9-]+(?:\.[a-z0-9-]+)+(?::[0-9]{1,5})?(?:[/?#][^\s]*)?$/i.test(trimmed)) {
-      return 'https://' + trimmed;
-    }
-    return trimmed;
-  }
-
-  function validateArtistLink() {
-    const value = normalizedArtistLink(link.value);
-    let message = '';
-    if (value && !name.value.trim()) {
-      message = 'Vul eerst de naam van de kunstenaar in.';
-    } else if (value) {
-      try {
-        const url = new URL(value);
-        if (!/^https?:\/\//i.test(value) ||
-            !['http:', 'https:'].includes(url.protocol) ||
-            !url.hostname || url.username || url.password ||
-            /[\s\x00-\x1f\x7f]/.test(value) ||
-            value.length > 2048) {
-          message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
-        }
-      } catch (_) {
-        message = 'Gebruik een geldige hyperlink, bijvoorbeeld www.marf.be of https://www.marf.be.';
+  const lotForm=document.getElementById('lot-editor-form');
+  const createLink=document.getElementById('lot-create-seller');
+  const sellerSelect=lotForm?.querySelector('select[name="seller_id"]');
+  const donationConfirmed=lotForm?.querySelector('input[name="donation_confirmed"]');
+  if (lotForm && sellerSelect && donationConfirmed) {
+    const donationWarning='Er is geen verkoper geselecteerd, deze kavel wordt beschouwd als geschonken voor de veiling er zal geen uitbetaling gebeuren naar de schenker, ga jij hiermee akkoord?';
+    sellerSelect.addEventListener('change', () => { donationConfirmed.value='0'; });
+    lotForm.addEventListener('submit', event => {
+      if (sellerSelect.value!=='') {
+        donationConfirmed.value='0';
+        return;
       }
-    }
-    link.setCustomValidity(message);
-    link.setAttribute('aria-invalid', message ? 'true' : 'false');
-    return !message;
+      if (donationConfirmed.value==='1') return;
+      if (!window.confirm(donationWarning)) {
+        event.preventDefault();
+        donationConfirmed.value='0';
+        sellerSelect.focus();
+        return;
+      }
+      donationConfirmed.value='1';
+    });
   }
-
-  function completeArtistLink() {
-    if (validateArtistLink() && link.value.trim()) {
-      link.value = normalizedArtistLink(link.value);
+  if (!createLink || !sellerSelect) return;
+  let refreshOnFocus=false;
+  async function refreshSellers(preferredId=null) {
+    try {
+      // Load the latest seller options without discarding unsaved lot fields.
+      const response=await fetch(window.location.href,{credentials:'same-origin',cache:'no-store'});
+      if (!response.ok) return;
+      const copy=new DOMParser().parseFromString(await response.text(),'text/html');
+      const latest=copy.querySelector('select[name="seller_id"]');
+      if (!latest) return;
+      const known=new Set(Array.from(sellerSelect.options,option=>option.value));
+      for (const option of latest.options) {
+        if (!option.value || known.has(option.value)) continue;
+        sellerSelect.add(new Option(option.text,option.value));
+        known.add(option.value);
+      }
+      if (preferredId!==null && known.has(String(preferredId))) {
+        sellerSelect.value=String(preferredId);
+        sellerSelect.dispatchEvent(new Event('change',{bubbles:true}));
+      }
+    } catch (_) {
+      // An unavailable refresh never clears the current lot form.
     }
   }
-
-  name.addEventListener('input', validateArtistLink);
-  link.addEventListener('input', validateArtistLink);
-  link.addEventListener('blur', function () {
-    completeArtistLink();
-    if (!validateArtistLink()) link.reportValidity();
+  createLink.addEventListener('click', () => { refreshOnFocus=true; });
+  window.addEventListener('message', event => {
+    if (event.origin!==window.location.origin || event.data?.type!=='lot-seller-created') return;
+    const sellerId=Number(event.data.sellerId);
+    if (!Number.isSafeInteger(sellerId) || sellerId<1) return;
+    refreshOnFocus=false;
+    void refreshSellers(sellerId);
   });
-  form.addEventListener('submit', function (event) {
-    completeArtistLink();
-    if (!validateArtistLink()) {
-      event.preventDefault();
-      link.reportValidity();
-      link.focus();
-    }
+  window.addEventListener('focus', () => {
+    if (!refreshOnFocus) return;
+    refreshOnFocus=false;
+    void refreshSellers();
   });
-  validateArtistLink();
 })();
 </script>
 <?php admin_bottom(); ?>

@@ -19,7 +19,7 @@ if (is_post()) {
     if ($action==='add') {
       lot_category_add($pdo,$_POST['name']??null);
     } elseif (($action==='rename' || $action==='delete') && $id!==false && $id!==null) {
-      if ($action==='rename') lot_category_rename($pdo,(int)$id,$_POST['name']??null);
+      if ($action==='rename') lot_category_rename($pdo,(int)$id,$_POST['name']??null,(int)$_SESSION['admin_id']);
       else lot_category_delete($pdo,(int)$id);
     } else {
       throw new InvalidArgumentException('Ongeldige categorieactie.');
