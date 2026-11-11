@@ -285,22 +285,35 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 }
 
 
-/* Private seller administration */
-.seller-manager{max-width:1250px;margin:0 auto}
-.seller-manager>p{color:#657183;margin:0 0 22px}
-.seller-manager-grid{display:grid;grid-template-columns:minmax(320px,1fr) minmax(340px,1fr);gap:24px;align-items:start}
-.seller-manager .lot-editor-card{padding:26px}
-.seller-manager .lot-editor-card h2{margin:0 0 20px}
-.seller-manager-form,.seller-artist-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.seller-manager-form>label,.seller-artist-fields>label{display:flex;flex-direction:column;gap:7px;font-weight:650}
-.seller-manager-form input,.seller-manager-form select{width:100%}
-.seller-artist-fields{grid-column:1/-1;padding:16px;background:#fbf5f1;border:1px solid #ecdfd6;border-radius:10px}
+/* Private seller administration - shares dashboard styles with the lots page */
+.seller-manager{max-width:none;margin:0}
+.seller-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seller-filters{grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) 140px}
+.seller-table{min-width:700px}
+.seller-lot-count{font-weight:750}
+.seller-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seller-row-actions form{margin:0}
+.seller-delete{min-height:40px;color:#922b37;background:#fff;border-color:#e6c8cd}
+.seller-delete:not(:disabled):hover{background:#fff1f2}
+.seller-delete:disabled{opacity:.45;cursor:not-allowed}
+.seller-editor-card{margin-top:24px;padding:28px}
+.seller-editor-card .lot-editor-card-header{margin-bottom:20px}
+.seller-manager-form{display:flex;flex-direction:column;gap:22px}
+.seller-fields-section{padding:20px;border:1px solid #ecdfd6;border-radius:11px;background:#fff}
+.seller-fields-section h3{font-size:17px;margin:0 0 16px;color:#28443a}
+.seller-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.seller-fields-grid label{display:flex;flex-direction:column;gap:7px;font-weight:650;min-width:0}
+.seller-fields-grid input,.seller-fields-grid select{width:100%}
+.seller-field-wide{grid-column:1/-1}
+.seller-fields-section .lot-editor-help{margin:12px 0 0}
+.seller-private-label{font-size:11px;letter-spacing:.04em;padding:4px 9px;border-radius:99px;background:#f8efe9;color:#7b2b31;vertical-align:middle}
+.seller-artist-fields{background:#fbf5f1}
 .seller-artist-fields[hidden]{display:none}
-.seller-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap;grid-column:1/-1}
-.seller-actions form{margin:0}
-.seller-list{display:flex;flex-direction:column;gap:12px}
-.seller-item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border:1px solid #ecdfd6;border-radius:9px;flex-wrap:wrap}
-.seller-item strong,.seller-item span{display:block}
-.seller-item span{font-size:13px;color:#657183;margin-top:4px}
-@media(max-width:850px){.seller-manager-grid{grid-template-columns:1fr}}
-@media(max-width:520px){.seller-manager-form,.seller-artist-fields{grid-template-columns:1fr}}
+.seller-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.seller-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){
+  .admin-main:has(.seller-manager){width:calc(100% - 24px)}
+  .seller-stats,.seller-filters,.seller-fields-grid{grid-template-columns:1fr}
+  .seller-editor-card{padding:16px}
+  .seller-field-wide{grid-column:auto}
+}
