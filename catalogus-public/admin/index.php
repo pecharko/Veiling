@@ -29,7 +29,7 @@ $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
 $count=$pdo->prepare('SELECT COUNT(*) FROM lots l '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
 $pages=max(1,(int)ceil($filtered/$perPage));$page=min($page,$pages);
-$st=$pdo->prepare('SELECT l.*, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
+$st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
 $i=1;foreach($p as $val)$st->bindValue($i++,$val);
 $st->bindValue($i++,$perPage,PDO::PARAM_INT);$st->bindValue($i,($page-1)*$perPage,PDO::PARAM_INT);$st->execute();$rows=$st->fetchAll();
 function dashboard_stat_url(array $filters): string { return url('admin/index.php', $filters); }
@@ -55,18 +55,19 @@ admin_top('Kaveloverzicht');
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoopplaats</th><th scope="col">Veilingsnummer</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Veilingsnummer</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr>
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
       <td class="dashboard-title"><a href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=e($row['title'])?></a></td>
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
+      <td class="dashboard-seller"><?=($row['seller_name'] ?? '') !== '' ? e((string)$row['seller_name']) : '—'?></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
       <td><?=($row['sale_location'] === 'veiling' && $row['auction_number'] !== null) ? e((string)$row['auction_number']) : ''?></td>
       <td><span class="dashboard-badge <?=$row['status']==='published'?'is-live':'is-draft'?>"><?=e(['draft'=>'● Concept','published'=>'● Gepubliceerd','sold'=>'● Verkocht','canceled'=>'● Canceled'][$row['status']] ?? '● Onbekend')?></span></td>
       <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row) ? '✎ Bewerken' : 'Bekijken'?></a></td>
     </tr><?php endforeach; ?>
-    <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+    <?php if(!$rows): ?><tr><td colspan="9">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
     <?php if($pages>1): ?><nav class="dashboard-pagination" aria-label="Paginering"><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
   </section>
