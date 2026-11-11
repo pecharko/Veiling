@@ -116,7 +116,7 @@ if (is_post() && $editId!==null && ($_POST['action']??'')!=='save' && $error!=='
 }
 $audit=null;
 if ($editId!==null) {
-  $auditStmt=$pdo->prepare("SELECT s.created_at,s.updated_at,COALESCE(NULLIF(creator.name,''),creator.email) AS creator_name,COALESCE(NULLIF(editor.name,''),editor.email) AS editor_name FROM lot_sellers s LEFT JOIN admins creator ON creator.id=s.created_by_admin_id LEFT JOIN admins editor ON editor.id=s.updated_by_admin_id WHERE s.id=?");
+  $auditStmt=$pdo->prepare("SELECT s.created_at,s.updated_at,COALESCE(NULLIF(s.created_by_name,''),NULLIF(creator.name,''),creator.email) AS creator_name,COALESCE(NULLIF(s.updated_by_name,''),NULLIF(editor.name,''),editor.email) AS editor_name FROM lot_sellers s LEFT JOIN admins creator ON creator.id=s.created_by_admin_id LEFT JOIN admins editor ON editor.id=s.updated_by_admin_id WHERE s.id=?");
   $auditStmt->execute([$editId]);
   $audit=$auditStmt->fetch(PDO::FETCH_ASSOC);
 }
