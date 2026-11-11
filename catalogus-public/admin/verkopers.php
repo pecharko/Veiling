@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__,2).'/private/bootstrap.php';
 require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
-require_administrator();
+require_auth();
 $pdo=db();
 $error='';
 if (is_post()) {
@@ -13,6 +13,7 @@ if (is_post()) {
   if ($sellerId===false || $sellerId===null) { http_response_code(400); exit('Ongeldige verkoper.'); }
   try {
     catalog_lock_for_request($pdo);
+    if (!seller_can_manage(effective_admin_role())) { http_response_code(403); exit('Geen toegang.'); }
     seller_delete($pdo,(int)$sellerId);
     flash('Verkoper verwijderd.');
     redirect('admin/verkopers.php');
@@ -67,7 +68,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     </form>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
-        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
+        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Kavels</th><th scope="col">Aangemaakt door / op</th><th scope="col">Laatst gewijzigd door / op</th><th scope="col">Acties</th></tr></thead>
         <tbody>
           <?php foreach($filteredRows as $r): ?>
             <tr>
@@ -75,13 +76,15 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
               <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
+              <td class="seller-audit"><strong><?=e($r['creator_name'] ?: 'Onbekend')?></strong><small><?=e($r['created_at'] ? gmdate('d/m/Y H:i',strtotime($r['created_at'])).' UTC' : 'Niet geregistreerd')?></small></td>
+              <td class="seller-audit"><strong><?=e($r['editor_name'] ?: 'Onbekend')?></strong><small><?=e($r['updated_at'] ? gmdate('d/m/Y H:i',strtotime($r['updated_at'])).' UTC' : 'Niet geregistreerd')?></small></td>
               <td><div class="seller-row-actions">
                 <a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a>
                 <form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form>
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$filteredRows): ?><tr><td colspan="5">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$filteredRows): ?><tr><td colspan="7">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
