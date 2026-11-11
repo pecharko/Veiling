@@ -152,14 +152,14 @@ if(is_post()){
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
-    $status = !$id ? 'draft' : (lot_can_change_publication($role)
-      ? $submittedStatus : (string)($lot['status'] ?? 'draft'));
+    $status = lot_can_change_publication($role)
+      ? $submittedStatus : ($id ? (string)($lot['status'] ?? 'draft') : 'draft');
     $auctionOnly = !empty($_POST['auction_only']);
     // A hidden publication section is not an authorization boundary: reject
     // fabricated assistant POST changes to sale location as well as status.
-    $saleLocation = $id
-      ? (lot_can_change_publication($role) ? (string)($_POST['sale_location'] ?? ($lot['sale_location'] ?? 'markt')) : (string)($lot['sale_location'] ?? 'markt'))
-      : 'markt';
+    $saleLocation = lot_can_change_publication($role)
+      ? (string)($_POST['sale_location'] ?? ($lot['sale_location'] ?? 'markt'))
+      : ($id ? (string)($lot['sale_location'] ?? 'markt') : 'markt');
     if($error!=='') { /* Existing validation error: no DB or photo writes. */ }
     elseif(mb_strlen($title)>50)$error='De titel mag maximaal 50 tekens bevatten.';
     elseif(mb_strlen($subtitle)>50)$error='De ondertitel mag maximaal 50 tekens bevatten.';
@@ -311,7 +311,7 @@ if ($error === $cancelAuctionWarning) {
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
         <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><?php if($lot && $canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><?php if ($lot): ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><?php endif; ?><p class="lot-editor-help lot-full">Een nieuw kavel start altijd als concept op Markt. Publicatie en verkoopplaats kunnen na bewaren worden gewijzigd. Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
+          <div class="lot-editor-fields lot-editor-two"><?php if($canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><p class="lot-editor-help lot-full">Nieuwe kavels staan standaard als concept op Markt. Administrator en Veilingmeester kunnen de publicatiestatus en verkoopplaats meteen aanpassen. Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
         </section>
         <?php endif; ?>
     <div class="lot-editor-layout lot-editor-layout--single">
