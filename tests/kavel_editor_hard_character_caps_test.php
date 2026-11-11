@@ -6,9 +6,7 @@ if (!is_string($editor)) throw new RuntimeException('Missing editor');
 foreach ([
   'title' => 50,
   'subtitle' => 50,
-  'artist_name' => 50,
   'category' => 120,
-  'artist_url' => 2048,
 ] as $field => $limit) {
   // PHP template values contain ?>, so do not use an [^>]* match over the input tag.
   if (!str_contains($editor, 'name="' . $field . '" value="<?=e($d[\'' . $field . '\'])?>" maxlength="' . $limit . '"')) {
@@ -32,6 +30,10 @@ if (!str_contains($editor, "elseif(mb_strlen(\$subtitle)>50)")) throw new Runtim
 if (!str_contains($editor, "elseif(mb_strlen(\$description)>250)")) throw new RuntimeException('Server description validation missing');
 if (!str_contains($editor, "elseif(mb_strlen(\$details)>100)")) throw new RuntimeException('Server details validation missing');
 if (!str_contains($editor, "elseif(mb_strlen(\$title)>50)")) throw new RuntimeException('Server title validation missing');
+$sellerEditor=file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/verkoper.php');
+if (!is_string($sellerEditor) || !str_contains($sellerEditor, 'name="artist_name" maxlength="50"')
+    || !str_contains($sellerEditor, 'name="artist_url" maxlength="2048"'))
+  throw new RuntimeException('Artist field caps must be enforced by central seller editor');
 $artistValidator = file_get_contents(dirname(__DIR__) . '/private/lot_artist.php');
 if (!is_string($artistValidator) || !str_contains($artistValidator, 'maximaal 50 tekens')) throw new RuntimeException('Server artist validation missing');
-echo "PASS: hard browser character caps for all seven limited editor text fields.\n";
+echo "PASS: hard browser character caps for lot fields and delegated seller artist limits.\n";
