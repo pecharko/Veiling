@@ -13,9 +13,11 @@ function reset_catalog_lots(PDO $pdo): array {
   try {
     $pdo->beginTransaction();
     $paths = $pdo->query('SELECT path FROM lot_images')->fetchAll(PDO::FETCH_COLUMN);
+    $paths = array_merge($paths,$pdo->query('SELECT path FROM seller_images')->fetchAll(PDO::FETCH_COLUMN));
     $count = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
     $sellerCount = (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn();
     $pdo->exec('DELETE FROM lot_images');
+    $pdo->exec('DELETE FROM seller_images');
     $pdo->exec('DELETE FROM lots');
     // After deleting all lots, their FK references no longer prevent deleting sellers.
     // Keep sellers in the same transaction so a failure restores everything.
