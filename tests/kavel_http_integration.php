@@ -124,6 +124,11 @@ try {
   claim($sellerRecord['bank_account_iban']==='BE68539007547034'
     && $sellerRecord['artist_url']==='https://www.example.org',
     'Seller IBAN and artist URL normalized on save');
+  $creatorActor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
+    && (int)$sellerRecord['updated_by_admin_id']===$creatorActor
+    && $sellerRecord['created_at']!==null && $sellerRecord['updated_at']!==null,
+    'Original creator and last updater recorded on first save');
   [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
   claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
     'Seller form preloads existing data');
@@ -159,6 +164,9 @@ try {
     && $sellerRecord['artist_intro']===''
     && (int)db()->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===0,
     'Seller can change type and private artist fields are cleared');
+  claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
+    && (int)$sellerRecord['updated_by_admin_id']===$creatorActor,
+    'Editing keeps original creator and updates last editor');
   [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier',
@@ -548,10 +556,23 @@ try {
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
-  [$sellerForbidden] = request_page('/admin/verkopers.php');
-  claim($sellerForbidden===403, 'Assistant cannot access private seller management');
-  [$sellerFormForbidden] = request_page('/admin/verkoper.php');
-  claim($sellerFormForbidden===403, 'Assistant cannot open private seller editor');
+  [$sellerOverviewStatus, $sellerAssistantOverview] = request_page('/admin/verkopers.php');
+  claim($sellerOverviewStatus===200 && str_contains($sellerAssistantOverview,'Verkopers beheren'),
+    'Assistant may open seller management');
+  [$sellerFormStatus, $sellerAssistantForm] = request_page('/admin/verkoper.php');
+  claim($sellerFormStatus===200 && str_contains($sellerAssistantForm,'Nieuwe verkoper'),
+    'Assistant may open new seller editor');
+  [$sellerFormStatus] = request_page('/admin/verkoper.php', [
+    'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'particulier',
+    'name'=>'Fictieve assistentverkoper','email'=>'assistent@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren'
+  ]);
+  $assistantSeller=db()->query("SELECT created_by_admin_id,updated_by_admin_id,created_at,updated_at FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetch();
+  claim($sellerFormStatus===303 && $assistantSeller
+    && (int)$assistantSeller['created_by_admin_id']===$actor
+    && (int)$assistantSeller['updated_by_admin_id']===$actor
+    && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null,
+    'Assistant creates seller with authenticated creator and edit timestamps');
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200 && !str_contains($ownForm,'alleen-lezen')
     && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
