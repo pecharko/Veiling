@@ -329,7 +329,10 @@ try {
       'Unused category can be deleted');
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
   // No effective change must never advance either the explicit audit or MySQL updated_at.
-  db()->prepare("UPDATE lots SET updated_at='2020-01-01 00:00:00' WHERE id=?")->execute([$id]);
+  $priorEditor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  db()->prepare("UPDATE lots SET updated_at='2020-01-01 00:00:00',
+    last_edited_at='2020-01-01 00:00:00',last_edited_by_admin_id=? WHERE id=?")
+    ->execute([$priorEditor,$id]);
   [$noopFormStatus,$noopForm]=request_page('/admin/kavel.php?id='.$id);
   [$noopStatus] = request_page('/admin/kavel.php?id='.$id, [
     'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
@@ -338,8 +341,8 @@ try {
     'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
   ]);
   $noopRow=by_number(10);
-  claim($noopStatus===303 && $noopRow['last_edited_at']===null
-    && $noopRow['last_edited_by_admin_id']===null
+  claim($noopStatus===303 && $noopRow['last_edited_at']==='2020-01-01 00:00:00'
+    && (int)$noopRow['last_edited_by_admin_id']===$priorEditor
     && $noopRow['updated_at']==='2020-01-01 00:00:00',
     'Unchanged lot save does not create edit audit or advance updated_at');
   [$changedStatus] = request_page('/admin/kavel.php?id='.$id, [
