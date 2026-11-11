@@ -143,6 +143,11 @@ if(is_post()){
         if ($error==='') $error='Kies een bestaande verkoper.';
       } else $sellerId=(int)$parsedSeller;
     }
+    // Every seller-less lot is a donation with no payout. Require explicit
+    // acknowledgement even if client-side JavaScript is disabled or bypassed.
+    if ($rawSeller==='' && ($_POST['donation_confirmed']??'')!=='1' && $error==='') {
+      $error='Er is geen verkoper geselecteerd. Deze kavel wordt beschouwd als geschonken voor de veiling; er zal geen uitbetaling gebeuren naar de schenker. Bevestig dit om op te slaan.';
+    }
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
@@ -303,7 +308,7 @@ if ($error === $cancelAuctionWarning) {
     </div>
   </div>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
-    <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save">
+    <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save"><input type="hidden" name="donation_confirmed" value="0">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
         <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
@@ -413,8 +418,28 @@ if ($error === $cancelAuctionWarning) {
 <script>
 (() => {
   'use strict';
+  const lotForm=document.getElementById('lot-editor-form');
   const createLink=document.getElementById('lot-create-seller');
-  const sellerSelect=document.querySelector('#lot-editor-form select[name="seller_id"]');
+  const sellerSelect=lotForm?.querySelector('select[name="seller_id"]');
+  const donationConfirmed=lotForm?.querySelector('input[name="donation_confirmed"]');
+  if (lotForm && sellerSelect && donationConfirmed) {
+    const donationWarning='Er is geen verkoper geselecteerd, deze kavel wordt beschouwd als geschonken voor de veiling er zal geen uitbetaling gebeuren naar de schenker, ga jij hiermee akkoord?';
+    sellerSelect.addEventListener('change', () => { donationConfirmed.value='0'; });
+    lotForm.addEventListener('submit', event => {
+      if (sellerSelect.value!=='') {
+        donationConfirmed.value='0';
+        return;
+      }
+      if (donationConfirmed.value==='1') return;
+      if (!window.confirm(donationWarning)) {
+        event.preventDefault();
+        donationConfirmed.value='0';
+        sellerSelect.focus();
+        return;
+      }
+      donationConfirmed.value='1';
+    });
+  }
   if (!createLink || !sellerSelect) return;
   let refreshOnFocus=false;
   async function refreshSellers(preferredId=null) {
