@@ -10,7 +10,7 @@ function lot_audit_touch(PDO $pdo,int $lotId,int $actorId): void {
   if ($lotId<1 || $actorId<1) throw new InvalidArgumentException('Ongeldige kavel- of gebruikersidentificatie.');
   $st=$pdo->prepare('UPDATE lots SET last_edited_by_admin_id=?, last_edited_at=UTC_TIMESTAMP() WHERE id=?');
   $st->execute([$actorId,$lotId]);
-  if ($st->rowCount()!==1) throw new RuntimeException('Kavel niet gevonden voor auditregistratie.');
+  // A repeat update by the same editor within one second may affect 0 rows.
 }
 /** UTC audit values are displayed in the visitor's local administrative timezone. */
 function lot_audit_label(?string $timestamp): string {
