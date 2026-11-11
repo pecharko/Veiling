@@ -14,7 +14,8 @@ if (is_post()) {
   try {
     catalog_lock_for_request($pdo);
     if (!seller_can_manage(effective_admin_role())) { http_response_code(403); exit('Geen toegang.'); }
-    seller_delete($pdo,(int)$sellerId);
+    seller_require_edit($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
+    seller_delete($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     flash('Verkoper verwijderd.');
     redirect('admin/verkopers.php');
   } catch (InvalidArgumentException $ex) {
@@ -72,15 +73,16 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
         <tbody>
           <?php foreach($filteredRows as $r): ?>
             <tr>
-              <td class="dashboard-title"><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e($r['name'])?></a></td>
+              <?php $canEditSeller=seller_can_edit(effective_admin_role(),(int)$_SESSION['admin_id'],$r); ?>
+              <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e($r['name'])?></a><?php else: ?><?=e($r['name'])?><?php endif; ?></td>
               <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
               <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td class="seller-audit"><strong><?=e($r['creator_name'] ?: 'Onbekend')?></strong><small><?=e($r['created_at'] ? seller_audit_time((string)$r['created_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
               <td class="seller-audit"><strong><?=e($r['editor_name'] ?: 'Onbekend')?></strong><small><?=e($r['updated_at'] ? seller_audit_time((string)$r['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
               <td><div class="seller-row-actions">
-                <a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a>
-                <form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form>
+                <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
+                <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
             </tr>
           <?php endforeach; ?>
