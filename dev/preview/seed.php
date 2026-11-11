@@ -15,6 +15,9 @@ if (cfg('setup_key') !== 'local-preview-only-nonproduction'
 $pdo = db();
 $sellerSchemaAlreadyPresent = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'seller_id'")->fetch();
 // Safe, idempotent schema update for the isolated synthetic Docker database only.
+if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) {
+    $pdo->exec("ALTER TABLE settings ADD COLUMN is_site_online TINYINT(1) NOT NULL DEFAULT 1");
+}
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
 }

@@ -21,7 +21,7 @@ if($pdo->query('SELECT DATABASE()')->fetchColumn()!=='auction_test'){
 }
 if(restore_journal_pending())throw new RuntimeException('Pending restore before T-053.');
 $source=(string)file_get_contents($root.'/private/snapshots.php');
-$needle="   foreach(['settings','admins','lots','lot_images','login_attempts'] as \$table){";
+$needle="   foreach(['settings','admins','lot_sellers','lots','lot_images','seller_images','login_attempts'] as \$table){";
 if(substr_count($source,$needle)!==1)throw new RuntimeException('Review restore fault point.');
 $inject=<<<'PHP'
    if(getenv('CI_RESTORE_SQL_FAIL')==='yes'){
