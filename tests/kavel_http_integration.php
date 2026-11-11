@@ -120,7 +120,7 @@ try {
   claim($sellerStatus===303 && $sellerRecord['seller_type']==='particulier'
     && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']==='',
     'Seller can change type and private artist fields are cleared');
-  [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php', [
+  [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier',
     'email'=>'bad-email','bank_account_iban'=>'BE68 5390 0754 7035'
