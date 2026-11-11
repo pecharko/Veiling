@@ -35,6 +35,7 @@ if (is_post()) {
       if ($slot===false || $slot===null) throw new InvalidArgumentException('Ongeldige fotopositie.');
       if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[]);
       else seller_image_delete($pdo,$editId,$kind,(int)$slot);
+      $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([(int)$_SESSION['admin_id'],$editId]);
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
       redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
