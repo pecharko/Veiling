@@ -123,6 +123,19 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch())
     $pdo->exec(trim((string)$mobileSql));
     echo "Optional seller mobile column added to isolated preview.\n";
 }
+// Add creator/last-editor audit columns only to the isolated local preview.
+$createdAudit=(bool)$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'created_by_admin_id'")->fetch();
+$updatedAudit=(bool)$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'updated_by_admin_id'")->fetch();
+if ($createdAudit !== $updatedAudit) throw new RuntimeException('Partial seller audit migration; refusing automatic repair.');
+if (!$createdAudit) {
+    $auditSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_audit.sql');
+    if (!is_string($auditSql) || !str_contains($auditSql,'ADD COLUMN updated_by_admin_id')) {
+        throw new RuntimeException('Reviewed seller audit migration missing.');
+    }
+    $auditSql=preg_replace('/^\s*--[^\n]*$/m','',$auditSql);
+    $pdo->exec(trim((string)$auditSql));
+    echo "Seller creator and last-editor tracking added to isolated preview.\n";
+}
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
