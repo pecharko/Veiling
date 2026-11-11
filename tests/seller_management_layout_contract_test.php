@@ -34,7 +34,7 @@ foreach (['email','street','house_number','postal_code','municipality','bank_acc
   if (!preg_match('/<input(?=[^>]*name="'.preg_quote($field,'/').'")(?=[^>]*\\brequired\\b)[^>]*>/s', $editor))
     throw new RuntimeException('Required seller input missing: '.$field);
 }
-if (!str_contains($editor,'input.required=artist') || !str_contains($editor,'input.disabled=!artist'))
+if (!str_contains($editor,"input.required=artist && (input.name==='artist_name' || input.name==='artist_url')") || !str_contains($editor,'input.disabled=!artist'))
   throw new RuntimeException('Artist required fields must toggle with seller type');
 if (str_contains($overview,'id="seller-form"') || str_contains($overview,'name="bank_account_iban"')
     || str_contains($overview,'seller_save(')) throw new RuntimeException('Seller overview must not embed new/edit form.');
