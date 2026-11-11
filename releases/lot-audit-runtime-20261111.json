@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "888e23c179033aa0fbadbc9eba087ad076cc835a8ac26936127aef6a20a51aeb",
+      "remote_sha256": "07399cca84769ff11eedc21de63b36a30c7d8e911bfd4474ca3d51ab32eec775"
+    },
+    {
+      "path": "catalogus-public/admin/backup.php",
+      "source_sha256": "097c17dc4c2ef568e644f9289fbaec0400c61c60f443dc8976a19234cba61fc9",
+      "remote_sha256": "12e21f1fa056fa9bab5933cf4013a0f439959e822612a1f7a586e5eb291b82a2"
+    },
+    {
+      "path": "catalogus-public/admin/categorieen.php",
+      "source_sha256": "4f2c59d7fbbc64f1e5e0c74b02feb5745bd4ed5b25c4980067814cfc8f2a37ef",
+      "remote_sha256": "921292643ad3f1319d01c6d15b3dc8f023b3f58870794804ded5455c691b8409"
+    },
+    {
+      "path": "catalogus-public/admin/index.php",
+      "source_sha256": "0dace486a4bdcca9036796002ed5dbf9f80871773b5a9e3458d8ebed58f42b90",
+      "remote_sha256": "17e5a4d18ef2b27dd58724224a82a0fc9bd8d69b3e2fdec49f9eae26382a792f"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "20e8f32424ed1b2d981d3d5333a535a147ed0a377d4d1740d7fc8e9f85dfc8c8",
+      "remote_sha256": "cd20951a2347c8f374aed3b58037c5fa08e5f46fabf641a6ecdc0cf5d272d602"
+    },
+    {
+      "path": "catalogus-public/admin/rollen.php",
+      "source_sha256": "f418f1ddc7210e22d9179f6c454ec5b19e695069119923e964161c4e07980cad",
+      "remote_sha256": "32a36e285f472bc1a36cbe4e6880d6c785e75babc5b8ad2b54c4a2028185e1d6"
+    },
+    {
+      "path": "catalogus-public/admin/veiling-organisatie.php",
+      "source_sha256": "5f5ef3fe20e8effe55430561b8a37395e240488490a81c9b9ea7632334587766",
+      "remote_sha256": "793b4e3955becd9ab5fbd8ff86131d47196b8f967a2143cb53a9e5a199c6173e"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "f5292b9e24ad8fe280b1f9ee229dc3fe29b1f294940a92573cde76c659e540d0",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "6b4b507a3f4cee14c0f2101b0933d0e29d8dcbb71502d0d84db70e99316e4016",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "f1a2b3fe28e4855a9df5dcb616244604719153c4067490c1046251753cc53530",
+      "remote_sha256": "96bba143d3934f169463978573ee22bf03046068013ee4c9bdbbe8a794d977d0"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "a352b188e6ae37db65ea35bd0025a5137cb337f62f58aa847ff750dd97bf09ac",
+      "remote_sha256": "940061bb23228e41c076d0e38e9826de286476d72af5853f25d31a367a14d9c8"
+    },
+    {
+      "path": "private/auction_organisation.php",
+      "source_sha256": "b32520eaaaa78f4986c0306f38e6e700c4d5798b62a17d48cec897398e2182b4",
+      "remote_sha256": "8c76245ca0a91f1edfff07533b4df66debf4e70f91d2a4dc20aa1d9fa0de75c0"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "d8dd63c635d5a1f9704fb109bbb031c315eb1779d5879b8f45b930fc1b7c5742",
+      "remote_sha256": "3ada5ad7cae581ccf608c22a9c11e5169cd573db86daacbda3497e7b34651733"
+    },
+    {
+      "path": "private/catalog_reset.php",
+      "source_sha256": "6c71044368490dcee6a74d18ef13c7ead1cb1429a09e9974c18d04c9140f07fc",
+      "remote_sha256": "34855a27a0b9232d2352f34690c8f994f52e1a44f618c718b2beffb105579efb"
+    },
+    {
+      "path": "private/lot_audit.php",
+      "source_sha256": "a5a0f29c8a49d8259a09dc9424acd59608ca36268d9b769c7e76fe5a22b51c0a",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/lot_categories.php",
+      "source_sha256": "b6e0ee03d28c404c9e26830cabde1c07fe88088a7fdfac683c7761f2aa2850d2",
+      "remote_sha256": "74692f1d9a1117a8185a470ef9cd4b64a5a56ffffd963bce43ef2fd4031e0352"
+    },
+    {
+      "path": "private/lot_form.php",
+      "source_sha256": "c367f52ea0022f8fdb8feadfd85f9246153799c896826fd085512aa1755d5c03",
+      "remote_sha256": "1ea3805c3698c1478ed5f5df28b7113a2d4fb5097578783103ab8ee3bdf79c17"
+    },
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "1a56aafaffd9f183be8b2383132f0c110187268861e81459b425389cf6c60d3a",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/seller_audit.php",
+      "source_sha256": "6d992d3a215158fa8b8caad4f4f5fccd0f6b86d1518612c8b8fef9fed46e373e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/seller_images.php",
+      "source_sha256": "a5ee957cc72a2eee0091c99b9cafbbee8fda1d4415db442d69875ca9eec10ec4",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/seller_mobile.php",
+      "source_sha256": "a33e3721cbfbcde8c9dcb752bf8b1b97dd8f69528ba852ea878c8d8289dc987d",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}
