@@ -50,4 +50,11 @@ foreach ([
 checkSeller(seller_can_manage('administrator'),'Admin may manage seller');
 checkSeller(seller_can_manage('assistant') && seller_can_manage('veilingmeester'), 'Assistants and auctioneers may manage sellers');
 checkSeller(!seller_can_manage('invalid'), 'Unknown role cannot manage sellers');
+checkSeller(seller_can_edit('assistant',7,['created_by_admin_id'=>7]), 'Assistant edits own seller');
+checkSeller(!seller_can_edit('assistant',7,['created_by_admin_id'=>8]), 'Assistant cannot edit another user seller');
+checkSeller(!seller_can_edit('assistant',7,['created_by_admin_id'=>null]), 'Assistant cannot claim legacy seller without creator');
+checkSeller(seller_can_edit('administrator',7,['created_by_admin_id'=>8]), 'Administrator manages all sellers');
+checkSeller(seller_can_edit('veilingmeester',7,['created_by_admin_id'=>8]), 'Auctioneer manages all sellers');
+checkSeller(!seller_can_edit('assistant',0,['created_by_admin_id'=>0]), 'Invalid actor cannot edit');
+
 echo "PASS: private seller role, bank, artist and field validation.\n";
