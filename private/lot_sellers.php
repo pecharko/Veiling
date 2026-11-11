@@ -23,8 +23,7 @@ function seller_clean(mixed $input): array {
     $fields[$key]=$value;
   }
   $requiredLabels = ['name'=>'Naam','email'=>'E-mail','street'=>'Straat','house_number'=>'Huisnummer',
-    'postal_code'=>'Postcode','municipality'=>'Gemeente','bank_account_name'=>'Naam bankrekeningnummer',
-    'bank_account_iban'=>'IBAN'];
+    'postal_code'=>'Postcode','municipality'=>'Gemeente'];
   foreach ($requiredLabels as $key=>$label) {
     if ($fields[$key]==='') throw new InvalidArgumentException($label.' is verplicht.');
   }
