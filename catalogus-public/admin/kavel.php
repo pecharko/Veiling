@@ -118,7 +118,7 @@ if(is_post()){
       $pdo->beginTransaction();
       $st=$pdo->prepare('SELECT path FROM lot_images WHERE lot_id=?');$st->execute([$id]);$paths=$st->fetchAll(PDO::FETCH_COLUMN);
       $pdo->prepare('DELETE FROM lots WHERE id=?')->execute([$id]);
-      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo);
+      if ($lot['auction_number'] !== null) compact_auction_numbers($pdo,(int)$_SESSION['admin_id']);
       $pdo->commit();
     } catch (Throwable $ex) {
       if ($pdo->inTransaction()) $pdo->rollBack();
@@ -227,7 +227,7 @@ if(is_post()){
             $st->execute([...$values,(int)$_SESSION['admin_id']]);
             $id=(int)$pdo->lastInsertId();
           }
-          if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
+          if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo,(int)$_SESSION['admin_id']);
           $pdo->commit();
           $failed=[];
           foreach($photos as $i=>$photo){
