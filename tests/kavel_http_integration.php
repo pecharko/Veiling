@@ -510,13 +510,13 @@ try {
 
   // Auction numbers are unique and monotonically assigned in the isolated MySQL fixture.
   [$status, $form] = request_page('/admin/kavel.php');
-  claim($status === 200 && !str_contains($form, 'name="sale_location"'), 'New lot has fixed sale location');
+  claim($status === 200 && str_contains($form, 'name="sale_location"'), 'New lot exposes sale-location choice to administrator');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'301',
-    'title'=>'Auction one', 'sale_location'=>'veiling'
+    'title'=>'Auction one'
   ]);
   claim($status===303 && by_number(301)['sale_location']==='markt' && by_number(301)['auction_number']===null,
-    'New lot is always created on Markt even if sale location is forged');
+    'New lot defaults to Markt if no sale location was selected');
   [$status, $form] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id']);
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id'], [
     'csrf'=>token($form), 'action'=>'save', 'id'=>(string)by_number(301)['id'],
@@ -527,7 +527,7 @@ try {
   [$status, $form] = request_page('/admin/kavel.php');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'302',
-    'title'=>'Auction two', 'sale_location'=>'veiling'
+    'title'=>'Auction two'
   ]);
   claim($status===303 && by_number(302)['auction_number']===null,
     'Second lot also starts on Markt');
