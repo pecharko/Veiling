@@ -36,7 +36,7 @@ PHP;
 $probe=$root.'/private/.ci-crash-'.bin2hex(random_bytes(6)).'.php';
 $marker=sys_get_temp_dir().'/ci-snapshot-kill-'.bin2hex(random_bytes(8));
 $uploads=snap_uploads();$base=dirname($uploads);
-$currentOnlyRel='2026/10/'.str_repeat('c',32).'.jpg';
+$currentOnlyRel='2026/10/'.str_repeat('d',32).'.jpg';
 $currentOnly=$uploads.'/'.$currentOnlyRel;
 $oldDirs=glob($base.'/.uploads-before-restore-*')?:[];
 if($oldDirs || restore_journal_pending())throw new RuntimeException('Existing recovery evidence before isolated test.');
