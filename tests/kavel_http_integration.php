@@ -130,6 +130,12 @@ try {
   claim($sellerStatus===303
     && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE id=$sellerId")->fetchColumn()===0,
     'Unused seller can be removed');
+  [$sellerStatus] = request_page('/admin/verkopers.php', [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier',
+    'name'=>'Kavelverkoper Demo','email'=>'kavel@example.invalid'
+  ]);
+  $sellerLinkId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Kavelverkoper Demo'")->fetchColumn();
+  claim($sellerStatus===303 && $sellerLinkId>0, 'Private seller available for lot association');
   [$status, $lotsNav] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsNav,'>Verkopers</a>'),
     'Administrator navigation exposes seller management');
@@ -290,9 +296,17 @@ try {
   imagedestroy($image);
   $small = $valid;
   $small['title'] = 'Geldig fotokavel';
+  $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
   [$status] = request_page('/admin/kavel.php', $small, true);
   claim($status === 303 && (bool)by_number(20), 'Valid kavel and photo saved');
+  claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
+  [$sellerStatus, $sellerBlocked] = request_page('/admin/verkopers.php', [
+    'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerLinkId
+  ]);
+  claim($sellerStatus===200 && str_contains($sellerBlocked, 'Verwijder eerst de koppeling')
+    && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE id=$sellerLinkId")->fetchColumn()===1,
+    'Cannot delete a seller used by an existing lot');
   $st = db()->prepare('SELECT path FROM lot_images WHERE lot_id=?');
   $st->execute([(int)by_number(20)['id']]);
   $imagePath = (string)$st->fetchColumn();
