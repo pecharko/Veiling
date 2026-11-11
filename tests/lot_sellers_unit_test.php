@@ -42,5 +42,6 @@ foreach ([
   catch (InvalidArgumentException $expected) {}
 }
 checkSeller(seller_can_manage('administrator'),'Admin may manage seller');
-checkSeller(!seller_can_manage('assistant') && !seller_can_manage('veilingmeester'),'Seller personal details are admin only');
+checkSeller(seller_can_manage('assistant') && seller_can_manage('veilingmeester'), 'Assistants and auctioneers may manage sellers');
+checkSeller(!seller_can_manage('invalid'), 'Unknown role cannot manage sellers');
 echo "PASS: private seller role, bank, artist and field validation.\n";
