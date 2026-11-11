@@ -317,6 +317,10 @@ try {
   [$status] = request_page('/admin/kavel.php', $small, true);
   claim($status === 303 && (bool)by_number(20), 'Valid kavel and photo saved');
   claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
+  [$status, $lotsWithSeller] = request_page('/admin/index.php');
+  claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
+    && str_contains($lotsWithSeller,'class="dashboard-seller">Kavelverkoper Demo</td>'),
+    'Admin lots overview displays linked seller name');
   [$sellerStatus, $sellerBlocked] = request_page('/admin/verkopers.php', [
     'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerLinkId
   ]);
