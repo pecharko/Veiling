@@ -23,7 +23,7 @@ foreach ([$catalog,$detail] as $source) {
   foreach (['bank_account_iban','bank_account_name','seller.email','seller.street'] as $private)
     if (str_contains($source,$private)) throw new RuntimeException('Private seller data in public view.');
 }
-foreach (["'lot_sellers'","'seller_id'","41lokeren-v5-seller-mobile"] as $key)
+foreach (["'lot_sellers'","'seller_id'","41lokeren-v6-seller-audit"] as $key)
   if (!str_contains($snap,$key)) throw new RuntimeException('Seller-aware snapshots missing '.$key);
 if (!str_contains($editor,'new DOMParser()') || !str_contains($editor,'sellerSelect.add('))
   throw new RuntimeException('New seller must be available without losing unsaved lot input.');
