@@ -5,13 +5,15 @@ $lotEditor=file_get_contents($root.'/catalogus-public/admin/kavel.php');
 $lotAudit=file_get_contents($root.'/private/lot_audit.php');
 $lotMigration=file_get_contents($root.'/database/migrations/20261111_lot_audit.sql');
 $lotForm=file_get_contents($root.'/private/lot_form.php');
+$auction=file_get_contents($root.'/private/auction_organisation.php');
+$auctionPage=file_get_contents($root.'/catalogus-public/admin/veiling-organisatie.php');
 $sellerLib=file_get_contents($root.'/private/lot_sellers.php');
 $sellerList=file_get_contents($root.'/catalogus-public/admin/verkopers.php');
 $sellerEditor=file_get_contents($root.'/catalogus-public/admin/verkoper.php');
 $roles=file_get_contents($root.'/catalogus-public/admin/rollen.php');
 $snapshot=file_get_contents($root.'/private/snapshots.php');
 $preview=file_get_contents($root.'/dev/preview/seed.php');
-foreach(compact('lotEditor','lotAudit','lotMigration','lotForm','sellerLib','sellerList','sellerEditor','roles','snapshot','preview') as $name=>$source)
+foreach(compact('lotEditor','lotAudit','lotMigration','lotForm','auction','auctionPage','sellerLib','sellerList','sellerEditor','roles','snapshot','preview') as $name=>$source)
   if(!is_string($source)) throw new RuntimeException('Missing source: '.$name);
 foreach(['ADD COLUMN last_edited_by_admin_id','ADD COLUMN last_edited_at'] as $term)
   if(!str_contains($lotMigration,$term))throw new RuntimeException('Lot audit migration missing '.$term);
@@ -22,6 +24,10 @@ foreach(['lot_effective_fields_changed($lot,$values)','lot_audit_touch($pdo,$id'
   if(!str_contains($lotEditor,$term))throw new RuntimeException('Lot audit UI/write missing '.$term);
 if(!str_contains($lotForm,'function lot_effective_fields_changed('))
   throw new RuntimeException('No-op comparison missing');
+if(!str_contains($auction,'function auction_apply_order(PDO $pdo, array $ids, int $actorId)')
+  || !str_contains($auction,'lot_audit_touch($pdo,(int)$id,$actorId)')
+  || !str_contains($auctionPage,"auction_apply_order($pdo, $ordered, (int)\$_SESSION['admin_id'])"))
+  throw new RuntimeException('Changed auction numbers must record an authenticated last editor');
 if(!str_contains($lotAudit,'UTC_TIMESTAMP()'))
   throw new RuntimeException('Explicit audit timestamp missing');
 if(!str_contains($preview,'20261111_lot_audit.sql'))
