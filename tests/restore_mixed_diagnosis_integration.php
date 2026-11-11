@@ -60,6 +60,15 @@ try {
     $originalPhotos = $originalHashes;
     unset($originalPhotos['database.json']);
     if (!$originalPhotos) throw new RuntimeException('CI baseline photo missing.');
+    // Seller galleries add more referenced photos; preserve the COMPLETE safety
+    // photo tree, not just the first lot image, for forensic comparisons.
+    $originalPhotoBytes=[];
+    foreach (array_keys($originalPhotos) as $photoRef) {
+        $photoRel=substr($photoRef,strlen('uploads/'));
+        $bytes=file_get_contents(snap_uploads().'/'.$photoRel);
+        if ($bytes===false) throw new RuntimeException('CI safety photo unreadable: '.$photoRef);
+        $originalPhotoBytes[$photoRel]=$bytes;
+    }
     $firstPhoto = array_key_first($originalPhotos);
     $relative = substr($firstPhoto, strlen('uploads/'));
     $photoPath = snap_uploads() . '/' . $relative;
@@ -144,9 +153,14 @@ try {
     // The stored old photo directory can be independently identified as
     // safety data, but that does not make a mixed database safe to modify.
     $oldPhoto = $oldDir . '/' . $relative;
-    if (!mkdir(dirname($oldPhoto),0700,true) ||
-        file_put_contents($oldPhoto,$originalPhoto) === false) {
-        throw new RuntimeException('Cannot prepare disposable old-photo directory.');
+    foreach ($originalPhotoBytes as $photoRel=>$bytes) {
+        $destination=$oldDir.'/'.$photoRel;
+        if (!is_dir(dirname($destination)) && !mkdir(dirname($destination),0700,true)) {
+            throw new RuntimeException('Cannot prepare disposable old-photo directory.');
+        }
+        if (file_put_contents($destination,$bytes)===false) {
+            throw new RuntimeException('Cannot create complete disposable safety photo tree.');
+        }
     }
     $withOld = restore_mixed_diagnose($pdo, $safety);
     mixed_check($withOld['photo_set_states']['original_previous']['present']
