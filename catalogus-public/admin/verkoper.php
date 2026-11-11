@@ -64,11 +64,11 @@ if (is_post()) {
     redirect('admin/verkopers.php');
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
-  } catch (RuntimeException $ex) {
-    $error=$ex->getMessage();
   } catch (PDOException $ex) {
     error_log('[Verkoper opslaan] Databasefout.');
     $error='Bewaren mislukt. Controleer de gegevens en de database.';
+  } catch (RuntimeException $ex) {
+    $error=$ex->getMessage();
   }
 } elseif ($editId!==null) {
   try {
@@ -106,6 +106,13 @@ if ($fromLot && ($_GET['completed']??'')==='1' && filter_var($_GET['seller_id']?
   <?php
   admin_bottom();
   exit;
+}
+// On a failed photo action, redisplay the stored seller rather than an empty form.
+if (is_post() && $editId!==null && ($_POST['action']??'')!=='save' && $error!=='') {
+  $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
+  $st->execute([$editId]);
+  $saved=$st->fetch(PDO::FETCH_ASSOC);
+  if ($saved) $values=array_merge($defaults,$saved);
 }
 $photos=$editId!==null?seller_image_rows($pdo,$editId):[];
 $photoByKey=[];
