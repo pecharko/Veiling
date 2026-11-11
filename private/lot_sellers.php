@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/lot_bank.php';
 require_once __DIR__ . '/lot_artist.php';
+require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
 function seller_can_manage(string $role): bool { return $role === 'administrator'; }
@@ -83,6 +84,7 @@ function seller_save(PDO $pdo, ?int $id, array $input): int {
 }
 
 function seller_delete(PDO $pdo, int $id): void {
+  $photos=[];
   $pdo->beginTransaction();
   try {
     $stmt=$pdo->prepare('SELECT id FROM lot_sellers WHERE id=? FOR UPDATE');
@@ -91,9 +93,13 @@ function seller_delete(PDO $pdo, int $id): void {
     $used=$pdo->prepare('SELECT COUNT(*) FROM lots WHERE seller_id=?');
     $used->execute([$id]);
     if ((int)$used->fetchColumn()>0) throw new InvalidArgumentException('Deze verkoper is gekoppeld aan kavels. Verwijder eerst de koppeling.');
+    $paths=$pdo->prepare('SELECT path FROM seller_images WHERE seller_id=?');
+    $paths->execute([$id]);
+    $photos=$paths->fetchAll(PDO::FETCH_COLUMN);
     $delete=$pdo->prepare('DELETE FROM lot_sellers WHERE id=?');
     $delete->execute([$id]);
     $pdo->commit();
+    foreach($photos as $path) catalog_safe_unlink_photo((string)$path,dirname(__DIR__).'/catalogus-public');
   } catch(Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     throw $ex;
