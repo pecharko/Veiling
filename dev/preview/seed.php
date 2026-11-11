@@ -13,6 +13,7 @@ if (cfg('setup_key') !== 'local-preview-only-nonproduction'
     throw new RuntimeException('Refusing to seed a non-preview database.');
 }
 $pdo = db();
+$sellerSchemaAlreadyPresent = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'seller_id'")->fetch();
 // Safe, idempotent schema update for the isolated synthetic Docker database only.
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
@@ -24,7 +25,7 @@ $artistUrlExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_url'")
 if ($artistNameExists !== $artistUrlExists) {
     throw new RuntimeException('Partial artist schema in preview; refusing an automatic repair.');
 }
-if (!$artistNameExists) {
+if (!$artistNameExists && !$sellerSchemaAlreadyPresent) {
     $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261108_lot_artist_fields.sql');
     if (!is_string($migration) || !str_contains($migration, 'chk_lots_artist_url_requires_name')) {
         throw new RuntimeException('Reviewed artist migration file missing.');
@@ -60,7 +61,7 @@ $bankIbanExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_i
 if ($bankNameExists !== $bankIbanExists) {
     throw new RuntimeException('Partial bank schema in preview; refusing automatic repair.');
 }
-if (!$bankNameExists) {
+if (!$bankNameExists && !$sellerSchemaAlreadyPresent) {
     $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261110_lot_bank_fields.sql');
     if (!is_string($migration) || !str_contains($migration, 'ADD COLUMN bank_account_iban')) {
         throw new RuntimeException('Bank account migration missing in isolated preview.');
@@ -84,6 +85,20 @@ if (!$sellersExist) {
         if (trim($statement) !== '') $pdo->exec($statement);
     }
     echo "Seller schema added only to isolated preview.\n";
+}
+// Only this isolated database may lose the four obsolete, duplicated columns.
+$oldArtist = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch();
+$oldBank = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_name'")->fetch();
+if ($oldArtist !== $oldBank) throw new RuntimeException('Partial legacy seller fields; refusing destructive migration.');
+if ($oldArtist) {
+    $dedup = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261111_lot_seller_dedup.sql');
+    if (!is_string($dedup) || !str_contains($dedup, 'DROP CHECK chk_lots_artist_url_requires_name')
+        || !str_contains($dedup,'DROP COLUMN bank_account_iban')) {
+        throw new RuntimeException('Reviewed seller dedup migration missing.');
+    }
+    $dedup = preg_replace('/^\\s*--[^\\n]*$/m', '', $dedup);
+    $pdo->exec(trim((string)$dedup));
+    echo "Old per-lot seller fields removed only in isolated preview.\\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
