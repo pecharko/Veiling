@@ -136,6 +136,19 @@ if (!$createdAudit) {
     $pdo->exec(trim((string)$auditSql));
     echo "Seller creator and last-editor tracking added to isolated preview.\n";
 }
+// Audit fields for lots; no historical edit is inferred from created_at/updated_at.
+$lotAuditEditor=(bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_by_admin_id'")->fetch();
+$lotAuditTime=(bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_at'")->fetch();
+if ($lotAuditEditor!==$lotAuditTime) throw new RuntimeException('Partial lot audit migration; refusing automatic repair.');
+if (!$lotAuditEditor) {
+    $lotAuditSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_lot_audit.sql');
+    if (!is_string($lotAuditSql) || !str_contains($lotAuditSql,'ADD COLUMN last_edited_at')) {
+        throw new RuntimeException('Reviewed lot audit migration missing.');
+    }
+    $lotAuditSql=preg_replace('/^\s*--[^\n]*$/m','',$lotAuditSql);
+    $pdo->exec(trim((string)$lotAuditSql));
+    echo "Lot edit auditing added to isolated preview.\n";
+}
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
