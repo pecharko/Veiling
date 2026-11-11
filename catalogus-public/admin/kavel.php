@@ -10,6 +10,7 @@ require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_once dirname(__DIR__, 2) . '/private/lot_categories.php';
 require_once dirname(__DIR__, 2) . '/private/lot_bank.php';
+require_once dirname(__DIR__, 2) . '/private/lot_sellers.php';
 require_auth();
 $pdo=db();
 $id=max(0,(int)($_GET['id']??$_POST['id']??0));
@@ -149,6 +150,14 @@ if(is_post()){
     $details=mb_substr(trim(str_replace(["\r\n", "\r"], "\n", (string)($_POST['details']??''))),0,10000);
     $marketPrice=trim((string)($_POST['market_price']??''));
     $startingBid=trim((string)($_POST['starting_bid']??''));
+    $rawSeller=$_POST['seller_id'] ?? '';
+    $sellerId=null;
+    if ($rawSeller !== '') {
+      $parsedSeller=filter_var($rawSeller,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
+      if ($parsedSeller===false || !seller_valid_id($pdo,(int)$parsedSeller)) {
+        if ($error==='') $error='Kies een bestaande verkoper.';
+      } else $sellerId=(int)$parsedSeller;
+    }
     $submittedStatus = in_array(($_POST['status'] ?? ''), ['draft','published','sold','canceled'], true) ? (string)$_POST['status'] : 'draft';
     // Assistants cannot publish, unpublish or use a fabricated POST status.
     $role = effective_admin_role();
@@ -208,9 +217,9 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$artistName,$artistUrl,$bankAccountName,$bankAccountIban,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber];
-          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,artist_name=?,artist_url=?,bank_account_name=?,bank_account_iban=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=? WHERE id=?');}
-          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,artist_name,artist_url,bank_account_name,bank_account_iban,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
+          $values=[$nr,$title,$subtitle,$artistName,$artistUrl,$bankAccountName,$bankAccountIban,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
+          if($id){$values[]=$id;$st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,artist_name=?,artist_url=?,bank_account_name=?,bank_account_iban=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');}
+          else{$values[]=(int)$_SESSION['admin_id'];$st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,artist_name,artist_url,bank_account_name,bank_account_iban,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');}
           $st->execute($values);
           if(!$id)$id=(int)$pdo->lastInsertId();
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo);
@@ -261,12 +270,14 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','artist_name'=>'','artist_url'=>'','bank_account_name'=>'','bank_account_iban'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','artist_name'=>'','artist_url'=>'','bank_account_name'=>'','bank_account_iban'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>''];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
 $canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
 $availableCategories = lot_category_names($pdo);
+try { $availableSellers=seller_choices($pdo); }
+catch (PDOException $ex) { error_log('[Kavel verkopers] Laden mislukt.'); $availableSellers=[]; }
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een eigen conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
 $cancelAuctionWarning = 'Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -321,6 +332,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
+            <label class="lot-full">Verkoper<select name="seller_id"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
             <label>Kunstenaar<input type="text" name="artist_name" value="<?=e($d['artist_name'])?>" maxlength="50" placeholder="Naam van de kunstenaar"></label>
