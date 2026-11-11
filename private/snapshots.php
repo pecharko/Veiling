@@ -4,11 +4,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/catalog_mutex.php';
 require_once __DIR__ . '/restore_journal.php';
 require_once __DIR__ . '/visitor_geo_snapshot.php';
-const SNAP_TABLES = ['settings','admins','lots','lot_images','login_attempts'];
+const SNAP_TABLES = ['settings','admins','lot_sellers','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','updated_at'],
  'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
- 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','created_at','updated_at'],
+ 'lot_sellers'=>['id','seller_type','name','email','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url'],
+ 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'login_attempts'=>['id','ip_hash','attempted_at'],
 ];
@@ -85,7 +86,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
   // The catalog snapshot never captures visitor statistics, even when geo is installed.
-  $format=visitor_geo_state($pdo)===null?'41lokeren-v1':'41lokeren-v2-geo';
+  $format='41lokeren-v3-sellers';
   $payload=['format'=>$format,'created_at'=>gmdate('c'),'tables'=>$rows];
   $data=json_encode($payload,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
   if(strlen($data)>30*1024*1024)throw new RuntimeException('Snapshotdatabase te groot.');
@@ -118,7 +119,7 @@ function snap_verified(string $name): array {
   $m=$zip->getFromName('manifest.json');$d=$zip->getFromName('database.json');
   if($m===false||$d===false||strlen($d)>30*1024*1024)throw new RuntimeException('Ongeldige snapshotinhoud.');
   $manifest=json_decode($m,true,512,JSON_THROW_ON_ERROR);$database=json_decode($d,true,512,JSON_THROW_ON_ERROR);
-  if(!in_array($database['format']??null,['41lokeren-v1','41lokeren-v2-geo'],true)||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
+  if(($database['format']??null)!=='41lokeren-v3-sellers'||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
   if(!isset($database['tables'])||array_keys($database['tables'])!==SNAP_TABLES)throw new RuntimeException('Onvolledige databasetabellen.');
   $hashes=$manifest['sha256']??null;if(!is_array($hashes)||count($hashes)>20000||!isset($hashes['database.json']))throw new RuntimeException('Ongeldige bestandslijst.');
   if(!hash_equals($hashes['database.json'],hash('sha256',$d)))throw new RuntimeException('Database checksum ongeldig.');
@@ -145,8 +146,7 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_require_clear();
   catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
-  $geoInstalled=visitor_geo_state($pdo)!==null;
-  if($geoInstalled!==($database['format']==='41lokeren-v2-geo'))throw new RuntimeException('Snapshot past niet bij het geografische schema. Oude snapshots kunnen na de upgrade niet worden hersteld.');
+  if(($database['format']??null)!=='41lokeren-v3-sellers')throw new RuntimeException('Oude snapshots worden na de verkopersmigratie niet ondersteund.');
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
   if(!mkdir($stage,0700))throw new RuntimeException('Kan tijdelijke fotomap niet maken.');
   $zip=new ZipArchive();if($zip->open(snap_path($name))!==true)throw new RuntimeException('Kan snapshot niet openen.');
@@ -196,8 +196,8 @@ function snap_restore(PDO $pdo,string $name): void {
    // Invites are not part of snapshot exports: invalidate pending invite tokens on restore.
    $inviteTable = $pdo->query("SHOW TABLES LIKE 'admin_invitations'")->fetchColumn();
    if ($inviteTable) $pdo->exec('DELETE FROM admin_invitations');
-   foreach(['lot_images','login_attempts','lots','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
-   foreach(['settings','admins','lots','lot_images','login_attempts'] as $table){
+   foreach(['lot_images','login_attempts','lots','lot_sellers','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
+   foreach(['settings','admins','lot_sellers','lots','lot_images','login_attempts'] as $table){
     $columns=SNAP_INSERT[$table];
     if($table==='settings' && !$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='is_site_online'));
     if($table==='admins') { foreach(['role','is_active','last_login_at'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM admins LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
