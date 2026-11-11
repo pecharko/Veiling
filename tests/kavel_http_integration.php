@@ -44,6 +44,12 @@ function request_page(string $url, ?array $data = null, bool $multipart = false,
     CURLOPT_HTTPHEADER => $headers,
   ]);
   if ($data !== null) {
+    // Existing synthetic lot fixtures explicitly consent to donation-style saves.
+    // Tests can send donation_confirmed=0 to exercise the refusal path.
+    if (str_starts_with($url,'/admin/kavel.php') && ($data['action']??'')==='save'
+        && !array_key_exists('donation_confirmed',$data)) {
+      $data['donation_confirmed']='1';
+    }
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $multipart ? $data : http_build_query($data));
   }
@@ -183,6 +189,17 @@ try {
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
   claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"'),
       'New lot title input is limited to 50 characters');
+  claim(str_contains($html,'name="donation_confirmed" value="0"')
+    && str_contains($html,'geen uitbetaling gebeuren naar de schenker'),
+    'New lot exposes explicit donation confirmation on save');
+  [$donationStatus, $donationPage] = request_page('/admin/kavel.php', [
+    'csrf'=>token($html),'action'=>'save','id'=>'0',
+    'lot_number'=>'876541','title'=>'Schenking zonder verkoper','seller_id'=>'',
+    'donation_confirmed'=>'0'
+  ]);
+  claim($donationStatus===200
+    && str_contains($donationPage,'Bevestig dit om op te slaan')
+    && !by_number(876541), 'Server rejects unconfirmed donation with no seller');
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save',
     'lot_number' => '876542', 'title' => str_repeat('X', 51),
