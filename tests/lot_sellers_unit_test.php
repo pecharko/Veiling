@@ -19,6 +19,13 @@ $base=[
 ];
 $private=seller_clean($base+['artist_name'=>'Should not be retained','artist_url'=>'https://example.org']);
 checkSeller($private['artist_name']==='' && $private['artist_url']==='','Private seller cannot retain artist fields');
+$withoutBank=seller_clean(array_merge($base,['bank_account_name'=>'','bank_account_iban'=>'']));
+checkSeller($withoutBank['bank_account_name']==='' && $withoutBank['bank_account_iban']==='',
+  'Seller can be created without any bank details');
+$onlyIban=seller_clean(array_merge($base,['bank_account_name'=>'','bank_account_iban'=>'BE68 5390 0754 7034']));
+checkSeller($onlyIban['bank_account_iban']==='BE68539007547034',
+  'Optional supplied IBAN remains validated and normalized');
+
 foreach ([
   ['seller_type'=>'unknown','name'=>'Demo'],
   array_merge($base,['email'=>'not-an-email']),
@@ -27,8 +34,6 @@ foreach ([
   array_merge($base,['house_number'=>'']),
   array_merge($base,['postal_code'=>'']),
   array_merge($base,['municipality'=>'']),
-  array_merge($base,['bank_account_name'=>'']),
-  array_merge($base,['bank_account_iban'=>'']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'Demo','artist_url'=>'']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'','artist_url'=>'https://example.org']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'Demo','artist_url'=>'javascript:alert(1)']),
