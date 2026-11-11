@@ -11,7 +11,7 @@ $fromLot=($_GET['from_lot']??'')==='1';
 $returnLotId=filter_var($_GET['lot_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
 $returnLotId=$returnLotId===false?0:(int)$returnLotId;
 $returnLotUrl=url('admin/kavel.php',$returnLotId>0?['id'=>$returnLotId]:[]);
-$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_intro'=>''];
+$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','mobile_number'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_intro'=>''];
 $editId=null;
 if (isset($_GET['id'])) {
   $editId=filter_var($_GET['id'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
@@ -137,6 +137,8 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
           <label class="seller-field-wide">Type verkoper<select name="seller_type" id="seller-type" required><option value="particulier" <?=$values['seller_type']==='particulier'?'selected':''?>>Particulier</option><option value="kunstenaar" <?=$values['seller_type']==='kunstenaar'?'selected':''?>>Kunstenaar</option></select></label>
           <label class="seller-field-wide">Naam <span class="lot-required">*</span><input name="name" maxlength="150" required value="<?=e((string)$values['name'])?>"></label>
           <label class="seller-field-wide">E-mail <span class="lot-required">*</span><input required name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
+          <label class="seller-field-wide">Mobiel nummer <span class="seller-optional">(optioneel)</span><input type="tel" name="mobile_number" maxlength="30" autocomplete="tel" inputmode="tel" value="<?=e((string)$values['mobile_number'])?>" placeholder="0470 12 34 56 of +32 470 12 34 56" aria-describedby="seller-mobile-help"></label>
+          <p id="seller-mobile-help" class="lot-editor-help seller-field-wide">Belgisch gsm-nummer of internationaal nummer met landcode. Bij het opslaan wordt het formaat gecontroleerd.</p>
           <label>Straat <span class="lot-required">*</span><input required name="street" maxlength="150" value="<?=e((string)$values['street'])?>"></label>
           <label>Huisnummer <span class="lot-required">*</span><input required name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
           <label>Postcode <span class="lot-required">*</span><input required name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
