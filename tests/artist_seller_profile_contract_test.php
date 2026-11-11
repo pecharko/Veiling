@@ -21,7 +21,7 @@ foreach (['seller_image_check','work','portrait','slot>=1 && $slot<=3',"slot===1
 foreach (['artist_intro VARCHAR(500)','CREATE TABLE seller_images','fk_seller_images_seller',
   'uq_seller_image_slot','chk_seller_image_slot'] as $required)
   if (!str_contains($schema,$required)) throw new RuntimeException('Artist profile schema missing: '.$required);
-foreach (['seller_images','artist_intro','41lokeren-v6-seller-audit','snap_require_referenced_photos'] as $required)
+foreach (['seller_images','artist_intro','41lokeren-v7-lot-audit','snap_require_referenced_photos'] as $required)
   if (!str_contains($snapshot,$required)) throw new RuntimeException('Snapshot gallery support missing: '.$required);
 if (!str_contains($preview,"LOCAL_PREVIEW_ISOLATED") || !str_contains($preview,'20261111_seller_artist_profile.sql'))
   throw new RuntimeException('Local preview-only gallery migration missing');
