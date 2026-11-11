@@ -60,6 +60,12 @@ imagefill($image, 0, 0, imagecolorallocate($image, 160, 32, 64));
 imagejpeg($image, $original, 85);
 imagedestroy($image);
 $checksum = hash_file('sha256', $original);
+$sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
+$sellerPhoto=$uploads.'/'.$sellerRelative;
+if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren' WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
+  ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
     ->execute([$lotId,'uploads/'.$relative,1,'snapshot-test.jpg']);
 
@@ -89,12 +95,15 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v4-artists' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId))===1
+verify($snapshot['format']==='41lokeren-v4-artists' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
+  && count($snapshot['tables']['seller_images'])===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId,
   'Snapshot v3 stores seller details and reference in one consistent archive');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
        'Snapshot contains sale location and auction number');
-verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original),
+verify(isset($hashes['uploads/'.$sellerRelative]) && is_file($sellerPhoto),
+  'Snapshot includes one referenced artist work photo');
+verify(isset($hashes['uploads/'.$relative]) && $photoBytes === filesize($original)+filesize($sellerPhoto),
        'Snapshot includes the exact original photo');
 $zip = new ZipArchive();
 if ($zip->open(snap_path($name)) !== true) throw new RuntimeException('Could not open snapshot ZIP');
@@ -140,6 +149,7 @@ $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
 $pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
+unlink($sellerPhoto);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
 // A token issued after the snapshot must never survive restoration.
@@ -166,6 +176,10 @@ verify((fileperms($uploads) & 0005) === 0005,
 verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
        'Restored photo subdirectories are readable and traversable by webserver');
 
+verify(is_file($sellerPhoto)
+  && $pdo->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve maker uit Lokeren'
+  && (int)$pdo->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
+  'Snapshot restores artist introduction and work photo');
 verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetchColumn()===$sellerId
     && (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===1,
     'Restore preserves seller records and lot foreign keys');
