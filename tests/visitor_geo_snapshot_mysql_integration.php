@@ -29,7 +29,7 @@ try {
     $expected=sg_payload($pdo);$digest=visitor_geo_snapshot_digest($expected);
     $name=snap_create($pdo);$names[]=$name;
     [$snapshot]=snap_verified($name);
-    sg_check($snapshot['format']==='41lokeren-v2-geo','Migrated snapshots use explicit geo format');
+    sg_check($snapshot['format']==='41lokeren-v3-sellers','Snapshots use the seller-aware format regardless of analytics schema');
     sg_check(!array_key_exists('analytics',$snapshot),'Catalog snapshot omits all visitor and geographic analytics');
     sg_check(recovery_compare_database($pdo,$snapshot)['matches_target'],'Recovery comparison checks catalog data only');
 
@@ -43,8 +43,10 @@ try {
     snap_restore($pdo,$name);
     sg_check(visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Restore preserves current analytics and geo start state');
     sg_check(!restore_journal_pending(),'Successful geo restore clears journal through existing gates');
-    sg_throws(fn()=>snap_restore($pdo,$legacy),'Old pre-geo snapshot is clearly rejected after migration');
-    sg_check(!restore_journal_pending()&&visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,'Legacy rejection occurs before any analytics mutation');
+    // Both snapshots were created with the new seller-aware format; geo analytics remain independent.
+    snap_restore($pdo,$legacy);
+    sg_check(!restore_journal_pending()&&visitor_geo_snapshot_digest(sg_payload($pdo))===$afterChange,
+        'Seller-aware snapshot made before geo upgrade restores without mutating analytics');
 
     // Recompute the checksums to prove schema validation, not only SHA checking.
     $bad='snapshot-20990102-000000-'.bin2hex(random_bytes(6)).'.zip';$names[]=$bad;
