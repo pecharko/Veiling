@@ -84,7 +84,7 @@ foreach (SNAP_TABLES as $t) {
     $tables[$t]=$pdo->query('SELECT * FROM '.$t)->fetchAll(PDO::FETCH_ASSOC);
 }
 $dbJson=json_encode(
-    ['format'=>'41lokeren-v1','created_at'=>gmdate('c'),'tables'=>$tables],
+    ['format'=>'41lokeren-v3-sellers','created_at'=>gmdate('c'),'tables'=>$tables],
     JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE
 );
 $exactRequirement=$margin+$actualPhotoBytes+strlen($dbJson);
