@@ -77,9 +77,20 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId): int {
   $pdo->beginTransaction();
   try {
     if ($id!==null) {
-      $check=$pdo->prepare('SELECT id FROM lot_sellers WHERE id=? FOR UPDATE');
+      $check=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=? FOR UPDATE');
       $check->execute([$id]);
-      if (!$check->fetchColumn()) throw new InvalidArgumentException('Verkoper niet gevonden.');
+      $current=$check->fetch(PDO::FETCH_ASSOC);
+      if (!$current) throw new InvalidArgumentException('Verkoper niet gevonden.');
+      // Compare canonical validated values against the locked DB row. A plain
+      // save of an unchanged form must not advance the last-editor audit fields.
+      $changed=false;
+      foreach($data as $key=>$value) {
+        if ((string)($current[$key]??'')!==(string)$value) { $changed=true; break; }
+      }
+      if (!$changed) {
+        $pdo->commit();
+        return $id;
+      }
       $sets=implode(',',array_map(static fn($key)=>$key.'=?',$keys));
       $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
       $stmt->execute([...array_values($data),$actorId,$actorName,$id]);
