@@ -1,8 +1,9 @@
 <?php
 declare(strict_types=1);
-$source=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/verkopers.php');
+$overview=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/verkopers.php');
+$editor=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/verkoper.php');
 $css=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/admin.css');
-if (!is_string($source) || !is_string($css)) throw new RuntimeException('Seller layout source missing.');
+if (!is_string($overview) || !is_string($editor) || !is_string($css)) throw new RuntimeException('Seller layout source missing.');
 foreach ([
   'class="dashboard-modern seller-manager"',
   'class="dashboard-stats seller-stats"',
@@ -12,16 +13,27 @@ foreach ([
   'class="dashboard-table seller-table"',
   'class="dashboard-edit"',
   '>+ Nieuwe verkoper</a>',
+  "url('admin/verkoper.php'))",
+  "url('admin/verkoper.php',['id'=>(int)\$r['id']])",
+] as $required) {
+  if (!str_contains($overview,$required)) throw new RuntimeException('Missing seller overview element: '.$required);
+}
+foreach ([
   'id="seller-form"',
   'class="seller-fields-grid"',
   'class="seller-form-actions"',
   'id="seller-artist-fields"',
   'name="bank_account_iban"',
+  'seller_save($pdo,$editId,$_POST)',
+  'Terug naar verkopers',
+  'require_administrator()',
 ] as $required) {
-  if (!str_contains($source,$required)) throw new RuntimeException('Missing aligned seller layout: '.$required);
+  if (!str_contains($editor,$required)) throw new RuntimeException('Missing seller editor element: '.$required);
 }
+if (str_contains($overview,'id="seller-form"') || str_contains($overview,'name="bank_account_iban"')
+    || str_contains($overview,'seller_save(')) throw new RuntimeException('Seller overview must not embed new/edit form.');
+if (!str_contains($overview,'require_administrator()')) throw new RuntimeException('Seller overview must remain admin-only.');
 foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
 }
-if (!str_contains($source,'require_administrator()')) throw new RuntimeException('Seller administration must be admin-only');
-echo "PASS seller list and editor share the kavels dashboard design.\n";
+echo "PASS separate seller list and new/edit form share the kavels design.\n";
