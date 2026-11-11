@@ -95,7 +95,7 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v6-seller-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
+verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId,
   'Snapshot v3 stores seller details and reference in one consistent archive');
