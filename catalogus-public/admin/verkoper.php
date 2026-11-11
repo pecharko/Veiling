@@ -4,7 +4,7 @@ require dirname(__DIR__,2).'/private/bootstrap.php';
 require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/seller_images.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
-require_administrator();
+require_auth();
 $pdo=db();
 $error='';
 $fromLot=($_GET['from_lot']??'')==='1';
@@ -38,7 +38,7 @@ if (is_post()) {
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
       redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
-    $savedId=seller_save($pdo,$editId,$_POST);
+    $savedId=seller_save($pdo,$editId,$_POST,(int)$_SESSION['admin_id']);
     if ($values['seller_type']!=='kunstenaar') seller_image_clear($pdo,$savedId);
     // Accept photo uploads together with the seller form, including creation.
     $failed=[];
@@ -113,6 +113,12 @@ if (is_post() && $editId!==null && ($_POST['action']??'')!=='save' && $error!=='
   $st->execute([$editId]);
   $saved=$st->fetch(PDO::FETCH_ASSOC);
   if ($saved) $values=array_merge($defaults,$saved);
+}
+$audit=null;
+if ($editId!==null) {
+  $auditStmt=$pdo->prepare("SELECT s.created_at,s.updated_at,COALESCE(NULLIF(creator.name,''),creator.email) AS creator_name,COALESCE(NULLIF(editor.name,''),editor.email) AS editor_name FROM lot_sellers s LEFT JOIN admins creator ON creator.id=s.created_by_admin_id LEFT JOIN admins editor ON editor.id=s.updated_by_admin_id WHERE s.id=?");
+  $auditStmt->execute([$editId]);
+  $audit=$auditStmt->fetch(PDO::FETCH_ASSOC);
 }
 $photos=$editId!==null?seller_image_rows($pdo,$editId):[];
 $photoByKey=[];
@@ -190,6 +196,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         <button class="primary" type="submit">Verkoper opslaan</button>
       </div>
     </form>
+    <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? gmdate('d/m/Y H:i',strtotime($audit['created_at'])).' UTC' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? gmdate('d/m/Y H:i',strtotime($audit['updated_at'])).' UTC' : 'Niet geregistreerd')?></div></div><?php endif; ?>
     <?php if($editId!==null && $values['seller_type']==='kunstenaar'): ?>
     <div class="seller-photo-delete-grid">
       <?php foreach($photos as $photo): ?>
