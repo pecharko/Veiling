@@ -136,6 +136,20 @@ try {
   claim(str_contains($sellerEditPage,'name="artist_intro"')
     && str_contains($sellerEditPage,'name="photo_portrait_1"'),
     'Artist editor exposes biography and optional portrait field');
+  // A save that changes no canonical seller field must preserve last-update audit.
+  db()->prepare("UPDATE lot_sellers SET updated_at='2020-01-01 00:00:00',updated_by_name='Earlier editor' WHERE id=?")->execute([$sellerId]);
+  [$noChangeStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Demo kunstenaar','bank_account_iban'=>'BE68539007547034',
+    'artist_name'=>'Demo Art','artist_url'=>'https://www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling',
+  ]);
+  $unchangedAudit=db()->query("SELECT updated_at,updated_by_name FROM lot_sellers WHERE id=$sellerId")->fetch();
+  claim($noChangeStatus===303 && $unchangedAudit['updated_at']==='2020-01-01 00:00:00'
+    && $unchangedAudit['updated_by_name']==='Earlier editor',
+    'Saving unchanged seller does not create an audit update');
   $artistFixture=$fixtures.'/artist-work.png';
   $artistImage=imagecreatetruecolor(64,64);
   imagefill($artistImage,0,0,imagecolorallocate($artistImage,20,100,80));
