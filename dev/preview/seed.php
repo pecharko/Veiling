@@ -79,18 +79,18 @@ if (!$sellersExist) {
     if (!is_string($migration) || !str_contains($migration, 'fk_lots_seller')) {
         throw new RuntimeException('Reviewed seller migration is missing.');
     }
-    $migration = preg_replace('/^\\s*--[^\\n]*$/m', '', $migration);
+    $migration = preg_replace('/^\s*--[^\n]*$/m', '', $migration);
     foreach (explode(';', (string)$migration) as $statement) {
         if (trim($statement) !== '') $pdo->exec($statement);
     }
-    echo "Seller schema added only to isolated preview.\\n";
+    echo "Seller schema added only to isolated preview.\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,municipality,artist_name,artist_url) VALUES (?,?,?,?,?,?)');
     $seller->execute(['kunstenaar','Voorbeeldkunstenaar','kunst@example.invalid','Lokeren','Fictieve Ateliernaam','https://example.org']);
     $seller->execute(['particulier','Voorbeeldparticulier','particulier@example.invalid','Lokeren','','']);
-    echo "Two synthetic sellers added to local preview.\\n";
+    echo "Two synthetic sellers added to local preview.\n";
 }
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
 // Both active and archived sources are seeded to exercise the real seven-day ranking.
