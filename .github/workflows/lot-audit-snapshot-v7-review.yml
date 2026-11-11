@@ -1,0 +1,32 @@
+name: Lot audit snapshot v7 protected release review
+on:
+  pull_request:
+    paths:
+      - 'private/snapshots.php'
+      - 'scripts/deploy_lot_audit_snapshot_v7.py'
+      - 'tests/deploy_lot_audit_snapshot_v7_test.py'
+      - 'releases/lot-audit-snapshot-v7-20261111.json'
+      - '.github/workflows/lot-audit-snapshot-v7-review.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify independent v7 snapshot release protections
+        run: |
+          python3 -B -m unittest discover -s tests -p deploy_lot_audit_snapshot_v7_test.py -v
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import PROTECTED
+          assert 'private/snapshots' in PROTECTED
+          PY
+          if test -f releases/lot-audit-snapshot-v7-20261111.json; then
+            python3 -B -m scripts.deploy_lot_audit_snapshot_v7 plan
+          else
+            echo 'Awaiting independently authenticated OVH baseline and same-head v7 manifest'
+          fi
+      - name: Lint candidate snapshot source
+        run: php -l private/snapshots.php
