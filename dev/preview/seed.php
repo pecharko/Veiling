@@ -113,6 +113,16 @@ if (!$introPresent) {
     foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
     echo "Artist biography and image slots added to isolated preview.\n";
 }
+// Add optional private seller mobile number only to the isolated Docker database.
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch()) {
+    $mobileSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_mobile.sql');
+    if (!is_string($mobileSql) || !str_contains($mobileSql,'ADD COLUMN mobile_number VARCHAR(16)')) {
+        throw new RuntimeException('Reviewed seller mobile migration missing.');
+    }
+    $mobileSql=preg_replace('/^\s*--[^\n]*$/m','',$mobileSql);
+    $pdo->exec(trim((string)$mobileSql));
+    echo "Optional seller mobile column added to isolated preview.\n";
+}
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
