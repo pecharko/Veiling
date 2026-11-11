@@ -5,12 +5,20 @@ function assert_artist(bool $condition, string $message): void {
   if (!$condition) throw new RuntimeException($message);
 }
 $limit = str_repeat('A', 50);
-assert_artist(lot_artist_validate($limit, '') === [$limit, ''], '50 characters must be accepted');
+// The generic legacy artist URL helper still accepts up to 250 characters.
+// The central seller record enforces the public artist-name cap of 50.
+require_once dirname(__DIR__).'/private/lot_sellers.php';
+$artistInput=[
+  'seller_type'=>'kunstenaar','name'=>'Voorbeeldmaker','email'=>'maker@example.invalid',
+  'street'=>'Voorbeeldstraat','house_number'=>'1','postal_code'=>'9160',
+  'municipality'=>'Lokeren','artist_name'=>$limit,'artist_url'=>'https://example.org'
+];
+assert_artist(seller_clean($artistInput)['artist_name']===$limit, '50-character seller artist name accepted');
 try {
-  lot_artist_validate($limit . 'B', '');
+  seller_clean(array_replace($artistInput,['artist_name'=>$limit.'B']));
   throw new RuntimeException('51 characters unexpectedly accepted');
 } catch (InvalidArgumentException $e) {
-  assert_artist(str_contains($e->getMessage(), 'maximaal 50 tekens'), 'Expected Dutch length error');
+  assert_artist(str_contains($e->getMessage(),'artist name'), 'Central seller name length limit reported');
 }
 $legacy = lot_artist_markup(['artist_name' => $limit . 'B', 'artist_url' => 'https://example.org/']);
 assert_artist(str_contains($legacy, '<a href="https://example.org/"'), 'Old long names retain valid artist links');
