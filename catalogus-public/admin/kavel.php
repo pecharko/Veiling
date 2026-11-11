@@ -9,6 +9,7 @@ require_once dirname(__DIR__, 2) . '/private/admin_names.php';
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 require_once dirname(__DIR__, 2) . '/private/lot_categories.php';
 require_once dirname(__DIR__, 2) . '/private/lot_sellers.php';
+require_once dirname(__DIR__, 2) . '/private/lot_audit.php';
 require_auth();
 $pdo=db();
 $id=max(0,(int)($_GET['id']??$_POST['id']??0));
@@ -55,6 +56,7 @@ if(is_post()){
           foreach($photos as $i=>$photo){
             try {
               add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);
+              lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
               $uploaded++;
             } catch(Throwable $ex) {
               error_log('[Kavel foto toevoegen] '.$ex->getMessage());
@@ -98,7 +100,12 @@ if(is_post()){
     $photoId=(int)($_POST['photo_id']??0);
     $get=$pdo->prepare('SELECT path FROM lot_images WHERE id=? AND lot_id=?');$get->execute([$photoId,$id]);$photo=$get->fetch();
     if($photo){
-      $pdo->prepare('DELETE FROM lot_images WHERE id=? AND lot_id=?')->execute([$photoId,$id]);
+      $pdo->beginTransaction();
+      try {
+        $pdo->prepare('DELETE FROM lot_images WHERE id=? AND lot_id=?')->execute([$photoId,$id]);
+        lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
+        $pdo->commit();
+      } catch(Throwable $ex) { if($pdo->inTransaction()) $pdo->rollBack(); throw $ex; }
       if(str_starts_with($photo['path'],'uploads/') && preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~',$photo['path']))@unlink(dirname(__DIR__).'/'.$photo['path']);
       flash('Foto verwijderd.');
     }
@@ -213,6 +220,7 @@ if(is_post()){
             if($lotFieldsChanged) {
               $st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');
               $st->execute([...$values,$id]);
+              lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
             }
           } else {
             $st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
@@ -223,7 +231,7 @@ if(is_post()){
           $pdo->commit();
           $failed=[];
           foreach($photos as $i=>$photo){
-            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);}
+            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);}
             catch(Throwable $ex){error_log('[Kavel foto] '.$ex->getMessage());$failed[]=$photo['name'].': verwerking mislukt';}
           }
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
