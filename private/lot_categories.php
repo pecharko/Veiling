@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/lot_audit.php';
 
 /** These methods are used after the separate, reviewed lot_categories migration. */
 function lot_category_can_manage(string $role): bool {
@@ -49,7 +50,7 @@ function lot_category_add(PDO $pdo, mixed $value): void {
   $st->execute([$name]);
 }
 
-function lot_category_rename(PDO $pdo, int $id, mixed $value): void {
+function lot_category_rename(PDO $pdo, int $id, mixed $value, ?int $actorId=null): void {
   $name=lot_category_clean_name($value);
   $pdo->beginTransaction();
   try {
@@ -61,8 +62,15 @@ function lot_category_rename(PDO $pdo, int $id, mixed $value): void {
       if (lot_category_exists($pdo,$name)) throw new InvalidArgumentException('Deze categorie bestaat al.');
       $update=$pdo->prepare('UPDATE lot_categories SET name=? WHERE id=?');
       $update->execute([$name,$id]);
+      $affected=[];
+      if ($actorId!==null) {
+        $lookup=$pdo->prepare('SELECT id FROM lots WHERE category=?');
+        $lookup->execute([$old]);
+        $affected=$lookup->fetchAll(PDO::FETCH_COLUMN);
+      }
       $lots=$pdo->prepare('UPDATE lots SET category=? WHERE category=?');
       $lots->execute([$name,$old]);
+      foreach ($affected as $lotId) lot_audit_touch($pdo,(int)$lotId,$actorId);
     }
     $pdo->commit();
   } catch(Throwable $e) {
