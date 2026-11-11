@@ -317,7 +317,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
-            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php'))?>" target="_blank" rel="noopener" aria-label="Nieuwe verkoper aanmaken (opent in nieuw tabblad)">+ Nieuwe verkoper</a><?php endif; ?></div>
+            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a id="lot-create-seller" class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php'))?>" target="_blank" rel="noopener" aria-label="Nieuwe verkoper aanmaken (opent in nieuw tabblad)">+ Nieuwe verkoper</a><?php endif; ?></div>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
           </div>
@@ -410,4 +410,35 @@ if ($error === $cancelAuctionWarning) {
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
 
+<script>
+(() => {
+  'use strict';
+  const createLink=document.getElementById('lot-create-seller');
+  const sellerSelect=document.querySelector('#lot-editor-form select[name="seller_id"]');
+  if (!createLink || !sellerSelect) return;
+  let refreshOnFocus=false;
+  createLink.addEventListener('click', () => { refreshOnFocus=true; });
+  window.addEventListener('focus', async () => {
+    if (!refreshOnFocus) return;
+    refreshOnFocus=false;
+    try {
+      // Refresh only seller options; never reload the form or discard unsaved lot data.
+      const response=await fetch(window.location.href,{credentials:'same-origin',cache:'no-store'});
+      if (!response.ok) return;
+      const documentCopy=new DOMParser().parseFromString(await response.text(),'text/html');
+      const latest=documentCopy.querySelector('select[name="seller_id"]');
+      if (!latest) return;
+      const known=new Set(Array.from(sellerSelect.options,option=>option.value));
+      for (const option of latest.options) {
+        if (!option.value || known.has(option.value)) continue;
+        sellerSelect.add(new Option(option.text,option.value));
+        known.add(option.value);
+        sellerSelect.value=option.value;
+      }
+    } catch (_) {
+      // The user can retry by reopening the seller form; no lot data is lost.
+    }
+  });
+})();
+</script>
 <?php admin_bottom(); ?>
