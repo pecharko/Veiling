@@ -94,7 +94,16 @@ try {
   [$sellerStatus, $newSellerPage] = request_page('/admin/verkoper.php');
   claim($sellerStatus===200 && str_contains($newSellerPage, 'name="bank_account_iban"')
       && str_contains($newSellerPage,'Terug naar verkopers'), 'New seller opens dedicated page');
+  claim(str_contains($newSellerPage,'name="email" type="email"')
+      && str_contains($newSellerPage,'id="seller-artist-fields"'),
+      'Seller form offers required details and conditional artist section');
   $sellerCsrf=token($newSellerPage);
+  [$sellerRequiredStatus, $missingSellerPage] = request_page('/admin/verkoper.php', [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier','name'=>'Incomplete'
+  ]);
+  claim($sellerRequiredStatus===200 && str_contains($missingSellerPage,'E-mail is verplicht.')
+    && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE name='Incomplete'")->fetchColumn()===0,
+    'Server rejects incomplete new seller without writing a row');
   [$sellerStatus] = request_page('/admin/verkoper.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'kunstenaar',
     'name'=>'Demo kunstenaar','email'=>'demo@example.invalid','street'=>'Fictieve straat',
@@ -114,6 +123,7 @@ try {
   [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
     'bank_account_name'=>'Demo particulier','bank_account_iban'=>'BE68 5390 0754 7034'
   ]);
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
@@ -136,7 +146,9 @@ try {
     'Unused seller can be removed');
   [$sellerStatus] = request_page('/admin/verkoper.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier',
-    'name'=>'Kavelverkoper Demo','email'=>'kavel@example.invalid'
+    'name'=>'Kavelverkoper Demo','email'=>'kavel@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'5','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Kavelverkoper Demo','bank_account_iban'=>'BE68 5390 0754 7034'
   ]);
   $sellerLinkId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Kavelverkoper Demo'")->fetchColumn();
   claim($sellerStatus===303 && $sellerLinkId>0, 'Private seller available for lot association');
