@@ -573,6 +573,28 @@ try {
     && (int)$assistantSeller['updated_by_admin_id']===$actor
     && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null,
     'Assistant creates seller with authenticated creator and edit timestamps');
+  db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
+  [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
+  claim($masterListStatus===200 && str_contains($masterListPage,'Aangemaakt door / op'),
+    'Auctioneer can view seller overview with audit columns');
+  $assistantSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetchColumn();
+  [$masterEditStatus, $masterEditor] = request_page('/admin/verkoper.php?id='.$assistantSellerId);
+  claim($masterEditStatus===200 && str_contains($masterEditor,'Laatste wijziging:'),
+    'Auctioneer can open existing seller and see last editor');
+  [$masterSaveStatus] = request_page('/admin/verkoper.php?id='.$assistantSellerId, [
+    'csrf'=>token($masterEditor),'action'=>'save','seller_id'=>(string)$assistantSellerId,
+    'seller_type'=>'particulier','name'=>'Fictieve verkoper gewijzigd',
+    'email'=>'assistent@example.invalid','street'=>'Voorbeeldstraat',
+    'house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'created_by_admin_id'=>'999999','updated_by_admin_id'=>'999999'
+  ]);
+  $masterEditedSeller=db()->query("SELECT name,created_by_admin_id,updated_by_admin_id,updated_at FROM lot_sellers WHERE id=".$assistantSellerId)->fetch();
+  claim($masterSaveStatus===303 && $masterEditedSeller['name']==='Fictieve verkoper gewijzigd'
+    && (int)$masterEditedSeller['created_by_admin_id']===$actor
+    && (int)$masterEditedSeller['updated_by_admin_id']===$actor
+    && $masterEditedSeller['updated_at']!==null,
+    'Auctioneer edits seller and forged audit actor fields are ignored');
+  db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200 && !str_contains($ownForm,'alleen-lezen')
     && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
