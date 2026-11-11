@@ -4,8 +4,10 @@
 -- Separately authorized production migration with verified full backup required.
 ALTER TABLE lot_sellers
   ADD COLUMN created_by_admin_id INT UNSIGNED NULL DEFAULT NULL,
+  ADD COLUMN created_by_name VARCHAR(150) NOT NULL DEFAULT '',
   ADD COLUMN created_at DATETIME NULL DEFAULT NULL,
   ADD COLUMN updated_by_admin_id INT UNSIGNED NULL DEFAULT NULL,
+  ADD COLUMN updated_by_name VARCHAR(150) NOT NULL DEFAULT '',
   ADD COLUMN updated_at DATETIME NULL DEFAULT NULL,
   ADD INDEX idx_lot_sellers_created_by (created_by_admin_id),
   ADD INDEX idx_lot_sellers_updated_by (updated_by_admin_id);
