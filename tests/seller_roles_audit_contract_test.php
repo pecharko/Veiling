@@ -6,9 +6,10 @@ $helpers=file_get_contents($root.'/private/lot_sellers.php');
 $overview=file_get_contents($root.'/catalogus-public/admin/verkopers.php');
 $editor=file_get_contents($root.'/catalogus-public/admin/verkoper.php');
 $migration=file_get_contents($root.'/database/migrations/20261111_seller_audit.sql');
+$auditHelpers=file_get_contents($root.'/private/seller_audit.php');
 $snapshot=file_get_contents($root.'/private/snapshots.php');
 $preview=file_get_contents($root.'/dev/preview/seed.php');
-foreach (compact('bootstrap','helpers','overview','editor','migration','snapshot','preview') as $key=>$value)
+foreach (compact('bootstrap','helpers','overview','editor','migration','auditHelpers','snapshot','preview') as $key=>$value)
   if (!is_string($value)) throw new RuntimeException('Missing audit source: '.$key);
 foreach (['verkopers.php','verkoper.php'] as $page) {
   if (!str_contains($bootstrap,"'".$page."'")) throw new RuntimeException('Role allowlist missing '.$page);
@@ -17,12 +18,14 @@ if (!str_contains($bootstrap,"'<a href=\"' . e(url('admin/verkopers.php'))"))
   throw new RuntimeException('Seller menu not exposed to all roles');
 if (!str_contains($overview,'require_auth()') || !str_contains($editor,'require_auth()'))
   throw new RuntimeException('Private seller pages require authenticated role');
-foreach (['created_by_admin_id','updated_by_admin_id','created_at','updated_at'] as $field) {
+foreach (['created_by_admin_id','updated_by_admin_id','created_by_name','updated_by_name','created_at','updated_at'] as $field) {
   if (!str_contains($migration,'ADD COLUMN '.$field)) throw new RuntimeException('Audit SQL missing '.$field);
   if (!str_contains($snapshot,"'".$field."'")) throw new RuntimeException('Audit snapshot missing '.$field);
 }
 foreach (['UTC_TIMESTAMP()','updated_by_admin_id=?','created_by_admin_id','created_at'] as $key)
   if (!str_contains($helpers,$key)) throw new RuntimeException('Audit writer missing '.$key);
+if (!str_contains($auditHelpers,'SELECT name,email FROM admins WHERE id=?') || !str_contains($helpers,'seller_actor_name($pdo,$actorId)'))
+  throw new RuntimeException('Audit actor name must originate from the admin database');
 if (!str_contains($editor,"(int)\$_SESSION['admin_id']"))
   throw new RuntimeException('Audit actor must originate from the authenticated session');
 if (!str_contains($editor,"$" . "audit") || !str_contains($editor,'Aangemaakt door:')
