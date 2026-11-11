@@ -23,7 +23,7 @@ if (is_post()) {
     if (!hash_equals($fingerprint, (string)($_POST['order_version'] ?? ''))) throw new RuntimeException('De volgorde is intussen veranderd. Vernieuw de pagina.');
     if (count($ids) !== count(array_filter($rows, static fn (array $r): bool => $r['auction_number'] !== null))) throw new RuntimeException('De nummering is onvolledig. Eerst controleren.');
     $ordered = auction_move_ids($ids, (int)$lotId, (int)$position);
-    if ($ordered !== $ids) auction_apply_order($pdo, $ordered);
+    if ($ordered !== $ids) auction_apply_order($pdo, $ordered, (int)$_SESSION['admin_id']);
     $pdo->commit();
     flash('Veilingvolgorde opgeslagen. Kavels zijn doorlopend hernummerd.');
     redirect('admin/veiling-organisatie.php');

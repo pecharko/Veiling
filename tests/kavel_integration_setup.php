@@ -95,6 +95,65 @@ if (!is_string($artistMigration) || !str_contains($artistMigration, 'chk_lots_ar
   throw new RuntimeException('Artist migration fixture is missing.');
 }
 $pdo->exec($artistMigration);
+// Apply the proposed one-time category migration to the isolated test database.
+$categorySql = file_get_contents($dir . '/database/migrations/20261110_lot_categories.sql');
+if (!is_string($categorySql) || !str_contains($categorySql, "UPDATE lots SET category=''")) {
+  throw new RuntimeException('Missing reviewed categories migration');
+}
+$categorySql = preg_replace('/^\s*--[^\n]*$/m', '', $categorySql);
+foreach (explode(';', (string)$categorySql) as $statement) {
+  if (trim($statement) !== '') $pdo->exec($statement);
+}
+$seeded = $pdo->query('SELECT name FROM lot_categories ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+if ($seeded !== ['Moderne Kunst','Oude Meesters']) throw new RuntimeException('Incorrect category seed data');
+// Apply reviewed bank fields only to disposable integration database.
+$bankMigration = file_get_contents($dir . '/database/migrations/20261110_lot_bank_fields.sql');
+if (!is_string($bankMigration) || !str_contains($bankMigration, 'ADD COLUMN bank_account_iban')) {
+  throw new RuntimeException('Bank fields fixture is missing.');
+}
+$pdo->exec($bankMigration);
+if (count($pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('bank_account_name','bank_account_iban')")->fetchAll()) !== 2) {
+  throw new RuntimeException('Bank fields fixture missing database columns.');
+}
+// Execute proposed private seller migration exclusively in disposable CI database.
+$sellerSql = file_get_contents($dir . '/database/migrations/20261111_lot_sellers.sql');
+if (!is_string($sellerSql) || !str_contains($sellerSql, 'fk_lots_seller')) {
+  throw new RuntimeException('Missing reviewed seller migration');
+}
+$sellerSql = preg_replace('/^\s*--[^\n]*$/m', '', $sellerSql);
+foreach (explode(';', (string)$sellerSql) as $statement) {
+  if (trim($statement) !== '') $pdo->exec($statement);
+}
+// Artist profile schema is additive; use only the disposable auction_test database.
+$artistProfileSql=file_get_contents($dir.'/database/migrations/20261111_seller_artist_profile.sql');
+if (!is_string($artistProfileSql) || !str_contains($artistProfileSql,'fk_seller_images_seller')) {
+  throw new RuntimeException('Artist profile migration fixture missing.');
+}
+$artistProfileSql=preg_replace('/^\s*--[^\n]*$/m','',$artistProfileSql);
+foreach(explode(';',(string)$artistProfileSql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_intro'")->fetch()
+    || !$pdo->query("SHOW TABLES LIKE 'seller_images'")->fetchColumn()) {
+  throw new RuntimeException('Artist profile schema missing in isolated test database');
+}
+// Mobile schema is additive and is applied only to the disposable CI DB.
+$mobileSql=file_get_contents($dir.'/database/migrations/20261111_seller_mobile.sql');
+if (!is_string($mobileSql) || !str_contains($mobileSql,'ADD COLUMN mobile_number VARCHAR(16)')) {
+  throw new RuntimeException('Seller mobile migration fixture missing.');
+}
+$mobileSql=preg_replace('/^\s*--[^\n]*$/m','',$mobileSql);
+$pdo->exec(trim((string)$mobileSql));
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch())
+  throw new RuntimeException('Seller mobile number column missing in disposable CI DB');
+// Audit migration runs only in disposable CI MySQL.
+$auditSql=file_get_contents($dir.'/database/migrations/20261111_seller_audit.sql');
+if (!is_string($auditSql) || !str_contains($auditSql,'ADD COLUMN updated_by_admin_id'))
+  throw new RuntimeException('Seller author audit fixture missing');
+$auditSql=preg_replace('/^\s*--[^\n]*$/m','',$auditSql);
+$pdo->exec(trim((string)$auditSql));
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'created_by_admin_id'")->fetch()
+    || !$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'updated_at'")->fetch())
+  throw new RuntimeException('Seller author audit columns missing');
+// Exercise legacy artist constraint before the agreed destructive seller-dedup migration.
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
 try {
@@ -104,23 +163,26 @@ try {
   if ((int)($expected->errorInfo[1] ?? 0) !== 3819) throw $expected;
 }
 
-// Apply the proposed category migration only in the disposable CI database.
-$categoryMigration = file_get_contents($dir . '/database/migrations/20261110_lot_categories.sql');
-if (!is_string($categoryMigration) || !str_contains($categoryMigration, 'CREATE TABLE lot_categories')) {
-  throw new RuntimeException('Missing reviewed category migration fixture.');
+// Option B approved: only remove these four obsolete lot metadata columns in isolated CI.
+$dropSql = file_get_contents($dir . '/database/migrations/20261111_lot_seller_dedup.sql');
+if (!is_string($dropSql) || !str_contains($dropSql, 'DROP COLUMN bank_account_iban')) throw new RuntimeException('Dedup migration missing');
+$dropSql = preg_replace('/^\s*--[^\n]*$/m', '', $dropSql);
+$pdo->exec(trim((string)$dropSql));
+if ($pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch()
+    || $pdo->query("SHOW COLUMNS FROM lots LIKE 'bank_account_iban'")->fetch()) {
+  throw new RuntimeException('Obsolete per-lot seller metadata remains after dedup');
 }
-$pdo->exec($categoryMigration);
-if ((int)$pdo->query('SELECT COUNT(*) FROM lot_categories')->fetchColumn() !== 2) {
-  throw new RuntimeException('Category fixture did not create two initial categories.');
+// Audit schema is exercised only in disposable auction_test MySQL.
+$lotAuditSql=file_get_contents($dir.'/database/migrations/20261111_lot_audit.sql');
+if (!is_string($lotAuditSql) || !str_contains($lotAuditSql,'ADD COLUMN last_edited_at')) {
+  throw new RuntimeException('Reviewed lot audit schema missing');
 }
-// Apply the exact proposed schema ONLY in the disposable MySQL CI database.
-$bankMigration = file_get_contents($dir . '/database/migrations/20261110_lot_bank_fields.sql');
-if (!is_string($bankMigration) || !str_contains($bankMigration, 'ADD COLUMN bank_account_iban')) {
-  throw new RuntimeException('Bank fields migration is missing.');
+$lotAuditSql=preg_replace('/^\s*--[^\n]*$/m','',$lotAuditSql);
+$pdo->exec(trim((string)$lotAuditSql));
+if (!$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_by_admin_id'")->fetch()
+    || !$pdo->query("SHOW COLUMNS FROM lots LIKE 'last_edited_at'")->fetch()) {
+  throw new RuntimeException('Lot audit schema missing in disposable MySQL');
 }
-$pdo->exec($bankMigration);
-$bankColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('bank_account_name','bank_account_iban')")->fetchAll();
-if (count($bankColumns) !== 2) throw new RuntimeException('Bank schema did not create both fields');
 $hash = password_hash('ci-password-not-a-real-secret', PASSWORD_DEFAULT);
 $pdo->prepare('INSERT INTO admins (email,password_hash) VALUES (?,?)')->execute(['ci-admin@example.invalid',$hash]);
 // Exercise the actual reviewed migration on the disposable pre-name CI account.

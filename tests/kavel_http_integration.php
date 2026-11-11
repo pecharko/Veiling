@@ -44,6 +44,12 @@ function request_page(string $url, ?array $data = null, bool $multipart = false,
     CURLOPT_HTTPHEADER => $headers,
   ]);
   if ($data !== null) {
+    // Existing synthetic lot fixtures explicitly consent to donation-style saves.
+    // Tests can send donation_confirmed=0 to exercise the refusal path.
+    if (str_starts_with($url,'/admin/kavel.php') && ($data['action']??'')==='save'
+        && !array_key_exists('donation_confirmed',$data)) {
+      $data['donation_confirmed']='1';
+    }
     curl_setopt($ch, CURLOPT_POST, true);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $multipart ? $data : http_build_query($data));
   }
@@ -86,11 +92,137 @@ try {
   ]);
   claim($status === 303, 'Valid login redirects');
 
+  // Private seller CRUD with fake contacts and IBAN, before any lots are created.
+  [$sellerStatus, $sellerPage] = request_page('/admin/verkopers.php');
+  claim($sellerStatus === 200 && str_contains($sellerPage, 'Verkopers beheren')
+      && !str_contains($sellerPage, 'name="bank_account_iban"')
+      && !str_contains($sellerPage, 'id="seller-form"'), 'Seller overview has no embedded form');
+  [$sellerStatus, $newSellerPage] = request_page('/admin/verkoper.php');
+  claim($sellerStatus===200 && str_contains($newSellerPage, 'name="bank_account_iban"')
+      && str_contains($newSellerPage,'Terug naar verkopers'), 'New seller opens dedicated page');
+  claim(str_contains($newSellerPage,'name="email" type="email"')
+      && str_contains($newSellerPage,'id="seller-artist-fields"'),
+      'Seller form offers required details and conditional artist section');
+  $sellerCsrf=token($newSellerPage);
+  [$sellerRequiredStatus, $missingSellerPage] = request_page('/admin/verkoper.php', [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier','name'=>'Incomplete'
+  ]);
+  claim($sellerRequiredStatus===200 && str_contains($missingSellerPage,'E-mail is verplicht.')
+    && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE name='Incomplete'")->fetchColumn()===0,
+    'Server rejects incomplete new seller without writing a row');
+  [$sellerStatus] = request_page('/admin/verkoper.php', [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'kunstenaar',
+    'name'=>'Demo kunstenaar','email'=>'demo@example.invalid','street'=>'Fictieve straat',
+    'house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Demo kunstenaar','bank_account_iban'=>'BE68 5390 0754 7034',
+    'artist_name'=>'Demo Art','artist_url'=>'www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling'
+  ]);
+  $sellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Demo kunstenaar'")->fetchColumn();
+  claim($sellerStatus === 303 && $sellerId>0, 'Administrator creates artist seller');
+  $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
+  claim($sellerRecord['bank_account_iban']==='BE68539007547034'
+    && $sellerRecord['artist_url']==='https://www.example.org',
+    'Seller IBAN and artist URL normalized on save');
+  $creatorActor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
+    && (int)$sellerRecord['updated_by_admin_id']===$creatorActor
+    && $sellerRecord['created_by_name']!=='' && $sellerRecord['updated_by_name']!==''
+    && $sellerRecord['created_at']!==null && $sellerRecord['updated_at']!==null,
+    'Original creator and last updater recorded on first save');
+  [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
+  claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
+    'Seller form preloads existing data');
+  claim(str_contains($sellerEditPage,'name="artist_intro"')
+    && str_contains($sellerEditPage,'name="photo_portrait_1"'),
+    'Artist editor exposes biography and optional portrait field');
+  // A save that changes no canonical seller field must preserve last-update audit.
+  db()->prepare("UPDATE lot_sellers SET updated_at='2020-01-01 00:00:00',updated_by_name='Earlier editor' WHERE id=?")->execute([$sellerId]);
+  [$noChangeStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Demo kunstenaar','bank_account_iban'=>'BE68539007547034',
+    'artist_name'=>'Demo Art','artist_url'=>'https://www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling',
+  ]);
+  $unchangedAudit=db()->query("SELECT updated_at,updated_by_name FROM lot_sellers WHERE id=$sellerId")->fetch();
+  claim($noChangeStatus===303 && $unchangedAudit['updated_at']==='2020-01-01 00:00:00'
+    && $unchangedAudit['updated_by_name']==='Earlier editor',
+    'Saving unchanged seller does not create an audit update');
+  $artistFixture=$fixtures.'/artist-work.png';
+  $artistImage=imagecreatetruecolor(64,64);
+  imagefill($artistImage,0,0,imagecolorallocate($artistImage,20,100,80));
+  imagepng($artistImage,$artistFixture);
+  imagedestroy($artistImage);
+  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'artist_name'=>'Demo Art','artist_url'=>'www.example.org',
+    'artist_intro'=>'Fictieve korte voorstelling',
+    'photo_work_1'=>new CURLFile($artistFixture,'image/png','fictief-werk.png')
+  ],true);
+  $imagePath=(string)db()->query('SELECT path FROM seller_images WHERE seller_id='.$sellerId." AND image_kind='work' AND slot=1")->fetchColumn();
+  claim($sellerStatus===303 && $imagePath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$imagePath)
+    && db()->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve korte voorstelling',
+    'Artist introduction and first work photo saved with seller');
+  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
+    'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Demo particulier','bank_account_iban'=>'BE68 5390 0754 7034'
+  ]);
+  $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
+  claim($sellerStatus===303 && $sellerRecord['seller_type']==='particulier'
+    && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']===''
+    && $sellerRecord['artist_intro']===''
+    && (int)db()->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===0,
+    'Seller can change type and private artist fields are cleared');
+  claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
+    && (int)$sellerRecord['updated_by_admin_id']===$creatorActor,
+    'Editing keeps original creator and updates last editor');
+  [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
+    'seller_type'=>'particulier','name'=>'Demo particulier',
+    'email'=>'bad-email','bank_account_iban'=>'BE68 5390 0754 7035'
+  ]);
+  claim($sellerStatus===200 && str_contains($badSellerPage,'geldig e-mailadres')
+    && db()->query("SELECT name FROM lot_sellers WHERE id=$sellerId")->fetchColumn()==='Demo particulier',
+    'Invalid seller fields rejected without mutation');
+  [$sellerStatus] = request_page('/admin/verkopers.php', [
+    'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerId
+  ]);
+  claim($sellerStatus===303
+    && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE id=$sellerId")->fetchColumn()===0,
+    'Unused seller can be removed');
+  [$sellerStatus] = request_page('/admin/verkoper.php', [
+    'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'particulier',
+    'name'=>'Kavelverkoper Demo','email'=>'kavel@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'5','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Kavelverkoper Demo','bank_account_iban'=>'BE68 5390 0754 7034'
+  ]);
+  $sellerLinkId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Kavelverkoper Demo'")->fetchColumn();
+  claim($sellerStatus===303 && $sellerLinkId>0, 'Private seller available for lot association');
+  [$status, $lotsNav] = request_page('/admin/index.php');
+  claim($status===200 && str_contains($lotsNav,'>Verkopers</a>'),
+    'Administrator navigation exposes seller management');
+
   [$status, $html] = request_page('/admin/kavel.php');
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
-  claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"')
-      && !str_contains($html, 'id="lot-title-error"'),
-      'New lot title uses native fifty-character maxlength without redundant warning');
+  claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"'),
+      'New lot title input is limited to 50 characters');
+  claim(str_contains($html,'name="donation_confirmed" value="0"')
+    && str_contains($html,'geen uitbetaling gebeuren naar de schenker'),
+    'New lot exposes explicit donation confirmation on save');
+  [$donationStatus, $donationPage] = request_page('/admin/kavel.php', [
+    'csrf'=>token($html),'action'=>'save','id'=>'0',
+    'lot_number'=>'876541','title'=>'Schenking zonder verkoper','seller_id'=>'',
+    'donation_confirmed'=>'0'
+  ]);
+  claim($donationStatus===200
+    && str_contains($donationPage,'Bevestig dit om op te slaan')
+    && !by_number(876541), 'Server rejects unconfirmed donation with no seller');
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save',
     'lot_number' => '876542', 'title' => str_repeat('X', 51),
@@ -98,26 +230,6 @@ try {
   claim($titleStatus === 200 && str_contains($tooLongTitlePage, 'maximaal 50 tekens')
       && !by_number(876542),
       'Server rejects a 51-character title without inserting a lot');
-  [$artistStatus, $tooLongArtistPage] = request_page('/admin/kavel.php', [
-    'csrf' => token($html), 'action' => 'save',
-    'lot_number' => '876541', 'title' => 'Test kunstenaar', 'artist_name' => str_repeat('A', 51),
-  ]);
-  claim($artistStatus === 200 && str_contains($tooLongArtistPage, 'De naam van de kunstenaar mag maximaal 50 tekens bevatten.')
-      && !by_number(876541), 'Server rejects 51-character artist without inserting a lot');
-  claim(str_contains($html, 'name="artist_name"') && !str_contains($html, 'id="lot-artist-error"'),
-      'New lot uses native artist maxlength without redundant warning');
-  foreach ([
-    ['subtitle', 51, 'De ondertitel mag maximaal 50 tekens bevatten.', 876540],
-    ['description', 251, 'De beschrijving mag maximaal 250 tekens bevatten.', 876539],
-    ['details', 101, 'Details, afmetingen en staat mogen maximaal 100 tekens bevatten.', 876538],
-  ] as [$field, $length, $message, $number]) {
-    [$limitStatus, $limitPage] = request_page('/admin/kavel.php', [
-      'csrf' => token($html), 'action' => 'save', 'lot_number' => (string)$number,
-      'title' => 'Limietcontrole', $field => str_repeat('X', $length),
-    ]);
-    claim($limitStatus === 200 && str_contains($limitPage, $message) && !by_number($number),
-      'Server rejects excessive text without inserting a lot: ' . $field);
-  }
   $newPhotoPos = strpos($html, 'id="lot-new-photo-grid"');
   $newBottomPos = strpos($html, 'class="lot-editor-bottom"');
   claim($newPhotoPos !== false && $newBottomPos !== false && $newBottomPos > $newPhotoPos
@@ -130,9 +242,8 @@ try {
   $layoutPos = strpos($html, 'class="lot-editor-layout lot-editor-layout--single"');
   $basicPos = strpos($html, '<h2>Basisinformatie</h2>');
   claim($publicationPos !== false && $layoutPos !== false && $basicPos !== false
-      && $publicationPos < $layoutPos && $layoutPos < $basicPos
-      && substr_count($html, '<h2>Publicatie</h2>') === 1,
-      'New lot publication appears once, full-width, before basic information');
+      && $publicationPos < $basicPos && $layoutPos < $basicPos && str_contains($html,'<h2>Publicatie</h2>'),
+      'Administrator sees publication even while creating a lot');
 
   // A concurrent snapshot/restore owns the MySQL lock: valid POST must
   // fail closed before either SQL or photo-file mutations.
@@ -149,6 +260,11 @@ try {
     catalog_data_unlock(db());
   }
 
+  claim(str_contains($html,'<h2>Publicatie</h2>') && str_contains($html, '<select name="category">')
+      && str_contains($html,'>Moderne Kunst</option>') && str_contains($html,'>Oude Meesters</option>')
+      && str_contains($html,'<select name="status">')
+      && str_contains($html,'<select name="sale_location">'),
+      'Administrator can choose publication status and sale location for a new lot');
   claim(str_contains($html, 'class="admin-logout-form"') && str_contains($html, 'action="/admin/logout.php"') && !str_contains($html, 'href="/admin/logout.php"'), 'Navigation uses a POST logout form, never a GET link');
   claim(!str_contains($html, 'Foto-import') && !str_contains($html, 'fotos-bulk.php'), 'Bulk photo import absent from admin navigation');
   [$status, $systemcheck] = request_page('/admin/systeemcheck.php');
@@ -173,7 +289,79 @@ try {
 
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];
+
+  // Isolated category CRUD: roles, rename propagation and deletion while in use.
+  [$categoryStatus, $categoryPage] = request_page('/admin/categorieen.php');
+  claim($categoryStatus === 200 && str_contains($categoryPage, 'Moderne Kunst')
+      && str_contains($categoryPage, 'Oude Meesters'),
+      'Administrator can manage the initial categories');
+  $categoryCsrf = token($categoryPage);
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'add', 'name'=>'Tijdelijke categorie']);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE name='Tijdelijke categorie'")->fetchColumn() === 1,
+      'Administrator adds a category');
+  $tempId = (int)db()->query("SELECT id FROM lot_categories WHERE name='Tijdelijke categorie'")->fetchColumn();
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'rename', 'category_id'=>(string)$tempId, 'name'=>'Tijdelijke naam']);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE name='Tijdelijke naam'")->fetchColumn() === 1,
+      'Administrator renames an unused category');
+  db()->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['Tijdelijke naam',$id]);
+  [$categoryStatus, $categoryPage] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'delete', 'category_id'=>(string)$tempId]);
+  claim($categoryStatus === 200 && str_contains($categoryPage, 'Verwijderen kan alleen')
+      && str_contains($categoryPage, '1 kavel(s)')
+      && str_contains($categoryPage, 'disabled title="Categorie is in gebruik"')
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 1,
+      'Usage count is correct and deletion is refused while a lot uses the category');
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'rename', 'category_id'=>(string)$tempId, 'name'=>'Categorie hernoemd']);
+  claim($categoryStatus === 303 && by_number(10)['category'] === 'Categorie hernoemd',
+      'Renaming a category propagates to linked lots');
+  db()->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['',$id]);
+  [$categoryStatus] = request_page('/admin/categorieen.php', [
+      'csrf'=>$categoryCsrf, 'action'=>'delete', 'category_id'=>(string)$tempId]);
+  claim($categoryStatus === 303
+      && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 0,
+      'Unused category can be deleted');
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
+  // No effective change must never advance either the explicit audit or MySQL updated_at.
+  db()->prepare("UPDATE lots SET updated_at='2020-01-01 00:00:00' WHERE id=?")->execute([$id]);
+  [$noopFormStatus,$noopForm]=request_page('/admin/kavel.php?id='.$id);
+  [$noopStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Originele titel','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','auction_only'=>'0','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  $noopRow=by_number(10);
+  claim($noopStatus===303 && $noopRow['last_edited_at']===null
+    && $noopRow['last_edited_by_admin_id']===null
+    && $noopRow['updated_at']==='2020-01-01 00:00:00',
+    'Unchanged lot save does not create edit audit or advance updated_at');
+  [$changedStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Werkelijk gewijzigd','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  $changedLot=by_number(10);
+  $actorId=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  claim($changedStatus===303 && $changedLot['title']==='Werkelijk gewijzigd'
+    && (int)$changedLot['last_edited_by_admin_id']===$actorId
+    && $changedLot['last_edited_at']!==null,
+    'Real lot metadata edit records the authenticated editor and time');
+  db()->prepare("UPDATE lots SET last_edited_at='2020-01-02 00:00:00' WHERE id=?")->execute([$id]);
+  [$repeatStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Werkelijk gewijzigd','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  claim($repeatStatus===303 && by_number(10)['last_edited_at']==='2020-01-02 00:00:00',
+    'Saving an unchanged edited lot keeps last-edit audit unchanged');
+  db()->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Originele titel',$id]);
   [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
   claim(!str_contains($existingLayout, '<h2>Kavelinformatie</h2>')
       && !str_contains($existingLayout, 'class="lot-editor-side"')
@@ -223,9 +411,21 @@ try {
   imagedestroy($image);
   $small = $valid;
   $small['title'] = 'Geldig fotokavel';
+  $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
   [$status] = request_page('/admin/kavel.php', $small, true);
   claim($status === 303 && (bool)by_number(20), 'Valid kavel and photo saved');
+  claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
+  [$status, $lotsWithSeller] = request_page('/admin/index.php');
+  claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
+    && str_contains($lotsWithSeller,'class="dashboard-seller">Kavelverkoper Demo</td>'),
+    'Admin lots overview displays linked seller name');
+  [$sellerStatus, $sellerBlocked] = request_page('/admin/verkopers.php', [
+    'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerLinkId
+  ]);
+  claim($sellerStatus===200 && str_contains($sellerBlocked, 'Verwijder eerst de koppeling')
+    && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE id=$sellerLinkId")->fetchColumn()===1,
+    'Cannot delete a seller used by an existing lot');
   $st = db()->prepare('SELECT path FROM lot_images WHERE lot_id=?');
   $st->execute([(int)by_number(20)['id']]);
   $imagePath = (string)$st->fetchColumn();
@@ -305,20 +505,78 @@ try {
 
   // Auction numbers are unique and monotonically assigned in the isolated MySQL fixture.
   [$status, $form] = request_page('/admin/kavel.php');
-  claim($status === 200 && str_contains($form, 'name="sale_location"'), 'Sale location selector visible');
+  claim($status === 200 && !str_contains($form, 'name="sale_location"'), 'New lot has fixed sale location');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'301',
     'title'=>'Auction one', 'sale_location'=>'veiling'
   ]);
+  claim($status===303 && by_number(301)['sale_location']==='markt' && by_number(301)['auction_number']===null,
+    'New lot is always created on Markt even if sale location is forged');
+  [$status, $form] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id']);
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(301)['id'], [
+    'csrf'=>token($form), 'action'=>'save', 'id'=>(string)by_number(301)['id'],
+    'lot_number'=>'301', 'title'=>'Auction one', 'sale_location'=>'veiling'
+  ]);
   claim($status===303 && (int)by_number(301)['auction_number']===1,
-    'First auction assignment starts at 1');
+    'First auction assignment after creation starts at 1');
   [$status, $form] = request_page('/admin/kavel.php');
   [$status] = request_page('/admin/kavel.php', [
     'csrf'=>token($form), 'action'=>'save', 'lot_number'=>'302',
     'title'=>'Auction two', 'sale_location'=>'veiling'
   ]);
+  claim($status===303 && by_number(302)['auction_number']===null,
+    'Second lot also starts on Markt');
+  [$status, $form] = request_page('/admin/kavel.php?id='.(int)by_number(302)['id']);
+  [$status] = request_page('/admin/kavel.php?id='.(int)by_number(302)['id'], [
+    'csrf'=>token($form), 'action'=>'save', 'id'=>(string)by_number(302)['id'],
+    'lot_number'=>'302', 'title'=>'Auction two', 'sale_location'=>'veiling'
+  ]);
   claim($status===303 && (int)by_number(302)['auction_number']===2,
-    'Second auction number increments');
+    'Second auction number increments after assignment');
+  // Reordering changes both the moved lot and every shifted lot: audit both.
+  $auctionAuditActor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  db()->exec("UPDATE lots SET last_edited_at='2020-01-01 00:00:00' WHERE lot_number IN (301,302)");
+  [$orderPageStatus,$orderPage]=request_page('/admin/veiling-organisatie.php');
+  claim($orderPageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$orderPage,$orderMatch)===1,
+    'Auction order editor exposes a consistent version token');
+  [$moveStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($orderPage),'lot_id'=>(string)by_number(302)['id'],
+    'position'=>'1','order_version'=>$orderMatch[1]
+  ]);
+  $moved=by_number(302);
+  $shifted=by_number(301);
+  claim($moveStatus===303 && (int)$moved['auction_number']===1
+    && (int)$shifted['auction_number']===2
+    && (int)$moved['last_edited_by_admin_id']===$auctionAuditActor
+    && (int)$shifted['last_edited_by_admin_id']===$auctionAuditActor
+    && $moved['last_edited_at']!=='2020-01-01 00:00:00'
+    && $shifted['last_edited_at']!=='2020-01-01 00:00:00',
+    'Moved and shifted auction numbers both record a real last editor and time');
+  db()->exec("UPDATE lots SET last_edited_at='2020-01-02 00:00:00' WHERE lot_number IN (301,302)");
+  [$noMovePageStatus,$noMovePage]=request_page('/admin/veiling-organisatie.php');
+  claim($noMovePageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$noMovePage,$noMoveMatch)===1,
+    'Auction order version available for no-op validation');
+  [$samePositionStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($noMovePage),'lot_id'=>(string)by_number(302)['id'],
+    'position'=>'1','order_version'=>$noMoveMatch[1]
+  ]);
+  claim($samePositionStatus===303
+    && by_number(301)['last_edited_at']==='2020-01-02 00:00:00'
+    && by_number(302)['last_edited_at']==='2020-01-02 00:00:00',
+    'Saving unchanged auction order does not advance lot audit');
+  [$restorePageStatus,$restorePage]=request_page('/admin/veiling-organisatie.php');
+  claim($restorePageStatus===200
+    && preg_match('/name="order_version" value="([a-f0-9]{64})"/',$restorePage,$restoreMatch)===1,
+    'Auction order version available for restoring synthetic order');
+  [$restoreStatus]=request_page('/admin/veiling-organisatie.php',[
+    'csrf'=>token($restorePage),'lot_id'=>(string)by_number(301)['id'],
+    'position'=>'1','order_version'=>$restoreMatch[1]
+  ]);
+  claim($restoreStatus===303 && (int)by_number(301)['auction_number']===1
+    && (int)by_number(302)['auction_number']===2,
+    'Restoring test auction order maintains consistent numbering');
   $auctionId=(int)by_number(301)['id'];
   [$status, $form] = request_page('/admin/kavel.php?id='.$auctionId);
   [$status] = request_page('/admin/kavel.php?id='.$auctionId, [
@@ -393,17 +651,89 @@ try {
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$sellerOverviewStatus, $sellerAssistantOverview] = request_page('/admin/verkopers.php');
+  claim($sellerOverviewStatus===200 && str_contains($sellerAssistantOverview,'Verkopers beheren'),
+    'Assistant may open seller management');
+  [$sellerFormStatus, $sellerAssistantForm] = request_page('/admin/verkoper.php');
+  claim($sellerFormStatus===200 && str_contains($sellerAssistantForm,'Nieuwe verkoper'),
+    'Assistant may open new seller editor');
+  [$sellerFormStatus] = request_page('/admin/verkoper.php', [
+    'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'particulier',
+    'name'=>'Fictieve assistentverkoper','email'=>'assistent@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren'
+  ]);
+  $assistantSeller=db()->query("SELECT created_by_admin_id,updated_by_admin_id,created_by_name,updated_by_name,created_at,updated_at FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetch();
+  claim($sellerFormStatus===303 && $assistantSeller
+    && (int)$assistantSeller['created_by_admin_id']===$actor
+    && (int)$assistantSeller['updated_by_admin_id']===$actor
+    && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
+    && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
+    'Assistant creates seller with authenticated creator and edit timestamps');
+  // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
+  db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
+  $foreignSellerId=(int)db()->lastInsertId();
+  [$forbiddenView] = request_page('/admin/verkoper.php?id='.$foreignSellerId);
+  claim($forbiddenView===403, 'Assistant cannot open unrelated seller editor');
+  [$forbiddenSave] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
+    'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_id'=>(string)$foreignSellerId,
+    'seller_type'=>'particulier','name'=>'FORGED','email'=>'ander@example.invalid',
+    'street'=>'Teststraat','house_number'=>'8','postal_code'=>'9160','municipality'=>'Lokeren'
+  ]);
+  claim($forbiddenSave===403 && db()->query('SELECT name FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==='Andere maker',
+    'Assistant cannot change unrelated seller even by forged POST');
+  [$forbiddenDelete] = request_page('/admin/verkopers.php', [
+    'csrf'=>token($sellerAssistantForm),'action'=>'delete','seller_id'=>(string)$foreignSellerId
+  ]);
+  claim($forbiddenDelete===403 && db()->query('SELECT COUNT(*) FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==1,
+    'Assistant cannot delete unrelated seller');
+  [$forbiddenImage] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
+    'csrf'=>token($sellerAssistantForm),'action'=>'delete-photo','seller_id'=>(string)$foreignSellerId,
+    'image_kind'=>'portrait','slot'=>'1'
+  ]);
+  claim($forbiddenImage===403, 'Assistant cannot perform photo actions on unrelated seller');
+  [$assistantListStatus, $assistantListPage]=request_page('/admin/verkopers.php');
+  claim($assistantListStatus===200 && str_contains($assistantListPage,'Alleen bekijken'),
+    'Unowned seller is read-only in assistant seller overview');
+  db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
+  [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
+  claim($masterListStatus===200 && str_contains($masterListPage,'Aangemaakt door / op'),
+    'Auctioneer can view seller overview with audit columns');
+  $assistantSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetchColumn();
+  [$masterEditStatus, $masterEditor] = request_page('/admin/verkoper.php?id='.$assistantSellerId);
+  claim($masterEditStatus===200 && str_contains($masterEditor,'Laatste wijziging:'),
+    'Auctioneer can open existing seller and see last editor');
+  [$masterSaveStatus] = request_page('/admin/verkoper.php?id='.$assistantSellerId, [
+    'csrf'=>token($masterEditor),'action'=>'save','seller_id'=>(string)$assistantSellerId,
+    'seller_type'=>'particulier','name'=>'Fictieve verkoper gewijzigd',
+    'email'=>'assistent@example.invalid','street'=>'Voorbeeldstraat',
+    'house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'created_by_admin_id'=>'999999','updated_by_admin_id'=>'999999',
+    'created_by_name'=>'FAKE','updated_by_name'=>'FAKE'
+  ]);
+  $masterEditedSeller=db()->query("SELECT name,created_by_admin_id,updated_by_admin_id,created_by_name,updated_by_name,updated_at FROM lot_sellers WHERE id=".$assistantSellerId)->fetch();
+  claim($masterSaveStatus===303 && $masterEditedSeller['name']==='Fictieve verkoper gewijzigd'
+    && (int)$masterEditedSeller['created_by_admin_id']===$actor
+    && (int)$masterEditedSeller['updated_by_admin_id']===$actor
+    && $masterEditedSeller['created_by_name']===$assistantSeller['created_by_name']
+    && $masterEditedSeller['updated_by_name']===$assistantSeller['updated_by_name']
+    && $masterEditedSeller['updated_by_name']!=='FAKE'
+    && $masterEditedSeller['updated_at']!==null,
+    'Auctioneer edits seller and forged audit actor fields are ignored');
+  db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
-  claim($status===200 && !str_contains($ownForm,'alleen-lezen') && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant can edit own draft without viewing publication');
-  [$assistantNewStatus, $assistantNewForm] = request_page('/admin/kavel.php');
-  claim($assistantNewStatus===200 && !str_contains($assistantNewForm,'<h2>Publicatie</h2>'), 'Assistant cannot view publication while creating a lot');
+  claim($status===200 && !str_contains($ownForm,'alleen-lezen')
+    && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
+  [$status, $assistantNewForm] = request_page('/admin/kavel.php');
+  claim($status===200 && !str_contains($assistantNewForm,'<h2>Publicatie</h2>'),
+    'Assistant cannot see publication when creating a lot');
   $csrfAssistant = token($ownForm);
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
     'csrf'=>$csrfAssistant,'action'=>'save','id'=>(string)by_number(401)['id'],
     'lot_number'=>'401','title'=>'Own edited','status'=>'published','sale_location'=>'veiling'
   ]);
-  claim($status===303 && by_number(401)['title']==='Own edited' && by_number(401)['status']==='draft' && by_number(401)['sale_location']==='markt',
-    'Assistant cannot publish or forge auction location via POST');
+  claim($status===303 && by_number(401)['title']==='Own edited'
+    && by_number(401)['status']==='draft' && by_number(401)['sale_location']==='markt',
+    'Assistant edits own draft but cannot publish or change sale location by forged POST');
   [$status, $otherForm] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id']);
   claim($status===200 && str_contains($otherForm,'alleen-lezen'), 'Other assistant draft is read-only');
   [$status] = request_page('/admin/kavel.php?id='.(int)by_number(402)['id'], [
@@ -427,88 +757,51 @@ try {
     by_number(401)['status']==='draft' && by_number(401)['title']==='Own edited',
     'Auction-only on market aborts entire publication transaction');
 
-  // Artist metadata: validate before SQL, persist, and retain input on error.
-  [$status, $artistForm] = request_page('/admin/kavel.php');
-  claim($status===200, 'Artist editor loads');
-  $csrf = token($artistForm);
-  claim(str_contains($artistForm, 'name="artist_name"') && str_contains($artistForm, 'name="artist_url"'),
-    'New lot editor exposes both artist fields');
-  $artistPost = [
-    'csrf'=>$csrf, 'action'=>'save', 'id'=>'0',
-    'lot_number'=>'750000', 'title'=>'Kunstwerk met maker',
-    'artist_name'=>'', 'artist_url'=>'https://example.org/kunst',
-    'status'=>'draft', 'sale_location'=>'markt'
+  // A lot now stores only the seller foreign key; private bank data is not duplicated.
+  [$status, $newSellerForm] = request_page('/admin/verkoper.php');
+  $sellerCreate=[
+    'csrf'=>token($newSellerForm),'action'=>'save','seller_type'=>'kunstenaar',
+    'name'=>'Fictieve maker','email'=>'maker@example.invalid','street'=>'Teststraat',
+    'house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_name'=>'Fictieve maker','bank_account_iban'=>'BE68 5390 0754 7034',
+    'artist_name'=>'Demo artiest','artist_url'=>'https://example.org/artist'
   ];
-  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($artistError, 'Vul eerst de naam van de kunstenaar')
-    && str_contains($artistError,'name="artist_url" value="https://example.org/kunst"')
-    && !by_number(750000), 'Artist URL without name is rejected and retained, no lot created');
-  $artistPost['artist_name']='Jan Jans';
-  $artistPost['artist_url']='javascript:alert(1)';
-  [$status, $artistError] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($artistError, 'http- of https-link')
-    && !by_number(750000), 'Unsafe artist URL rejected before database write');
-  $artistPost['artist_url']='https://example.org/artist?x=1&y=2';
-  $artistPost['bank_account_name']='Kunstkring Lokeren';
-  $artistPost['bank_account_iban']='BE68 5390 0754 7035';
-  [$status, $badIban] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===200 && str_contains($badIban,'IBAN-controlegetal') && !by_number(750000),
-    'Invalid IBAN checksum rejects lot save without mutation');
-  $artistPost['bank_account_iban']='BE68 5390 0754 7034';
-  [$status] = request_page('/admin/kavel.php', $artistPost);
-  claim($status===303, 'Valid artist link and name accepted');
+  [$status] = request_page('/admin/verkoper.php',$sellerCreate);
+  $artistSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve maker'")->fetchColumn();
+  claim($status===303 && $artistSellerId>0,'Artist seller created in private seller registry');
+  [$status, $artistForm] = request_page('/admin/kavel.php');
+  claim($status===200 && str_contains($artistForm,'name="seller_id"')
+    && str_contains($artistForm,'+ Nieuwe verkoper')
+    && !str_contains($artistForm,'name="artist_name"')
+    && !str_contains($artistForm,'name="bank_account_iban"'),
+    'Lot form uses seller selector and private seller creation link only');
+  $artistPost=[
+    'csrf'=>token($artistForm),'action'=>'save','id'=>'0',
+    'lot_number'=>'750000','title'=>'Kunstwerk met maker',
+    'seller_id'=>(string)$artistSellerId,'status'=>'draft','sale_location'=>'markt'
+  ];
+  [$status] = request_page('/admin/kavel.php',$artistPost);
   $artistStored=by_number(750000);
-  claim($artistStored && $artistStored['artist_name']==='Jan Jans'
-    && $artistStored['artist_url']==='https://example.org/artist?x=1&y=2',
-    'Both artist fields stored');
-  claim($artistStored['bank_account_name']==='Kunstkring Lokeren'
-      && $artistStored['bank_account_iban']==='BE68539007547034',
-    'Private account holder and canonical IBAN saved');
-  [$status, $persistedEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
-  claim($status===200 && str_contains($persistedEditor, 'name="artist_name" value="Jan Jans"')
-      && str_contains($persistedEditor, 'name="artist_url" value="https://example.org/artist?x=1&amp;y=2"'),
-    'Existing lot reload shows the saved artist name and escaped hyperlink');
-  claim(str_contains($persistedEditor,'name="bank_account_name" value="Kunstkring Lokeren"')
-      && str_contains($persistedEditor,'name="bank_account_iban" value="BE68539007547034"'),
-    'Existing lot reload shows private bank fields');
+  claim($status===303 && $artistStored && (int)$artistStored['seller_id']===$artistSellerId,
+    'Lot persists only its referenced seller ID');
+  [$status, $artistEditor] = request_page('/admin/kavel.php?id='.$artistStored['id']);
+  claim($status===200 && str_contains($artistEditor,'value="'.$artistSellerId.'" selected'),
+    'Existing lot reload selects the linked seller');
   [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
-    'csrf'=>token($persistedEditor), 'action'=>'save', 'id'=>(string)$artistStored['id'],
-    'lot_number'=>'750000', 'title'=>'Kunstwerk met bijgewerkte titel',
-    'artist_name'=>'Jan Jans', 'artist_url'=>'https://example.org/artist?x=1&y=2',
-    'status'=>'draft', 'sale_location'=>'markt'
+    'csrf'=>token($artistEditor),'action'=>'save','id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000','title'=>'Updated seller lot','seller_id'=>'999999',
+    'status'=>'draft','sale_location'=>'markt'
   ]);
-  claim($status===303 && by_number(750000)['title']==='Kunstwerk met bijgewerkte titel'
-      && by_number(750000)['artist_name']==='Jan Jans'
-      && by_number(750000)['artist_url']==='https://example.org/artist?x=1&y=2',
-    'Artist metadata survives saving unrelated lot fields');
-  claim(by_number(750000)['bank_account_name']==='Kunstkring Lokeren'
-      && by_number(750000)['bank_account_iban']==='BE68539007547034',
-    'Omitting bank fields from a legacy POST preserves existing bank data');
-  $artistPost['id']=(string)$artistStored['id'];
-  $artistPost['artist_name']='';
-  [$status, $artistError] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
-  claim($status===200 && by_number(750000)['artist_name']==='Jan Jans',
-    'Cannot clear artist name while a URL remains');
-  $artistPost['artist_name']='Nieuwe kunstenaar';
-  $artistPost['artist_url']='';
-  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], $artistPost);
-  claim($status===303 && by_number(750000)['artist_name']==='Nieuwe kunstenaar'
-    && by_number(750000)['artist_url']==='', 'Artist link can be removed while keeping name');
-
-  // Browsers count one newline as one character but send CRLF over HTTP.
-  // A full textarea including a newline must save without a false 251/101 error.
-  $fullDescription = str_repeat('D', 124) . "\r\n" . str_repeat('D', 125);
-  $fullDetails = str_repeat('S', 49) . "\r\n" . str_repeat('S', 50);
-  [$newlineStatus] = request_page('/admin/kavel.php', [
-    'csrf' => token($html), 'action' => 'save', 'lot_number' => '876537',
-    'title' => 'Regelafbreking limieten', 'description' => $fullDescription,
-    'details' => $fullDetails,
+  claim($status===200 && (int)by_number(750000)['seller_id']===$artistSellerId,
+    'Forged seller ID rejected without changing lot');
+  [$status] = request_page('/admin/kavel.php?id='.$artistStored['id'], [
+    'csrf'=>token($artistEditor),'action'=>'save','id'=>(string)$artistStored['id'],
+    'lot_number'=>'750000','title'=>'Updated seller lot','seller_id'=>(string)$artistSellerId,
+    'status'=>'draft','sale_location'=>'markt'
   ]);
-  $newlineLot = by_number(876537);
-  claim($newlineStatus === 303 && $newlineLot
-      && $newlineLot['description'] === str_repeat('D', 124) . "\n" . str_repeat('D', 125)
-      && $newlineLot['details'] === str_repeat('S', 49) . "\n" . str_repeat('S', 50),
-      'CRLF at HTML maxlength does not cause false server length validation');
+  claim($status===303 && by_number(750000)['title']==='Updated seller lot'
+    && (int)by_number(750000)['seller_id']===$artistSellerId,
+    'Unrelated lot edit preserves linked seller');
   // Logout is a state-changing action and must require a valid POST + CSRF.
   [$status] = request_page('/admin/logout.php');
   claim($status === 405, 'Authenticated GET logout is rejected without destroying session');

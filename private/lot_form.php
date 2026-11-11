@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/lot_audit.php';
 
 /**
  * Toon na een bewaarfout de ingestuurde veldwaarden opnieuw.
@@ -59,12 +60,43 @@ function next_auction_number(PDO $pdo): int {
  * Caller must hold catalog_lock_for_request() and a DB transaction.
  * Updating in ascending order frees each next target under the UNIQUE index.
  */
-function compact_auction_numbers(PDO $pdo): void {
+function compact_auction_numbers(PDO $pdo, ?int $actorId=null): void {
   if (!$pdo->inTransaction()) throw new LogicException('Transaction required for auction renumbering.');
   $rows = $pdo->query("SELECT id, auction_number FROM lots WHERE sale_location='veiling' ORDER BY auction_number, id")->fetchAll(PDO::FETCH_ASSOC);
   $update = $pdo->prepare('UPDATE lots SET auction_number=? WHERE id=?');
   foreach ($rows as $index => $row) {
     $expected = $index + 1;
-    if ((int)$row['auction_number'] !== $expected) $update->execute([$expected, (int)$row['id']]);
+    if ((int)$row['auction_number'] !== $expected) {
+      $update->execute([$expected, (int)$row['id']]);
+      if ($actorId!==null) lot_audit_touch($pdo,(int)$row['id'],$actorId);
+    }
   }
+}
+
+/**
+ * Compare the effective values of a lot to its persisted row. Normalize MySQL
+ * DECIMAL(,2), nullable foreign keys and integer flags to avoid marking a
+ * visually unchanged form as a modification.
+ */
+function lot_effective_fields_changed(array $stored, array $values): bool {
+  $keys=['lot_number','title','subtitle','category','description','details',
+    'market_price','starting_bid','auction_only','status','sale_location',
+    'auction_number','seller_id'];
+  if (count($values)!==count($keys)) throw new InvalidArgumentException('Ongeldige kavelvergelijking.');
+  foreach ($keys as $i=>$key) {
+    $old=$stored[$key]??null;
+    $next=$values[$i];
+    if (in_array($key,['market_price','starting_bid'],true)) {
+      $old=($old===null||$old==='')?null:number_format((float)$old,2,'.','');
+      $next=($next===null||$next==='')?null:number_format((float)$next,2,'.','');
+    } elseif (in_array($key,['lot_number','auction_only','auction_number','seller_id'],true)) {
+      $old=($old===null||$old==='')?null:(int)$old;
+      $next=($next===null||$next==='')?null:(int)$next;
+    } else {
+      $old=(string)($old??'');
+      $next=(string)($next??'');
+    }
+    if ($old!==$next) return true;
+  }
+  return false;
 }

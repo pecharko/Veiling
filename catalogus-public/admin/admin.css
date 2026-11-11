@@ -173,6 +173,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .dashboard-icon{display:grid;place-items:center;flex:0 0 56px;height:56px;border-radius:50%;background:#fbe9e9;color:#850015;font-size:28px}
 .dashboard-stat:nth-child(2) .dashboard-icon{background:#e7f5e8;color:#207240}.dashboard-stat:nth-child(3) .dashboard-icon{background:#e5f3ff;color:#277ac0}.dashboard-stat:nth-child(4) .dashboard-icon{background:#eee7ff;color:#7052bd}
 .dashboard-panel{background:#fff;border:1px solid #ecdfd6;border-radius:14px;padding:25px;box-shadow:0 8px 25px rgba(78,32,35,.035)}
+.dashboard-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.dashboard-panel-heading>a.primary{white-space:nowrap;margin-bottom:16px}
 .dashboard-panel-heading h2{margin:0 0 3px;font-size:24px}.dashboard-panel-heading p{margin:0 0 20px;color:#657183;font-size:14px}
 .dashboard-filters{display:grid;grid-template-columns:minmax(220px,1.25fr) repeat(2,minmax(150px,1fr)) 150px;gap:12px;margin-bottom:17px}
 .dashboard-filters label{min-width:0}.dashboard-filters input,.dashboard-filters select{width:100%;height:48px;max-width:none;border:1px solid #d9dde4;border-radius:8px;color:#263f46}.dashboard-filters button{width:100%;height:48px}
@@ -282,3 +283,76 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
   .category-manager-rename-controls{flex-wrap:wrap}
   .category-manager-rename-controls button,.category-manager-delete-button{min-height:44px}
 }
+
+
+/* Private seller administration - shares dashboard styles with the lots page */
+.seller-manager{--ed-line:#e9ddd4;--ed-muted:#748078;--ed-ink:#29473e;max-width:none;margin:0}
+.seller-editor-page{max-width:1380px;margin:0 auto}
+.admin-main:has(.seller-editor-page){width:min(1380px,calc(100% - 44px));margin:32px auto 58px}
+.seller-editor-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+.seller-editor-toolbar .dashboard-subtitle{margin:8px 0 0;font-size:13px;color:var(--ed-muted)}
+.seller-editor-card{margin-top:0}
+.seller-fields-grid label{font-size:13px;color:var(--ed-ink)}
+.seller-fields-grid input,.seller-fields-grid select{min-height:49px;border:1px solid #d6ddd5;background:#fff;border-radius:9px;padding:12px 13px;font-size:14px;line-height:1.5;color:#1e382f}
+.seller-fields-grid input:focus,.seller-fields-grid select:focus{outline:3px solid rgba(239,133,134,.18);border-color:var(--wine)}
+.seller-form-actions{border-top:1px solid var(--ed-line);padding-top:18px}
+
+.seller-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seller-filters{grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) 140px}
+.seller-table{min-width:700px}
+.seller-lot-count{font-weight:750}
+.seller-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.seller-row-actions form{margin:0}
+.seller-delete{min-height:40px;color:#922b37;background:#fff;border-color:#e6c8cd}
+.seller-delete:not(:disabled):hover{background:#fff1f2}
+.seller-delete:disabled{opacity:.45;cursor:not-allowed}
+.seller-editor-card{margin-top:0;padding:28px}
+.seller-editor-card .lot-editor-card-header{margin-bottom:20px}
+.seller-manager-form{display:flex;flex-direction:column;gap:22px}
+.seller-fields-section{padding:20px;border:1px solid #ecdfd6;border-radius:11px;background:#fff}
+.seller-fields-section h3{font-size:17px;margin:0 0 16px;color:#28443a}
+.seller-fields-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.seller-fields-grid label{display:flex;flex-direction:column;gap:7px;font-weight:650;min-width:0}
+.seller-fields-grid input,.seller-fields-grid select{width:100%}
+.seller-field-wide{grid-column:1/-1}
+.seller-fields-section .lot-editor-help{margin:12px 0 0}
+.seller-private-label{font-size:11px;letter-spacing:.04em;padding:4px 9px;border-radius:99px;background:#f8efe9;color:#7b2b31;vertical-align:middle}
+.seller-artist-fields{background:#fbf5f1}
+.seller-artist-fields[hidden]{display:none}
+.seller-form-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;flex-wrap:wrap}
+@media(max-width:900px){.seller-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){
+  .admin-main:has(.seller-manager),.admin-main:has(.seller-editor-page){width:calc(100% - 24px)}
+  .seller-stats,.seller-filters,.seller-fields-grid{grid-template-columns:1fr}
+  .seller-editor-card{padding:16px}
+  .seller-field-wide{grid-column:auto}
+}
+
+/* Private artist profile additions - same card design as seller and lot editors. */
+.seller-introduction{margin-top:18px}
+.seller-introduction label{display:block;font-weight:650;color:#29473e;font-size:13px;margin-bottom:8px}
+.seller-introduction textarea{display:block;width:100%;max-width:100%;border:1px solid #d6ddd5;background:#fff;border-radius:9px;padding:12px 13px;color:#1e382f;font:inherit;resize:vertical}
+.seller-introduction textarea:focus{outline:3px solid rgba(239,133,134,.18);border-color:var(--wine)}
+.seller-gallery{margin-top:24px;border-top:1px solid #ecdfd6;padding-top:20px}
+.seller-gallery h4{color:#29473e;font-size:15px;margin:0 0 12px}
+.seller-photo-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px}
+.seller-photo-slot{border:1px solid #e5dcd5;background:#fff;border-radius:10px;padding:12px;min-width:0}
+.seller-photo-slot img{display:block;max-width:100%;width:100%;height:160px;object-fit:contain;border-radius:6px;background:#f7f7f5;margin-bottom:12px}
+.seller-photo-slot label{display:block;font-weight:650;font-size:13px;color:#29473e}
+.seller-photo-slot input{display:block;margin-top:8px;font-size:12px;max-width:100%;width:100%}
+.seller-photo-delete-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
+.seller-photo-delete button{color:#922b37;border-color:#e6c8cd}
+.seller-optional{font-size:12px;color:#63766e;font-weight:400}
+@media(max-width:650px){.seller-photo-grid{grid-template-columns:1fr}.seller-photo-slot img{height:220px}}
+
+/* Seller audit trail: private metadata, readable at desktop and mobile widths. */
+.seller-audit{min-width:148px;font-size:12px;vertical-align:middle}
+.seller-audit strong{display:block;font-size:13px;font-weight:650;color:#29473e}
+.seller-audit small{display:block;margin-top:3px;color:#64736c;font-size:11px;white-space:nowrap}
+.seller-audit-summary{margin:18px 0 0;padding:14px 18px;border:1px solid #e9ddd4;border-radius:10px;background:#faf8f6;color:#29473e;font-size:13px;line-height:1.9}
+
+/* Lot creator and effective-edit audit follows the seller audit cards. */
+.lot-audit-summary{display:flex;flex-wrap:wrap;gap:8px 28px;margin:0 0 18px;padding:12px 18px;border:1px solid #e9ddd4;border-radius:10px;background:#faf8f6;color:#29473e;font-size:13px}
+.lot-audit-summary strong{font-weight:700}
+.seller-readonly{display:inline-block;font-size:12px;color:#64736c}
+@media(max-width:650px){.lot-audit-summary{flex-direction:column;gap:6px;padding:12px}}
