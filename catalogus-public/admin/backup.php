@@ -36,7 +36,7 @@ if(is_post()){
   }
   elseif($action==='reset-lots'){
    require_administrator();
-   if(($_POST['confirm']??'')!=='WIS ALLE KAVELS EN HERSTART OP 1') throw new RuntimeException('Typ de volledige bevestigingszin om alle kavels te verwijderen.');
+   if(($_POST['confirm']??'')!=='WIS ALLE KAVELS EN VERKOPERS EN HERSTART OP 1') throw new RuntimeException('Typ de volledige bevestigingszin om alle kavels te verwijderen.');
    // No snapshot is created automatically: this reset deliberately removes the
    // issued-number registry. Existing snapshot ZIP archives remain untouched.
    $pdo=db(); catalog_data_lock($pdo);
@@ -95,8 +95,8 @@ admin_top('Back-up & herstel');
 <div class="backup-warning"><strong>Onomkeerbare beheeractie.</strong> Verwijdert alle kavels, alle verkopers (inclusief hun contact- en bankgegevens) en de fotoreferenties en wist alle uitgegeven gewone kavelnummers, zodat het volgende nieuwe kavel nummer 1 krijgt. Veilingsnummers beginnen eveneens opnieuw bij 1. Bestaande snapshot-ZIP's en beheerdersaccounts blijven bestaan. Herstel van een oude snapshot kan kavels terugbrengen; voer geen reset uit tijdens andere catalogusbewerkingen.</div>
 <form method="post" onsubmit="return confirm('ALLE kavels, ALLE verkopers en alle nummerreservaties definitief wissen? Dit kan niet ongedaan worden gemaakt zonder afzonderlijk herstel.');">
 <?=csrf_field()?><input type="hidden" name="action" value="reset-lots">
-<label for="reset-lots-confirm">Typ WIS ALLE KAVELS EN HERSTART OP 1</label>
-<input class="backup-confirm" name="confirm" id="reset-lots-confirm" required autocomplete="off" placeholder="WIS ALLE KAVELS EN HERSTART OP 1">
+<label for="reset-lots-confirm">Typ WIS ALLE KAVELS EN VERKOPERS EN HERSTART OP 1</label>
+<input class="backup-confirm" name="confirm" id="reset-lots-confirm" required autocomplete="off" placeholder="WIS ALLE KAVELS EN VERKOPERS EN HERSTART OP 1">
 <button type="submit" class="backup-danger">Alle kavels verwijderen en herstarten</button>
 </form>
 </section>
