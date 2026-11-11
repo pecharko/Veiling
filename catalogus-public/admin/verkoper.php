@@ -221,8 +221,8 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   function sync() {
     const artist=type.value==='kunstenaar';
     fields.hidden=!artist;
-    fields.querySelectorAll('input').forEach(input => {
-      input.required=artist;
+    fields.querySelectorAll('input,textarea').forEach(input => {
+      input.required=artist && (input.name==='artist_name' || input.name==='artist_url');
       input.disabled=!artist;
     });
   }
