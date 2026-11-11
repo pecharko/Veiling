@@ -6,7 +6,7 @@ require_once __DIR__ . '/restore_journal.php';
 require_once __DIR__ . '/visitor_geo_snapshot.php';
 const SNAP_TABLES = ['settings','admins','lot_sellers','lots','lot_images','login_attempts'];
 const SNAP_INSERT = [
- 'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','updated_at'],
+ 'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
  'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
  'lot_sellers'=>['id','seller_type','name','email','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url'],
  'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at'],
@@ -134,7 +134,7 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && array_values(array_diff(SNAP_INSERT[$t],array_keys($row)))===['is_site_online']) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) || ($t==='lots' && !array_diff(SNAP_INSERT[$t],array_keys($row),['sale_location','auction_number','market_price','starting_bid','auction_only','created_by_admin_id'])))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -199,7 +199,7 @@ function snap_restore(PDO $pdo,string $name): void {
    foreach(['lot_images','login_attempts','lots','lot_sellers','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
    foreach(['settings','admins','lot_sellers','lots','lot_images','login_attempts'] as $table){
     $columns=SNAP_INSERT[$table];
-    if($table==='settings' && !$pdo->query("SHOW COLUMNS FROM settings LIKE 'is_site_online'")->fetch()) $columns=array_values(array_filter($columns,fn($column)=>$column!=='is_site_online'));
+    if($table==='settings') { foreach(['is_site_online','catalog_split_active','show_report_issue_link'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM settings LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     if($table==='admins') { foreach(['role','is_active','last_login_at'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM admins LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     if($table==='lots') { foreach(['market_price','starting_bid','auction_only','created_by_admin_id'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM lots LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
