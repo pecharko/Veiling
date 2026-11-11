@@ -144,6 +144,15 @@ $mobileSql=preg_replace('/^\s*--[^\n]*$/m','',$mobileSql);
 $pdo->exec(trim((string)$mobileSql));
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch())
   throw new RuntimeException('Seller mobile number column missing in disposable CI DB');
+// Audit migration runs only in disposable CI MySQL.
+$auditSql=file_get_contents($dir.'/database/migrations/20261111_seller_audit.sql');
+if (!is_string($auditSql) || !str_contains($auditSql,'ADD COLUMN updated_by_admin_id'))
+  throw new RuntimeException('Seller author audit fixture missing');
+$auditSql=preg_replace('/^\s*--[^\n]*$/m','',$auditSql);
+$pdo->exec(trim((string)$auditSql));
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'created_by_admin_id'")->fetch()
+    || !$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'updated_at'")->fetch())
+  throw new RuntimeException('Seller author audit columns missing');
 // Exercise legacy artist constraint before the agreed destructive seller-dedup migration.
 $artistColumns = $pdo->query("SHOW COLUMNS FROM lots WHERE Field IN ('artist_name', 'artist_url')")->fetchAll();
 if (count($artistColumns) !== 2) throw new RuntimeException('Artist migration did not add both fields.');
