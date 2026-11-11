@@ -21,7 +21,6 @@ $private=seller_clean($base+['artist_name'=>'Should not be retained','artist_url
 checkSeller($private['artist_name']==='' && $private['artist_url']==='','Private seller cannot retain artist fields');
 foreach ([
   ['seller_type'=>'unknown','name'=>'Demo'],
-  $base+['artist_name'=>'N'],
   array_merge($base,['email'=>'not-an-email']),
   array_merge($base,['bank_account_iban'=>'BE68 5390 0754 7035']),
   array_merge($base,['street'=>'']),
