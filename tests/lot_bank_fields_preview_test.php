@@ -26,12 +26,15 @@ try {
 } catch (InvalidArgumentException) {}
 
 $editor = file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/kavel.php');
+$sellerEditor = file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/verkoper.php');
+$sellerValidation = file_get_contents(dirname(__DIR__) . '/private/lot_sellers.php');
 $preview = file_get_contents(dirname(__DIR__) . '/dev/preview/seed.php');
 $schema = file_get_contents(dirname(__DIR__) . '/database/migrations/20261110_lot_bank_fields.sql');
 checkBank(is_string($editor) && str_contains($editor, 'if (lot_can_change_publication(effective_admin_role()))'), 'Publication section is role-restricted');
 checkBank(str_contains($editor, 'lot_can_change_publication($role) ? (string)($_POST'), 'Assistants cannot bypass publication role using POST');
-checkBank(str_contains($editor, 'Naam bankrekeningnummer') && str_contains($editor, '>Bankrekeningnummer<') && !str_contains($editor, '>Banknummer<'), 'Bank account fields carry the requested names');
-checkBank(str_contains($editor, "lot_bank_validate(") && str_contains($editor, 'bank_account_iban=?'), 'Bank account is server validated and persisted');
+checkBank(!str_contains($editor,'name="bank_account_iban"'), 'Lot editor no longer duplicates bank account data');
+checkBank(str_contains($sellerEditor,'Naam bankrekeningnummer') && str_contains($sellerEditor,'name="bank_account_iban"'), 'Bank fields are in private seller editor');
+checkBank(str_contains($sellerValidation, 'lot_bank_validate('), 'Bank account is server validated on seller save');
 checkBank(str_contains($preview, "SHOW COLUMNS FROM lots LIKE 'bank_account_name'"), 'Isolated preview can migrate bank fields');
 checkBank(is_string($schema) && str_contains($schema, 'VARCHAR(100)') && str_contains($schema, 'VARCHAR(34)'), 'Migration reserves correct column lengths');
 echo "Bank fields and role restrictions: OK\n";
