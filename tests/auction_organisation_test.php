@@ -21,7 +21,7 @@ verify_order(str_contains($screen,'catalog_lock_for_request($pdo)'),'catalog loc
 verify_order(str_contains($screen,'$pdo->beginTransaction()'),'transaction required');
 verify_order(str_contains($screen,'$pdo->rollBack()'),'rollback on failure required');
 verify_order(str_contains($screen,'order_version'),'stale form guard required');
-verify_order(str_contains($screen,"auction_apply_order($pdo, $ordered, (int)\$_SESSION['admin_id'])"),'transactional renumber records actor');
+verify_order(str_contains($screen,'auction_apply_order($pdo, $ordered, (int)$_SESSION[\'admin_id\'])'),'transactional renumber records actor');
 $helper=file_get_contents(dirname(__DIR__).'/private/auction_organisation.php');
 verify_order(str_contains($helper,'int $actorId') && str_contains($helper,'lot_audit_touch($pdo,(int)$id,$actorId)'),
   'Every effective auction number shift is auditable with mandatory actor');
