@@ -326,6 +326,42 @@ try {
       && (int)db()->query("SELECT COUNT(*) FROM lot_categories WHERE id=$tempId")->fetchColumn() === 0,
       'Unused category can be deleted');
   $invalid['id'] = (string)$id; $invalid['lot_number'] = '10'; $invalid['title']='Gewijzigde maar niet opgeslagen titel';
+  // No effective change must never advance either the explicit audit or MySQL updated_at.
+  db()->prepare("UPDATE lots SET updated_at='2020-01-01 00:00:00' WHERE id=?")->execute([$id]);
+  [$noopFormStatus,$noopForm]=request_page('/admin/kavel.php?id='.$id);
+  [$noopStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Originele titel','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','auction_only'=>'0','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  $noopRow=by_number(10);
+  claim($noopStatus===303 && $noopRow['last_edited_at']===null
+    && $noopRow['last_edited_by_admin_id']===null
+    && $noopRow['updated_at']==='2020-01-01 00:00:00',
+    'Unchanged lot save does not create edit audit or advance updated_at');
+  [$changedStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Werkelijk gewijzigd','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  $changedLot=by_number(10);
+  $actorId=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
+  claim($changedStatus===303 && $changedLot['title']==='Werkelijk gewijzigd'
+    && (int)$changedLot['last_edited_by_admin_id']===$actorId
+    && $changedLot['last_edited_at']!==null,
+    'Real lot metadata edit records the authenticated editor and time');
+  db()->prepare("UPDATE lots SET last_edited_at='2020-01-02 00:00:00' WHERE id=?")->execute([$id]);
+  [$repeatStatus] = request_page('/admin/kavel.php?id='.$id, [
+    'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
+    'lot_number'=>'10','title'=>'Werkelijk gewijzigd','category'=>'','description'=>'','details'=>'',
+    'market_price'=>'','starting_bid'=>'','seller_id'=>'',
+    'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
+  ]);
+  claim($repeatStatus===303 && by_number(10)['last_edited_at']==='2020-01-02 00:00:00',
+    'Saving an unchanged edited lot keeps last-edit audit unchanged');
+  db()->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Originele titel',$id]);
   [$status, $existingLayout] = request_page('/admin/kavel.php?id=' . $id);
   claim(!str_contains($existingLayout, '<h2>Kavelinformatie</h2>')
       && !str_contains($existingLayout, 'class="lot-editor-side"')
