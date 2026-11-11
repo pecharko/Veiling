@@ -8,6 +8,25 @@ require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
 function seller_can_manage(string $role): bool { return in_array($role,['administrator','veilingmeester','assistant'],true); }
+/** Only creator ownership gives assistants seller edit/delete rights. */
+function seller_can_edit(string $role,int $actorId,array $seller): bool {
+  if (!seller_can_manage($role) || $actorId<=0) return false;
+  if ($role==='administrator' || $role==='veilingmeester') return true;
+  return isset($seller['created_by_admin_id']) && (int)$seller['created_by_admin_id']===$actorId;
+}
+function seller_require_edit(PDO $pdo,int $sellerId,string $role,int $actorId): array {
+  if ($sellerId<1) throw new InvalidArgumentException('Verkoper niet gevonden.');
+  $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
+  $st->execute([$sellerId]);
+  $seller=$st->fetch(PDO::FETCH_ASSOC);
+  if (!$seller) { http_response_code(404); exit('Verkoper niet gevonden.'); }
+  if (!seller_can_edit($role,$actorId,$seller)) {
+    http_response_code(403);
+    exit('Geen bewerkingsrechten voor deze verkoper.');
+  }
+  return $seller;
+}
+
 function seller_audit_time(?string $utc): string {
   if ($utc===null || $utc==='') return 'Niet geregistreerd';
   $when=new DateTimeImmutable($utc,new DateTimeZone('UTC'));
@@ -69,8 +88,8 @@ function seller_valid_id(PDO $pdo, ?int $id): bool {
 }
 
 /** Caller must have checked admin role, CSRF and catalog mutex. */
-function seller_save(PDO $pdo, ?int $id, array $input, int $actorId): int {
-  if ($actorId<1) throw new InvalidArgumentException('Ongeldige ingelogde beheerder.');
+function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $role): int {
+  if ($actorId<1 || !seller_can_manage($role)) throw new InvalidArgumentException('Ongeldige bewerkingsrechten.');
   $data=seller_clean($input);
   $actorName=seller_actor_name($pdo,$actorId);
   $keys=array_keys($data);
@@ -81,6 +100,7 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId): int {
       $check->execute([$id]);
       $current=$check->fetch(PDO::FETCH_ASSOC);
       if (!$current) throw new InvalidArgumentException('Verkoper niet gevonden.');
+      if (!seller_can_edit($role,$actorId,$current)) throw new InvalidArgumentException('Geen bewerkingsrechten voor deze verkoper.');
       // Compare canonical validated values against the locked DB row. A plain
       // save of an unchanged form must not advance the last-editor audit fields.
       $changed=false;
@@ -107,13 +127,15 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId): int {
   }
 }
 
-function seller_delete(PDO $pdo, int $id): void {
+function seller_delete(PDO $pdo, int $id, string $role, int $actorId): void {
   $photos=[];
   $pdo->beginTransaction();
   try {
-    $stmt=$pdo->prepare('SELECT id FROM lot_sellers WHERE id=? FOR UPDATE');
+    $stmt=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=? FOR UPDATE');
     $stmt->execute([$id]);
-    if (!$stmt->fetchColumn()) throw new InvalidArgumentException('Verkoper niet gevonden.');
+    $record=$stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$record) throw new InvalidArgumentException('Verkoper niet gevonden.');
+    if (!seller_can_edit($role,$actorId,$record)) throw new InvalidArgumentException('Geen bewerkingsrechten voor deze verkoper.');
     $used=$pdo->prepare('SELECT COUNT(*) FROM lots WHERE seller_id=?');
     $used->execute([$id]);
     if ((int)$used->fetchColumn()>0) throw new InvalidArgumentException('Deze verkoper is gekoppeld aan kavels. Verwijder eerst de koppeling.');
