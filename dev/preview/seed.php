@@ -100,6 +100,19 @@ if ($oldArtist) {
     $pdo->exec(trim((string)$dedup));
     echo "Old per-lot seller fields removed only in isolated preview.\n";
 }
+// Artist introduction and gallery migration only in verified isolated preview.
+$introPresent=(bool)$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_intro'")->fetch();
+$photoTable=(bool)$pdo->query("SHOW TABLES LIKE 'seller_images'")->fetchColumn();
+if ($introPresent !== $photoTable) throw new RuntimeException('Partial seller gallery migration; refusing automatic repair.');
+if (!$introPresent) {
+    $sql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_artist_profile.sql');
+    if (!is_string($sql) || !str_contains($sql,'fk_seller_images_seller') || !str_contains($sql,'artist_intro VARCHAR(500)')) {
+        throw new RuntimeException('Reviewed artist profile migration missing.');
+    }
+    $sql=preg_replace('/^\\s*--[^\\n]*$/m','',$sql);
+    foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
+    echo "Artist biography and image slots added to isolated preview.\\n";
+}
 // Use fake names and e-mail addresses only; never import actual seller information.
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
