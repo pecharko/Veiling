@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__.'/lot_audit.php';
 
 /**
  * Toon na een bewaarfout de ingestuurde veldwaarden opnieuw.
@@ -59,13 +60,16 @@ function next_auction_number(PDO $pdo): int {
  * Caller must hold catalog_lock_for_request() and a DB transaction.
  * Updating in ascending order frees each next target under the UNIQUE index.
  */
-function compact_auction_numbers(PDO $pdo): void {
+function compact_auction_numbers(PDO $pdo, ?int $actorId=null): void {
   if (!$pdo->inTransaction()) throw new LogicException('Transaction required for auction renumbering.');
   $rows = $pdo->query("SELECT id, auction_number FROM lots WHERE sale_location='veiling' ORDER BY auction_number, id")->fetchAll(PDO::FETCH_ASSOC);
   $update = $pdo->prepare('UPDATE lots SET auction_number=? WHERE id=?');
   foreach ($rows as $index => $row) {
     $expected = $index + 1;
-    if ((int)$row['auction_number'] !== $expected) $update->execute([$expected, (int)$row['id']]);
+    if ((int)$row['auction_number'] !== $expected) {
+      $update->execute([$expected, (int)$row['id']]);
+      if ($actorId!==null) lot_audit_touch($pdo,(int)$row['id'],$actorId);
+    }
   }
 }
 
