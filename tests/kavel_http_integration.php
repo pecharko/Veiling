@@ -488,6 +488,8 @@ try {
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$sellerForbidden] = request_page('/admin/verkopers.php');
+  claim($sellerForbidden===403, 'Assistant cannot access private seller management');
   [$status, $ownForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200 && !str_contains($ownForm,'alleen-lezen')
     && !str_contains($ownForm,'<h2>Publicatie</h2>'), 'Assistant may edit own draft without publication box');
