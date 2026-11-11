@@ -33,9 +33,8 @@ if (is_post()) {
       $kind=(string)($_POST['image_kind']??'');
       $slot=filter_var($_POST['slot']??null,FILTER_VALIDATE_INT);
       if ($slot===false || $slot===null) throw new InvalidArgumentException('Ongeldige fotopositie.');
-      if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[]);
-      else seller_image_delete($pdo,$editId,$kind,(int)$slot);
-      $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([(int)$_SESSION['admin_id'],$editId]);
+      if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[],(int)$_SESSION['admin_id']);
+      else seller_image_delete($pdo,$editId,$kind,(int)$slot,(int)$_SESSION['admin_id']);
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
       redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
@@ -49,7 +48,7 @@ if (is_post()) {
           $key='photo_'.$kind.'_'.$slot;
           $file=$_FILES[$key]??null;
           if (!is_array($file) || (int)($file['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE) continue;
-          try { seller_image_upload($pdo,$savedId,$kind,$slot,$file); }
+          try { seller_image_upload($pdo,$savedId,$kind,$slot,$file,(int)$_SESSION['admin_id']); }
           catch (Throwable $photoError) { $failed[]=$kind.' '.$slot.': '.$photoError->getMessage(); }
         }
       }
