@@ -185,7 +185,9 @@ try {
   [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier',
-    'email'=>'bad-email','bank_account_iban'=>'BE68 5390 0754 7035'
+    'email'=>'bad-email','street'=>'Fictieve straat','house_number'=>'10',
+    'postal_code'=>'9160','municipality'=>'Lokeren',
+    'bank_account_iban'=>'BE68 5390 0754 7035'
   ]);
   claim($sellerStatus===200 && str_contains($badSellerPage,'geldig e-mailadres')
     && db()->query("SELECT name FROM lot_sellers WHERE id=$sellerId")->fetchColumn()==='Demo particulier',
