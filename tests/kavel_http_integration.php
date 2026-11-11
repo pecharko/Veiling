@@ -127,6 +127,7 @@ try {
   $creatorActor=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
   claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
     && (int)$sellerRecord['updated_by_admin_id']===$creatorActor
+    && $sellerRecord['created_by_name']!=='' && $sellerRecord['updated_by_name']!==''
     && $sellerRecord['created_at']!==null && $sellerRecord['updated_at']!==null,
     'Original creator and last updater recorded on first save');
   [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
@@ -567,11 +568,12 @@ try {
     'name'=>'Fictieve assistentverkoper','email'=>'assistent@example.invalid',
     'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren'
   ]);
-  $assistantSeller=db()->query("SELECT created_by_admin_id,updated_by_admin_id,created_at,updated_at FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetch();
+  $assistantSeller=db()->query("SELECT created_by_admin_id,updated_by_admin_id,created_by_name,updated_by_name,created_at,updated_at FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetch();
   claim($sellerFormStatus===303 && $assistantSeller
     && (int)$assistantSeller['created_by_admin_id']===$actor
     && (int)$assistantSeller['updated_by_admin_id']===$actor
-    && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null,
+    && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
+    && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
@@ -586,12 +588,16 @@ try {
     'seller_type'=>'particulier','name'=>'Fictieve verkoper gewijzigd',
     'email'=>'assistent@example.invalid','street'=>'Voorbeeldstraat',
     'house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
-    'created_by_admin_id'=>'999999','updated_by_admin_id'=>'999999'
+    'created_by_admin_id'=>'999999','updated_by_admin_id'=>'999999',
+    'created_by_name'=>'FAKE','updated_by_name'=>'FAKE'
   ]);
-  $masterEditedSeller=db()->query("SELECT name,created_by_admin_id,updated_by_admin_id,updated_at FROM lot_sellers WHERE id=".$assistantSellerId)->fetch();
+  $masterEditedSeller=db()->query("SELECT name,created_by_admin_id,updated_by_admin_id,created_by_name,updated_by_name,updated_at FROM lot_sellers WHERE id=".$assistantSellerId)->fetch();
   claim($masterSaveStatus===303 && $masterEditedSeller['name']==='Fictieve verkoper gewijzigd'
     && (int)$masterEditedSeller['created_by_admin_id']===$actor
     && (int)$masterEditedSeller['updated_by_admin_id']===$actor
+    && $masterEditedSeller['created_by_name']===$assistantSeller['created_by_name']
+    && $masterEditedSeller['updated_by_name']===$assistantSeller['updated_by_name']
+    && $masterEditedSeller['updated_by_name']!=='FAKE'
     && $masterEditedSeller['updated_at']!==null,
     'Auctioneer edits seller and forged audit actor fields are ignored');
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
