@@ -333,12 +333,6 @@ if ($error === $cancelAuctionWarning) {
       <?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit"><?=$lot?'Wijzigingen opslaan':'Kavel opslaan'?></button><?php endif; ?>
     </div>
   </div>
-  <?php if($lot): ?>
-    <div class="lot-audit-summary" aria-label="Bewerkingsgeschiedenis">
-      <span><strong>Aangemaakt door:</strong> <?=e($creatorLabel)?> · <?=e(lot_audit_label((string)($lot['created_at']??'')))?> (Brussel)</span>
-      <span><strong>Laatste wijziging:</strong> <?=e($lastEditorLabel)?> · <?=e(lot_audit_label($lot['last_edited_at']??null))?><?=!empty($lot['last_edited_at'])?' (Brussel)':''?></span>
-    </div>
-  <?php endif; ?>
   <form id="lot-editor-form" method="post" enctype="multipart/form-data">
     <?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="save"><input type="hidden" name="donation_confirmed" value="0">
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
@@ -443,6 +437,12 @@ if ($error === $cancelAuctionWarning) {
   </section>
   <div class="lot-editor-bottom"><a class="secondary" href="<?=e(url('admin/index.php'))?>">Annuleren</a><?php if($canEditLot): ?><button form="lot-editor-form" class="primary" type="submit">Wijzigingen opslaan</button><?php endif; ?></div>
   <?php if($canEditLot): ?><details class="lot-editor-danger"><summary>Gevarenzone — kavel definitief verwijderen</summary><p>Dit verwijdert het kavel en alle gekoppelde foto's. Deze actie kan niet ongedaan gemaakt worden.</p><form method="post" onsubmit="return confirm('Dit kavel en alle foto\'s definitief verwijderen?')"><?=csrf_field()?><input type="hidden" name="id" value="<?=$id?>"><input type="hidden" name="action" value="delete-lot"><button class="danger" type="submit">Kavel definitief verwijderen</button></form></details><?php endif; ?>
+  <?php endif; ?>
+  <?php if($lot): ?>
+    <div class="lot-audit-summary" aria-label="Bewerkingsgeschiedenis">
+      <span><strong>Aangemaakt door:</strong> <?=e($creatorLabel)?> · <?=e(lot_audit_label((string)($lot['created_at']??'')))?> (Brussel)</span>
+      <span><strong>Laatste wijziging:</strong> <?=e($lastEditorLabel)?> · <?=e(lot_audit_label($lot['last_edited_at']??null))?><?=!empty($lot['last_edited_at'])?' (Brussel)':''?></span>
+    </div>
   <?php endif; ?>
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
