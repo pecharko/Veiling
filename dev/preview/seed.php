@@ -125,9 +125,9 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
     if (!is_string($sloganSql) || !str_contains($sloganSql, "ADD COLUMN artist_slogan VARCHAR(250) NOT NULL DEFAULT ''")) {
         throw new RuntimeException('Reviewed artist slogan migration missing.');
     }
-    $sloganSql=preg_replace('/^\\s*--[^\\n]*$/m','',$sloganSql);
+    $sloganSql=preg_replace('/^\s*--[^\n]*$/m','',$sloganSql);
     $pdo->exec(trim((string)$sloganSql));
-    echo "Optional artist slogan added to isolated preview.\\n";
+    echo "Optional artist slogan added to isolated preview.\n";
 }
 // Add optional private seller mobile number only to the isolated Docker database.
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch()) {
