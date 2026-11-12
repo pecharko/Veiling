@@ -287,7 +287,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       bar.removeAttribute('value');
       status.textContent="Gegevens en foto's uploaden…";
       const xhr=new XMLHttpRequest();
-      xhr.open('POST',form.action || window.location.href);
+      xhr.open('POST',form.getAttribute('action') || window.location.href);
       xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
       xhr.responseType='json';
       const fail=message => {
