@@ -16,17 +16,31 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Verify independent v7 snapshot release protections
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: bash
         run: |
+          set -euo pipefail
           python3 -B -m unittest discover -s tests -p deploy_lot_audit_snapshot_v7_test.py -v
           python3 - <<'PY'
           from scripts.shared_ovh_release import PROTECTED
           assert 'private/snapshots' in PROTECTED
           PY
-          if test -f releases/lot-audit-snapshot-v7-20261111.json; then
-            python3 -B -m scripts.deploy_lot_audit_snapshot_v7 plan
-          else
-            echo 'Awaiting independently authenticated OVH baseline and same-head v7 manifest'
+          # Historical v7 source is immutable and cannot be silently
+          # rebound to a new singer/slogan snapshot revision.
+          HISTORIC_V7_SHA=3c9b10a80001fe6ad4d59aa776f638b2dbf9ef42
+          git merge-base --is-ancestor "$HISTORIC_V7_SHA" "$PR_BASE_SHA"
+          history="$(mktemp -d "$RUNNER_TEMP/historical-v7.XXXXXXXX")"
+          trap 'git worktree remove --force "$history" 2>/dev/null || true' EXIT
+          git worktree add --detach "$history" "$HISTORIC_V7_SHA"
+          (cd "$history" && python3 -B -m scripts.deploy_lot_audit_snapshot_v7 plan)
+          # Current protected snapshot revision uses only its own manifest
+          # and independently owner-bound dispatch workflow.
+          if grep -F -x 'private/snapshots.php' <(git diff --name-only "$PR_BASE_SHA" HEAD); then
+            python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
+            python3 -B -m scripts.deploy_artist_slogan_snapshot plan
           fi
       - name: Lint candidate snapshot source
         run: php -l private/snapshots.php
