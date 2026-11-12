@@ -179,7 +179,9 @@ function preview_seed_public_artist(PDO $pdo): void {
     $seller->execute();
     $sellerId = $seller->fetchColumn();
     if (!$sellerId) return;
-    $pdo->prepare("UPDATE lot_sellers SET artist_slogan='Kunst die verwondert',artist_intro='Een fictieve maker, uitsluitend voor de lokale preview.' WHERE id=? AND artist_slogan='' AND artist_intro=''")
+    $pdo->prepare("UPDATE lot_sellers SET artist_slogan='Kunst die verwondert' WHERE id=? AND artist_slogan=''")
+        ->execute([(int)$sellerId]);
+    $pdo->prepare("UPDATE lot_sellers SET artist_intro='Een fictieve maker, uitsluitend voor de lokale preview.' WHERE id=? AND artist_intro=''")
         ->execute([(int)$sellerId]);
     $pdo->prepare("UPDATE lots SET seller_id=? WHERE lot_number=101 AND status='published' AND seller_id IS NULL")
         ->execute([(int)$sellerId]);
