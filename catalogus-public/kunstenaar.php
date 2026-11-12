@@ -32,8 +32,10 @@ $photosStmt->execute([$artistId]);
 $portrait = null;
 $works = [];
 foreach ($photosStmt->fetchAll(PDO::FETCH_ASSOC) as $photo) {
-  if ($photo['image_kind']==='portrait') $portrait = (string)$photo['path'];
-  elseif ($photo['image_kind']==='work') $works[] = (string)$photo['path'];
+  $path = (string)$photo['path'];
+  if (!preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D', $path)) continue;
+  if ($photo['image_kind']==='portrait') $portrait = $path;
+  elseif ($photo['image_kind']==='work') $works[] = $path;
 }
 $name = (string)$artist['artist_name'];
 $slogan = trim((string)$artist['artist_slogan']);
