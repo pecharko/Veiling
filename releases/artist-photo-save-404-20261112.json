@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "34dded0f28171cd3b70b092849d271f86c3bb79e578b51fb4be50423f4f24aef",
+      "remote_sha256": "7a7ac18f3d7e4f7b428f90a7189130b2676daa5dc6e11f376b18b2f7b117edad"
+    }
+  ]
+}
