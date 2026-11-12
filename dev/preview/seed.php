@@ -172,6 +172,19 @@ if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller->execute(['particulier','Voorbeeldparticulier','particulier@example.invalid','Voorbeeldstraat','2','9160','Lokeren','Voorbeeldparticulier','BE68539007547034','','']);
     echo "Two synthetic sellers added to local preview.\n";
 }
+// Link one fictitious published lot to the fictitious artist so the public
+// profile can be reviewed locally, without copying production records.
+function preview_seed_public_artist(PDO $pdo): void {
+    $seller = $pdo->prepare("SELECT id FROM lot_sellers WHERE email='kunst@example.invalid' AND seller_type='kunstenaar' LIMIT 1");
+    $seller->execute();
+    $sellerId = $seller->fetchColumn();
+    if (!$sellerId) return;
+    $pdo->prepare("UPDATE lot_sellers SET artist_slogan='Kunst die verwondert',artist_intro='Een fictieve maker, uitsluitend voor de lokale preview.' WHERE id=? AND artist_slogan='' AND artist_intro=''")
+        ->execute([(int)$sellerId]);
+    $pdo->prepare("UPDATE lots SET seller_id=? WHERE lot_number=101 AND status='published' AND seller_id IS NULL")
+        ->execute([(int)$sellerId]);
+}
+
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
 // Both active and archived sources are seeded to exercise the real seven-day ranking.
 function preview_seed_popularity(PDO $pdo): void {
@@ -202,6 +215,7 @@ function preview_seed_popularity(PDO $pdo): void {
     }
 }
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
+    preview_seed_public_artist($pdo);
     preview_seed_popularity($pdo);
     echo "Preview fixtures already present.\n";
     return;
@@ -221,6 +235,7 @@ try {
     ];
     foreach ($samples as $row) $insert->execute($row);
     $pdo->commit();
+    preview_seed_public_artist($pdo);
     preview_seed_popularity($pdo);
     echo "Six synthetic lots and preview admin prepared.\n";
 } catch (Throwable $e) {
