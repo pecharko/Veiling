@@ -22,6 +22,14 @@ if (isset($_GET['id'])) {
 $values=$defaults;
 // Check ownership on every edit view and before any write, including photo actions.
 if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
+$ajaxSave=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='save';
+$ajaxReply=static function(int $code,array $body): void {
+  http_response_code($code);
+  header('Content-Type: application/json; charset=utf-8');
+  header('Cache-Control: no-store');
+  echo json_encode($body,JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+  exit;
+};
 if (is_post()) {
   check_csrf();
   $action=(string)($_POST['action']??'');
@@ -59,12 +67,15 @@ if (is_post()) {
     }
     if ($failed) {
       flash('Verkoper bewaard, maar niet alle foto’s lukten: '.implode('; ',$failed),'warning');
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
       redirect('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     if ($fromLot) {
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId])]);
       redirect('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
     }
     flash('Verkoper opgeslagen.');
+    if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkopers.php')]);
     redirect('admin/verkopers.php');
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
@@ -74,6 +85,7 @@ if (is_post()) {
   } catch (RuntimeException $ex) {
     $error=$ex->getMessage();
   }
+  if ($ajaxSave && $error!=='') $ajaxReply(422,['error'=>$error]);
 } elseif ($editId!==null) {
   try {
     $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
@@ -137,7 +149,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
     <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
-    <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form">
+    <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form" data-seller-upload="1">
       <?=csrf_field()?>
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="seller_id" value="<?=$editId!==null?(int)$editId:''?>">
@@ -216,10 +228,15 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       </div>
       <div class="seller-form-actions">
         <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
-        <button class="primary" type="submit">Verkoper opslaan</button>
+        <button class="primary" type="submit" id="seller-save-button">Verkoper opslaan</button>
       </div>
+      <div id="seller-save-progress" class="seller-save-progress" role="status" aria-live="polite" hidden>
+        <div class="seller-save-progress-heading"><strong id="seller-save-status">Gegevens uploaden…</strong><span id="seller-save-percent" hidden></span></div>
+        <progress id="seller-upload-progress" max="100" aria-label="Voortgang upload"></progress>
+        <p>Sluit deze pagina niet zolang het opslaan bezig is.</p>
+      </div>
+      <div id="seller-save-error" class="alert error" role="alert" hidden></div>
     </form>
-    <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? seller_audit_time((string)$audit['created_at']).' (Brussel)' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? seller_audit_time((string)$audit['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></div></div><?php endif; ?>
     <?php if($editId!==null && $values['seller_type']==='kunstenaar'): ?>
     <div class="seller-photo-delete-grid">
       <?php foreach($photos as $photo): ?>
@@ -235,6 +252,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
     </div>
     <?php endif; ?>
   </section>
+    <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? seller_audit_time((string)$audit['created_at']).' (Brussel)' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? seller_audit_time((string)$audit['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></div></div><?php endif; ?>
 </div>
 <script>
 (function () {
@@ -247,6 +265,77 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       }
     });
   });
+  const form=document.getElementById('seller-manager-form');
+  const submit=form?.querySelector('#seller-save-button');
+  const panel=document.getElementById('seller-save-progress');
+  const bar=document.getElementById('seller-upload-progress');
+  const pct=document.getElementById('seller-save-percent');
+  const status=document.getElementById('seller-save-status');
+  const error=document.getElementById('seller-save-error');
+  let saving=false;
+  if (form && submit && panel && bar && pct && status && error && window.XMLHttpRequest && window.FormData) {
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      if (saving || !form.reportValidity()) return;
+      saving=true;
+      submit.disabled=true;
+      submit.textContent='Bezig met opslaan…';
+      error.hidden=true;
+      error.textContent='';
+      panel.hidden=false;
+      pct.hidden=true;
+      bar.removeAttribute('value');
+      status.textContent="Gegevens en foto's uploaden…";
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST',form.action || window.location.href);
+      xhr.setRequestHeader('X-Requested-With','XMLHttpRequest');
+      xhr.responseType='json';
+      const fail=message => {
+        saving=false;
+        submit.disabled=false;
+        submit.textContent='Verkoper opslaan';
+        panel.hidden=true;
+        error.textContent=message;
+        error.hidden=false;
+      };
+      xhr.upload.addEventListener('progress', e => {
+        if (!saving || !e.lengthComputable || !e.total) return;
+        bar.value=Math.min(100,Math.round(e.loaded*100/e.total));
+        pct.textContent=bar.value+'%';
+        pct.hidden=false;
+      });
+      xhr.upload.addEventListener('load', () => {
+        if (!saving) return;
+        status.textContent="Gegevens en foto's verwerken…";
+        bar.removeAttribute('value');
+        pct.hidden=true;
+      });
+      xhr.addEventListener('load', () => {
+        const body=xhr.response;
+        if (xhr.status===200 && body && typeof body.redirect==='string') {
+          const target=new URL(body.redirect,window.location.href);
+          if (target.origin===window.location.origin) {
+            saving=false;
+            status.textContent='Verkoper opgeslagen. Pagina openen…';
+            window.location.assign(target.href);
+            return;
+          }
+        }
+        if (xhr.status===422 && body && typeof body.error==='string') {
+          fail(body.error);
+          return;
+        }
+        fail('Opslaan kon niet worden bevestigd. Controleer eerst of de verkoper al bewaard is voordat je opnieuw probeert.');
+      });
+      xhr.addEventListener('error', () => fail('Verbinding verbroken. Controleer eerst of de verkoper al bewaard is voordat je opnieuw probeert.'));
+      xhr.addEventListener('abort', () => fail('Upload afgebroken. Controleer eerst of de verkoper al bewaard is voordat je opnieuw probeert.'));
+      try { xhr.send(new FormData(form)); }
+      catch (_) { fail('Upload niet gestart. Controleer je verbinding.'); }
+    });
+    window.addEventListener('beforeunload', event => {
+      if (saving) { event.preventDefault(); event.returnValue=''; }
+    });
+  }
   const type=document.getElementById('seller-type');
   const fields=document.getElementById('seller-artist-fields');
   if (!type || !fields) return;
