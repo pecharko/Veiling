@@ -54,3 +54,6 @@ private/geoip/
 # Local UI preview (generated, never commit)
 node_modules/
 dev/preview/.screenshots/
+
+# Synthetic artist photos copied locally from Downloads; never commit images.
+dev/preview/local-artists/
