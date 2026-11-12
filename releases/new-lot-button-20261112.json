@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "cd4fd2df037d8a7a4d6ea7043702d43014e5d0963fc949392c51564804582b9c",
+      "remote_sha256": "d8dd63c635d5a1f9704fb109bbb031c315eb1779d5879b8f45b930fc1b7c5742"
+    },
+    {
+      "path": "catalogus-public/admin/index.php",
+      "source_sha256": "cec53c8c059c278bf69941796cf34771349a8755bc7985ab3af713e0447fda45",
+      "remote_sha256": "0dace486a4bdcca9036796002ed5dbf9f80871773b5a9e3458d8ebed58f42b90"
+    }
+  ]
+}
