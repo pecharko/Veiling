@@ -185,6 +185,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
                   <label>Werk <?=$slot?><input type="file" name="photo_work_<?=$slot?>" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer foto van werk <?=$slot?>"></label>
                   <small>Klik of sleep een foto hierheen</small>
                 </div>
+                <button type="button" class="seller-photo-replace secondary" data-seller-photo-replace>Foto vervangen</button>
                 <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
                 <p class="seller-photo-status" role="status" aria-live="polite"></p>
               </div>
@@ -200,6 +201,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
                 <label>Portret<input type="file" name="photo_portrait_1" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer portretfoto"></label>
                 <small>Klik of sleep een foto hierheen</small>
               </div>
+              <button type="button" class="seller-photo-replace secondary" data-seller-photo-replace>Foto vervangen</button>
               <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
               <p class="seller-photo-status" role="status" aria-live="polite"></p>
             </div>
