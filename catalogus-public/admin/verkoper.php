@@ -200,7 +200,6 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         <button class="primary" type="submit">Verkoper opslaan</button>
       </div>
     </form>
-    <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? seller_audit_time((string)$audit['created_at']).' (Brussel)' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? seller_audit_time((string)$audit['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></div></div><?php endif; ?>
     <?php if($editId!==null && $values['seller_type']==='kunstenaar'): ?>
     <div class="seller-photo-delete-grid">
       <?php foreach($photos as $photo): ?>
@@ -216,6 +215,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
     </div>
     <?php endif; ?>
   </section>
+    <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? seller_audit_time((string)$audit['created_at']).' (Brussel)' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? seller_audit_time((string)$audit['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></div></div><?php endif; ?>
 </div>
 <script>
 (function () {
