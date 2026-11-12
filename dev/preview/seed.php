@@ -187,6 +187,97 @@ function preview_seed_public_artist(PDO $pdo): void {
         ->execute([(int)$sellerId]);
 }
 
+
+// Populate only the verified isolated preview with fictional artist portraits,
+// artworks and linked lots. Existing sellers, photos and lots are never overwritten.
+function preview_seed_artist_gallery(PDO $pdo): void {
+    if (getenv('LOCAL_PREVIEW_ISOLATED') !== '1'
+        || cfg('setup_key') !== 'local-preview-only-nonproduction'
+        || db()->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test'
+        || !function_exists('imagewebp')) {
+        throw new RuntimeException('Fictieve kunstenaars uitsluitend in de lokale preview.');
+    }
+    $artists = [
+        ['Mira Veld','abstract','Abstracte kleurvelden en ritmische composities.',
+            ['Kleurstroom','Ritme in blauw'],[901101,901102]],
+        ['Noor Steen','ceramic','Sculpturale vormen geïnspireerd op klei en natuur.',
+            ['Stille vormen','Aardlagen'],[901103,901104]],
+        ['Elias Wolk','graphic','Grafische kunst met geometrie en contrast.',
+            ['Lichtlijnen','Stad in beweging'],[901105,901106]],
+    ];
+    $findSeller=$pdo->prepare('SELECT id FROM lot_sellers WHERE email=? LIMIT 1');
+    $insertSeller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,artist_name,artist_url,artist_intro,artist_slogan) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
+    $findLot=$pdo->prepare('SELECT id FROM lots WHERE lot_number=? LIMIT 1');
+    $addLot=$pdo->prepare("INSERT INTO lots (lot_number,title,subtitle,category,description,details,status,sale_location,market_price,starting_bid,seller_id) VALUES (?,?,'Fictief kunstwerk','Moderne Kunst',?,'Enkel testgegevens','published','markt',?,?,?)");
+    $findImage=$pdo->prepare('SELECT id FROM seller_images WHERE seller_id=? AND image_kind=? AND slot=?');
+    $addImage=$pdo->prepare('INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,?,?,?)');
+    $findLotImage=$pdo->prepare('SELECT id FROM lot_images WHERE lot_id=? LIMIT 1');
+    $addLotImage=$pdo->prepare('INSERT INTO lot_images (lot_id,path,sort_order) VALUES (?,?,1)');
+    $dir=dirname(__DIR__,2).'/catalogus-public/uploads/preview-fixtures';
+    if (!is_dir($dir) && !mkdir($dir,0755,true) && !is_dir($dir)) throw new RuntimeException('Preview fotomap onbeschikbaar.');
+    foreach ($artists as $index=>$artist) {
+        [$name,$style,$intro,$titles,$numbers]=$artist;
+        $email='preview-artist-'.($index+1).'@example.invalid';
+        $findSeller->execute([$email]); $sellerId=$findSeller->fetchColumn();
+        if (!$sellerId) {
+            $insertSeller->execute(['kunstenaar',$name,$email,'Fictiestraat',(string)($index+1),'9160','Lokeren',$name,'https://example.org/',$intro,'Fictieve kunstenaar · lokale test']);
+            $sellerId=(int)$pdo->lastInsertId();
+        }
+        $sellerId=(int)$sellerId;
+        foreach (['portrait'=>1,'work'=>3] as $kind=>$slots) {
+            for ($slot=1;$slot<=$slots;$slot++) {
+                $findImage->execute([$sellerId,$kind,$slot]);
+                if ($findImage->fetchColumn()) continue;
+                $relative='uploads/preview-fixtures/artist-'.($index+1).'-'.$kind.'-'.$slot.'.webp';
+                $absolute=dirname(__DIR__,2).'/catalogus-public/'.$relative;
+                if (!is_file($absolute)) {
+                    $image=imagecreatetruecolor(600,450);
+                    if (!$image) throw new RuntimeException('Preview image allocation failed.');
+                    $palette=[['#204E5F','#E5B45A','#F0785C'],['#56654A','#E2C8A3','#AD7255'],['#26274A','#E7DCD0','#E85B73']][$index];
+                    $hex=static function(string $color) use ($image): int {
+                        return imagecolorallocate($image,hexdec(substr($color,1,2)),hexdec(substr($color,3,2)),hexdec(substr($color,5,2)));
+                    };
+                    $background=$hex($palette[0]); $accent=$hex($palette[1]); $highlight=$hex($palette[2]);
+                    imagefilledrectangle($image,0,0,599,449,$background);
+                    if ($kind==='portrait') {
+                        imagefilledellipse($image,300,180,150,168,$accent);
+                        imagefilledellipse($image,300,405,310,270,$highlight);
+                        imagefilledrectangle($image,240,330,360,450,$highlight);
+                    } elseif ($style==='abstract') {
+                        for ($shape=0;$shape<9;$shape++) imagefilledellipse($image,100+($shape*71+$slot*34)%480,70+($shape*61)%340,90+$shape*7,130,($shape%2)?$accent:$highlight);
+                    } elseif ($style==='ceramic') {
+                        for ($shape=0;$shape<5;$shape++) {
+                            imagefilledellipse($image,140+$shape*80,295-$shape*27,110+$slot*14,190+$shape*12,$accent);
+                            imagefilledellipse($image,140+$shape*80,230-$shape*24,70,28,$highlight);
+                        }
+                    } else {
+                        for ($shape=0;$shape<13;$shape++) {
+                            $x=($shape*67+$slot*39)%600;
+                            imageline($image,$x,0,($x+280)%600,449,($shape%2)?$accent:$highlight);
+                            imagefilledrectangle($image,$x,($shape*43)%400,$x+13,($shape*43)%400+56,$accent);
+                        }
+                    }
+                    if (!imagewebp($image,$absolute,82)) { imagedestroy($image); throw new RuntimeException('Preview image generation failed.'); }
+                    imagedestroy($image);
+                }
+                $addImage->execute([$sellerId,$kind,$slot,$relative]);
+            }
+        }
+        foreach ($numbers as $n=>$lotNumber) {
+            $findLot->execute([$lotNumber]);
+            $lotId=$findLot->fetchColumn();
+            if ($lotId) continue; // Never overwrite user-created preview lots.
+            $addLot->execute([$lotNumber,$titles[$n],$intro,380+$index*240+$n*100,90+$index*45+$n*20,$sellerId]);
+            $lotId=(int)$pdo->lastInsertId();
+            $findLotImage->execute([$lotId]);
+            if (!$findLotImage->fetchColumn()) {
+                $addLotImage->execute([$lotId,'uploads/preview-fixtures/artist-'.($index+1).'-work-'.($n+1).'.webp']);
+            }
+        }
+    }
+    echo "Three synthetic artists, up to twelve images and six linked lots available in isolated preview.\n";
+}
+
 // Synthetic popularity statistics exclusively inside the guarded disposable preview DB.
 // Both active and archived sources are seeded to exercise the real seven-day ranking.
 function preview_seed_popularity(PDO $pdo): void {
@@ -218,6 +309,7 @@ function preview_seed_popularity(PDO $pdo): void {
 }
 if ((int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn() !== 0) {
     preview_seed_public_artist($pdo);
+    preview_seed_artist_gallery($pdo);
     preview_seed_popularity($pdo);
     echo "Preview fixtures already present.\n";
     return;
