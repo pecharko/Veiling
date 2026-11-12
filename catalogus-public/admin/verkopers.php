@@ -69,7 +69,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     </form>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
-        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Kavels</th><th scope="col">Aangemaakt door / op</th><th scope="col">Laatst gewijzigd door / op</th><th scope="col">Acties</th></tr></thead>
+        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
         <tbody>
           <?php foreach($filteredRows as $r): ?>
             <tr>
@@ -78,15 +78,13 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
               <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
-              <td class="seller-audit"><strong><?=e($r['creator_name'] ?: 'Onbekend')?></strong><small><?=e($r['created_at'] ? seller_audit_time((string)$r['created_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
-              <td class="seller-audit"><strong><?=e($r['editor_name'] ?: 'Onbekend')?></strong><small><?=e($r['updated_at'] ? seller_audit_time((string)$r['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></small></td>
               <td><div class="seller-row-actions">
                 <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$filteredRows): ?><tr><td colspan="7">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$filteredRows): ?><tr><td colspan="5">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>

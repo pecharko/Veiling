@@ -39,7 +39,7 @@ function seller_clean(mixed $input): array {
   $types = ['kunstenaar','particulier'];
   $type = $input['seller_type'] ?? '';
   if (!is_string($type) || !in_array($type, $types, true)) throw new InvalidArgumentException('Kies kunstenaar of particulier.');
-  $limits = ['name'=>150,'email'=>254,'mobile_number'=>30,'street'=>150,'house_number'=>20,'postal_code'=>20,'municipality'=>120,'bank_account_name'=>100,'bank_account_iban'=>42,'artist_name'=>50,'artist_url'=>2048,'artist_intro'=>500];
+  $limits = ['name'=>150,'email'=>254,'mobile_number'=>30,'street'=>150,'house_number'=>20,'postal_code'=>20,'municipality'=>120,'bank_account_name'=>100,'bank_account_iban'=>42,'artist_name'=>50,'artist_url'=>2048,'artist_intro'=>500,'artist_slogan'=>250];
   $fields = [];
   foreach ($limits as $key=>$limit) {
     $value=$input[$key] ?? '';
@@ -68,6 +68,7 @@ function seller_clean(mixed $input): array {
     $fields['artist_name']='';
     $fields['artist_url']='';
     $fields['artist_intro']='';
+    $fields['artist_slogan']='';
   }
   return ['seller_type'=>$type]+$fields;
 }

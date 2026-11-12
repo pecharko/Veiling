@@ -189,3 +189,41 @@ body{background:#fffaf6;color:var(--ink)}
 .main-photo .detail-sold-badge{position:absolute;top:47px;left:14px;right:auto;z-index:4;margin:0}
 .main-photo .detail-popular-tag{position:absolute;top:20px;right:14px;z-index:3;min-width:118px;padding:12px 16px 11px;border-radius:2px;font-size:13px;line-height:1.2;letter-spacing:.07em;text-transform:uppercase;pointer-events:none}
 @media(max-width:800px){.main-photo .detail-sold-badge{top:39px;left:10px;min-width:100px;padding:9px 9px;font-size:10px}.main-photo .detail-popular-tag{top:16px;right:10px;min-width:100px;padding:9px 9px;font-size:10px}}
+
+
+/* Public artist profile: portrait alongside introduction and an artwork gallery. */
+.artist-profile{padding:30px 0 85px;min-height:62vh}
+.artist-profile .back-link{display:inline-block;margin-bottom:28px}
+.artist-profile-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:clamp(22px,5vw,68px);align-items:start;background:#fffaf6;border:1px solid #ebdcd2;border-radius:14px;padding:clamp(24px,4vw,60px)}
+.artist-profile-copy{min-width:0}.artist-profile-copy .eyebrow,.artist-profile-works .eyebrow{color:#9b6a65}
+.artist-profile h1{font:400 clamp(36px,5vw,68px)/1.12 Georgia,serif;color:var(--wine,#8a001b);margin:16px 0 20px;overflow-wrap:anywhere}
+.artist-profile-slogan{font:italic 400 clamp(20px,2.5vw,30px)/1.45 Georgia,serif;color:#425e54;margin:0 0 24px;overflow-wrap:anywhere}
+.artist-profile-intro{max-width:65ch;font-size:16px;line-height:1.85;color:#33463e;overflow-wrap:anywhere}
+.artist-profile-portrait{margin:0;background:#f2efea;border-radius:10px;overflow:hidden}
+.artist-profile-portrait img{display:block;width:100%;max-height:540px;aspect-ratio:4/5;object-fit:contain}
+.artist-profile-works{padding-top:56px}
+.artist-profile-works h2{font:400 clamp(28px,3.4vw,42px)/1.2 Georgia,serif;color:var(--wine,#8a001b);margin:10px 0 25px}
+.artist-profile-works-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+.artist-profile-works-grid figure{margin:0;border:1px solid #ebdcd2;border-radius:10px;background:#fffaf6;padding:12px;min-width:0}
+.artist-profile-works-grid img{display:block;width:100%;height:320px;object-fit:contain;background:#f4f2ee;border-radius:6px}
+@media(max-width:800px){.artist-profile{padding:20px 0 50px}.artist-profile-hero{grid-template-columns:1fr;padding:22px}.artist-profile-portrait img{max-height:420px}.artist-profile-works-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.artist-profile-works-grid img{height:230px}}
+@media(max-width:540px){.artist-profile-works-grid{grid-template-columns:1fr}.artist-profile-works-grid img{height:310px}}
+
+
+/* Editorial artist brochure: understated print-like rhythm and full artworks. */
+.artist-brochure{padding-top:28px;padding-bottom:78px}
+.artist-brochure .back-link{margin-bottom:24px}
+.artist-brochure-sheet{max-width:1100px;margin:0 auto;padding:clamp(26px,4vw,56px);background:#faf8f5;color:#28221f}
+.artist-brochure-heading{text-align:center;padding:4px 0 clamp(28px,4vw,48px)}
+.artist-brochure-heading .eyebrow{color:#897a70;letter-spacing:.22em;font-size:10px}
+.artist-brochure-heading h1{font:400 clamp(48px,8vw,104px)/1.08 Georgia,serif;letter-spacing:-.055em;color:#28221f;margin:10px 0 8px}
+.artist-brochure-subheading{display:flex;align-items:center;justify-content:center;gap:24px}
+.artist-brochure-rule{height:1px;background:#a99b8d;flex:1 1 75px;max-width:110px}
+.artist-brochure .artist-profile-slogan{font:italic 400 clamp(18px,2.7vw,31px)/1.4 Georgia,serif;color:#302a26;margin:0;max-width:740px}
+.artist-brochure-columns{display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:clamp(20px,3.2vw,42px)}
+.artist-brochure-column{min-width:0;display:flex;flex-direction:column;gap:clamp(24px,3vw,38px)}
+.artist-brochure .artist-profile-portrait,.artist-brochure-artwork{margin:0;background:#f0ece7;border-radius:0;overflow:hidden}
+.artist-brochure .artist-profile-portrait img{display:block;width:100%;height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}
+.artist-brochure-artwork img{display:block;width:100%;height:auto;object-fit:contain}
+.artist-brochure .artist-profile-intro{font:400 clamp(18px,2.4vw,27px)/1.5 Georgia,serif;color:#302a26;max-width:unset;padding:20px 0 8px}
+@media(max-width:700px){.artist-brochure{padding-bottom:40px}.artist-brochure-sheet{padding:24px 18px}.artist-brochure-heading h1{font-size:clamp(42px,10vw,67px)}.artist-brochure-subheading{gap:10px}.artist-brochure-rule{max-width:35px}.artist-brochure-columns{grid-template-columns:1fr;gap:24px}.artist-brochure .artist-profile-intro{padding:0;font-size:19px}.artist-brochure-column{gap:24px}.artist-brochure-column:first-child{display:contents}.artist-brochure .artist-profile-portrait{order:0}.artist-brochure-column:nth-child(2){display:contents}.artist-brochure .artist-profile-intro{order:1}.artist-brochure-artwork{order:2}}
