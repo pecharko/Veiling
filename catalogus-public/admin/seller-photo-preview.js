@@ -8,6 +8,14 @@
   const types = new Set(['image/jpeg', 'image/png', 'image/webp']);
   const maxBytes = 16 * 1024 * 1024;
   const maxPixels = 48000000;
+  let validating = 0;
+  let queuedSave = false;
+  form.addEventListener('submit', event => {
+    if (validating > 0) {
+      event.preventDefault();
+      queuedSave = true;
+    }
+  });
 
   for (const tile of form.querySelectorAll('[data-seller-photo-slot]')) {
     const input = tile.querySelector('[data-seller-photo-input]');
@@ -44,6 +52,7 @@
       const nextUrl = URL.createObjectURL(file);
       const img = new Image();
       img.alt = 'Nog niet opgeslagen: ' + file.name;
+      validating++;
       try {
         await new Promise((resolve, rejectLoad) => {
           img.onload = resolve;
@@ -69,6 +78,12 @@
       } catch (error) {
         URL.revokeObjectURL(nextUrl);
         if (request === sequence) reject('Deze afbeelding kan niet worden geopend. Kies een andere foto.');
+      } finally {
+        validating--;
+        if (validating === 0 && queuedSave) {
+          queuedSave = false;
+          form.requestSubmit();
+        }
       }
     };
     input.addEventListener('change', () => {
