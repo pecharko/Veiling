@@ -41,7 +41,7 @@ jobs:
           # historical tree, never against a future artist_slogan revision.
           HISTORIC_V7_SHA=3c9b10a80001fe6ad4d59aa776f638b2dbf9ef42
           history="$(mktemp -d "$RUNNER_TEMP/historical-v7.XXXXXXXX")"
-          trap 'git worktree remove --force "$history" 2>/dev/null || true' EXIT
+          trap 'git worktree remove --force "$history"' EXIT
           git worktree add --detach "$history" "$HISTORIC_V7_SHA"
           (cd "$history" && python3 -B -m scripts.deploy_lot_audit_snapshot_v7 plan)
           python3 -B -m scripts.deploy_artist_slogan_snapshot plan
