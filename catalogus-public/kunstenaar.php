@@ -33,7 +33,13 @@ $portrait = null;
 $works = [];
 foreach ($photosStmt->fetchAll(PDO::FETCH_ASSOC) as $photo) {
   $path = (string)$photo['path'];
-  if (!preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D', $path)) continue;
+  $normalUpload = preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D', $path) === 1;
+  // Synthetic fixtures have a separate fixed namespace. Never serve this
+  // exception outside the isolated preview, even on an admin preview session.
+  $syntheticPreview = getenv('LOCAL_PREVIEW_ISOLATED') === '1'
+    && cfg('setup_key') === 'local-preview-only-nonproduction'
+    && preg_match('~^uploads/preview-fixtures/artist-[1-3]-(?:portrait-1|work-[1-3])\\.webp$~D', $path) === 1;
+  if (!$normalUpload && !$syntheticPreview) continue;
   if ($photo['image_kind']==='portrait') $portrait = $path;
   elseif ($photo['image_kind']==='work') $works[] = $path;
 }
