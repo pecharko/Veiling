@@ -13,7 +13,7 @@ $fromLot=($_GET['from_lot']??'')==='1';
 $returnLotId=filter_var($_GET['lot_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
 $returnLotId=$returnLotId===false?0:(int)$returnLotId;
 $returnLotUrl=url('admin/kavel.php',$returnLotId>0?['id'=>$returnLotId]:[]);
-$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','mobile_number'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_intro'=>''];
+$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','mobile_number'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_intro'=>'','artist_slogan'=>''];
 $editId=null;
 if (isset($_GET['id'])) {
   $editId=filter_var($_GET['id'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
@@ -168,6 +168,11 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         <div class="seller-fields-grid">
           <label>Kunstenaarsnaam <span class="lot-required">*</span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
           <label>Website kunstenaar <span class="lot-required">*</span><input required name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
+        </div>
+        <div class="seller-introduction">
+          <label for="artist-slogan">Slogan van de kunstenaar (optioneel)</label>
+          <input id="artist-slogan" name="artist_slogan" type="text" maxlength="250" value="<?=e((string)$values['artist_slogan'])?>" placeholder="Een korte slogan van de kunstenaar">
+          <p class="lot-editor-help">Maximaal 250 tekens.</p>
         </div>
         <div class="seller-introduction">
           <label for="artist-intro">Korte voorstelling van de kunstenaar (optioneel)</label>
