@@ -119,6 +119,16 @@ if (!$introPresent) {
     foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='') $pdo->exec($statement);
     echo "Artist biography and image slots added to isolated preview.\n";
 }
+// Add optional artist slogan to the isolated, synthetic preview database only.
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch()) {
+    $sloganSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261112_seller_artist_slogan.sql');
+    if (!is_string($sloganSql) || !str_contains($sloganSql, "ADD COLUMN artist_slogan VARCHAR(250) NOT NULL DEFAULT ''")) {
+        throw new RuntimeException('Reviewed artist slogan migration missing.');
+    }
+    $sloganSql=preg_replace('/^\\s*--[^\\n]*$/m','',$sloganSql);
+    $pdo->exec(trim((string)$sloganSql));
+    echo "Optional artist slogan added to isolated preview.\\n";
+}
 // Add optional private seller mobile number only to the isolated Docker database.
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch()) {
     $mobileSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_mobile.sql');
