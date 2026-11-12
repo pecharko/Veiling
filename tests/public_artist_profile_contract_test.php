@@ -17,6 +17,10 @@ foreach ([
  'biography escaped'=>'nl2br(e($intro))',
  'artist portrait'=>'artist-profile-portrait',
  'responsive works'=>'artist-profile-works-grid',
+ 'isolated preview guard'=>"getenv('LOCAL_PREVIEW_ISOLATED') === '1'",
+ 'preview setup key'=>"cfg('setup_key') === 'local-preview-only-nonproduction'",
+ 'strict preview image namespace'=>'uploads/preview-fixtures/artist-[1-3]-(?:portrait-1|work-[1-3])',
+ 'normal image path'=>'uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}',
  'canonical URL'=>'https://41lokeren.be/kunstenaar.php?id=',
 ] as $label=>$needle) {
  if (!str_contains($page,$needle)) throw new RuntimeException('Artist public page missing '.$label);
