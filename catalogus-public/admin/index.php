@@ -46,7 +46,7 @@ admin_top('Kaveloverzicht');
     <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['photos'=>'none']))?>" aria-label="Kavels zonder foto tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS ZONDER FOTO</small><div><strong><?=e((string)$withoutPhoto)?></strong> kavels</div></div></a>
   </div>
   <section class="dashboard-panel" aria-labelledby="dashboard-lots-title">
-    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title">Alle kavels</h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div></div>
+    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title">Alle kavels</h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div>
     <form class="dashboard-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek kavel of titel</span><input type="search" name="q" placeholder="Zoek kavel of titel…" value="<?=e($q)?>"></label>
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
