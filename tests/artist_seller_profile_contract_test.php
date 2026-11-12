@@ -21,7 +21,7 @@ foreach (['seller_image_check','work','portrait','slot>=1 && $slot<=3',"slot===1
 foreach (['artist_intro VARCHAR(500)','CREATE TABLE seller_images','fk_seller_images_seller',
   'uq_seller_image_slot','chk_seller_image_slot'] as $required)
   if (!str_contains($schema,$required)) throw new RuntimeException('Artist profile schema missing: '.$required);
-foreach (['seller_images','artist_intro','41lokeren-v7-lot-audit','snap_require_referenced_photos'] as $required)
+foreach (['seller_images','artist_intro','artist_slogan','41lokeren-v7-lot-audit','snap_require_referenced_photos'] as $required)
   if (!str_contains($snapshot,$required)) throw new RuntimeException('Snapshot gallery support missing: '.$required);
 if (!str_contains($preview,"LOCAL_PREVIEW_ISOLATED") || !str_contains($preview,'20261111_seller_artist_profile.sql'))
   throw new RuntimeException('Local preview-only gallery migration missing');
@@ -44,6 +44,14 @@ try {
   seller_clean($base+['artist_intro'=>str_repeat('A',501)]);
   throw new RuntimeException('501-character artist intro accepted');
 } catch (InvalidArgumentException) {}
-$private=seller_clean(array_merge($base,['seller_type'=>'particulier','artist_intro'=>'should clear']));
-if ($private['artist_intro']!=='') throw new RuntimeException('Private seller retained artist introduction');
+$withSlogan=seller_clean($base+['artist_slogan'=>str_repeat('é',250)]);
+if (mb_strlen($withSlogan['artist_slogan'],'UTF-8')!==250) throw new RuntimeException('250-character slogan rejected');
+try {
+  seller_clean($base+['artist_slogan'=>str_repeat('A',251)]);
+  throw new RuntimeException('251-character slogan accepted');
+} catch (InvalidArgumentException) {}
+$noSlogan=seller_clean($base);
+if ($noSlogan['artist_slogan']!=='') throw new RuntimeException('Optional slogan not empty by default');
+$private=seller_clean(array_merge($base,['seller_type'=>'particulier','artist_intro'=>'should clear','artist_slogan'=>'should clear']));
+if ($private['artist_intro']!=='' || $private['artist_slogan']!=='') throw new RuntimeException('Private seller retained artist fields');
 echo "PASS artist introduction, 3 work slots, portrait, upload safety and snapshot scope.\n";
