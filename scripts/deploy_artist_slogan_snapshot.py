@@ -25,7 +25,7 @@ def guarded_load(release_id, *, source_root=None):
     root = engine.ROOT if source_root is None else Path(source_root)
     manifest_path = root / MANIFEST_NAME
     if manifest_path.is_symlink() or not manifest_path.is_file():
-        raise ValueError("Authenticated v7 manifest missing")
+        raise ValueError("Authenticated artist slogan manifest missing")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if not isinstance(manifest, dict) or set(manifest) != {"schema", "files"} or manifest["schema"] != 1:
         raise ValueError("Invalid artist-slogan snapshot manifest schema")
@@ -34,7 +34,7 @@ def guarded_load(release_id, *, source_root=None):
         raise ValueError("Exactly one protected snapshot target required")
     entry = entries[0]
     if not isinstance(entry, dict) or set(entry) != {"path", "source_sha256", "remote_sha256"} or entry["path"] != TARGET:
-        raise ValueError("Wrong protected v7 path or fields")
+        raise ValueError("Wrong protected artist slogan path or fields")
     source_sha, remote_sha = entry["source_sha256"], entry["remote_sha256"]
     if not isinstance(source_sha, str) or not engine.HASH.fullmatch(source_sha):
         raise ValueError("Invalid artist-slogan snapshot source SHA")
@@ -53,7 +53,7 @@ def guarded_load(release_id, *, source_root=None):
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ("plan", "deploy"):
-        raise ValueError("Usage: deploy_lot_audit_snapshot_v7.py plan|deploy")
+        raise ValueError("Usage: deploy_artist_slogan_snapshot.py plan|deploy")
     mode = sys.argv[1]
     original_confirm = os.environ.get("DEPLOY_CONFIRMATION")
     if mode == "deploy":
@@ -61,7 +61,7 @@ def main():
         if not re.fullmatch("[a-f0-9]{40}", sha) or original_confirm != PREFIX + RELEASE_ID + "-" + sha:
             raise ValueError("Separate exact artist-slogan snapshot owner authorization missing")
         if os.environ.get("ARTIST_SLOGAN_SCHEMA_READY") != SCHEMA_ATTESTATION:
-            raise ValueError("Verified lot-audit schema v7 attestation required")
+            raise ValueError("Verified artist slogan schema attestation required")
     previous_loader, previous_argv = engine.load_manifest, sys.argv
     scripts_path = str(engine.ROOT / "scripts")
     added = scripts_path not in sys.path
