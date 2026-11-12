@@ -1,4 +1,4 @@
-"""Offline security regression tests for the independent v7 snapshot adapter."""
+"""Offline security regression tests for the independent artist slogan snapshot adapter."""
 import json
 import os
 from pathlib import Path
