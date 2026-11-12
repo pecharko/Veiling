@@ -55,7 +55,7 @@ $intro = trim((string)$artist['artist_intro']);
   <title><?=e($name)?> · Kunstenaar · 41 Lokeren</title>
   <meta name="description" content="<?=e($slogan!=='' ? $slogan : 'Ontdek kunstenaar '.$name.' bij 41 Lokeren.')?>">
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar.php?id=<?=(int)$artistId?>"><?php endif; ?>
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=190">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=191">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -63,30 +63,40 @@ $intro = trim((string)$artist['artist_intro']);
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
   <nav class="header-nav"><a href="<?=e(url('index.php'))?>#catalogus">← Alle kavels</a><a href="<?=e(url('index.php'))?>#informatie">Praktisch</a></nav>
 </div></header>
-<main class="artist-profile shell">
+<main class="artist-profile shell artist-brochure">
   <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
-  <div class="artist-profile-hero">
-    <div class="artist-profile-copy">
+  <article class="artist-brochure-sheet">
+    <header class="artist-brochure-heading">
       <p class="eyebrow">ONTMOET DE KUNSTENAAR</p>
       <h1><?=e($name)?></h1>
-      <?php if ($slogan!==''): ?><p class="artist-profile-slogan"><?=e($slogan)?></p><?php endif; ?>
-      <?php if ($intro!==''): ?><div class="artist-profile-intro"><?=nl2br(e($intro))?></div><?php endif; ?>
+      <?php if ($slogan!==''): ?>
+        <div class="artist-brochure-subheading">
+          <span class="artist-brochure-rule" aria-hidden="true"></span>
+          <p class="artist-profile-slogan"><?=e($slogan)?></p>
+          <span class="artist-brochure-rule" aria-hidden="true"></span>
+        </div>
+      <?php endif; ?>
+    </header>
+    <div class="artist-brochure-columns">
+      <div class="artist-brochure-column">
+        <?php if ($portrait): ?>
+          <figure class="artist-profile-portrait"><img src="<?=e(url($portrait))?>" alt="Portret van <?=e($name)?>" decoding="async"></figure>
+        <?php endif; ?>
+        <?php if (isset($works[0])): ?>
+          <figure class="artist-brochure-artwork"><img src="<?=e(url($works[0]))?>" alt="Kunstwerk 1 van <?=e($name)?>" loading="lazy" decoding="async"></figure>
+        <?php endif; ?>
+      </div>
+      <div class="artist-brochure-column">
+        <?php if ($intro!==''): ?><div class="artist-profile-intro"><?=nl2br(e($intro))?></div><?php endif; ?>
+        <?php if (isset($works[1])): ?>
+          <figure class="artist-brochure-artwork"><img src="<?=e(url($works[1]))?>" alt="Kunstwerk 2 van <?=e($name)?>" loading="lazy" decoding="async"></figure>
+        <?php endif; ?>
+        <?php if (isset($works[2])): ?>
+          <figure class="artist-brochure-artwork"><img src="<?=e(url($works[2]))?>" alt="Kunstwerk 3 van <?=e($name)?>" loading="lazy" decoding="async"></figure>
+        <?php endif; ?>
+      </div>
     </div>
-    <?php if ($portrait): ?>
-    <figure class="artist-profile-portrait"><img src="<?=e(url($portrait))?>" alt="Portret van <?=e($name)?>" decoding="async"></figure>
-    <?php endif; ?>
-  </div>
-  <?php if ($works): ?>
-  <section class="artist-profile-works" aria-labelledby="artist-works-heading">
-    <p class="eyebrow">SELECTIE WERKEN</p>
-    <h2 id="artist-works-heading">Werk van <?=e($name)?></h2>
-    <div class="artist-profile-works-grid">
-      <?php foreach ($works as $i=>$photo): ?>
-        <figure><img loading="lazy" decoding="async" src="<?=e(url($photo))?>" alt="Kunstwerk <?=($i+1)?> van <?=e($name)?>"></figure>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
+  </article>
 </main>
 <footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><a href="<?=e(url('index.php'))?>#catalogus">Terug naar catalogus</a><?php public_social_footer(); ?></div></footer>
 </body>
