@@ -28,6 +28,21 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `catalogue-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No public overflow ${width}`);
     }
+    // Public artist profile: the lot links internally and exposes no private seller data.
+    const artLot = await page.goto(base + '/kavel.php?nr=101');
+    assert.equal(artLot.status(), 200, 'Published synthetic artist lot must load');
+    const artistLink = page.locator('.detail-artist .lot-artist-name a[href*="kunstenaar.php?id="]');
+    assert.equal(await artistLink.count(), 1, 'Artist name must link internally');
+    await Promise.all([page.waitForURL('**/kunstenaar.php?id=*'), artistLink.click()]);
+    assert.match(await page.locator('.artist-profile h1').textContent(), /Fictieve Ateliernaam/);
+    assert.match(await page.locator('.artist-profile-slogan').textContent(), /Kunst die verwondert/);
+    assert.match(await page.locator('.artist-profile-intro').textContent(), /fictieve maker/);
+    assert.doesNotMatch(await page.textContent('body'), /kunst@example\\.invalid|BE68539007547034|Voorbeeldstraat/);
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.screenshot({path: path.join(output, `artist-profile-${width}.png`), fullPage: true, animations: 'disabled'});
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `Artist page overflow ${width}`);
+    }
     await page.goto(base + '/admin/login.php');
     await page.locator('[name=email]').fill('ci-admin@example.invalid');
     await page.locator('[name=password]').fill('ci-password-not-a-real-secret');

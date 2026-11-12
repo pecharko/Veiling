@@ -701,8 +701,10 @@ try {
     'Unowned seller is read-only in assistant seller overview');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
-  claim($masterListStatus===200 && str_contains($masterListPage,'Aangemaakt door / op'),
-    'Auctioneer can view seller overview with audit columns');
+  claim($masterListStatus===200 && str_contains($masterListPage,'Alle verkopers')
+    && !str_contains($masterListPage,'Aangemaakt door / op')
+    && !str_contains($masterListPage,'Laatst gewijzigd door / op'),
+    'Auctioneer sees seller overview without audit columns');
   $assistantSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve assistentverkoper'")->fetchColumn();
   [$masterEditStatus, $masterEditor] = request_page('/admin/verkoper.php?id='.$assistantSellerId);
   claim($masterEditStatus===200 && str_contains($masterEditor,'Laatste wijziging:'),

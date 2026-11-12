@@ -1,0 +1,97 @@
+name: Artist slogan snapshot protected one-file release
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/artist-slogan-snapshot-release.yml'
+      - 'scripts/deploy_artist_slogan_snapshot.py'
+      - 'tests/deploy_artist_slogan_snapshot_test.py'
+      - 'releases/artist-slogan-snapshot-20261112.json'
+      - 'private/snapshots.php'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'ARTIST-SLOGAN-SNAPSHOT-DEPLOY-artist-slogan-snapshot-20261112-<exact main SHA>'
+        required: true
+        type: string
+      schema_ready:
+        description: 'ARTIST-SLOGAN-SCHEMA-VERIFIED-20261112 only after separately approved migrations and verified complete backup'
+        required: true
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ovh-production-deploy' || format('artist-slogan-review-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: false
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Check exact new snapshot source, independent manifest and workflow safety
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
+          sha256sum private/snapshots.php
+          python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          php -l private/snapshots.php
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import PROTECTED
+          assert 'private/snapshots' in PROTECTED
+          PY
+      - name: Lint dedicated protected workflow
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/artist-slogan-snapshot-release.yml
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      ARTIST_SLOGAN_SCHEMA_READY: ${{ inputs.schema_ready }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify immutable main and owner-bound artist slogan schema attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          test "$DEPLOY_CONFIRMATION" = "ARTIST-SLOGAN-SNAPSHOT-DEPLOY-artist-slogan-snapshot-20261112-$GITHUB_SHA"
+          test "$ARTIST_SLOGAN_SCHEMA_READY" = 'ARTIST-SLOGAN-SCHEMA-VERIFIED-20261112'
+      - name: Verify artist slogan manifest, protected source and offline safety tests
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
+          python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          php -l private/snapshots.php
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Fresh remote drift, protected backup, upload, verified readback and rollback on error
+        run: python3 -B -m scripts.deploy_artist_slogan_snapshot deploy
+      - name: Retain artist slogan upload/readback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-slogan-snapshot-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Retain artist slogan code rollback backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-slogan-snapshot-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn

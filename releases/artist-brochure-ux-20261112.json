@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "0e6148db64a0130582d7c0b803589168df7b1a92523a02e913faf54f6ef44922",
+      "remote_sha256": "888e23c179033aa0fbadbc9eba087ad076cc835a8ac26936127aef6a20a51aeb"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "03e3e6bb4e9be06849a7d75d685bdb46d0b6bec28feb84ac6d4de0e79299ccc0",
+      "remote_sha256": "20e8f32424ed1b2d981d3d5333a535a147ed0a377d4d1740d7fc8e9f85dfc8c8"
+    },
+    {
+      "path": "catalogus-public/admin/seller-photo-preview.js",
+      "source_sha256": "1009898ba2ba1e9483376d58eea53a80d64e84c92fd46a1098a882cf303147be",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "7a7ac18f3d7e4f7b428f90a7189130b2676daa5dc6e11f376b18b2f7b117edad",
+      "remote_sha256": "f5292b9e24ad8fe280b1f9ee229dc3fe29b1f294940a92573cde76c659e540d0"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "359d99c8725f63743fe36285ed91bff721dd015e02314698ef7fb1c57014e9ae",
+      "remote_sha256": "6b4b507a3f4cee14c0f2101b0933d0e29d8dcbb71502d0d84db70e99316e4016"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "5fde233e40312210ecc9af93d16a761d86c48efb1df925f7557c72f9ed61634a",
+      "remote_sha256": "c83dbc722034da71e12b6b72e878034a44c79a4b42d3063bc5c2bc8eedb47f50"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "145a30067fd2e9e949cd3d1fd929208acb6d6a809199125c88078a6609a60bf9",
+      "remote_sha256": "a352b188e6ae37db65ea35bd0025a5137cb337f62f58aa847ff750dd97bf09ac"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "ebcd8deb5a167bfabe7e6cd014ec523655f3a722dc4eabee4c0bb8cfc178b9ce",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "2559c4f9aad217368e01039624cfc5469649aa094365139229f578cdd007f691",
+      "remote_sha256": "1a56aafaffd9f183be8b2383132f0c110187268861e81459b425389cf6c60d3a"
+    }
+  ]
+}
