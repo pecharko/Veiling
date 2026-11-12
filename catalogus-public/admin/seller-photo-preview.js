@@ -21,12 +21,19 @@
     const input = tile.querySelector('[data-seller-photo-input]');
     const zone = tile.querySelector('[data-seller-photo-dropzone]');
     const clear = tile.querySelector('[data-seller-photo-clear]');
+    const replace = tile.querySelector('[data-seller-photo-replace]');
     const current = tile.querySelector('.seller-photo-existing');
     const status = tile.querySelector('.seller-photo-status');
-    if (!input || !zone || !clear || !status) continue;
+    if (!input || !zone || !clear || !replace || !status) continue;
     let preview = null;
     let objectUrl = null;
     let sequence = 0;
+    const syncPhotoControls = () => {
+      const hasPhoto = Boolean(preview || current);
+      zone.hidden = hasPhoto;
+      replace.hidden = !hasPhoto;
+    };
+    replace.addEventListener('click', () => input.click());
 
     const resetPreview = () => {
       if (preview) preview.remove();
@@ -36,6 +43,7 @@
       if (current) current.hidden = false;
       clear.hidden = true;
       tile.classList.remove('seller-photo-selected');
+      syncPhotoControls();
     };
     const reject = (message) => {
       input.value = '';
@@ -74,6 +82,7 @@
         if (current) current.hidden = true;
         clear.hidden = false;
         tile.classList.add('seller-photo-selected');
+        syncPhotoControls();
         status.textContent = 'Voorbeeld geselecteerd — nog niet opgeslagen.';
       } catch (error) {
         URL.revokeObjectURL(nextUrl);
@@ -121,5 +130,6 @@
       }
       void show(file);
     });
+    syncPhotoControls();
   }
 })();
