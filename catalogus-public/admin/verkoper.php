@@ -137,7 +137,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
     <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
-    <form method="post" enctype="multipart/form-data" class="seller-manager-form">
+    <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form">
       <?=csrf_field()?>
       <input type="hidden" name="action" value="save">
       <input type="hidden" name="seller_id" value="<?=$editId!==null?(int)$editId:''?>">
@@ -178,21 +178,33 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
           <h4>Foto’s van werken <span class="seller-optional">(maximaal 3)</span></h4>
           <div class="seller-photo-grid">
             <?php for($slot=1;$slot<=3;$slot++): $photo=$photoByKey['work_'.$slot]??null; ?>
-              <div class="seller-photo-slot">
-                <?php if($photo): ?><img src="<?=e(url($photo['path']))?>" alt="Werk van kunstenaar, foto <?=$slot?>" loading="lazy"><?php endif; ?>
-                <label>Werk <?=$slot?><input type="file" name="photo_work_<?=$slot?>" accept="image/jpeg,image/png,image/webp"></label>
+              <div class="seller-photo-slot" data-seller-photo-slot>
+                <?php if($photo): ?><img class="seller-photo-existing" src="<?=e(url($photo['path']))?>" alt="Werk van kunstenaar, foto <?=$slot?>" loading="lazy"><?php endif; ?>
+                <div class="seller-photo-dropzone" data-seller-photo-dropzone>
+                  <span class="seller-photo-upload-icon" aria-hidden="true">＋</span>
+                  <label>Werk <?=$slot?><input type="file" name="photo_work_<?=$slot?>" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer foto van werk <?=$slot?>"></label>
+                  <small>Klik of sleep een foto hierheen</small>
+                </div>
+                <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
+                <p class="seller-photo-status" role="status" aria-live="polite"></p>
               </div>
             <?php endfor; ?>
           </div>
           <h4>Portretfoto van de kunstenaar <span class="seller-optional">(optioneel, maximaal 1)</span></h4>
           <?php $portrait=$photoByKey['portrait_1']??null; ?>
           <div class="seller-photo-grid">
-            <div class="seller-photo-slot">
-              <?php if($portrait): ?><img src="<?=e(url($portrait['path']))?>" alt="Portretfoto van kunstenaar" loading="lazy"><?php endif; ?>
-              <label>Portret<input type="file" name="photo_portrait_1" accept="image/jpeg,image/png,image/webp"></label>
+            <div class="seller-photo-slot" data-seller-photo-slot>
+              <?php if($portrait): ?><img class="seller-photo-existing" src="<?=e(url($portrait['path']))?>" alt="Portretfoto van kunstenaar" loading="lazy"><?php endif; ?>
+              <div class="seller-photo-dropzone" data-seller-photo-dropzone>
+                <span class="seller-photo-upload-icon" aria-hidden="true">＋</span>
+                <label>Portret<input type="file" name="photo_portrait_1" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer portretfoto"></label>
+                <small>Klik of sleep een foto hierheen</small>
+              </div>
+              <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
+              <p class="seller-photo-status" role="status" aria-live="polite"></p>
             </div>
           </div>
-          <p class="lot-editor-help">JPG, PNG of WebP, maximaal 16 MB en 48 megapixel per foto. Een nieuwe foto vervangt de foto in dezelfde positie.</p>
+          <p class="lot-editor-help">JPG, PNG of WebP, maximaal 16 MB en 48 megapixel per foto. De server verkleint foto’s tot maximaal 1800 pixels en bewaart ze als WebP. Je ziet de geselecteerde foto onmiddellijk; ze wordt pas opgeslagen met ‘Verkoper opslaan’. Een nieuwe foto vervangt de bestaande foto op dezelfde positie.</p>
         </div>
       </div>
       <div class="seller-form-actions">
@@ -243,4 +255,5 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   sync();
 }());
 </script>
+<script src="<?=e(url('admin/seller-photo-preview.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/seller-photo-preview.js'), 0, 12)]))?>" defer></script>
 <?php admin_bottom(); ?>
