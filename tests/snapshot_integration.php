@@ -64,7 +64,7 @@ $checksum = hash_file('sha256', $original);
 $sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
 $sellerPhoto=$uploads.'/'.$sellerRelative;
 if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
-$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren' WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter' WHERE id=?")->execute([$sellerId]);
 $pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
   ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
@@ -96,7 +96,7 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren'))===1
+verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter'))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
@@ -181,6 +181,7 @@ verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
 
 verify(is_file($sellerPhoto)
   && $pdo->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve maker uit Lokeren'
+  && $pdo->query('SELECT artist_slogan FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Kunst met karakter'
   && (int)$pdo->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
   'Snapshot restores artist introduction and work photo');
 verify((int)$pdo->query('SELECT last_edited_by_admin_id FROM lots WHERE lot_number=101')->fetchColumn()===1
