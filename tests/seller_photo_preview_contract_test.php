@@ -8,7 +8,7 @@ $css=file_get_contents($root.'/catalogus-public/admin/admin.css');
 $images=file_get_contents($root.'/private/images.php');
 foreach ([
     'four artist file inputs' => substr_count((string)$php, 'data-seller-photo-input')===2
-        && str_contains((string)$php, "name=\"photo_work_<?=$slot?>\"")
+        && str_contains((string)$php, 'name="photo_work_<?=$slot?>"')
         && str_contains((string)$php, 'name="photo_portrait_1"'),
     'photo previews shipped on seller page' => str_contains((string)$php, "admin/seller-photo-preview.js")
         && str_contains((string)$php, 'id="seller-manager-form"'),
