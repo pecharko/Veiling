@@ -340,6 +340,19 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-photo-slot img{display:block;max-width:100%;width:100%;height:160px;object-fit:contain;border-radius:6px;background:#f7f7f5;margin-bottom:12px}
 .seller-photo-slot label{display:block;font-weight:650;font-size:13px;color:#29473e}
 .seller-photo-slot input{display:block;margin-top:8px;font-size:12px;max-width:100%;width:100%}
+
+/* Artist photo slots use the same immediate, unsaved preview idiom as new lots. */
+.seller-photo-dropzone{position:relative;min-height:112px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;border:2px dashed #decac0;border-radius:8px;background:#fffaf7;padding:12px 8px;text-align:center}
+.seller-photo-dropzone:hover,.seller-photo-dropzone:focus-within,.seller-photo-dropzone.is-dragover{border-color:var(--wine);background:#fff3ed}
+.seller-photo-dropzone label{display:flex;align-items:center;justify-content:center;min-height:42px;width:100%;color:var(--wine);cursor:pointer}
+.seller-photo-dropzone input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.seller-photo-dropzone small{font-size:11px;color:var(--ed-muted)}
+.seller-photo-upload-icon{font-size:28px;line-height:1;color:var(--wine)}
+.seller-photo-slot .seller-photo-preview{display:block;width:100%;height:160px;object-fit:contain;border-radius:6px;background:#f7f7f5;margin-bottom:12px}
+.seller-photo-slot .seller-photo-clear{width:100%;margin-top:10px}
+.seller-photo-slot .seller-photo-clear[hidden],.seller-photo-slot .seller-photo-existing[hidden]{display:none!important}
+.seller-photo-status{min-height:16px;margin:8px 0 0;color:var(--ed-muted);font-size:11px;line-height:1.4}
+.seller-photo-selected{border-color:#aa8174;background:#fffaf7}
 .seller-photo-delete-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:16px}
 .seller-photo-delete button{color:#922b37;border-color:#e6c8cd}
 .seller-optional{font-size:12px;color:#63766e;font-weight:400}
