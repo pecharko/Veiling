@@ -16,7 +16,10 @@ foreach ([
  'slogan presented'=>'artist-profile-slogan',
  'biography escaped'=>'nl2br(e($intro))',
  'artist portrait'=>'artist-profile-portrait',
- 'responsive works'=>'artist-profile-works-grid',
+ 'brochure shell'=>'artist-brochure-sheet',
+ 'brochure title'=>'artist-brochure-heading',
+ 'brochure two columns'=>'artist-brochure-columns',
+ 'brochure artwork'=>'artist-brochure-artwork',
  'isolated preview guard'=>"getenv('LOCAL_PREVIEW_ISOLATED') === '1'",
  'preview setup key'=>"cfg('setup_key') === 'local-preview-only-nonproduction'",
  'strict preview image namespace'=>'uploads/preview-fixtures/artist-[1-3]-(?:portrait-1|work-[1-3])',
@@ -30,6 +33,6 @@ if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|mobile_number|bank_account_
 if (!str_contains($detail,"url('kunstenaar.php',['id'=>(int)\$lot['seller_id']])"))
  throw new RuntimeException('Detail artist link does not point internally');
 if (str_contains($detail,'lot_artist_markup($lot)')) throw new RuntimeException('Detail still uses external artist link');
-if (!str_contains($css,'.artist-profile-hero') || !str_contains($css,'@media(max-width:800px)'))
+if (!str_contains($css,'.artist-brochure-columns') || !str_contains($css,'@media(max-width:700px)'))
  throw new RuntimeException('Artist layout is not responsive');
-echo "PASS internal artist page, published-only access, public-field allowlist and galleries.\\n";
+echo "PASS internal artist page, published-only access, public-field allowlist and brochure layout.\\n";
