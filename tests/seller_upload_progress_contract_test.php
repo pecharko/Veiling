@@ -17,6 +17,14 @@ foreach (['id="seller-manager-form"','id="seller-save-button"','id="seller-save-
 foreach (['$ajaxSave=is_post()','$ajaxReply(200','$ajaxReply(422','check_csrf()','seller_save($pdo,$editId,$_POST,$actorId,$actorRole)'] as $required) {
   if (!str_contains($editor,$required)) throw new RuntimeException('Seller save behavior missing '.$required);
 }
+// A hidden <input name="action"> shadows HTMLFormElement.action in the DOM.
+// The AJAX upload must read the actual action *attribute* or current page URL,
+// never the named input object (which produces /[object%20HTMLInputElement]).
+if (!str_contains($editor, 'name="action" value="save"')) throw new RuntimeException('Seller form action-name collision fixture missing.');
+if (!str_contains($editor, "xhr.open('POST',form.getAttribute('action') || window.location.href);")) {
+  throw new RuntimeException('Seller AJAX POST target must come from the form action attribute, not the shadowed DOM property.');
+}
+if (str_contains($editor, "xhr.open('POST',form.action")) throw new RuntimeException('Seller AJAX URL still uses shadowed form.action.');
 if (!str_contains($editor,'class="seller-audit-summary"') || strpos($editor,'class="seller-audit-summary"')<strpos($editor,'class="seller-photo-delete-grid"')) throw new RuntimeException('Seller audit must remain at page bottom.');
 if (!str_contains($css,'.seller-save-progress[hidden]')) throw new RuntimeException('Missing upload styling.');
 echo "PASS seller list omits audit columns, editor tracks upload and keeps bottom audit.\n";
