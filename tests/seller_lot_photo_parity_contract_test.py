@@ -37,6 +37,7 @@ class SellerLotPhotoParityContract(unittest.TestCase):
         self.assertIn("input.name='photo_' + kind + '_' + slot", JS)
         self.assertIn("input.parentNode.append(freshInput)", JS)
         self.assertIn('tile.append(input)', JS)
+        self.assertIn("input.setAttribute('form', 'seller-manager-form')", JS)
         self.assertIn('seller_image_upload($pdo,$savedId,$kind,$slot', SELLER)
 
     def test_invalid_or_ambiguous_photo_upload_cannot_autoretry(self):
