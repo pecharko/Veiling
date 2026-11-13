@@ -11,7 +11,7 @@ if (!is_string($page) || !is_string($profile) || !is_string($home) || !is_string
 }
 $required = [
     'site online gate' => 'require_public_site_online()',
-    'publication gate' => "($settings['is_published'] ?? 0)",
+    'publication gate' => '($settings[\'is_published\'] ?? 0)',
     'artist type' => "s.seller_type='kunstenaar'",
     'published lots' => "l.status IN ('published','sold')",
     'eligibility via exists' => 'AND EXISTS (',
