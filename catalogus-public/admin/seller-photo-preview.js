@@ -103,6 +103,7 @@
         freshInput.value='';
         input.parentNode.append(freshInput);
         input.name='photo_' + kind + '_' + slot;
+        input.setAttribute('form', 'seller-manager-form');
         input.hidden=true;
         input.style.display='none';
         tile.append(input);
