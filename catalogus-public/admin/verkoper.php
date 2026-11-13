@@ -22,6 +22,7 @@ if (isset($_GET['id'])) {
 $values=$defaults;
 // Check ownership on every edit view and before any write, including photo actions.
 if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
+$ajaxPhoto=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && in_array(($_POST['action']??''),['upload-photo','delete-photo'],true);
 $ajaxSave=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='save';
 $ajaxReply=static function(int $code,array $body): void {
   http_response_code($code);
@@ -47,6 +48,14 @@ if (is_post()) {
       if ($slot===false || $slot===null) throw new InvalidArgumentException('Ongeldige fotopositie.');
       if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[],(int)$_SESSION['admin_id']);
       else seller_image_delete($pdo,$editId,$kind,(int)$slot,(int)$_SESSION['admin_id']);
+      if ($ajaxPhoto && $action==='delete-photo') $ajaxReply(200,['ok'=>true,'slot'=>(int)$slot,'kind'=>$kind,'deleted'=>true]);
+      if ($ajaxPhoto) {
+        $rows=seller_image_rows($pdo,$editId);
+        $uploaded=null;
+        foreach ($rows as $row) if ($row['image_kind']===$kind && (int)$row['slot']===(int)$slot) $uploaded=$row;
+        if (!$uploaded) throw new RuntimeException('Foto opgeslagen maar niet teruggevonden.');
+        $ajaxReply(200,['ok'=>true,'image_url'=>url((string)$uploaded['path']),'image_id'=>(int)$uploaded['id'],'slot'=>(int)$slot,'kind'=>$kind]);
+      }
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
       redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
@@ -85,7 +94,7 @@ if (is_post()) {
   } catch (RuntimeException $ex) {
     $error=$ex->getMessage();
   }
-  if ($ajaxSave && $error!=='') $ajaxReply(422,['error'=>$error]);
+  if (($ajaxSave || $ajaxPhoto) && $error!=='') $ajaxReply(422,['ok'=>false,'error'=>$error]);
 } elseif ($editId!==null) {
   try {
     $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
@@ -145,6 +154,10 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   <div class="seller-editor-toolbar">
     <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':'Terug naar verkopers'?></a>
       <p class="dashboard-subtitle">Beheer persoonsgegevens en bankgegevens op één afgeschermde plek.</p></div>
+    <div class="lot-editor-toolbar-actions">
+      <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
+      <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
+    </div>
   </div>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
@@ -193,42 +206,47 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         </div>
         <div class="seller-gallery">
           <h4>Foto’s van werken <span class="seller-optional">(maximaal 3)</span></h4>
-          <div class="seller-photo-grid">
-            <?php for($slot=1;$slot<=3;$slot++): $photo=$photoByKey['work_'.$slot]??null; ?>
-              <div class="seller-photo-slot" data-seller-photo-slot>
-                <?php if($photo): ?><img class="seller-photo-existing" src="<?=e(url($photo['path']))?>" alt="Werk van kunstenaar, foto <?=$slot?>" loading="lazy"><?php endif; ?>
-                <div class="seller-photo-dropzone" data-seller-photo-dropzone>
-                  <span class="seller-photo-upload-icon" aria-hidden="true">＋</span>
-                  <label>Werk <?=$slot?><input type="file" name="photo_work_<?=$slot?>" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer foto van werk <?=$slot?>"></label>
-                  <small>Klik of sleep een foto hierheen</small>
-                </div>
-                <button type="button" class="seller-photo-replace secondary" data-seller-photo-replace>Foto vervangen</button>
-                <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
-                <p class="seller-photo-status" role="status" aria-live="polite"></p>
-              </div>
-            <?php endfor; ?>
-          </div>
-          <h4>Portretfoto van de kunstenaar <span class="seller-optional">(optioneel, maximaal 1)</span></h4>
-          <?php $portrait=$photoByKey['portrait_1']??null; ?>
-          <div class="seller-photo-grid">
-            <div class="seller-photo-slot" data-seller-photo-slot>
-              <?php if($portrait): ?><img class="seller-photo-existing" src="<?=e(url($portrait['path']))?>" alt="Portretfoto van kunstenaar" loading="lazy"><?php endif; ?>
-              <div class="seller-photo-dropzone" data-seller-photo-dropzone>
-                <span class="seller-photo-upload-icon" aria-hidden="true">＋</span>
-                <label>Portret<input type="file" name="photo_portrait_1" accept="image/jpeg,image/png,image/webp" data-seller-photo-input aria-label="Selecteer portretfoto"></label>
-                <small>Klik of sleep een foto hierheen</small>
-              </div>
-              <button type="button" class="seller-photo-replace secondary" data-seller-photo-replace>Foto vervangen</button>
-              <button type="button" class="seller-photo-clear secondary" data-seller-photo-clear hidden>Geselecteerde foto verwijderen</button>
-              <p class="seller-photo-status" role="status" aria-live="polite"></p>
+          <div class="lot-editor-photo-grid seller-lot-photo-grid" data-seller-gallery="work" data-max-photos="3" data-existing="<?=count(array_filter($photos,static fn($p)=>$p['image_kind']==='work'))?>" data-seller-id="<?=$editId!==null?(int)$editId:''?>">
+            <?php foreach($photos as $photo): if($photo['image_kind']!=='work') continue; ?>
+            <div class="lot-editor-photo seller-saved-photo" data-seller-slot="<?=(int)$photo['slot']?>">
+              <img src="<?=e(url($photo['path']))?>" alt="Foto van werk">
+              <button type="button" class="lot-editor-remove-photo seller-remove-saved" data-kind="work" data-slot="<?=(int)$photo['slot']?>">Foto verwijderen</button>
+            </div>
+            <?php endforeach; ?>
+            <div class="lot-editor-photo lot-editor-photo-add" data-seller-picker>
+              <label class="lot-editor-photo-add-picker">
+                <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+                <strong>Foto toevoegen</strong>
+                <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-seller-new-file aria-label="Foto van werk toevoegen">
+              </label>
             </div>
           </div>
-          <p class="lot-editor-help">JPG, PNG of WebP, maximaal 16 MB en 48 megapixel per foto. De server verkleint foto’s tot maximaal 1800 pixels en bewaart ze als WebP. Je ziet de geselecteerde foto onmiddellijk; ze wordt pas opgeslagen met ‘Verkoper opslaan’. Een nieuwe foto vervangt de bestaande foto op dezelfde positie.</p>
+          <p class="lot-editor-help seller-photo-group-status" data-seller-status="work" role="status" aria-live="polite"></p>
+          <h4>Portretfoto van de kunstenaar <span class="seller-optional">(optioneel, maximaal 1)</span></h4>
+          <div class="lot-editor-photo-grid seller-lot-photo-grid" data-seller-gallery="portrait" data-max-photos="1" data-existing="<?=isset($photoByKey['portrait_1'])?1:0?>" data-seller-id="<?=$editId!==null?(int)$editId:''?>">
+            <?php if(isset($photoByKey['portrait_1'])): ?>
+            <div class="lot-editor-photo seller-saved-photo" data-seller-slot="1">
+              <img src="<?=e(url($photoByKey['portrait_1']['path']))?>" alt="Portret van kunstenaar">
+              <button type="button" class="lot-editor-remove-photo seller-remove-saved" data-kind="portrait" data-slot="1">Foto verwijderen</button>
+            </div>
+            <?php endif; ?>
+            <div class="lot-editor-photo lot-editor-photo-add" data-seller-picker>
+              <label class="lot-editor-photo-add-picker">
+                <span class="lot-editor-upload-icon" aria-hidden="true">＋</span>
+                <strong>Foto toevoegen</strong>
+                <span class="lot-editor-photo-add-help">JPG, PNG of WebP · max. 16 MB</span>
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-seller-new-file aria-label="Portretfoto toevoegen">
+              </label>
+            </div>
+          </div>
+          <p class="lot-editor-help seller-photo-group-status" data-seller-status="portrait" role="status" aria-live="polite"></p>
+          <p class="lot-editor-help">JPG, PNG of WebP · maximaal 16 MB en 48 megapixel per foto. Foto’s worden automatisch verkleind tot maximaal 1800 pixels en als WebP bewaard. Bij een nieuwe verkoper verschijnen foto's meteen als voorbeeld en worden ze pas bij Verkoper opslaan bewaard. Bij een bestaande verkoper worden ze meteen opgeslagen.</p>
         </div>
       </div>
       <div class="seller-form-actions">
         <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
-        <button class="primary" type="submit" id="seller-save-button">Verkoper opslaan</button>
+        <button class="primary seller-save-trigger" type="submit" id="seller-save-button"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
       </div>
       <div id="seller-save-progress" class="seller-save-progress" role="status" aria-live="polite" hidden>
         <div class="seller-save-progress-heading"><strong id="seller-save-status">Gegevens uploaden…</strong><span id="seller-save-percent" hidden></span></div>
@@ -237,20 +255,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       </div>
       <div id="seller-save-error" class="alert error" role="alert" hidden></div>
     </form>
-    <?php if($editId!==null && $values['seller_type']==='kunstenaar'): ?>
-    <div class="seller-photo-delete-grid">
-      <?php foreach($photos as $photo): ?>
-      <form method="post" class="seller-photo-delete">
-        <?=csrf_field()?>
-        <input type="hidden" name="action" value="delete-photo">
-        <input type="hidden" name="seller_id" value="<?=$editId?>">
-        <input type="hidden" name="image_kind" value="<?=e($photo['image_kind'])?>">
-        <input type="hidden" name="slot" value="<?=(int)$photo['slot']?>">
-        <button class="secondary" type="submit">Verwijder <?=e($photo['image_kind']==='portrait'?'portret':'werkfoto '.(int)$photo['slot'])?></button>
-      </form>
-      <?php endforeach; ?>
-    </div>
-    <?php endif; ?>
+
   </section>
     <?php if($audit): ?><div class="seller-audit-summary"><strong>Aangemaakt door:</strong> <?=e($audit['creator_name'] ?: 'Onbekend')?> · <?=e($audit['created_at'] ? seller_audit_time((string)$audit['created_at']).' (Brussel)' : 'Niet geregistreerd')?><div><strong>Laatste wijziging:</strong> <?=e($audit['editor_name'] ?: 'Onbekend')?> · <?=e($audit['updated_at'] ? seller_audit_time((string)$audit['updated_at']).' (Brussel)' : 'Niet geregistreerd')?></div></div><?php endif; ?>
 </div>
@@ -266,6 +271,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
     });
   });
   const form=document.getElementById('seller-manager-form');
+  const submits=[...document.querySelectorAll('.seller-save-trigger')];
   const submit=form?.querySelector('#seller-save-button');
   const panel=document.getElementById('seller-save-progress');
   const bar=document.getElementById('seller-upload-progress');
@@ -278,8 +284,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       event.preventDefault();
       if (saving || !form.reportValidity()) return;
       saving=true;
-      submit.disabled=true;
-      submit.textContent='Bezig met opslaan…';
+      submits.forEach(button=>{button.disabled=true;button.dataset.originalText=button.textContent;button.textContent='Bezig met opslaan…';});
       error.hidden=true;
       error.textContent='';
       panel.hidden=false;
@@ -292,8 +297,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       xhr.responseType='json';
       const fail=message => {
         saving=false;
-        submit.disabled=false;
-        submit.textContent='Verkoper opslaan';
+        submits.forEach(button=>{button.disabled=false;button.textContent=button.dataset.originalText||'Verkoper opslaan';});
         panel.hidden=true;
         error.textContent=message;
         error.hidden=false;

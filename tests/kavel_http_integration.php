@@ -139,8 +139,16 @@ try {
   claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
     'Seller form preloads existing data');
   claim(str_contains($sellerEditPage,'name="artist_intro"')
-    && str_contains($sellerEditPage,'name="photo_portrait_1"'),
-    'Artist editor exposes biography and optional portrait field');
+    && str_contains($sellerEditPage,'data-seller-gallery="portrait"')
+    && str_contains($sellerEditPage,'data-max-photos="1"')
+    && str_contains($sellerEditPage,'data-seller-new-file'),
+    'Artist editor exposes biography and optional portrait photo tile');
+  claim(str_contains($sellerEditPage,'class="primary seller-save-trigger"')
+    && str_contains($sellerEditPage,'form="seller-manager-form"')
+    && str_contains($sellerEditPage,'data-seller-gallery="work"')
+    && str_contains($sellerEditPage,'data-max-photos="3"')
+    && str_contains($sellerEditPage,'class="lot-editor-photo-add-picker"'),
+    'Seller editor provides top save action and lot-style artwork photo picker');
   // A save that changes no canonical seller field must preserve last-update audit.
   db()->prepare("UPDATE lot_sellers SET updated_at='2020-01-01 00:00:00',updated_by_name='Earlier editor' WHERE id=?")->execute([$sellerId]);
   [$noChangeStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
