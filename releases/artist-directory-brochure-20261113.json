@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "feb745cbe94011e6b9beb101155dd28fc9b128938f3267d56b1d5b9becb15ded",
+      "remote_sha256": "5fde233e40312210ecc9af93d16a761d86c48efb1df925f7557c72f9ed61634a"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "92943ab27e8fa798f747b863f56dc7d26dc24e2d373573c3819247f7139e9c75",
+      "remote_sha256": "f1a2b3fe28e4855a9df5dcb616244604719153c4067490c1046251753cc53530"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "72b8d476e47abc93134e78d20b05cd22b0ed3d85a1cc4e51eac8155e3f5f3fe8",
+      "remote_sha256": "ebcd8deb5a167bfabe7e6cd014ec523655f3a722dc4eabee4c0bb8cfc178b9ce"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "a23e308d8699808b2feead5a5f42499eb53e442ae6223c910931f3598c112ce4",
+      "remote_sha256": "ABSENT"
+    }
+  ]
+}

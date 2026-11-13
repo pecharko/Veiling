@@ -10,7 +10,7 @@ foreach ([
  'public site guard'=>'require_public_site_online()',
  'published-only guard'=>"l.status IN ('published','sold')",
  'only artist profiles'=>"s.seller_type='kunstenaar'",
- 'public field selection'=>'SELECT s.artist_name, s.artist_slogan, s.artist_intro',
+ 'public field selection'=>'SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url',
  'public photo slots'=>"image_kind='portrait' AND slot=1",
  'three public works'=>"image_kind='work' AND slot BETWEEN 1 AND 3",
  'slogan presented'=>'artist-profile-slogan',
@@ -25,6 +25,10 @@ foreach ([
  'strict preview image namespace'=>'uploads/preview-fixtures/artist-[1-3]-(?:portrait-1|work-[1-3])',
  'normal image path'=>'uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}',
  'canonical URL'=>'https://41lokeren.be/kunstenaar.php?id=',
+ 'validated optional website'=>'lot_artist_validate($name, (string)($artist[\'artist_url\'] ?? \'\'))',
+ 'conditional website'=>'if ($artistWebsite !== \'\')',
+ 'website anchored after art columns'=>'artist-brochure-website',
+ 'external link safety'=>'rel="noopener noreferrer"',
 ] as $label=>$needle) {
  if (!str_contains($page,$needle)) throw new RuntimeException('Artist public page missing '.$label);
 }
@@ -33,6 +37,9 @@ if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|mobile_number|bank_account_
 if (!str_contains($detail,"url('kunstenaar.php',['id'=>(int)\$lot['seller_id']])"))
  throw new RuntimeException('Detail artist link does not point internally');
 if (str_contains($detail,'lot_artist_markup($lot)')) throw new RuntimeException('Detail still uses external artist link');
+if (!str_contains($css,'.artist-brochure-website')) throw new RuntimeException('Artist website footer styling missing');
+if (strpos($page,'class="artist-brochure-website"') <= strpos($page,'class="artist-brochure-columns"'))
+ throw new RuntimeException('Artist website link must appear below the artwork columns');
 if (!str_contains($css,'.artist-brochure-columns') || !str_contains($css,'@media(max-width:700px)'))
  throw new RuntimeException('Artist layout is not responsive');
 echo "PASS internal artist page, published-only access, public-field allowlist and brochure layout.\\n";

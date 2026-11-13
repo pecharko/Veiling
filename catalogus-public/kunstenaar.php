@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
+require_once dirname(__DIR__) . '/private/lot_artist.php';
 require_public_site_online();
 $settings = settings();
 $artistId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
@@ -12,7 +13,7 @@ if (!$artistId || ((int)($settings['is_published'] ?? 0) !== 1 && !admin_preview
 // Only explicit public artist fields may leave seller management. Never SELECT *,
 // contact information, bank data, creator identity, or unrelated sellers.
 $stmt = db()->prepare("
-  SELECT s.artist_name, s.artist_slogan, s.artist_intro
+  SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url
   FROM lot_sellers s
   WHERE s.id=? AND s.seller_type='kunstenaar' AND s.artist_name<>''
     AND EXISTS (
@@ -46,6 +47,12 @@ foreach ($photosStmt->fetchAll(PDO::FETCH_ASSOC) as $photo) {
 $name = (string)$artist['artist_name'];
 $slogan = trim((string)$artist['artist_slogan']);
 $intro = trim((string)$artist['artist_intro']);
+$artistWebsite = '';
+try {
+  [, $artistWebsite] = lot_artist_validate($name, (string)($artist['artist_url'] ?? ''));
+} catch (InvalidArgumentException) {
+  // Invalid legacy URLs must never become public hyperlinks.
+}
 ?><!doctype html>
 <html lang="nl">
 <head>
@@ -55,16 +62,16 @@ $intro = trim((string)$artist['artist_intro']);
   <title><?=e($name)?> · Kunstenaar · 41 Lokeren</title>
   <meta name="description" content="<?=e($slogan!=='' ? $slogan : 'Ontdek kunstenaar '.$name.' bij 41 Lokeren.')?>">
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar.php?id=<?=(int)$artistId?>"><?php endif; ?>
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=191">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=192">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
-  <nav class="header-nav"><a href="<?=e(url('index.php'))?>#catalogus">← Alle kavels</a><a href="<?=e(url('index.php'))?>#informatie">Praktisch</a></nav>
+  <nav class="header-nav"><a href="<?=e(url('kunstenaars.php'))?>">← Alle kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Alle kavels</a><a href="<?=e(url('index.php'))?>#informatie">Praktisch</a></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
-  <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
+  <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">
       <p class="eyebrow">ONTMOET DE KUNSTENAAR</p>
@@ -96,6 +103,9 @@ $intro = trim((string)$artist['artist_intro']);
         <?php endif; ?>
       </div>
     </div>
+    <?php if ($artistWebsite !== ''): ?>
+      <p class="artist-brochure-website"><a href="<?=e($artistWebsite)?>" target="_blank" rel="noopener noreferrer">Website van de kunstenaar ↗</a></p>
+    <?php endif; ?>
   </article>
 </main>
 <footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><a href="<?=e(url('index.php'))?>#catalogus">Terug naar catalogus</a><?php public_social_footer(); ?></div></footer>
