@@ -237,6 +237,8 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
             : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
             $failed?'warning':'success');
+          // Keep the new-lot editor behavior; return edited lots to the overview.
+          if ($lot) redirect('admin/index.php');
           redirect('admin/kavel.php',['id'=>$id]);
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
