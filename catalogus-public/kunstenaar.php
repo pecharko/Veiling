@@ -68,10 +68,10 @@ try {
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
-  <nav class="header-nav"><a href="<?=e(url('index.php'))?>#catalogus">← Alle kavels</a><a href="<?=e(url('index.php'))?>#informatie">Praktisch</a></nav>
+  <nav class="header-nav"><a href="<?=e(url('kunstenaars.php'))?>">← Alle kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Alle kavels</a><a href="<?=e(url('index.php'))?>#informatie">Praktisch</a></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
-  <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
+  <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">
       <p class="eyebrow">ONTMOET DE KUNSTENAAR</p>
