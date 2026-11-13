@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "e17c3299dcc31178caf689a80381535411dcf5b5c7f0a11a764534cb7e3fc143",
+      "remote_sha256": "0e6148db64a0130582d7c0b803589168df7b1a92523a02e913faf54f6ef44922"
+    },
+    {
+      "path": "catalogus-public/admin/seller-photo-preview.js",
+      "source_sha256": "ee8e4471de30b734bc4ed8fd04424eb469e18800c88d43fdb889d014d28afc59",
+      "remote_sha256": "1009898ba2ba1e9483376d58eea53a80d64e84c92fd46a1098a882cf303147be"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "5b0d295927a71daeb0137428a3b29ac24154e0b6c5c3700d27661bf8bd44bd31",
+      "remote_sha256": "34dded0f28171cd3b70b092849d271f86c3bb79e578b51fb4be50423f4f24aef"
+    }
+  ]
+}
