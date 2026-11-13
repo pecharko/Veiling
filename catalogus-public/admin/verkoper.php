@@ -22,7 +22,7 @@ if (isset($_GET['id'])) {
 $values=$defaults;
 // Check ownership on every edit view and before any write, including photo actions.
 if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
-$ajaxPhoto=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='upload-photo';
+$ajaxPhoto=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && in_array(($_POST['action']??''),['upload-photo','delete-photo'],true);
 $ajaxSave=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='save';
 $ajaxReply=static function(int $code,array $body): void {
   http_response_code($code);
@@ -48,6 +48,7 @@ if (is_post()) {
       if ($slot===false || $slot===null) throw new InvalidArgumentException('Ongeldige fotopositie.');
       if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[],(int)$_SESSION['admin_id']);
       else seller_image_delete($pdo,$editId,$kind,(int)$slot,(int)$_SESSION['admin_id']);
+      if ($ajaxPhoto && $action==='delete-photo') $ajaxReply(200,['ok'=>true,'slot'=>(int)$slot,'kind'=>$kind,'deleted'=>true]);
       if ($ajaxPhoto) {
         $rows=seller_image_rows($pdo,$editId);
         $uploaded=null;
