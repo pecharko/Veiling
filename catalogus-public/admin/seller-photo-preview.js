@@ -47,6 +47,20 @@
       : 'Foto wordt eerst opgeslagen; daarna worden de verkopergegevens bewaard.';
   },true);
 
+  let unsavedFields=false;
+  form.addEventListener('input', event => {
+    if (event.target.matches('input:not([type=file]),textarea,select')) unsavedFields=true;
+  });
+  form.addEventListener('change', event => {
+    if (event.target.matches('input:not([type=file]),textarea,select')) unsavedFields=true;
+  });
+  document.querySelectorAll('.seller-editor-cancel,.seller-form-actions a.secondary,.seller-editor-toolbar a.lot-editor-back').forEach(link => {
+    link.addEventListener('click', event => {
+      if ((unsavedFields || document.querySelector('.seller-pending-photo')) &&
+          !confirm('Je hebt niet-opgeslagen wijzigingen. Wil je deze pagina verlaten?')) event.preventDefault();
+    });
+  });
+
   grids.forEach(grid => {
     const kind = grid.dataset.sellerGallery;
     const status = note(grid);
@@ -82,8 +96,12 @@
         update(grid);
       };
       if (!sellerId) {
+        const freshInput=input.cloneNode(true);
+        freshInput.value='';
+        input.parentNode.append(freshInput);
         input.name='photo_' + kind + '_' + slot;
         input.hidden=true;
+        input.style.display='none';
         tile.append(input);
         remove.addEventListener('click',discard);
         status.textContent='Voorbeeld geselecteerd — nog niet opgeslagen.';
