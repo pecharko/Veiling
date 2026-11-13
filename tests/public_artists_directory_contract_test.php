@@ -16,7 +16,7 @@ $required = [
     'published lots' => "l.status IN ('published','sold')",
     'eligibility via exists' => 'AND EXISTS (',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",
-    'portrait link to profile' => "url('kunstenaar.php',['id'=>(int)$artist['id']])",
+    'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\']])',
     'image URL escaped' => 'src="<?=e(url($portrait))?>"',
     'artist name escaped' => '<?=e($name)?>',
     'safe live upload path' => 'uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}',
@@ -34,7 +34,7 @@ if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|bank_account_iban|mobile_nu
     throw new RuntimeException('Artist directory must not expose seller private fields');
 }
 if (!str_contains($home,"url('kunstenaars.php')")) throw new RuntimeException('Artist directory missing from home navigation');
-if (!str_contains($profile,"url('kunstenaar.php'")) throw new RuntimeException('Artist profile missing expected identity');
+if (!str_contains($profile,'Kunstenaar niet gevonden.')) throw new RuntimeException('Artist profile gate missing');
 if (!str_contains($css,'.artists-overview-card') || !str_contains($css,'@media(max-width:580px)')) {
     throw new RuntimeException('Artist directory layout missing mobile breakpoints');
 }
