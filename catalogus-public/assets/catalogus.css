@@ -226,4 +226,7 @@ body{background:#fffaf6;color:var(--ink)}
 .artist-brochure .artist-profile-portrait img{display:block;width:100%;height:auto;max-height:none;aspect-ratio:auto;object-fit:contain}
 .artist-brochure-artwork img{display:block;width:100%;height:auto;object-fit:contain}
 .artist-brochure .artist-profile-intro{font:400 clamp(18px,2.4vw,27px)/1.5 Georgia,serif;color:#302a26;max-width:unset;padding:20px 0 8px}
+.artist-brochure-website{margin:clamp(32px,5vw,64px) 0 0;padding-top:20px;border-top:1px solid #d5c9be;text-align:center;font-size:14px;font-weight:700;overflow-wrap:anywhere}
+.artist-brochure-website a{color:var(--wine,#8a001b);text-decoration:underline;text-underline-offset:4px}
+.artist-brochure-website a:hover{text-decoration-thickness:2px}
 @media(max-width:700px){.artist-brochure{padding-bottom:40px}.artist-brochure-sheet{padding:24px 18px}.artist-brochure-heading h1{font-size:clamp(42px,10vw,67px)}.artist-brochure-subheading{gap:10px}.artist-brochure-rule{max-width:35px}.artist-brochure-columns{grid-template-columns:1fr;gap:24px}.artist-brochure .artist-profile-intro{padding:0;font-size:19px}.artist-brochure-column{gap:24px}.artist-brochure-column:first-child{display:contents}.artist-brochure .artist-profile-portrait{order:0}.artist-brochure-column:nth-child(2){display:contents}.artist-brochure .artist-profile-intro{order:1}.artist-brochure-artwork{order:2}}
