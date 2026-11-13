@@ -423,8 +423,9 @@ try {
   $small['title'] = 'Geldig fotokavel';
   $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
-  [$status] = request_page('/admin/kavel.php', $small, true);
-  claim($status === 303 && (bool)by_number(20), 'Valid kavel and photo saved');
+  [$status, , $newLotRedirect] = request_page('/admin/kavel.php', $small, true);
+  claim($status === 303 && $newLotRedirect === '/admin/kavel.php?id='.(int)by_number(20)['id']
+    && (bool)by_number(20), 'New lot save preserves existing editor redirect and photo persistence');
   claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
   [$status, $lotsWithSeller] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
