@@ -6,6 +6,11 @@ declare(strict_types=1);
  */
 require dirname(__DIR__) . '/private/bootstrap.php';
 require dirname(__DIR__) . '/private/catalog_mutex.php';
+// Exercise the public artist overview and profile contracts during routed PHP HTTP CI.
+(static function (): void {
+  require __DIR__ . '/public_artist_profile_contract_test.php';
+  require __DIR__ . '/public_artists_directory_contract_test.php';
+})();
 
 // Apply role extension only to the disposable CI database used by this test.
 if (getenv('GITHUB_ACTIONS') === 'true' && db()->query('SELECT DATABASE()')->fetchColumn() === 'auction_test') {
