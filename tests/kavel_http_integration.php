@@ -33,6 +33,7 @@ function claim(bool $ok, string $message): void {
 function request_page(string $url, ?array $data = null, bool $multipart = false, array $headers = []): array {
   global $base, $jar;
   $ch = curl_init($base . $url);
+  $responseLocation = null;
   curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_FOLLOWLOCATION => false,
@@ -41,6 +42,10 @@ function request_page(string $url, ?array $data = null, bool $multipart = false,
     CURLOPT_CONNECTTIMEOUT => 4,
     CURLOPT_TIMEOUT => 15,
     CURLOPT_HEADER => false,
+    CURLOPT_HEADERFUNCTION => static function($ch, string $header) use (&$responseLocation): int {
+      if (stripos($header, 'Location:') === 0) $responseLocation = trim(substr($header, strlen('Location:')));
+      return strlen($header);
+    },
     CURLOPT_HTTPHEADER => $headers,
   ]);
   if ($data !== null) {
@@ -57,7 +62,7 @@ function request_page(string $url, ?array $data = null, bool $multipart = false,
   if ($html === false) throw new RuntimeException('HTTP client failed: ' . curl_error($ch));
   $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
   curl_close($ch);
-  return [$status, (string)$html];
+  return [$status, (string)$html, $responseLocation];
 }
 function token(string $html): string {
   if (!preg_match('/name="csrf" value="([a-f0-9]+)"/', $html, $m)) {
@@ -334,18 +339,18 @@ try {
     last_edited_at='2020-01-01 00:00:00',last_edited_by_admin_id=? WHERE id=?")
     ->execute([$priorEditor,$id]);
   [$noopFormStatus,$noopForm]=request_page('/admin/kavel.php?id='.$id);
-  [$noopStatus] = request_page('/admin/kavel.php?id='.$id, [
+  [$noopStatus, , $noopRedirect] = request_page('/admin/kavel.php?id='.$id, [
     'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
     'lot_number'=>'10','title'=>'Originele titel','category'=>'','description'=>'','details'=>'',
     'market_price'=>'','starting_bid'=>'','auction_only'=>'0','seller_id'=>'',
     'status'=>'draft','sale_location'=>'markt','donation_confirmed'=>'1'
   ]);
   $noopRow=by_number(10);
-  claim($noopStatus===303 && $noopRow['last_edited_at']==='2020-01-01 00:00:00'
+  claim($noopStatus===303 && $noopRedirect==='/admin/index.php' && $noopRow['last_edited_at']==='2020-01-01 00:00:00'
     && (int)$noopRow['last_edited_by_admin_id']===$priorEditor
     && $noopRow['updated_at']==='2020-01-01 00:00:00',
     'Unchanged lot save does not create edit audit or advance updated_at');
-  [$changedStatus] = request_page('/admin/kavel.php?id='.$id, [
+  [$changedStatus, , $changedRedirect] = request_page('/admin/kavel.php?id='.$id, [
     'csrf'=>token($noopForm),'action'=>'save','id'=>(string)$id,
     'lot_number'=>'10','title'=>'Werkelijk gewijzigd','category'=>'','description'=>'','details'=>'',
     'market_price'=>'','starting_bid'=>'','seller_id'=>'',
@@ -353,7 +358,7 @@ try {
   ]);
   $changedLot=by_number(10);
   $actorId=(int)db()->query("SELECT id FROM admins WHERE email='ci-admin@example.invalid'")->fetchColumn();
-  claim($changedStatus===303 && $changedLot['title']==='Werkelijk gewijzigd'
+  claim($changedStatus===303 && $changedRedirect==='/admin/index.php' && $changedLot['title']==='Werkelijk gewijzigd'
     && (int)$changedLot['last_edited_by_admin_id']===$actorId
     && $changedLot['last_edited_at']!==null,
     'Real lot metadata edit records the authenticated editor and time');
@@ -418,8 +423,9 @@ try {
   $small['title'] = 'Geldig fotokavel';
   $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
-  [$status] = request_page('/admin/kavel.php', $small, true);
-  claim($status === 303 && (bool)by_number(20), 'Valid kavel and photo saved');
+  [$status, , $newLotRedirect] = request_page('/admin/kavel.php', $small, true);
+  claim($status === 303 && $newLotRedirect === '/admin/kavel.php?id='.(int)by_number(20)['id']
+    && (bool)by_number(20), 'New lot save preserves existing editor redirect and photo persistence');
   claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
   [$status, $lotsWithSeller] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
