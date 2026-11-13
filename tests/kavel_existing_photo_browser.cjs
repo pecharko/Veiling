@@ -116,6 +116,9 @@ const { chromium } = require('playwright');
           page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
         ]);
         assert(delayedFirstUpload, 'The slow-upload race must actually be exercised');
+        assert.equal(new URL(page.url()).pathname, '/admin/index.php',
+          'Saving an existing lot returns to the overview');
+        await page.goto(editorUrl, { waitUntil: 'domcontentloaded' });
         assert.equal(await page.locator('input[name="title"]').inputValue(), 'Edited while photo upload runs',
           'Save queued during photo upload must preserve edited lot fields');
       } else {
@@ -141,7 +144,9 @@ const { chromium } = require('playwright');
       page.waitForNavigation({ waitUntil: 'domcontentloaded' }),
       page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
     ]);
-    await page.reload();
+    assert.equal(new URL(page.url()).pathname, '/admin/index.php',
+      'Saving an edited lot with three photos returns to the overview');
+    await page.goto(editorUrl, { waitUntil: 'domcontentloaded' });
     assert.equal(await page.locator('input[name="title"]').inputValue(), 'Saved with three photos');
     assert.equal(await savedPhotos().count(), 3,
       'All photos must remain after saving unrelated lot data and reopening');
