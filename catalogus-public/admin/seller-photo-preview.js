@@ -54,12 +54,15 @@
   form.addEventListener('change', event => {
     if (event.target.matches('input:not([type=file]),textarea,select')) unsavedFields=true;
   });
-  document.querySelectorAll('.seller-editor-cancel,.seller-form-actions a.secondary,.seller-editor-toolbar a.lot-editor-back').forEach(link => {
-    link.addEventListener('click', event => {
-      if ((unsavedFields || document.querySelector('.seller-pending-photo')) &&
-          !confirm('Je hebt niet-opgeslagen wijzigingen. Wil je deze pagina verlaten?')) event.preventDefault();
-    });
-  });
+  document.addEventListener('click', event => {
+    const link=event.target.closest('.seller-editor-cancel,.seller-form-actions a.secondary,.seller-editor-toolbar a.lot-editor-back');
+    if (!link) return;
+    if ((unsavedFields || document.querySelector('.seller-pending-photo')) &&
+        !confirm('Je hebt niet-opgeslagen wijzigingen. Wil je deze pagina verlaten?')) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }
+  },true);
 
   grids.forEach(grid => {
     const kind = grid.dataset.sellerGallery;
