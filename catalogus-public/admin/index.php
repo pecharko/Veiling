@@ -18,7 +18,7 @@ $status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $photoFilter = ($_GET['photos'] ?? '') === 'none' ? 'none' : '';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
-$perPage = 50;
+$perPage = in_array((int)($_GET['per_page'] ?? 20),[20,50,100],true) ? (int)($_GET['per_page'] ?? 20) : 20;
 $where = []; $p = [];
 if ($q!=='') { $where[] = '(CAST(lot_number AS CHAR) LIKE ? OR title LIKE ? OR category LIKE ?)'; $p=array_fill(0,3,'%'.$q.'%'); }
 if ($category!=='') { $where[]='category=?'; $p[]=$category; }
@@ -52,6 +52,7 @@ admin_top('Kaveloverzicht');
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
       <label><span class="sr-only">Status</span><select name="status"><option value="">Alle statussen</option><option value="draft" <?=$status==='draft'?'selected':''?>>Concept</option><option value="published" <?=$status==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$status==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$status==='canceled'?'selected':''?>>Canceled</option></select></label>
       <label><span class="sr-only">Verkoopplaats</span><select name="sale_location"><option value="">Alle verkoopplaatsen</option><option value="markt" <?=$saleLocation==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$saleLocation==='veiling'?'selected':''?>>Veiling</option></select></label>
+      <label><span class="sr-only">Aantal kavels per pagina</span><select name="per_page" aria-label="Kavels per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
@@ -69,7 +70,7 @@ admin_top('Kaveloverzicht');
     </tr><?php endforeach; ?>
     <?php if(!$rows): ?><tr><td colspan="9">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
-    <?php if($pages>1): ?><nav class="dashboard-pagination" aria-label="Paginering"><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
+    <nav class="dashboard-pagination" aria-label="Paginering kavels"><span><?=($filtered ? (($page-1)*$perPage+1) : 0)?>–<?=min($filtered,$page*$perPage)?> van <?=$filtered?> kavels</span><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav>
   </section>
 </div>
 <?php admin_bottom(); ?>
