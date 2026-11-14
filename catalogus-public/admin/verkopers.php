@@ -16,8 +16,8 @@ if (is_post()) {
     if (!seller_can_manage(effective_admin_role())) { http_response_code(403); exit('Geen toegang.'); }
     if (($_POST['action']??'')==='artist-publication') {
       $status=(string)($_POST['artist_status']??'');
-      if (!in_array($status,['published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
-      seller_set_artist_publication($pdo,(int)$sellerId,$status==='published',effective_admin_role(),(int)$_SESSION['admin_id']);
+      if (!in_array($status,['new','published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
+      seller_set_artist_publication($pdo,(int)$sellerId,['unpublished'=>0,'published'=>1,'new'=>2][$status],effective_admin_role(),(int)$_SESSION['admin_id']);
       flash('Publicatiestatus kunstenaar aangepast.');
       $returnType=in_array(($_GET['type']??''),['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
       $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
@@ -130,13 +130,13 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
                   <?php endif; ?>
                 </td>
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
-                <td><span class="dashboard-category"><?=((int)$r['artist_published']===1?'Gepubliceerd':'Niet gepubliceerd')?></span></td>
+                <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
               <?php else: ?>
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
-                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><input type="hidden" name="artist_status" value="<?=((int)$r['artist_published']===1?'unpublished':'published')?>"><button class="secondary" type="submit"><?=((int)$r['artist_published']===1?'Publicatie intrekken':'Publiceren')?></button></form><?php endif; ?>
+                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><label class="sr-only" for="artist-status-<?=(int)$r['id']?>">Status van <?=e((string)$r['artist_name'])?></label><select id="artist-status-<?=(int)$r['id']?>" name="artist_status"><option value="new" <?=(int)$r['artist_published']===2?'selected':''?>>Nieuw</option><option value="published" <?=(int)$r['artist_published']===1?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=(int)$r['artist_published']===0?'selected':''?>>Niet gepubliceerd</option></select><button class="secondary" type="submit">Wijzig status</button></form><?php endif; ?>
                 <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>

@@ -14,7 +14,7 @@ $checks=[
   'published artist type conversion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
-  'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['published','unpublished']")
+  'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['new','published','unpublished']")
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'seller_set_artist_publication('),
   'overview filters unpublished artists'=>str_contains($read('catalogus-public/kunstenaars.php'), 's.artist_published=1'),
   'direct artist page filters unpublished artists'=>str_contains($read('catalogus-public/kunstenaar.php'), 's.artist_published=1'),

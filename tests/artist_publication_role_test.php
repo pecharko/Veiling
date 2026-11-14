@@ -5,9 +5,11 @@ function artist_role_assert(bool $ok,string $what): void {
   if (!$ok) throw new RuntimeException('Artist role permissions: '.$what);
 }
 $draft=['seller_type'=>'kunstenaar','artist_published'=>0,'created_by_admin_id'=>7];
+$newArtist=['seller_type'=>'kunstenaar','artist_published'=>2,'created_by_admin_id'=>7];
 $published=['seller_type'=>'kunstenaar','artist_published'=>1,'created_by_admin_id'=>7];
 $private=['seller_type'=>'particulier','artist_published'=>0,'created_by_admin_id'=>7];
 artist_role_assert(seller_can_edit('assistant',7,$draft),'creator can edit unpublished artist');
+artist_role_assert(seller_can_edit('assistant',7,$newArtist),'creator can edit new artist');
 artist_role_assert(!seller_can_edit('assistant',8,$draft),'other assistant cannot edit draft');
 artist_role_assert(!seller_can_edit('assistant',7,$published),'creator cannot edit published artist');
 artist_role_assert(!seller_can_edit('assistant',8,$published),'other assistant cannot edit published artist');

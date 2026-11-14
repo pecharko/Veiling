@@ -13,8 +13,8 @@ function seller_can_publish_artist(string $role): bool {
   return in_array($role,['administrator','veilingmeester'],true);
 }
 /** Caller validates CSRF and acquires the catalog lock; only an artist may be published. */
-function seller_set_artist_publication(PDO $pdo,int $sellerId,bool $published,string $role,int $actorId): void {
-  if ($sellerId<1 || $actorId<1 || !seller_can_publish_artist($role)) {
+function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string $role,int $actorId): void {
+  if ($sellerId<1 || $actorId<1 || !in_array($status,[0,1,2],true) || !seller_can_publish_artist($role)) {
     throw new InvalidArgumentException('Geen rechten om kunstenaars te publiceren.');
   }
   $pdo->beginTransaction();
@@ -23,10 +23,10 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,bool $published,st
     $st->execute([$sellerId]);
     $seller=$st->fetch(PDO::FETCH_ASSOC);
     if (!$seller || $seller['seller_type']!=='kunstenaar') throw new InvalidArgumentException('Kunstenaar niet gevonden.');
-    if ((int)$seller['artist_published']!==($published?1:0)) {
+    if ((int)$seller['artist_published']!==$status) {
       $name=seller_actor_name($pdo,$actorId);
       $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
-      $update->execute([$published?1:0,$actorId,$name,$sellerId]);
+      $update->execute([$status,$actorId,$name,$sellerId]);
     }
     $pdo->commit();
   } catch(Throwable $ex) {
@@ -156,6 +156,9 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
       $stmt->execute([...array_values($data),$actorId,$actorName,$id]);
     } else {
+      // Status 2 means 'Nieuw'. Existing statuses 0 and 1 remain unchanged.
+      $data['artist_published']=$data['seller_type']==='kunstenaar' ? 2 : 0;
+      $keys=array_keys($data);
       $stmt=$pdo->prepare('INSERT INTO lot_sellers ('.implode(',',$keys).',created_by_admin_id,created_by_name,created_at,updated_by_admin_id,updated_by_name,updated_at) VALUES ('.implode(',',array_fill(0,count($keys),'?')).',?,?,UTC_TIMESTAMP(),?,?,UTC_TIMESTAMP())');
       $stmt->execute([...array_values($data),$actorId,$actorName,$actorId,$actorName]);
       $id=(int)$pdo->lastInsertId();
