@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/rollen.php",
+      "source_sha256": "b02ac5de857771a63eac2728e8b53e461f70c93ffdc34de0bb9894363b1e5408",
+      "remote_sha256": "f418f1ddc7210e22d9179f6c454ec5b19e695069119923e964161c4e07980cad"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "f404880634afc1933e5adaca1f49045dc71a86c14bd71e9002d6fb23e66a1f9b",
+      "remote_sha256": "5b0d295927a71daeb0137428a3b29ac24154e0b6c5c3700d27661bf8bd44bd31"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "6b0ae6f71bb26ae29e71abcff4931d03a96087e1fe060797c76b21e8cfbb8212",
+      "remote_sha256": "359d99c8725f63743fe36285ed91bff721dd015e02314698ef7fb1c57014e9ae"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "f9b7cba0c06c4badf71a75f49e99679ae134b91e45cd6dce8b9892cb1a1c385b",
+      "remote_sha256": "92943ab27e8fa798f747b863f56dc7d26dc24e2d373573c3819247f7139e9c75"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "92af7a37124b4533d17e7c62c426bdcbd746fc79202293da0a4777f624708625",
+      "remote_sha256": "145a30067fd2e9e949cd3d1fd929208acb6d6a809199125c88078a6609a60bf9"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "ee391df4f5373d06529d9762dbfeb18d1d45dd4db5469da602f19c112e42be0a",
+      "remote_sha256": "72b8d476e47abc93134e78d20b05cd22b0ed3d85a1cc4e51eac8155e3f5f3fe8"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "d19b272aa896df8d2b2631d8cd45b5937604b8d4696dbaf74e970f9346e85738",
+      "remote_sha256": "a23e308d8699808b2feead5a5f42499eb53e442ae6223c910931f3598c112ce4"
+    },
+    {
+      "path": "private/lot_artist.php",
+      "source_sha256": "6ed262ee538562d8f6ad8c02a4521578b2bdd3f17cca6219871dd85b218b0289",
+      "remote_sha256": "c37a19cbcff1091ed54595886e7db6099527d8b1f76fbac78e011c25841a46a5"
+    },
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "d42d9d1570b000a1e0ac59524d3866da1c065b40a4d9fa0b4a5c8323e1eb33de",
+      "remote_sha256": "2559c4f9aad217368e01039624cfc5469649aa094365139229f578cdd007f691"
+    }
+  ]
+}
