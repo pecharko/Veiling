@@ -744,7 +744,7 @@ try {
   [$lockedArtistDeleteStatus,$lockedArtistDeletePage]=request_page('/admin/verkopers.php', [
     'csrf'=>token($ownArtistEditor),'action'=>'delete','seller_id'=>(string)$ownArtistId
   ]);
-  claim($lockedArtistDeleteStatus===200 && str_contains($lockedArtistDeletePage,'Geen bewerkingsrechten')
+  claim($lockedArtistDeleteStatus===403 && str_contains($lockedArtistDeletePage,'Geen bewerkingsrechten')
     && (int)db()->query('SELECT COUNT(*) FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===1,
     'Assistant cannot delete own published artist');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
