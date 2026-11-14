@@ -395,3 +395,8 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 
 /* Keep the edited artist row visible below the sticky admin header after publication. */
 .seller-table tr[id^="seller-row-"]{scroll-margin-top:110px}
+
+/* Adjustable page sizes in seller management; retain room for search and filters. */
+.seller-manager .seller-filters{grid-template-columns:minmax(180px,2fr) minmax(145px,1fr) minmax(145px,1fr) 120px}
+@media(max-width:900px){.seller-manager .seller-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.seller-manager .seller-filters{grid-template-columns:minmax(0,1fr)}}
