@@ -9,7 +9,7 @@ $s = settings();
 $splitPreview = catalog_split_active($s);
 $lotNum = filter_input(INPUT_GET, 'nr', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
 if (((int)($s['is_published'] ?? 0) !== 1 && !admin_preview_active()) || !$lotNum) { http_response_code(404); exit('Kavel niet gevonden.'); }
-$st = db()->prepare("SELECT l.*, CASE WHEN seller.seller_type='kunstenaar' THEN seller.artist_name ELSE '' END AS artist_name, CASE WHEN seller.seller_type='kunstenaar' THEN seller.artist_url ELSE '' END AS artist_url FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id WHERE l.lot_number=? AND l.status IN ('published','sold') LIMIT 1");
+$st = db()->prepare("SELECT l.*, CASE WHEN seller.seller_type='kunstenaar' THEN seller.artist_name ELSE '' END AS artist_name, CASE WHEN seller.seller_type='kunstenaar' AND seller.artist_published=1 THEN seller.artist_url ELSE '' END AS artist_url, CASE WHEN seller.seller_type='kunstenaar' AND seller.artist_published=1 THEN seller.id ELSE NULL END AS published_artist_id FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id WHERE l.lot_number=? AND l.status IN ('published','sold') LIMIT 1");
 $st->execute([$lotNum]);
 $lot = $st->fetch();
 if (!$lot) { http_response_code(404); exit('Kavel niet gevonden.'); }
