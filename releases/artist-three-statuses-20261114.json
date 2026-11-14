@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "220640bfd010936f9d108b5884b8fa7bea5576bccc5816a4df14f2890fb18988",
+      "remote_sha256": "d8297e3b719cf05e4bac4e5067ad9fc0381ed81d4887acc127a0efe883bf452f"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "d3803470fc0cd55a7423ec28e29361358d85b20552799507345c59f998164750",
+      "remote_sha256": "f404880634afc1933e5adaca1f49045dc71a86c14bd71e9002d6fb23e66a1f9b"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "fe12ba2f386890e63a7d6d9a2fd7530a61654f8967e652363d5c5175e562b835",
+      "remote_sha256": "9daa821250c4cdf1950ae17f3cc0dd49ac9026f4c21e545da6342479b1636185"
+    },
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "d5b2b729e8b3d63f040c4c0aaf70e316999d92d450757ba93979a1f195d6c267",
+      "remote_sha256": "d42d9d1570b000a1e0ac59524d3866da1c065b40a4d9fa0b4a5c8323e1eb33de"
+    }
+  ]
+}
