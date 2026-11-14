@@ -6,6 +6,8 @@ require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
 $pdo=db();
 $error='';
+$filterType=in_array($_GET['type'] ?? '', ['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
+$search=mb_substr(trim((string)($_GET['q']??'')),0,100);
 if (is_post()) {
   check_csrf();
   if (!in_array(($_POST['action']??''),['delete','artist-publication'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
@@ -19,7 +21,12 @@ if (is_post()) {
       if (!in_array($status,['published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
       seller_set_artist_publication($pdo,(int)$sellerId,$status==='published',effective_admin_role(),(int)$_SESSION['admin_id']);
       flash('Publicatiestatus kunstenaar aangepast.');
-      redirect('admin/verkopers.php');
+      // Keep the submitted artist in view after the POST/redirect/GET refresh.
+      $returnFilters=[];
+      if ($filterType!=='') $returnFilters['type']=$filterType;
+      if ($search!=='') $returnFilters['q']=$search;
+      header('Location: '.url('admin/verkopers.php',$returnFilters).'#seller-row-'.(int)$sellerId,true,303);
+      exit;
     }
     seller_require_edit($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     seller_delete($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
@@ -47,8 +54,6 @@ try {
 admin_top('Verkopers beheren');
 ?>
 <?php
-$filterType=in_array($_GET['type'] ?? '', ['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
-$search=mb_substr(trim((string)($_GET['q']??'')),0,100);
 $artistCount=count(array_filter($rows,static fn($row)=>$row['seller_type']==='kunstenaar'));
 $privateCount=count($rows)-$artistCount;
 $filteredRows=array_values(array_filter($rows,static function($row) use ($filterType,$search):bool {
@@ -94,7 +99,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
         </tr></thead>
         <tbody>
           <?php foreach($groupRows as $r): ?>
-            <tr>
+            <tr id="seller-row-<?=(int)$r['id']?>" style="scroll-margin-top:110px">
               <?php $canEditSeller=seller_can_edit(effective_admin_role(),(int)$_SESSION['admin_id'],$r); ?>
               <?php if ($groupType==='kunstenaar'): ?>
                 <?php
