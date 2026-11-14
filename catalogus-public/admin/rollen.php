@@ -6,7 +6,7 @@ admin_top('Rollen & rechten');
 ?>
 <section class="dashboard-panel">
   <h2>Wie kan wat doen?</h2>
-  <p>De actieve rol bepaalt welke acties toegestaan zijn. Assistenten mogen uitsluitend eigen conceptkavels bewerken en alleen verkopers aanpassen die ze zelf hebben aangemaakt. Veilingmeesters en administrators mogen alle verkopers wijzigen. Voor kavels zonder bekende maker zijn alleen de Veilingmeester en Administrator bevoegd. Ook fotoacties en verwijderingen volgen deze regels.</p><p>Publicatie op de Markt is verboden wanneer een kavel gemarkeerd is als uitsluitend bestemd voor de Veiling. De server weigert een conflicterende publicatie volledig.</p>
+  <p>De actieve rol bepaalt welke acties toegestaan zijn. Assistenten mogen uitsluitend eigen conceptkavels en eigen verkopers aanpassen, behalve gepubliceerde kunstenaars. Een gepubliceerde kunstenaar kan alleen door de Veilingmeester of Administrator worden gewijzigd, inclusief foto's en verwijdering. Veilingmeesters en administrators mogen alle verkopers wijzigen. Voor kavels zonder bekende maker zijn alleen de Veilingmeester en Administrator bevoegd. Ook fotoacties en verwijderingen volgen deze regels.</p><p>Publicatie op de Markt is verboden wanneer een kavel gemarkeerd is als uitsluitend bestemd voor de Veiling. De server weigert een conflicterende publicatie volledig.</p>
   <div class="table-wrap">
     <table>
       <thead><tr><th>Bevoegdheid</th><th>Administrator</th><th>Assistent</th><th>Veilingmeester</th></tr></thead>
@@ -19,6 +19,7 @@ admin_top('Rollen & rechten');
         <tr><td>Nieuwe verkopers en kunstenaars aanmaken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Eigen aangemaakte verkopers bewerken of verwijderen (inclusief foto's en bankgegevens)</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Verkopers van andere gebruikers bewerken of verwijderen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
+        <tr><td>Gepubliceerde kunstenaar bewerken, foto's wijzigen of verwijderen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Publicatiestatus van kunstenaars wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Veilingorganisatie bekijken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingvolgorde wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>

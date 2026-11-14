@@ -39,6 +39,8 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,bool $published,st
 function seller_can_edit(string $role,int $actorId,array $seller): bool {
   if (!seller_can_manage($role) || $actorId<=0) return false;
   if ($role==='administrator' || $role==='veilingmeester') return true;
+  // Even the creator loses all edit, photo and delete rights once published.
+  if (($seller['seller_type']??'')==='kunstenaar' && (int)($seller['artist_published']??0)===1) return false;
   return isset($seller['created_by_admin_id']) && (int)$seller['created_by_admin_id']===$actorId;
 }
 function seller_require_edit(PDO $pdo,int $sellerId,string $role,int $actorId): array {
