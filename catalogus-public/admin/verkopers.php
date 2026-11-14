@@ -8,12 +8,19 @@ $pdo=db();
 $error='';
 if (is_post()) {
   check_csrf();
-  if (($_POST['action']??'')!=='delete') { http_response_code(400); exit('Ongeldige actie.'); }
+  if (!in_array(($_POST['action']??''),['delete','artist-publication'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
   $sellerId=filter_var($_POST['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if ($sellerId===false || $sellerId===null) { http_response_code(400); exit('Ongeldige verkoper.'); }
   try {
     catalog_lock_for_request($pdo);
     if (!seller_can_manage(effective_admin_role())) { http_response_code(403); exit('Geen toegang.'); }
+    if (($_POST['action']??'')==='artist-publication') {
+      $status=(string)($_POST['artist_status']??'');
+      if (!in_array($status,['published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
+      seller_set_artist_publication($pdo,(int)$sellerId,$status==='published',effective_admin_role(),(int)$_SESSION['admin_id']);
+      flash('Publicatiestatus kunstenaar aangepast.');
+      redirect('admin/verkopers.php');
+    }
     seller_require_edit($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     seller_delete($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     flash('Verkoper verwijderd.');
@@ -69,7 +76,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     </form>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
-        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
+        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Publicatie</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
         <tbody>
           <?php foreach($filteredRows as $r): ?>
             <tr>
@@ -77,14 +84,16 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e($r['name'])?></a><?php else: ?><?=e($r['name'])?><?php endif; ?></td>
               <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
               <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
+              <td><?php if($r['seller_type']==='kunstenaar'): ?><span class="dashboard-category"><?=((int)$r['artist_published']===1?'Gepubliceerd':'Niet gepubliceerd')?></span><?php else: ?>—<?php endif; ?></td>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
+                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><input type="hidden" name="artist_status" value="<?=((int)$r['artist_published']===1?'unpublished':'published')?>"><button class="secondary" type="submit"><?=((int)$r['artist_published']===1?'Publicatie intrekken':'Publiceren')?></button></form><?php endif; ?>
                 <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$filteredRows): ?><tr><td colspan="5">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$filteredRows): ?><tr><td colspan="6">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>

@@ -129,6 +129,16 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
     $pdo->exec(trim((string)$sloganSql));
     echo "Optional artist slogan added to isolated preview.\n";
 }
+// Install publication flag only into the isolated, synthetic preview database.
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_published'")->fetch()) {
+    $publicationSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261114_artist_publication.sql');
+    if (!is_string($publicationSql) || !str_contains($publicationSql, 'artist_published TINYINT(1) NOT NULL DEFAULT 0')) {
+        throw new RuntimeException('Reviewed artist publication migration missing.');
+    }
+    $publicationSql=preg_replace('/^\s*--[^\n]*$/m','',$publicationSql);
+    $pdo->exec(trim((string)$publicationSql));
+    echo "Artist publication flag added to isolated preview.\n";
+}
 // Add optional private seller mobile number only to the isolated Docker database.
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch()) {
     $mobileSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_mobile.sql');
@@ -179,6 +189,7 @@ function preview_seed_public_artist(PDO $pdo): void {
     $seller->execute();
     $sellerId = $seller->fetchColumn();
     if (!$sellerId) return;
+    $pdo->prepare("UPDATE lot_sellers SET artist_published=1 WHERE id=?")->execute([(int)$sellerId]);
     $pdo->prepare("UPDATE lot_sellers SET artist_slogan='Kunst die verwondert' WHERE id=? AND artist_slogan=''")
         ->execute([(int)$sellerId]);
     $pdo->prepare("UPDATE lot_sellers SET artist_intro='Een fictieve maker, uitsluitend voor de lokale preview.' WHERE id=? AND artist_intro=''")
@@ -224,6 +235,8 @@ function preview_seed_artist_gallery(PDO $pdo): void {
             $sellerId=(int)$pdo->lastInsertId();
         }
         $sellerId=(int)$sellerId;
+        // Include published and hidden artists in synthetic browser fixtures.
+        $pdo->prepare('UPDATE lot_sellers SET artist_published=? WHERE id=?')->execute([$index<2?1:0,$sellerId]);
         foreach (['portrait'=>1,'work'=>3] as $kind=>$slots) {
             for ($slot=1;$slot<=$slots;$slot++) {
                 $findImage->execute([$sellerId,$kind,$slot]);

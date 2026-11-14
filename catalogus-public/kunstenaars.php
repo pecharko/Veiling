@@ -15,7 +15,7 @@ $stmt = db()->query("
   FROM lot_sellers s
   LEFT JOIN seller_images si
     ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1
-  WHERE s.seller_type='kunstenaar' AND s.artist_name<>''
+  WHERE s.seller_type='kunstenaar' AND s.artist_name<>'' AND s.artist_published=1
     AND EXISTS (
       SELECT 1 FROM lots l
       WHERE l.seller_id=s.id AND l.status IN ('published','sold')
