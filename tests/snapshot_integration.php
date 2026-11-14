@@ -19,6 +19,28 @@ $pdo = db();
 if ($pdo->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test') {
     throw new RuntimeException('Refusing to test against an unexpected database.');
 }
+// Exercise the new protected-release adapter strictly offline inside CI's
+// disposable snapshot test job; no workflow or historical release gate changes.
+$offlineCommand = [
+  'python3', '-B', '-m', 'unittest', 'discover', '-s', 'tests',
+  '-p', 'deploy_artist_publication_snapshot_test.py', '-v'
+];
+$offlineProcess = proc_open(
+  $offlineCommand,
+  [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],
+  $offlinePipes,
+  $root
+);
+if (!is_resource($offlineProcess)) throw new RuntimeException('Offline snapshot release test could not start.');
+fclose($offlinePipes[0]);
+$offlineOutput = stream_get_contents($offlinePipes[1]);
+$offlineErrors = stream_get_contents($offlinePipes[2]);
+fclose($offlinePipes[1]);
+fclose($offlinePipes[2]);
+$offlineExit = proc_close($offlineProcess);
+echo (string)$offlineOutput, (string)$offlineErrors;
+if ($offlineExit !== 0) throw new RuntimeException('Offline artist publication release adapter checks failed.');
+
 $count = 0;
 function verify(bool $yes, string $message): void {
     global $count;
