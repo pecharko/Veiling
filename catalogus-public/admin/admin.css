@@ -392,3 +392,6 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
   .seller-editor-toolbar{align-items:stretch;flex-direction:column}
   .seller-editor-toolbar .lot-editor-toolbar-actions{justify-content:flex-start}
 }
+
+/* Keep the edited artist row visible below the sticky admin header after publication. */
+.seller-table tr[id^="seller-row-"]{scroll-margin-top:110px}
