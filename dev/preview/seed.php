@@ -189,6 +189,7 @@ function preview_seed_public_artist(PDO $pdo): void {
     $seller->execute();
     $sellerId = $seller->fetchColumn();
     if (!$sellerId) return;
+    $pdo->prepare("UPDATE lot_sellers SET artist_published=1 WHERE id=?")->execute([(int)$sellerId]);
     $pdo->prepare("UPDATE lot_sellers SET artist_slogan='Kunst die verwondert' WHERE id=? AND artist_slogan=''")
         ->execute([(int)$sellerId]);
     $pdo->prepare("UPDATE lot_sellers SET artist_intro='Een fictieve maker, uitsluitend voor de lokale preview.' WHERE id=? AND artist_intro=''")
@@ -234,6 +235,8 @@ function preview_seed_artist_gallery(PDO $pdo): void {
             $sellerId=(int)$pdo->lastInsertId();
         }
         $sellerId=(int)$sellerId;
+        // Include published and hidden artists in synthetic browser fixtures.
+        $pdo->prepare('UPDATE lot_sellers SET artist_published=? WHERE id=?')->execute([$index<2?1:0,$sellerId]);
         foreach (['portrait'=>1,'work'=>3] as $kind=>$slots) {
             for ($slot=1;$slot<=$slots;$slot++) {
                 $findImage->execute([$sellerId,$kind,$slot]);
