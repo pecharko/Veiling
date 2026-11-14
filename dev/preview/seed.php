@@ -129,6 +129,16 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
     $pdo->exec(trim((string)$sloganSql));
     echo "Optional artist slogan added to isolated preview.\n";
 }
+// Install publication flag only into the isolated, synthetic preview database.
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_published'")->fetch()) {
+    $publicationSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261114_artist_publication.sql');
+    if (!is_string($publicationSql) || !str_contains($publicationSql, 'artist_published TINYINT(1) NOT NULL DEFAULT 0')) {
+        throw new RuntimeException('Reviewed artist publication migration missing.');
+    }
+    $publicationSql=preg_replace('/^\s*--[^\n]*$/m','',$publicationSql);
+    $pdo->exec(trim((string)$publicationSql));
+    echo "Artist publication flag added to isolated preview.\n";
+}
 // Add optional private seller mobile number only to the isolated Docker database.
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'mobile_number'")->fetch()) {
     $mobileSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261111_seller_mobile.sql');
