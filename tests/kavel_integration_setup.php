@@ -146,6 +146,17 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
   throw new RuntimeException('Artist slogan missing in isolated CI database.');
 }
 
+// Publication status exists only in the disposable CI database, never production.
+$publicationSql=file_get_contents($dir.'/database/migrations/20261114_artist_publication.sql');
+if (!is_string($publicationSql) || !str_contains($publicationSql, 'artist_published TINYINT(1) NOT NULL DEFAULT 0')) {
+  throw new RuntimeException('Artist publication migration fixture missing.');
+}
+$publicationSql=preg_replace('/^\s*--[^\n]*$/m','',$publicationSql);
+$pdo->exec(trim((string)$publicationSql));
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_published'")->fetch()) {
+  throw new RuntimeException('Artist publication flag missing in disposable CI database.');
+}
+
 // Mobile schema is additive and is applied only to the disposable CI DB.
 $mobileSql=file_get_contents($dir.'/database/migrations/20261111_seller_mobile.sql');
 if (!is_string($mobileSql) || !str_contains($mobileSql,'ADD COLUMN mobile_number VARCHAR(16)')) {
