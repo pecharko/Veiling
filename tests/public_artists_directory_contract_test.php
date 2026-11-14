@@ -39,4 +39,18 @@ if (!str_contains($profile,'Kunstenaar niet gevonden.')) throw new RuntimeExcept
 if (!str_contains($css,'.artists-overview-card') || !str_contains($css,'@media(max-width:580px)')) {
     throw new RuntimeException('Artist directory layout missing mobile breakpoints');
 }
+if (!str_contains($css, '.artists-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))')) {
+    throw new RuntimeException('Artists directory should display four compact cards across on desktop');
+}
+foreach ([
+    '@media(max-width:1100px){.artists-overview-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}',
+    '@media(max-width:760px){.artists-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '@media(max-width:580px){.artists-overview',
+    '.artists-overview-card-body{display:flex;flex-direction:column;gap:7px;padding:17px 18px 20px}',
+] as $needle) {
+    if (!str_contains($css,$needle)) throw new RuntimeException('Artist directory missing compact layout contract: '.$needle);
+}
+if (!str_contains($page, "url('assets/catalogus.css'))?>?v=194")) {
+    throw new RuntimeException('Artist directory stylesheet cache needs updated version');
+}
 echo "PASS public artist directory, portrait links, publication privacy and responsive layout.\n";
