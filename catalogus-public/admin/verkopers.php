@@ -19,7 +19,15 @@ if (is_post()) {
       if (!in_array($status,['published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
       seller_set_artist_publication($pdo,(int)$sellerId,$status==='published',effective_admin_role(),(int)$_SESSION['admin_id']);
       flash('Publicatiestatus kunstenaar aangepast.');
-      redirect('admin/verkopers.php');
+      $returnType=in_array(($_GET['type']??''),['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
+      $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
+      $returnParams=['type'=>$returnType,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
+      foreach (['kunstenaar','particulier'] as $returnGroup) {
+        $key='pagina_'.$returnGroup;
+        $returnParams[$key]=max(1,(int)($_GET[$key]??1));
+      }
+      header('Location: '.url('admin/verkopers.php',$returnParams).'#seller-row-'.(int)$sellerId,true,303);
+      exit;
     }
     seller_require_edit($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     seller_delete($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
@@ -49,6 +57,12 @@ admin_top('Verkopers beheren');
 <?php
 $filterType=in_array($_GET['type'] ?? '', ['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
 $search=mb_substr(trim((string)($_GET['q']??'')),0,100);
+$perPage=in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)($_GET['per_page']??20):20;
+function seller_page_url(string $groupType,int $page): string {
+  $params=$_GET;
+  $params['pagina_'.$groupType]=$page;
+  return url('admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
+}
 $artistCount=count(array_filter($rows,static fn($row)=>$row['seller_type']==='kunstenaar'));
 $privateCount=count($rows)-$artistCount;
 $filteredRows=array_values(array_filter($rows,static function($row) use ($filterType,$search):bool {
@@ -73,15 +87,22 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     <form class="dashboard-filters seller-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
       <label><span class="sr-only">Type verkoper</span><select name="type"><option value="">Alle verkopers</option><option value="kunstenaar" <?=$filterType==='kunstenaar'?'selected':''?>>Kunstenaars</option><option value="particulier" <?=$filterType==='particulier'?'selected':''?>>Particulieren</option></select></label>
+      <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
   </section>
   <?php foreach (['kunstenaar'=>'Kunstenaars','particulier'=>'Particulieren'] as $groupType=>$groupLabel): ?>
     <?php if ($filterType!=='' && $filterType!==$groupType) continue; ?>
-    <?php $groupRows=array_values(array_filter($filteredRows,static fn($row)=>$row['seller_type']===$groupType)); ?>
+    <?php
+      $allGroupRows=array_values(array_filter($filteredRows,static fn($row)=>$row['seller_type']===$groupType));
+      $groupTotal=count($allGroupRows);
+      $groupPages=max(1,(int)ceil($groupTotal/$perPage));
+      $groupPage=max(1,min($groupPages,(int)($_GET['pagina_'.$groupType]??1)));
+      $groupRows=array_slice($allGroupRows,($groupPage-1)*$perPage,$perPage);
+    ?>
   <section class="dashboard-panel" aria-labelledby="seller-list-<?=e($groupType)?>-heading">
     <div class="dashboard-panel-heading">
-      <div><h2 id="seller-list-<?=e($groupType)?>-heading"><?=e($groupLabel)?></h2><p><?=count($groupRows)?> resultaten</p></div>
+      <div><h2 id="seller-list-<?=e($groupType)?>-heading"><?=e($groupLabel)?></h2><p><?=$groupTotal?> resultaten</p></div>
     </div>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
@@ -94,7 +115,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
         </tr></thead>
         <tbody>
           <?php foreach($groupRows as $r): ?>
-            <tr>
+            <tr id="seller-row-<?=(int)$r['id']?>">
               <?php $canEditSeller=seller_can_edit(effective_admin_role(),(int)$_SESSION['admin_id'],$r); ?>
               <?php if ($groupType==='kunstenaar'): ?>
                 <?php
@@ -115,7 +136,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
-                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><input type="hidden" name="artist_status" value="<?=((int)$r['artist_published']===1?'unpublished':'published')?>"><button class="secondary" type="submit"><?=((int)$r['artist_published']===1?'Publicatie intrekken':'Publiceren')?></button></form><?php endif; ?>
+                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><input type="hidden" name="artist_status" value="<?=((int)$r['artist_published']===1?'unpublished':'published')?>"><button class="secondary" type="submit"><?=((int)$r['artist_published']===1?'Publicatie intrekken':'Publiceren')?></button></form><?php endif; ?>
                 <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
@@ -125,6 +146,12 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
         </tbody>
       </table>
     </div>
+    <nav class="dashboard-pagination" aria-label="Paginering <?=e(mb_strtolower($groupLabel))?>">
+      <span><?=($groupTotal ? (($groupPage-1)*$perPage+1) : 0)?>–<?=min($groupTotal,$groupPage*$perPage)?> van <?=$groupTotal?></span>
+      <?php if($groupPage>1): ?><a href="<?=e(seller_page_url($groupType,$groupPage-1))?>">← Vorige</a><?php endif; ?>
+      <span>Pagina <?=$groupPage?> / <?=$groupPages?></span>
+      <?php if($groupPage<$groupPages): ?><a href="<?=e(seller_page_url($groupType,$groupPage+1))?>">Volgende →</a><?php endif; ?>
+    </nav>
   </section>
   <?php endforeach; ?>
 
