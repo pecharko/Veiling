@@ -40,6 +40,26 @@ fclose($offlinePipes[2]);
 $offlineExit = proc_close($offlineProcess);
 echo (string)$offlineOutput, (string)$offlineErrors;
 if ($offlineExit !== 0) throw new RuntimeException('Offline artist publication release adapter checks failed.');
+$workflowCommand = [
+  'python3', '-B', '-m', 'unittest', 'discover', '-s', 'tests',
+  '-p', 'artist_publication_snapshot_workflow_test.py', '-v'
+];
+$workflowProcess = proc_open(
+  $workflowCommand,
+  [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],
+  $workflowPipes,
+  $root
+);
+if (!is_resource($workflowProcess)) throw new RuntimeException('Offline workflow test could not start.');
+fclose($workflowPipes[0]);
+$workflowOutput = stream_get_contents($workflowPipes[1]);
+$workflowErrors = stream_get_contents($workflowPipes[2]);
+fclose($workflowPipes[1]);
+fclose($workflowPipes[2]);
+$workflowExit = proc_close($workflowProcess);
+echo (string)$workflowOutput, (string)$workflowErrors;
+if ($workflowExit !== 0) throw new RuntimeException('Artist publication workflow security contracts failed.');
+
 
 $count = 0;
 function verify(bool $yes, string $message): void {
