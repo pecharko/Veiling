@@ -57,4 +57,16 @@ if (!str_contains($overview,'require_auth()')) throw new RuntimeException('Selle
 foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
 }
+// Publishing must return to the same artist row without losing active filters.
+foreach ([
+  "if (\$filterType!=='') \$returnFilters['type']=\$filterType;",
+  "if (\$search!=='') \$returnFilters['q']=\$search;",
+  "url('admin/verkopers.php',\$returnFilters).'#seller-row-'",
+  'id="seller-row-<?=(int)$r[\'id\']?>"',
+  'style="scroll-margin-top:110px"',
+] as $needle) {
+  if (!str_contains($overview,$needle)) throw new RuntimeException('Artist publication must retain filters and row position: '.$needle);
+}
+if (substr_count($overview,"header('Location: '.url('admin/verkopers.php',\$returnFilters)") !== 1)
+  throw new RuntimeException('Artist publication redirect should use a single anchored PRG response.');
 echo "PASS separate seller list and new/edit form share the kavels design.\n";
