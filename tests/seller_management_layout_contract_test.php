@@ -42,6 +42,17 @@ if (strpos($overview, "'kunstenaar'=>'Kunstenaars'") >= strpos($overview, "'part
 foreach (['Kunstenaars','Particulieren','foreach($groupRows as $r)','seller-list-<?=e($groupType)?>-heading'] as $required) {
   if (!str_contains($overview,$required)) throw new RuntimeException('Missing separate seller group: '.$required);
 }
+if (str_contains($overview, '<th scope="col">Type</th>'))
+  throw new RuntimeException('Redundant seller type column must be absent from both grouped tables.');
+if (!str_contains($overview, "<th scope=\"col\">Portret</th><th scope=\"col\">Kunstenaar</th>"))
+  throw new RuntimeException('Artist table must show portrait and artist name instead of private name.');
+if (!str_contains($overview, "<th scope=\"col\">Naam</th><th scope=\"col\">Kavels</th><th scope=\"col\">Acties</th>"))
+  throw new RuntimeException('Private-seller table must show only name, lots and actions.');
+foreach (['seller_images', "image_kind='portrait' AND slot=1", "preg_match('~^uploads/", 'seller-portrait-thumb', 'seller-portrait-placeholder', '<?=e(url($portrait))?>', '$groupType===\'kunstenaar\'?5:3'] as $required) {
+  if (!str_contains($overview,$required)) throw new RuntimeException('Artist portrait cell missing safety or rendering contract: '.$required);
+}
+if (!str_contains($css, '.seller-portrait-thumb') || !str_contains($css, '.seller-portrait-placeholder'))
+  throw new RuntimeException('Missing compact portrait styles.');
 if (!str_contains($overview,'require_auth()')) throw new RuntimeException('Seller overview must require an authenticated role.');
 foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
