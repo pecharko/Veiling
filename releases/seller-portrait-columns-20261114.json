@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "5578570b0fe7d000eb3a435dfb925119eb3180116198441b0e9fef86da5e8493",
+      "remote_sha256": "e17c3299dcc31178caf689a80381535411dcf5b5c7f0a11a764534cb7e3fc143"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "0ef2129ed9839e4b538a7d7419abf558d47d4d0369165e79e7bdde99a4c39a16",
+      "remote_sha256": "74faff71c9789120f6835d4730b53f2c86e93ba4a28920c786ac679504eb2dd9"
+    }
+  ]
+}
