@@ -34,6 +34,7 @@ if (is_post()) {
 }
 try {
   $rows=seller_list($pdo);
+  $portraitPaths=$pdo->query("SELECT seller_id,path FROM seller_images WHERE image_kind='portrait' AND slot=1")->fetchAll(PDO::FETCH_KEY_PAIR);
 
 } catch (PDOException $e) {
   error_log('[Verkopersbeheer] Laden mislukt.');
@@ -84,15 +85,34 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     </div>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
-        <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Publicatie</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
+        <thead><tr>
+          <?php if ($groupType==='kunstenaar'): ?>
+            <th scope="col">Portret</th><th scope="col">Kunstenaar</th><th scope="col">Publicatie</th><th scope="col">Kavels</th><th scope="col">Acties</th>
+          <?php else: ?>
+            <th scope="col">Naam</th><th scope="col">Kavels</th><th scope="col">Acties</th>
+          <?php endif; ?>
+        </tr></thead>
         <tbody>
           <?php foreach($groupRows as $r): ?>
             <tr>
               <?php $canEditSeller=seller_can_edit(effective_admin_role(),(int)$_SESSION['admin_id'],$r); ?>
-              <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e($r['name'])?></a><?php else: ?><?=e($r['name'])?><?php endif; ?></td>
-              <td><span class="dashboard-category"><?=e($r['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier')?></span></td>
-              <td><?=e($r['seller_type']==='kunstenaar'?(string)$r['artist_name']:'—')?></td>
-              <td><?php if($r['seller_type']==='kunstenaar'): ?><span class="dashboard-category"><?=((int)$r['artist_published']===1?'Gepubliceerd':'Niet gepubliceerd')?></span><?php else: ?>—<?php endif; ?></td>
+              <?php if ($groupType==='kunstenaar'): ?>
+                <?php
+                  $portrait=(string)($portraitPaths[(int)$r['id']]??'');
+                  $safePortrait=preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D',$portrait)===1;
+                ?>
+                <td class="seller-portrait-cell">
+                  <?php if ($safePortrait): ?>
+                    <img class="seller-portrait-thumb" src="<?=e(url($portrait))?>" alt="Portret van <?=e((string)$r['artist_name'])?>" loading="lazy" decoding="async" width="48" height="48">
+                  <?php else: ?>
+                    <span class="seller-portrait-placeholder" role="img" aria-label="Geen portret beschikbaar">👤</span>
+                  <?php endif; ?>
+                </td>
+                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
+                <td><span class="dashboard-category"><?=((int)$r['artist_published']===1?'Gepubliceerd':'Niet gepubliceerd')?></span></td>
+              <?php else: ?>
+                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
+              <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
                 <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><input type="hidden" name="artist_status" value="<?=((int)$r['artist_published']===1?'unpublished':'published')?>"><button class="secondary" type="submit"><?=((int)$r['artist_published']===1?'Publicatie intrekken':'Publiceren')?></button></form><?php endif; ?>
@@ -101,7 +121,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$groupRows): ?><tr><td colspan="6">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$groupRows): ?><tr><td colspan="<?=$groupType==='kunstenaar'?5:3?>">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
