@@ -37,6 +37,17 @@
 7. Alleen na afzonderlijke, op het exacte manifest gerichte productieautorisatie: verse remote-driftcontrole, gepinde hostkey, terugrolbare bestandsback-up, readback per bestand, bewijs, onafhankelijke read-only OVH-reconciliatie en browseracceptatie.
 8. Bij een ambigue externe schrijfuitkomst: **STOP, GEEN RETRY**, alleen onafhankelijke read-only reconciliatie.
 
+## Gecombineerde PR-controle tegen main (14 november 2026)
+
+- **Enige bedoelde merge-Pull Request:** #583 met alle 27 bestanden rechtstreeks naar `main`. #582 is historisch deelwerk en mag niet afzonderlijk worden gemergd.
+- Main-baseline bij laatste controle: `bfa8ad99869adf4f788350727908d59aa083aa27`. Voor elke exacte mergeautorisatie moeten basis, head, diff en CI opnieuw gecontroleerd worden.
+- De nieuwe `Artist publication snapshot protected one-file release` reviewworkflow, PHP/repository, snapshot/restore, kavel-HTTP/MySQL en visitor-statistiek-MySQL zijn geslaagd op de gecombineerde bron.
+- De drie historische `Lot audit snapshot v7` / `Artist slogan snapshot` releasechecks falen *fail-closed* omdat de **nieuwe bronhash** voor `private/snapshots.php` niet overeenstemt met het historische, onveranderlijke manifest. In de logs is de concrete melding `Protected artist-slogan snapshot source drift`. Dit is geen toestemming om hashes, workflows, historische manifests of gate-eisen te herzien.
+- Een groen resultaat van de nieuwe workflow is uitsluitend **offline bron- en beveiligingsvalidatie**, geen bewijs dat OVH-baselines of migratie in productie reeds geverifieerd zijn.
+- Zolang toepasbare verplichte releasechecks rood blijven of branch-regels onduidelijk zijn, is #583 **niet vrijgegeven voor merge**. Vraag geen mergeautorisatie als vervanging voor een ontbrekende technische gate.
+- De nieuwe workflow is nog niet geactiveerd op `main`; geen `workflow_dispatch`, geen live SFTP, geen databasehandeling.
+- Na wijzigingen aan de PR-base moet CI op de **daadwerkelijke nieuwe basis `main`** opnieuw worden geëvalueerd. Eerdere PR-events die de oude deelbranch als basis gebruikten, vormen op zichzelf geen volledige actuele basisverificatie.
+
 ## Open blokkades
 
 - Geen actueel geauthenticeerd remote-baselinebewijs voor deze nieuwe bron.
