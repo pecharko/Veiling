@@ -48,3 +48,4 @@ echo "PASS lot artist validation and safe public markup\n";
 
 require __DIR__ . '/artist_public_link_style_test.php';
 require __DIR__ . '/artist_publication_contract_test.php';
+require __DIR__ . '/artist_publication_role_test.php';
