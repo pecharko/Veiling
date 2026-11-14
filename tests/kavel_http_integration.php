@@ -702,8 +702,8 @@ try {
   ]);
   $ownArtistId=(int)db()->query("SELECT id FROM lot_sellers WHERE email='eigen-kunstenaar@example.invalid'")->fetchColumn();
   claim($assistantArtistStatus===303 && $ownArtistId>0
-    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
-    'Assistant creates unpublished artist by default');
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
+    'Assistant creates artist with new status by default');
   [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/verkoper.php?id='.$ownArtistId);
   claim($ownArtistStatus===200, 'Assistant can edit own unpublished artist');
   [$blockedPublish,$blockedPublishPage]=request_page('/admin/verkopers.php', [
@@ -711,12 +711,12 @@ try {
     'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'
   ]);
   claim($blockedPublish===200 && str_contains($blockedPublishPage,'Geen rechten om kunstenaars te publiceren')
-    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
     'Forged assistant publication request is denied');
   db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
   [$adminArtistListStatus,$adminArtistList]=request_page('/admin/verkopers.php');
-  claim($adminArtistListStatus===200 && str_contains($adminArtistList,'Publiceren'),
-    'Administrator sees artist publication controls');
+  claim($adminArtistListStatus===200 && str_contains($adminArtistList,'Wijzig status'),
+    'Administrator sees artist status controls');
   [$adminPublishStatus]=request_page('/admin/verkopers.php', [
     'csrf'=>token($adminArtistList),'action'=>'artist-publication',
     'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'

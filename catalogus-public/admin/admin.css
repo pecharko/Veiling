@@ -400,3 +400,11 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-manager .seller-filters{grid-template-columns:minmax(180px,2fr) minmax(145px,1fr) minmax(145px,1fr) 120px}
 @media(max-width:900px){.seller-manager .seller-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.seller-manager .seller-filters{grid-template-columns:minmax(0,1fr)}}
+
+/* Artist publication status: distinct, accessible state colors. */
+.seller-publication-status{display:inline-block;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;white-space:nowrap}
+.seller-publication-status.is-published{background:#e4f6e9;color:#195b32}
+.seller-publication-status.is-unpublished{background:#fde9e8;color:#a12424}
+.seller-publication-status.is-new{background:#e7f0ff;color:#1952a0}
+.seller-status-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.seller-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}
