@@ -162,6 +162,9 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
     <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
+    <?php if ($editId!==null && $values['seller_type']==='kunstenaar'): ?>
+      <p class="dashboard-subtitle"><strong>Publicatiestatus:</strong> <?=((int)($values['artist_published']??0)===1?'Gepubliceerd':'Niet gepubliceerd')?>. De status wordt uitsluitend door de Veilingmeester of Administrator gewijzigd via Verkopers beheren.</p>
+    <?php endif; ?>
     <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form" data-seller-upload="1">
       <?=csrf_field()?>
       <input type="hidden" name="action" value="save">

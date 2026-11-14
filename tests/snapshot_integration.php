@@ -19,6 +19,48 @@ $pdo = db();
 if ($pdo->query('SELECT DATABASE()')->fetchColumn() !== 'auction_test') {
     throw new RuntimeException('Refusing to test against an unexpected database.');
 }
+// Exercise the new protected-release adapter strictly offline inside CI's
+// disposable snapshot test job; no workflow or historical release gate changes.
+$offlineCommand = [
+  'python3', '-B', '-m', 'unittest', 'discover', '-s', 'tests',
+  '-p', 'deploy_artist_publication_snapshot_test.py', '-v'
+];
+$offlineProcess = proc_open(
+  $offlineCommand,
+  [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],
+  $offlinePipes,
+  $root
+);
+if (!is_resource($offlineProcess)) throw new RuntimeException('Offline snapshot release test could not start.');
+fclose($offlinePipes[0]);
+$offlineOutput = stream_get_contents($offlinePipes[1]);
+$offlineErrors = stream_get_contents($offlinePipes[2]);
+fclose($offlinePipes[1]);
+fclose($offlinePipes[2]);
+$offlineExit = proc_close($offlineProcess);
+echo (string)$offlineOutput, (string)$offlineErrors;
+if ($offlineExit !== 0) throw new RuntimeException('Offline artist publication release adapter checks failed.');
+$workflowCommand = [
+  'python3', '-B', '-m', 'unittest', 'discover', '-s', 'tests',
+  '-p', 'artist_publication_snapshot_workflow_test.py', '-v'
+];
+$workflowProcess = proc_open(
+  $workflowCommand,
+  [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],
+  $workflowPipes,
+  $root
+);
+if (!is_resource($workflowProcess)) throw new RuntimeException('Offline workflow test could not start.');
+fclose($workflowPipes[0]);
+$workflowOutput = stream_get_contents($workflowPipes[1]);
+$workflowErrors = stream_get_contents($workflowPipes[2]);
+fclose($workflowPipes[1]);
+fclose($workflowPipes[2]);
+$workflowExit = proc_close($workflowProcess);
+echo (string)$workflowOutput, (string)$workflowErrors;
+if ($workflowExit !== 0) throw new RuntimeException('Artist publication workflow security contracts failed.');
+
+
 $count = 0;
 function verify(bool $yes, string $message): void {
     global $count;
@@ -64,7 +106,7 @@ $checksum = hash_file('sha256', $original);
 $sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
 $sellerPhoto=$uploads.'/'.$sellerRelative;
 if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
-$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter' WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1 WHERE id=?")->execute([$sellerId]);
 $pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
   ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
@@ -96,7 +138,7 @@ verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($sna
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
 verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
        'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter'))===1
+verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
@@ -148,6 +190,7 @@ $bad->close();
 assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is rejected by checksum validation');
 
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
+$pdo->prepare('UPDATE lot_sellers SET artist_published=0 WHERE id=?')->execute([$sellerId]);
 $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
 $pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
@@ -182,8 +225,9 @@ verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
 verify(is_file($sellerPhoto)
   && $pdo->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve maker uit Lokeren'
   && $pdo->query('SELECT artist_slogan FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Kunst met karakter'
+  && (int)$pdo->query('SELECT artist_published FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()===1
   && (int)$pdo->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
-  'Snapshot restores artist introduction and work photo');
+  'Snapshot restores published artist status, introduction and work photo');
 verify((int)$pdo->query('SELECT last_edited_by_admin_id FROM lots WHERE lot_number=101')->fetchColumn()===1
   && $pdo->query('SELECT last_edited_at FROM lots WHERE lot_number=101')->fetchColumn()==='2026-11-11 07:30:00',
   'Snapshot restores effective lot audit editor and timestamp');

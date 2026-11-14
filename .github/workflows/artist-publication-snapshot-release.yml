@@ -1,0 +1,106 @@
+name: Artist publication snapshot protected one-file release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/artist-publication-snapshot-release.yml'
+      - 'scripts/deploy_artist_publication_snapshot.py'
+      - 'tests/deploy_artist_publication_snapshot_test.py'
+      - 'tests/artist_publication_snapshot_workflow_test.py'
+      - 'private/snapshots.php'
+      - 'releases/artist-publication-snapshot-20261114.json'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'ARTIST-PUBLICATION-SNAPSHOT-DEPLOY-artist-publication-snapshot-20261114-<exact main SHA>'
+        required: true
+        type: string
+      schema_ready:
+        description: 'ARTIST-PUBLICATION-SCHEMA-VERIFIED-20261114; only with separately approved DB migration and verified complete backup'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ovh-production-deploy' || format('artist-publication-review-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Verify dedicated release controller and workflow fail-closed offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_publication_snapshot_test.py -v
+          python3 -B -m unittest discover -s tests -p artist_publication_snapshot_workflow_test.py -v
+          python3 -m py_compile scripts/deploy_artist_publication_snapshot.py
+          php -l private/snapshots.php
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import PROTECTED
+          assert 'private/snapshots' in PROTECTED
+          PY
+      - name: Validate dedicated workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/artist-publication-snapshot-release.yml
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: production
+    env:
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      ARTIST_PUBLICATION_SCHEMA_READY: ${{ inputs.schema_ready }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check immutable main, exact owner confirmation and verified schema attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          test "$DEPLOY_CONFIRMATION" = "ARTIST-PUBLICATION-SNAPSHOT-DEPLOY-artist-publication-snapshot-20261114-$GITHUB_SHA"
+          test "$ARTIST_PUBLICATION_SCHEMA_READY" = 'ARTIST-PUBLICATION-SCHEMA-VERIFIED-20261114'
+      - name: Verify protected source, authenticated manifest and offline security tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_publication_snapshot_test.py -v
+          python3 -B -m unittest discover -s tests -p artist_publication_snapshot_workflow_test.py -v
+          python3 -B -m scripts.deploy_artist_publication_snapshot plan
+          php -l private/snapshots.php
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Fresh pinned-hostkey OVH drift check, backup, exact upload, readback and rollback
+        run: python3 -B -m scripts.deploy_artist_publication_snapshot deploy
+      - name: Retain verified upload and rollback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-publication-snapshot-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Retain protected source rollback backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-publication-snapshot-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn

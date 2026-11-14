@@ -13,6 +13,7 @@ $required = [
     'site online gate' => 'require_public_site_online()',
     'publication gate' => '($settings[\'is_published\'] ?? 0)',
     'artist type' => "s.seller_type='kunstenaar'",
+    'artist publication guard' => 's.artist_published=1',
     'published lots' => "l.status IN ('published','sold')",
     'eligibility via exists' => 'AND EXISTS (',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",

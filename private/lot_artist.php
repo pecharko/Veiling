@@ -39,13 +39,9 @@ function lot_artist_markup(array $lot): string {
   $name = trim((string)($lot['artist_name'] ?? ''));
   if ($name === '') return '';
   $safeName = htmlspecialchars($name, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-  $url = trim((string)($lot['artist_url'] ?? ''));
-  if ($url === '') return $safeName;
-  try {
-    [, $url] = lot_artist_validate($name, $url);
-  } catch (InvalidArgumentException) {
-    return $safeName;
-  }
-  $safeUrl = htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-  return '<a href="' . $safeUrl . '" target="_blank" rel="noopener noreferrer">' . $safeName . '</a>';
+  $publishedId = (int)($lot['published_artist_id'] ?? 0);
+  // An unpublished or unlinked seller must never produce an artist hyperlink.
+  if ($publishedId < 1) return $safeName;
+  $href = htmlspecialchars(url('kunstenaar.php', ['id'=>$publishedId]), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+  return '<a href="' . $href . '">' . $safeName . '</a>';
 }

@@ -10,6 +10,7 @@ foreach ([
  'public site guard'=>'require_public_site_online()',
  'published-only guard'=>"l.status IN ('published','sold')",
  'only artist profiles'=>"s.seller_type='kunstenaar'",
+ 'artist publication guard'=>'s.artist_published=1',
  'public field selection'=>'SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url',
  'public photo slots'=>"image_kind='portrait' AND slot=1",
  'three public works'=>"image_kind='work' AND slot BETWEEN 1 AND 3",
@@ -34,9 +35,8 @@ foreach ([
 }
 if (preg_match('/SELECT\\s+s\\.\\*/i',$page)) throw new RuntimeException('Public artist query selects sensitive seller fields');
 if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|mobile_number|bank_account_iban|street|house_number|created_by_name)/i',$page)) throw new RuntimeException('Private seller field rendered publicly');
-if (!str_contains($detail,"url('kunstenaar.php',['id'=>(int)\$lot['seller_id']])"))
- throw new RuntimeException('Detail artist link does not point internally');
-if (str_contains($detail,'lot_artist_markup($lot)')) throw new RuntimeException('Detail still uses external artist link');
+if (!str_contains($detail,'lot_artist_markup($lot)'))
+ throw new RuntimeException('Detail must use public-status-aware artist link');
 if (!str_contains($css,'.artist-brochure-website')) throw new RuntimeException('Artist website footer styling missing');
 if (strpos($page,'class="artist-brochure-website"') <= strpos($page,'class="artist-brochure-columns"'))
  throw new RuntimeException('Artist website link must appear below the artwork columns');
