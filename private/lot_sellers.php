@@ -8,6 +8,33 @@ require_once __DIR__ . '/photo_delete_safety.php';
 
 /** Seller records contain personal and banking information: never use on public pages. */
 function seller_can_manage(string $role): bool { return in_array($role,['administrator','veilingmeester','assistant'],true); }
+/** Artist publication is distinct from ordinary seller editing and is never an assistant right. */
+function seller_can_publish_artist(string $role): bool {
+  return in_array($role,['administrator','veilingmeester'],true);
+}
+/** Caller validates CSRF and acquires the catalog lock; only an artist may be published. */
+function seller_set_artist_publication(PDO $pdo,int $sellerId,bool $published,string $role,int $actorId): void {
+  if ($sellerId<1 || $actorId<1 || !seller_can_publish_artist($role)) {
+    throw new InvalidArgumentException('Geen rechten om kunstenaars te publiceren.');
+  }
+  $pdo->beginTransaction();
+  try {
+    $st=$pdo->prepare('SELECT seller_type,artist_published FROM lot_sellers WHERE id=? FOR UPDATE');
+    $st->execute([$sellerId]);
+    $seller=$st->fetch(PDO::FETCH_ASSOC);
+    if (!$seller || $seller['seller_type']!=='kunstenaar') throw new InvalidArgumentException('Kunstenaar niet gevonden.');
+    if ((int)$seller['artist_published']!==($published?1:0)) {
+      $name=seller_actor_name($pdo,$actorId);
+      $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
+      $update->execute([$published?1:0,$actorId,$name,$sellerId]);
+    }
+    $pdo->commit();
+  } catch(Throwable $ex) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    throw $ex;
+  }
+}
+
 /** Only creator ownership gives assistants seller edit/delete rights. */
 function seller_can_edit(string $role,int $actorId,array $seller): bool {
   if (!seller_can_manage($role) || $actorId<=0) return false;
