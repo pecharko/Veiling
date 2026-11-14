@@ -8,7 +8,9 @@ $read=static function(string $p) use($root):string {
 };
 $checks=[
   'additive migration defaults to unpublished'=>str_contains($read('database/migrations/20261114_artist_publication.sql'), 'artist_published TINYINT(1) NOT NULL DEFAULT 0'),
-  'publisher role whitelist'=>str_contains($read('private/lot_sellers.php'), 'function seller_can_publish_artist(string $role)'),
+  'publisher role whitelist'=>str_contains($read('private/lot_sellers.php'), "in_array(\$role,['administrator','veilingmeester'],true)"),
+  'published artist deletion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar verwijderen.'),
+  'published artist type conversion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
   'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['published','unpublished']")
