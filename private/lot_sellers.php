@@ -175,6 +175,10 @@ function seller_delete(PDO $pdo, int $id, string $role, int $actorId): void {
     $record=$stmt->fetch(PDO::FETCH_ASSOC);
     if (!$record) throw new InvalidArgumentException('Verkoper niet gevonden.');
     if (!seller_can_edit($role,$actorId,$record)) throw new InvalidArgumentException('Geen bewerkingsrechten voor deze verkoper.');
+    if ($record['seller_type']==='kunstenaar' && (int)$record['artist_published']===1
+        && !seller_can_publish_artist($role)) {
+      throw new InvalidArgumentException('Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar verwijderen.');
+    }
     $used=$pdo->prepare('SELECT COUNT(*) FROM lots WHERE seller_id=?');
     $used->execute([$id]);
     if ((int)$used->fetchColumn()>0) throw new InvalidArgumentException('Deze verkoper is gekoppeld aan kavels. Verwijder eerst de koppeling.');
