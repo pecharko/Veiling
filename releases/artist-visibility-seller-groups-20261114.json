@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "74faff71c9789120f6835d4730b53f2c86e93ba4a28920c786ac679504eb2dd9",
+      "remote_sha256": "6b0ae6f71bb26ae29e71abcff4931d03a96087e1fe060797c76b21e8cfbb8212"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "527d81736d56c400b8ebb54c1e4f0582fdd11b09cc569d2f5df988d781a4ed98",
+      "remote_sha256": "ee391df4f5373d06529d9762dbfeb18d1d45dd4db5469da602f19c112e42be0a"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "7f0240483d939e127294ef931b2b1c8426754e6eb2fd55ddee7f900523b6f226",
+      "remote_sha256": "d19b272aa896df8d2b2631d8cd45b5937604b8d4696dbaf74e970f9346e85738"
+    }
+  ]
+}
