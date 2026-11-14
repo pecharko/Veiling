@@ -14,7 +14,7 @@ $required = [
     'publication gate' => '($settings[\'is_published\'] ?? 0)',
     'artist type' => "s.seller_type='kunstenaar'",
     'artist publication guard' => 's.artist_published=1',
-    'independent artist publication' => 's.artist_published=1',
+    'independent artist publication' => 'Publication is governed by artist_published, independent of lot publication.',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",
     'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\']])',
     'image URL escaped' => 'src="<?=e(url($portrait))?>"',
