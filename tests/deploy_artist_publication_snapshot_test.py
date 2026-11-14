@@ -66,6 +66,9 @@ class ArtistPublicationSnapshotReleaseTests(unittest.TestCase):
             bad(source_sha256="f" * 64)
             manifest_file.write_text(json.dumps(original))
             source.write_bytes(b"<?php // old snapshot without publication")
+            old_document = json.loads(json.dumps(original))
+            old_document["files"][0]["source_sha256"] = adapter.engine.digest(source.read_bytes())
+            manifest_file.write_text(json.dumps(old_document))
             with self.assertRaisesRegex(ValueError, "lacks approved"):
                 adapter.guarded_load(adapter.RELEASE_ID, source_root=root)
             source.write_bytes(
