@@ -300,6 +300,9 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 .seller-filters{grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) 140px}
 .seller-table{min-width:700px}
+.seller-portrait-cell{width:72px}
+.seller-portrait-thumb,.seller-portrait-placeholder{display:flex;align-items:center;justify-content:center;width:48px;height:48px;border-radius:9px;background:#f8efe9;object-fit:cover}
+.seller-portrait-placeholder{color:#7b6459;font-size:23px}
 .seller-lot-count{font-weight:750}
 .seller-row-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .seller-row-actions form{margin:0}
