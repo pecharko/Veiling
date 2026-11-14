@@ -12,13 +12,11 @@ if (!$artistId || ((int)($settings['is_published'] ?? 0) !== 1 && !admin_preview
 }
 // Only explicit public artist fields may leave seller management. Never SELECT *,
 // contact information, bank data, creator identity, or unrelated sellers.
+// Artist publication does not depend on whether linked lots are published.
 $stmt = db()->prepare("
   SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url
   FROM lot_sellers s
   WHERE s.id=? AND s.seller_type='kunstenaar' AND s.artist_name<>'' AND s.artist_published=1
-    AND EXISTS (
-      SELECT 1 FROM lots l WHERE l.seller_id=s.id AND l.status IN ('published','sold')
-    )
   LIMIT 1");
 $stmt->execute([$artistId]);
 $artist = $stmt->fetch(PDO::FETCH_ASSOC);

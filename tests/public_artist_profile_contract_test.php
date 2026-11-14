@@ -8,7 +8,6 @@ $css=file_get_contents($root.'/catalogus-public/assets/catalogus.css');
 if (!is_string($page) || !is_string($detail) || !is_string($css)) throw new RuntimeException('Missing artist page source');
 foreach ([
  'public site guard'=>'require_public_site_online()',
- 'published-only guard'=>"l.status IN ('published','sold')",
  'only artist profiles'=>"s.seller_type='kunstenaar'",
  'artist publication guard'=>'s.artist_published=1',
  'public field selection'=>'SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url',
@@ -33,6 +32,7 @@ foreach ([
 ] as $label=>$needle) {
  if (!str_contains($page,$needle)) throw new RuntimeException('Artist public page missing '.$label);
 }
+if (str_contains($page, 'AND EXISTS (') || str_contains($page, "l.status IN ('published','sold')")) throw new RuntimeException('Published artist profile must be independent of lot publication');
 if (preg_match('/SELECT\\s+s\\.\\*/i',$page)) throw new RuntimeException('Public artist query selects sensitive seller fields');
 if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|mobile_number|bank_account_iban|street|house_number|created_by_name)/i',$page)) throw new RuntimeException('Private seller field rendered publicly');
 if (!str_contains($detail,'lot_artist_markup($lot)'))

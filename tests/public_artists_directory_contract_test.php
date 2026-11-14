@@ -14,8 +14,7 @@ $required = [
     'publication gate' => '($settings[\'is_published\'] ?? 0)',
     'artist type' => "s.seller_type='kunstenaar'",
     'artist publication guard' => 's.artist_published=1',
-    'published lots' => "l.status IN ('published','sold')",
-    'eligibility via exists' => 'AND EXISTS (',
+    'independent artist publication' => 'Publication is governed by artist_published, independent of lot publication.',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",
     'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\']])',
     'image URL escaped' => 'src="<?=e(url($portrait))?>"',
@@ -30,6 +29,7 @@ $required = [
 foreach ($required as $label=>$needle) {
     if (!str_contains($page,$needle)) throw new RuntimeException('Artist directory missing '.$label);
 }
+if (str_contains($page, 'AND EXISTS (') || str_contains($page, "l.status IN ('published','sold')")) throw new RuntimeException('Artist directory must not require published lots');
 if (preg_match('/SELECT\\s+s\\.\\*/i',$page)) throw new RuntimeException('Artist directory may not select seller private fields');
 if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|bank_account_iban|mobile_number|street|created_by_name)/i',$page)) {
     throw new RuntimeException('Artist directory must not expose seller private fields');

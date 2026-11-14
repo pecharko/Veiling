@@ -64,9 +64,9 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php',['type'=>'kunstenaar']))?>"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>KUNSTENAARS</small><div><strong><?=$artistCount?></strong> kunstenaars</div></div></a>
     <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php',['type'=>'particulier']))?>"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>PARTICULIEREN</small><div><strong><?=$privateCount?></strong> particulieren</div></div></a>
   </div>
-  <section class="dashboard-panel" aria-labelledby="seller-list-heading">
+  <section class="dashboard-panel" aria-labelledby="seller-filter-heading">
     <div class="dashboard-panel-heading">
-      <div><h2 id="seller-list-heading">Alle verkopers</h2><p><?=count($filteredRows)?> resultaten. Klik op Bewerken om een verkoper aan te passen.</p></div>
+      <div><h2 id="seller-filter-heading">Verkopers beheren</h2><p>Zoek binnen kunstenaars en particulieren. Beide groepen worden afzonderlijk weergegeven.</p></div>
       <a class="primary" href="<?=e(url('admin/verkoper.php'))?>">+ Nieuwe verkoper</a>
     </div>
     <form class="dashboard-filters seller-filters" method="get" role="search">
@@ -74,11 +74,19 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
       <label><span class="sr-only">Type verkoper</span><select name="type"><option value="">Alle verkopers</option><option value="kunstenaar" <?=$filterType==='kunstenaar'?'selected':''?>>Kunstenaars</option><option value="particulier" <?=$filterType==='particulier'?'selected':''?>>Particulieren</option></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
+  </section>
+  <?php foreach (['kunstenaar'=>'Kunstenaars','particulier'=>'Particulieren'] as $groupType=>$groupLabel): ?>
+    <?php if ($filterType!=='' && $filterType!==$groupType) continue; ?>
+    <?php $groupRows=array_values(array_filter($filteredRows,static fn($row)=>$row['seller_type']===$groupType)); ?>
+  <section class="dashboard-panel" aria-labelledby="seller-list-<?=e($groupType)?>-heading">
+    <div class="dashboard-panel-heading">
+      <div><h2 id="seller-list-<?=e($groupType)?>-heading"><?=e($groupLabel)?></h2><p><?=count($groupRows)?> resultaten</p></div>
+    </div>
     <div class="dashboard-table-scroll">
       <table class="dashboard-table seller-table">
         <thead><tr><th scope="col">Naam</th><th scope="col">Type</th><th scope="col">Kunstenaarsnaam</th><th scope="col">Publicatie</th><th scope="col">Kavels</th><th scope="col">Acties</th></tr></thead>
         <tbody>
-          <?php foreach($filteredRows as $r): ?>
+          <?php foreach($groupRows as $r): ?>
             <tr>
               <?php $canEditSeller=seller_can_edit(effective_admin_role(),(int)$_SESSION['admin_id'],$r); ?>
               <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e($r['name'])?></a><?php else: ?><?=e($r['name'])?><?php endif; ?></td>
@@ -93,11 +101,12 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$filteredRows): ?><tr><td colspan="6">Geen verkopers gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$groupRows): ?><tr><td colspan="6">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
   </section>
+  <?php endforeach; ?>
 
 </div>
 <?php admin_bottom(); ?>

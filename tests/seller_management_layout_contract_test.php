@@ -38,6 +38,10 @@ if (!str_contains($editor,"input.required=artist && (input.name==='artist_name' 
   throw new RuntimeException('Artist required fields must toggle with seller type');
 if (str_contains($overview,'id="seller-form"') || str_contains($overview,'name="bank_account_iban"')
     || str_contains($overview,'seller_save(')) throw new RuntimeException('Seller overview must not embed new/edit form.');
+if (strpos($overview, "'kunstenaar'=>'Kunstenaars'") >= strpos($overview, "'particulier'=>'Particulieren'")) throw new RuntimeException('Artists must precede private sellers');
+foreach (['Kunstenaars','Particulieren','foreach($groupRows as $r)','seller-list-<?=e($groupType)?>-heading'] as $required) {
+  if (!str_contains($overview,$required)) throw new RuntimeException('Missing separate seller group: '.$required);
+}
 if (!str_contains($overview,'require_auth()')) throw new RuntimeException('Seller overview must require an authenticated role.');
 foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
