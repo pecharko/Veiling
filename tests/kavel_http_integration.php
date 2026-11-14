@@ -693,6 +693,72 @@ try {
     && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
+  // Artist publication is role-protected, and publication locks even an assistant's own artist.
+  [$assistantArtistStatus] = request_page('/admin/verkoper.php', [
+    'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'kunstenaar',
+    'name'=>'Eigen testkunstenaar','email'=>'eigen-kunstenaar@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'artist_name'=>'Eigen Atelier','artist_url'=>'https://example.org'
+  ]);
+  $ownArtistId=(int)db()->query("SELECT id FROM lot_sellers WHERE email='eigen-kunstenaar@example.invalid'")->fetchColumn();
+  claim($assistantArtistStatus===303 && $ownArtistId>0
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
+    'Assistant creates unpublished artist by default');
+  [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  claim($ownArtistStatus===200, 'Assistant can edit own unpublished artist');
+  [$blockedPublish,$blockedPublishPage]=request_page('/admin/verkopers.php', [
+    'csrf'=>token($ownArtistEditor),'action'=>'artist-publication',
+    'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'
+  ]);
+  claim($blockedPublish===200 && str_contains($blockedPublishPage,'Geen rechten om kunstenaars te publiceren')
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
+    'Forged assistant publication request is denied');
+  db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
+  [$adminArtistListStatus,$adminArtistList]=request_page('/admin/verkopers.php');
+  claim($adminArtistListStatus===200 && str_contains($adminArtistList,'Publiceren'),
+    'Administrator sees artist publication controls');
+  [$adminPublishStatus]=request_page('/admin/verkopers.php', [
+    'csrf'=>token($adminArtistList),'action'=>'artist-publication',
+    'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'
+  ]);
+  claim($adminPublishStatus===303
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===1,
+    'Administrator publishes artist');
+  db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$lockedArtistStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  claim($lockedArtistStatus===403, 'Assistant cannot open own published artist editor');
+  [$lockedArtistSaveStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId, [
+    'csrf'=>token($ownArtistEditor),'action'=>'save','seller_id'=>(string)$ownArtistId,
+    'seller_type'=>'kunstenaar','name'=>'Unauthorized change','email'=>'eigen-kunstenaar@example.invalid',
+    'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
+    'artist_name'=>'Eigen Atelier','artist_url'=>'https://example.org'
+  ]);
+  claim($lockedArtistSaveStatus===403
+    && db()->query('SELECT name FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()==='Eigen testkunstenaar',
+    'Assistant cannot save changes to own published artist');
+  [$lockedArtistPhotoStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId, [
+    'csrf'=>token($ownArtistEditor),'action'=>'delete-photo','seller_id'=>(string)$ownArtistId,
+    'kind'=>'work','slot'=>'1'
+  ]);
+  claim($lockedArtistPhotoStatus===403, 'Assistant cannot change photos of own published artist');
+  [$lockedArtistDeleteStatus,$lockedArtistDeletePage]=request_page('/admin/verkopers.php', [
+    'csrf'=>token($ownArtistEditor),'action'=>'delete','seller_id'=>(string)$ownArtistId
+  ]);
+  claim($lockedArtistDeleteStatus===200 && str_contains($lockedArtistDeletePage,'Geen bewerkingsrechten')
+    && (int)db()->query('SELECT COUNT(*) FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===1,
+    'Assistant cannot delete own published artist');
+  db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
+  [$masterArtistListStatus,$masterArtistList]=request_page('/admin/verkopers.php');
+  [$masterUnpublishStatus]=request_page('/admin/verkopers.php', [
+    'csrf'=>token($masterArtistList),'action'=>'artist-publication',
+    'seller_id'=>(string)$ownArtistId,'artist_status'=>'unpublished'
+  ]);
+  claim($masterArtistListStatus===200 && $masterUnpublishStatus===303
+    && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
+    'Veilingmeester may unpublish artist');
+  db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$unlockedArtistStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  claim($unlockedArtistStatus===200, 'Assistant regains own artist edit access after unpublishing');
   // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
   db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
   $foreignSellerId=(int)db()->lastInsertId();
