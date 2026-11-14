@@ -1,5 +1,11 @@
 <?php
 declare(strict_types=1);
+// Test the standalone markup helper without connecting to a database.
+if (!function_exists('url')) {
+  function url(string $path, array $query=[]): string {
+    return '/'.$path.($query ? '?'.http_build_query($query) : '');
+  }
+}
 require_once dirname(__DIR__) . '/private/lot_artist.php';
 
 function artist_style_assert(bool $condition, string $message): void {
