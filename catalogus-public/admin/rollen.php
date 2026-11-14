@@ -19,6 +19,7 @@ admin_top('Rollen & rechten');
         <tr><td>Nieuwe verkopers en kunstenaars aanmaken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Eigen aangemaakte verkopers bewerken of verwijderen (inclusief foto's en bankgegevens)</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Verkopers van andere gebruikers bewerken of verwijderen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
+        <tr><td>Publicatiestatus van kunstenaars wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Veilingorganisatie bekijken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingvolgorde wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Gebruikersbeheer, instellingen, statistieken, back-ups en systeemcheck</td><td>Ja</td><td>Nee</td><td>Nee</td></tr>
