@@ -21,7 +21,7 @@ try {
   assert_artist(str_contains($e->getMessage(),'artist name'), 'Central seller name length limit reported');
 }
 $legacy = lot_artist_markup(['artist_name' => $limit . 'B', 'artist_url' => 'https://example.org/']);
-assert_artist(str_contains($legacy, '<a href="https://example.org/"'), 'Old long names retain valid artist links');
+assert_artist($legacy === $limit . 'B', 'Unpublished artist names remain plain text even with legacy URLs');
 $admin = file_get_contents(dirname(__DIR__) . '/catalogus-public/admin/kavel.php');
 $css = file_get_contents(dirname(__DIR__) . '/catalogus-public/assets/catalogus.css');
 $catalog = file_get_contents(dirname(__DIR__) . '/catalogus-public/index.php');
