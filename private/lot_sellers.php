@@ -129,6 +129,12 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       $current=$check->fetch(PDO::FETCH_ASSOC);
       if (!$current) throw new InvalidArgumentException('Verkoper niet gevonden.');
       if (!seller_can_edit($role,$actorId,$current)) throw new InvalidArgumentException('Geen bewerkingsrechten voor deze verkoper.');
+      // Changing a published artist into a private seller would indirectly hide
+      // their public profile. Only publication managers may make that transition.
+      if ($current['seller_type']==='kunstenaar' && (int)$current['artist_published']===1
+          && $data['seller_type']!=='kunstenaar' && !seller_can_publish_artist($role)) {
+        throw new InvalidArgumentException('Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.');
+      }
       // Compare canonical validated values against the locked DB row. A plain
       // save of an unchanged form must not advance the last-editor audit fields.
       $changed=false;
@@ -138,6 +144,11 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       if (!$changed) {
         $pdo->commit();
         return $id;
+      }
+      // Converting an artist to a private seller always discards publication.
+      if ($current['seller_type']==='kunstenaar' && $data['seller_type']!=='kunstenaar') {
+        $data['artist_published']=0;
+        $keys=array_keys($data);
       }
       $sets=implode(',',array_map(static fn($key)=>$key.'=?',$keys));
       $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
