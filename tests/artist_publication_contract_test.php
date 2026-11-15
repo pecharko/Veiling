@@ -12,6 +12,15 @@ $checks=[
   'published artist edit disabled for assistants'=>str_contains($read('private/lot_sellers.php'), "if ((\$seller['seller_type']??'')==='kunstenaar' && (int)(\$seller['artist_published']??0)===1) return false;"),
   'published artist deletion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar verwijderen.'),
   'published artist type conversion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.'),
+  'artist publication requires saved portrait'=>str_contains($read('private/lot_sellers.php'), 'Publiceren kan alleen met een opgeslagen portretfoto')
+    && str_contains($read('private/lot_sellers.php'), "image_kind='portrait'")
+    && str_contains($read('private/lot_sellers.php'), 'is_file('),
+  'published artist portrait cannot be removed'=>str_contains($read('private/seller_images.php'), "if ($kind==='portrait')")
+    && str_contains($read('private/seller_images.php'), "artist_published")
+    && str_contains($read('private/seller_images.php'), 'Trek eerst de publicatie'),
+  'editor status restricted to manager'=>str_contains($read('catalogus-public/admin/verkoper.php'), 'seller_can_publish_artist($actorRole)')
+    && str_contains($read('catalogus-public/admin/verkoper.php'), "seller_set_artist_publication($pdo,$editId,")
+    && str_contains($read('catalogus-public/admin/verkoper.php'), 'name="artist_status"'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
   'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['new','published','unpublished']")
