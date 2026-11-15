@@ -11,7 +11,8 @@ $checks=[
   'publisher role whitelist'=>str_contains($read('private/lot_sellers.php'), "in_array(\$role,['administrator','veilingmeester'],true)"),
   'published artist edit disabled for assistants'=>str_contains($read('private/lot_sellers.php'), "if ((\$seller['seller_type']??'')==='kunstenaar' && (int)(\$seller['artist_published']??0)===1) return false;"),
   'published artist deletion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar verwijderen.'),
-  'published artist type conversion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.'),
+  'seller type permanently immutable for all roles'=>str_contains($read('private/lot_sellers.php'), "if (\$current['seller_type']!==\$data['seller_type'])")
+    && str_contains($read('private/lot_sellers.php'), 'Het type verkoper kan na aanmaak niet worden gewijzigd.'),
   'artist publication requires saved portrait'=>str_contains($read('private/lot_sellers.php'), 'Publiceren kan alleen met een opgeslagen portretfoto')
     && str_contains($read('private/lot_sellers.php'), "image_kind='portrait'")
     && str_contains($read('private/lot_sellers.php'), 'is_file('),
