@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/snapshots.php",
+      "source_sha256": "ce1dcc6021ec2904474e57c710a5276cf4b08e40236b7515a749516eb40478d0",
+      "remote_sha256": "55dfab3a7b951e2c5d14cef151253ae2757b64e7b3433d3408be776be4a6f28a"
+    },
+    {
+      "path": "catalogus-public/admin/backup.php",
+      "source_sha256": "ba55c16e94c2a60c3283e18fc97fb1b83ada80d09d6a662c897fd02fd2932b50",
+      "remote_sha256": "097c17dc4c2ef568e644f9289fbaec0400c61c60f443dc8976a19234cba61fc9"
+    }
+  ]
+}
