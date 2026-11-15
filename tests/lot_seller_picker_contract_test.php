@@ -11,6 +11,11 @@ $js=$read('catalogus-public/admin/lot-seller-picker.js');
 $endpoint=$read('catalogus-public/admin/seller-search.php');
 $bootstrap=$read('private/bootstrap.php');
 $css=$read('catalogus-public/admin/admin.css');
+// A source-only contract cannot catch malformed quoted PHP strings: lint the real endpoint.
+$endpointPath=$root.'/catalogus-public/admin/seller-search.php';
+$lintCommand=escapeshellarg(PHP_BINARY).' -l '.escapeshellarg($endpointPath).' 2>&1';
+exec($lintCommand,$lintOutput,$lintExit);
+if ($lintExit!==0) throw new RuntimeException('Seller search endpoint has invalid PHP syntax: '.implode(' ', $lintOutput));
 
 $checks=[
   'no giant seller dropdown'=>!str_contains($editor,'seller_choices($pdo)')
