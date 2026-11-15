@@ -5,6 +5,10 @@ require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/seller_images.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
+$sellerScreen=($sellerScreen??'particulier')==='kunstenaar'?'kunstenaar':'particulier';
+$screenUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php';
+$editorUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaar-bewerken.php':'admin/verkoper.php';
+$screenLabel=$sellerScreen==='kunstenaar'?'kunstenaar':'verkoper';
 $pdo=db();
 $error='';
 $actorId=(int)$_SESSION['admin_id'];
@@ -20,8 +24,12 @@ if (isset($_GET['id'])) {
   if ($editId===false) { http_response_code(404); exit('Verkoper niet gevonden.'); }
 }
 $values=$defaults;
+$values['seller_type']=$sellerScreen;
 // Check ownership on every edit view and before any write, including photo actions.
-if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
+if ($editId!==null) {
+  $existing=seller_require_edit($pdo,$editId,$actorRole,$actorId);
+  if ($existing['seller_type']!==$sellerScreen) { http_response_code(404); exit('Verkoper niet gevonden.'); }
+}
 $ajaxPhoto=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && in_array(($_POST['action']??''),['upload-photo','delete-photo'],true);
 $ajaxSave=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='save';
 $ajaxReply=static function(int $code,array $body): void {
@@ -38,6 +46,9 @@ if (is_post()) {
   $rawId=$_POST['seller_id']??'';
   $postId=$rawId==='' ? null : filter_var($rawId,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if ($postId===false || $postId!==$editId) { http_response_code(400); exit('Ongeldige verkoperselectie.'); }
+  if ($action==='save' && ($_POST['seller_type']??'')!==$sellerScreen) {
+    http_response_code(400); exit('Het type verkoper is vast en kan niet gewijzigd worden.');
+  }
   $values=array_merge($defaults,array_intersect_key($_POST,$defaults));
   try {
     catalog_lock_for_request($pdo);
@@ -47,7 +58,7 @@ if (is_post()) {
       if (!in_array($status,['new','published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
       seller_set_artist_publication($pdo,$editId,['unpublished'=>0,'published'=>1,'new'=>2][$status],$actorRole,$actorId);
       flash('Publicatiestatus kunstenaar aangepast.');
-      redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+      redirect($editorUrl,['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     if ($action==='upload-photo' || $action==='delete-photo') {
       if ($editId===null) throw new InvalidArgumentException('Bewaar eerst de verkoper.');
@@ -84,7 +95,7 @@ if (is_post()) {
     }
     if ($failed) {
       flash('Verkoper bewaard, maar niet alle foto’s lukten: '.implode('; ',$failed),'warning');
-      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
       redirect('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     if ($fromLot) {
@@ -92,8 +103,8 @@ if (is_post()) {
       redirect('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
     }
     flash('Verkoper opgeslagen.');
-    if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkopers.php')]);
-    redirect('admin/verkopers.php');
+    if ($ajaxSave) $ajaxReply(200,['redirect'=>url($screenUrl)]);
+    redirect($screenUrl);
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
   } catch (PDOException $ex) {
@@ -156,7 +167,7 @@ if ($editId!==null) {
 $photos=$editId!==null?seller_image_rows($pdo,$editId):[];
 $photoByKey=[];
 foreach($photos as $photo)$photoByKey[$photo['image_kind'].'_'.$photo['slot']]=$photo;
-admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
+admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken');
 ?>
 <div class="seller-manager seller-editor-page">
   <div class="seller-editor-toolbar">
@@ -164,12 +175,12 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <p class="dashboard-subtitle">Beheer persoonsgegevens en bankgegevens op één afgeschermde plek.</p></div>
     <div class="lot-editor-toolbar-actions">
       <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
-      <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
+      <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':($sellerScreen==='kunstenaar'?'Kunstenaar opslaan':'Verkoper opslaan')?></button>
     </div>
   </div>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
-    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
+    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?ucfirst($screenLabel).' bewerken':'Nieuwe '.$screenLabel?></h2><p>Algemene gegevens zijn verplicht. Bankgegevens blijven optioneel. Het type kan na aanmaak niet worden gewijzigd.</p></div></div>
     <?php if ($editId!==null && $values['seller_type']==='kunstenaar'): ?>
       <div class="seller-fields-section">
         <h3>Publicatiestatus kunstenaar</h3>
@@ -200,7 +211,8 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <div class="seller-fields-section">
         <h3>Algemene gegevens</h3>
         <div class="seller-fields-grid">
-          <label class="seller-field-wide">Type verkoper<select name="seller_type" id="seller-type" required><option value="particulier" <?=$values['seller_type']==='particulier'?'selected':''?>>Particulier</option><option value="kunstenaar" <?=$values['seller_type']==='kunstenaar'?'selected':''?>>Kunstenaar</option></select></label>
+          <input type="hidden" name="seller_type" id="seller-type" value="<?=e($sellerScreen)?>">
+          <p class="lot-editor-help seller-field-wide"><strong>Type:</strong> <?=$sellerScreen==='kunstenaar'?'Kunstenaar':'Particulier'?> (vast na aanmaak)</p>
           <label class="seller-field-wide">Naam <span class="lot-required">*</span><input name="name" maxlength="150" required value="<?=e((string)$values['name'])?>"></label>
           <label class="seller-field-wide">E-mail <span class="lot-required">*</span><input required name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
           <label class="seller-field-wide">Mobiel nummer <span class="seller-optional">(optioneel)</span><input type="tel" name="mobile_number" maxlength="30" autocomplete="tel" inputmode="tel" value="<?=e((string)$values['mobile_number'])?>" placeholder="0470 12 34 56 of +32 470 12 34 56" aria-describedby="seller-mobile-help"></label>
