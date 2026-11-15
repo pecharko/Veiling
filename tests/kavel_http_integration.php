@@ -130,6 +130,26 @@ try {
   ]);
   $sellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Demo kunstenaar'")->fetchColumn();
   claim($sellerStatus === 303 && $sellerId>0, 'Administrator creates artist seller');
+  // Exercise the authenticated, bounded JSON picker end-to-end, not only source contracts.
+  [$lookupStatus,$lookupBody]=request_page('/admin/seller-search.php?id='.$sellerId);
+  $lookupData=json_decode($lookupBody,true);
+  claim($lookupStatus===200 && is_array($lookupData)
+    && count($lookupData['items']??[])===1
+    && (int)$lookupData['items'][0]['id']===$sellerId
+    && $lookupData['items'][0]['type']==='kunstenaar'
+    && !str_contains($lookupBody,'demo@example.invalid'),
+    'Seller picker resolves selected artist without exposing private contact data');
+  [$searchStatus,$searchBody]=request_page('/admin/seller-search.php?type=kunstenaar&q=Demo');
+  $searchData=json_decode($searchBody,true);
+  claim($searchStatus===200 && is_array($searchData)
+    && in_array($sellerId,array_map(static fn(array $row):int=>(int)$row['id'],$searchData['items']??[]),true),
+    'Seller picker searches artists by name and returns JSON');
+  [$privateSearchStatus,$privateSearchBody]=request_page('/admin/seller-search.php?type=particulier&q=Demo');
+  $privateSearchData=json_decode($privateSearchBody,true);
+  claim($privateSearchStatus===200 && is_array($privateSearchData)
+    && !in_array($sellerId,array_map(static fn(array $row):int=>(int)$row['id'],$privateSearchData['items']??[]),true),
+    'Seller picker type filter excludes artists from private seller results');
+
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
   claim($sellerRecord['bank_account_iban']==='BE68539007547034'
     && $sellerRecord['artist_url']==='https://www.example.org',
