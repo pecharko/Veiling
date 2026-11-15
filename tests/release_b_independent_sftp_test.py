@@ -15,6 +15,9 @@ UPLOAD = {
                "baseline_sha256":"c"*64, "readback_sha256":"b"*64}]
 }
 
+MANIFEST = {"schema": 1, "files": [{"path": "catalogus-public/asset.css",
+    "source_sha256": "b"*64, "remote_sha256": "c"*64}]}
+
 class Info:
     st_mode = stat.S_IFREG | 0o444
     st_size = 4
@@ -40,7 +43,7 @@ class FakeSFTP:
 class ReadbackTests(unittest.TestCase):
     def test_hashes_with_only_read_operations(self):
         sftp = FakeSFTP()
-        r = collect(sftp, "/site/www", UPLOAD, "collection-20261115-01")
+        r = collect(sftp, "/site/www", UPLOAD, "collection-20261115-01", MANIFEST)
         self.assertEqual(r["files"], [{"path": "catalogus-public/asset.css",
                                          "remote_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}])
         self.assertEqual([x[0] for x in sftp.calls], ["lstat"] * 3 + ["lstat", "open", "lstat"])
@@ -52,7 +55,7 @@ class ReadbackTests(unittest.TestCase):
             sftp = FakeSFTP()
             bad = {**UPLOAD, "files": [{**UPLOAD["files"][0], "path": path}]}
             with self.subTest(path=path), self.assertRaises(ValueError):
-                collect(sftp, "/site/www", bad, "collection-20261115-01")
+                collect(sftp, "/site/www", bad, "collection-20261115-01", MANIFEST)
             self.assertEqual(sftp.calls, [])
 
     def test_reject_unsafe_roots(self):
@@ -69,8 +72,29 @@ class ReadbackTests(unittest.TestCase):
                 return info
         sftp = ParentSymlink()
         with self.assertRaises(ValueError):
-            collect(sftp, "/site/www", UPLOAD, "collection-20261115-01")
+            collect(sftp, "/site/www", UPLOAD, "collection-20261115-01", MANIFEST)
         self.assertFalse(any(call[0] == "open" for call in sftp.calls))
+
+    def test_reject_manifest_drift_before_network(self):
+        for altered in (
+            {"schema": 1, "files": [{**MANIFEST["files"][0], "source_sha256": "d"*64}]},
+            {"schema": 1, "files": [{**MANIFEST["files"][0], "remote_sha256": "d"*64}]},
+            {"schema": 1, "files": [{**MANIFEST["files"][0], "path": "catalogus-public/other.css"}]},
+        ):
+            sftp = FakeSFTP()
+            with self.subTest(altered=altered), self.assertRaises(ValueError):
+                collect(sftp, "/site/www", UPLOAD, "collection-20261115-01", altered)
+            self.assertEqual(sftp.calls, [])
+
+    def test_reject_protected_manifest_path_before_network(self):
+        for path in ("private/snapshots.php", "private/config.php",
+                     "private/visitor_stats_daily_cron.php"):
+            bad_upload = {**UPLOAD, "files": [{**UPLOAD["files"][0], "path": path}]}
+            bad_manifest = {"schema": 1, "files": [{**MANIFEST["files"][0], "path": path}]}
+            sftp = FakeSFTP()
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                collect(sftp, "/site/www", bad_upload, "collection-20261115-01", bad_manifest)
+            self.assertEqual(sftp.calls, [])
 
     def test_reject_symlinks(self):
         sftp = FakeSFTP()
@@ -83,13 +107,13 @@ class ReadbackTests(unittest.TestCase):
         sftp = FakeSFTP()
         with self.assertRaises(ValueError):
             collect(sftp, "/site/www", {**UPLOAD, "status": "FAILED"},
-                    "collection-20261115-01")
+                    "collection-20261115-01", MANIFEST)
         self.assertEqual(sftp.calls, [])
 
     def test_reject_bad_session_id(self):
         sftp = FakeSFTP()
         with self.assertRaises(ValueError):
-            collect(sftp, "/site/www", UPLOAD, "../unsafe")
+            collect(sftp, "/site/www", UPLOAD, "../unsafe", MANIFEST)
         self.assertEqual(sftp.calls, [])
 
 if __name__ == "__main__":
