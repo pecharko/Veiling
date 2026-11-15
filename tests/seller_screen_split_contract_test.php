@@ -25,6 +25,8 @@ $checks=[
     && str_contains($artistEditor,"require __DIR__.'/verkoper.php';"),
   'list cannot leak other seller type'=>str_contains($list,"if (\$row['seller_type']!==\$sellerScreen) return false;")
     && str_contains($list,"if (\$screenCheck->fetchColumn()!==\$sellerScreen)"),
+  'name and edit action both target screen-specific editor'=>substr_count($list,"url(\$editorUrl,['id'=>(int)\$r['id']])")===3
+    && !str_contains($list,"url('admin/verkoper.php',['id'=>(int)\$r['id']])"),
   'editor rejects crossing between artist and private seller'=>str_contains($editor,"if (\$existing['seller_type']!==\$sellerScreen)")
     && str_contains($editor,"(\$_POST['seller_type']??'')!==\$sellerScreen"),
   'type selection removed but server receives fixed value'=>str_contains($editor,'name="seller_type" id="seller-type"')
