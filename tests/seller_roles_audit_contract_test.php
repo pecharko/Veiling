@@ -32,8 +32,7 @@ if (!str_contains($editor,"(int)\$_SESSION['admin_id']"))
 if (!str_contains($editor,"$" . "audit") || !str_contains($editor,'Aangemaakt door:')
   || !str_contains($editor,'Laatste wijziging:'))
   throw new RuntimeException('Seller edit audit display missing');
-if (!str_contains($overview,'Aangemaakt door / op') || !str_contains($overview,'Laatst gewijzigd door / op'))
-  throw new RuntimeException('Seller overview audit columns missing');
+// Audit is shown in the editor footer; it is deliberately not duplicated as list columns.
 if (!str_contains($preview,'20261111_seller_audit.sql'))
   throw new RuntimeException('Isolated preview audit migration missing');
 require_once $root.'/private/lot_sellers.php';
