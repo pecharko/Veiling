@@ -8,7 +8,7 @@
 - Bestaande `deployment-evidence.json` bevat uploaderreadback, niet onafhankelijke OVH-readback; `browser_acceptance` staat na uitrol op PENDING.
 
 ## Wat deze eerste veilige implementatie toevoegt
-De nieuwe workflow `post-release-evidence-status.yml` reageert alleen op voltooiing van de bestaande shared-OVH workflow. Via een beperkt `actions: read` token leest hij de run en de lijst met artifacts. Het script `release_b_status.py` maakt een compacte Actions Summary met exacte run/SHA, status en ontbrekende bewijsstappen. Dit is nadrukkelijk **geen** verificatie van de artifactinhoud of van de onafhankelijke live server. De summary krijgt altijd `independent_ovh_readback=PENDING`, `browser_acceptance=PENDING` en `release_administration=OPEN`, ook bij succesvolle workflow. Onvolledige/ongeldige API-invoer faalt gesloten. Geen secrets, SFTP, uploads, DB, workflow_dispatch, issuecommentaar of releasecontrollerwijziging.
+De nieuwe workflow `post-release-evidence-status.yml` reageert op voltooiing van de bestaande shared-OVH workflow én de afzonderlijke beschermde snapshot-v8-release. Via een beperkt `actions: read` token leest hij de run en de lijst met artifacts. Per releasetype controleert het script de exact verwachte, niet-verlopen evidence- en rollbackartifactnamen, zodat snapshot-v8-bewijs niet met shared-OVH-bewijs kan worden verward. Het script `release_b_status.py` maakt een compacte Actions Summary met exacte run/SHA, status en ontbrekende bewijsstappen. Dit is nadrukkelijk **geen** verificatie van de artifactinhoud of van de onafhankelijke live server. De summary krijgt altijd `independent_ovh_readback=PENDING`, `browser_acceptance=PENDING` en `release_administration=OPEN`, ook bij succesvolle workflow. Onvolledige/ongeldige API-invoer faalt gesloten. Geen secrets, SFTP, uploads, DB, workflow_dispatch, issuecommentaar of releasecontrollerwijziging.
 
 ## B-vervolg dat een afzonderlijke review vereist
 
@@ -21,6 +21,7 @@ De nieuwe workflow `post-release-evidence-status.yml` reageert alleen op voltooi
 ## Acceptatiecriteria
 - Run-ID, SHA, trigger en bronworkflow worden gevalideerd; geen conclusies uit een PR-run of vreemde workflow.
 - Succesvolle workflow zonder rollback- en evidenceartifact wordt als onvolledig gerapporteerd.
+- Zowel de standaard shared-OVH als de beschermde snapshot-v8-workflow worden zonder nieuwe deploymentbevoegdheden herkend; artifacts van een andere workflow tellen niet.
 - Een groene job of beschikbare artifactnamen promoveert geen release tot VERIFIED of ACCEPTED.
 - Ongeldige of verlopen gegevens stoppen zichtbaar; geen automatische retry van writes.
 - De bestaande owner-only merge/productiegates, snapshots/restore, cron, DB, secrets en hostkey-/rollbackchecks blijven onaangeroerd.
