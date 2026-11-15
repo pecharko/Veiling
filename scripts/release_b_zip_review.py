@@ -91,7 +91,9 @@ def main():
     run = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
     artifacts = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
     artifact_id = evidence_artifact(run, artifacts)
-    evidence = read_evidence_zip(Path(sys.argv[3]).read_bytes())
+    with Path(sys.argv[3]).open("rb") as stream:
+        bounded_archive = stream.read(MAX_ZIP + 1)
+    evidence = read_evidence_zip(bounded_archive)
     if len(sys.argv) == 4:
         print(json.dumps({"artifact_id": artifact_id, "release_id": evidence["release_id"],
                           "status": "MANIFEST_REQUIRED", "release_administration": "OPEN"}, sort_keys=True))
