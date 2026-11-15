@@ -37,6 +37,12 @@ $checks=[
     && str_contains($list,'seller_can_publish_artist(effective_admin_role())'),
   'status filtering applies to artists only'=>str_contains($list,"if(\$sellerScreen==='kunstenaar')")
     && str_contains($list,"\$row['seller_type']==='kunstenaar'"),
+  'deleting either seller type requires an explicit irreversible confirmation'=>str_contains($list, 'class="seller-delete-form"')
+    && str_contains($list, 'onsubmit="return window.confirm(')
+    && str_contains($list, 'Wil je werkelijk de kunstenaar verwijderen? Dit kan niet ongedaan gemaakt worden.')
+    && str_contains($list, 'Wil je werkelijk de particulier verwijderen? Dit kan niet ongedaan gemaakt worden.')
+    && str_contains($list, 'name="action" value="delete"')
+    && str_contains($list, 'seller_delete($pdo,'),
   'lot editor offers both new seller types'=>str_contains($lot,"admin/kunstenaar-bewerken.php")
     && str_contains($lot,"admin/verkoper.php"),
   'roles explain immutable type'=>str_contains($roles,'Type kunstenaar/particulier wijzigen na aanmaak'),
