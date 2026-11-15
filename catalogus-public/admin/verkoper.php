@@ -76,7 +76,7 @@ if (is_post()) {
         $ajaxReply(200,['ok'=>true,'image_url'=>url((string)$uploaded['path']),'image_id'=>(int)$uploaded['id'],'slot'=>(int)$slot,'kind'=>$kind]);
       }
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
-      redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+      redirect($editorUrl,['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     $savedId=seller_save($pdo,$editId,$_POST,$actorId,$actorRole);
     if ($values['seller_type']!=='kunstenaar') seller_image_clear($pdo,$savedId);
@@ -96,11 +96,11 @@ if (is_post()) {
     if ($failed) {
       flash('Verkoper bewaard, maar niet alle foto’s lukten: '.implode('; ',$failed),'warning');
       if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
-      redirect('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+      redirect($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     if ($fromLot) {
-      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId])]);
-      redirect('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId])]);
+      redirect($editorUrl, ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
     }
     flash('Verkoper opgeslagen.');
     if ($ajaxSave) $ajaxReply(200,['redirect'=>url($screenUrl)]);
@@ -171,10 +171,10 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
 ?>
 <div class="seller-manager seller-editor-page">
   <div class="seller-editor-toolbar">
-    <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':'Terug naar verkopers'?></a>
+    <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':($sellerScreen==='kunstenaar'?'Terug naar kunstenaars':'Terug naar verkopers')?></a>
       <p class="dashboard-subtitle">Beheer persoonsgegevens en bankgegevens op één afgeschermde plek.</p></div>
     <div class="lot-editor-toolbar-actions">
-      <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
+      <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
       <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':($sellerScreen==='kunstenaar'?'Kunstenaar opslaan':'Verkoper opslaan')?></button>
     </div>
   </div>
@@ -288,7 +288,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
         </div>
       </div>
       <div class="seller-form-actions">
-        <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
+        <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
         <button class="primary seller-save-trigger" type="submit" id="seller-save-button"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
       </div>
       <div id="seller-save-progress" class="seller-save-progress" role="status" aria-live="polite" hidden>
