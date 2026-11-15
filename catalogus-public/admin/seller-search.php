@@ -13,10 +13,10 @@ $type=in_array(($_GET['type']??''),['kunstenaar','particulier'],true)?(string)$_
 $query=mb_substr(trim((string)($_GET['q']??'')),0,100);
 try {
   if ($id!==false && $id!==null) {
-    $st=$pdo->prepare('SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=? LIMIT 1');
+    $st=$pdo->prepare("SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=? LIMIT 1");
     $st->execute([(int)$id]);
   } else {
-    $sql='SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE 1=1';
+    $sql="SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE 1=1";
     $params=[];
     if ($type!=='') { $sql.=' AND s.seller_type=?'; $params[]=$type; }
     if ($query!=='') {
