@@ -241,7 +241,7 @@ jobs:
           # the original audited tree, not the live source of a later PR.
           history="$(mktemp -d "$RUNNER_TEMP/historical-audit.XXXXXXXX")"
           trap 'git worktree remove --force "$history"' EXIT
-          git worktree add --detach "$history" fa837076e366e8f14263b6467bf8552567e543d3
+          git worktree add --detach "$history" 263edcabd6c386c46619062529e0cd0c27363958
           (
             cd "$history"
             python3 -m py_compile scripts/deploy_audit_release.py
