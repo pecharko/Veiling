@@ -8,7 +8,7 @@ foreach ([
   'class="dashboard-modern seller-manager"',
   'class="dashboard-panel"',
   'class="dashboard-panel-heading"',
-  'class="dashboard-filters seller-filters"',
+  'class="dashboard-filters seller-filters ',
   'class="dashboard-table seller-table"',
   'class="dashboard-edit"',
   'url($editorUrl)',
@@ -71,7 +71,7 @@ $artistEditorRoute=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/k
 if (!is_string($artistRoute) || !is_string($artistEditorRoute)
     || !str_contains($artistRoute, "\$sellerScreen='kunstenaar';")
     || !str_contains($artistEditorRoute, "\$sellerScreen='kunstenaar';")
-    || !str_contains($overview, "\$sellerScreen= (") && !str_contains($overview, "\$sellerScreen=(\$sellerScreen??'particulier')")
+    || !str_contains($overview, "\$sellerScreen=(\$sellerScreen??'particulier')")
     || !str_contains($editor, 'id="seller-type" value="<?=e($sellerScreen)?>"')
     || str_contains($editor, '<select name="seller_type"')) {
   throw new RuntimeException('Artist/private administration must be isolated and seller type fixed.');
