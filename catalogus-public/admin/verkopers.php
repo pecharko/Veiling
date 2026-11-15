@@ -203,12 +203,13 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
       event.preventDefault();
       if (select.disabled || select.value===select.dataset.savedValue) return;
       const previous=select.dataset.savedValue;
+      const payload=new FormData(form);
       select.disabled=true;
       notice.textContent='Publicatiestatus opslaan…';
       try {
         const response=await fetch(form.action,{
           method:'POST',
-          body:new FormData(form),
+          body:payload,
           headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           credentials:'same-origin'
         });
