@@ -31,6 +31,8 @@ $checks=[
     && str_contains($read('catalogus-public/admin/verkopers.php'), "badge.classList.add(statusClasses[data.status]);"),
   'async endpoint reports saved artist status'=>str_contains($read('catalogus-public/admin/verkopers.php'), "'ok'=>true,'status'=>\$status")
     && str_contains($read('catalogus-public/admin/verkopers.php'), "HTTP_X_REQUESTED_WITH"),
+  'status request uses form action attribute despite input named action'=>str_contains($read('catalogus-public/admin/verkopers.php'), "fetch(form.getAttribute('action'),")
+    && !str_contains($read('catalogus-public/admin/verkopers.php'), 'fetch(form.action,'),
   'async status handles unexpected HTML response safely'=>str_contains($read('catalogus-public/admin/verkopers.php'), "response.headers.get('content-type')")
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'response.redirected')
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'application/json')
