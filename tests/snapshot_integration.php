@@ -86,6 +86,9 @@ $pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sal
     ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lotId]);
+$pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Eenmalige categorie')");
+$categoryId=(int)$pdo->lastInsertId();
+$pdo->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['CI Eenmalige categorie',$lotId]);
 $pdo->prepare("UPDATE lots SET last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
@@ -136,14 +139,19 @@ verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['si
 [$snapshot, $hashes, $photoBytes] = snap_verified($name);
 verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($snapshot['tables']['visitor_stats_ip_exclusion_state'])
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
-verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
-       'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
+verify(count($snapshot['tables']['lots'])===1 && !isset($snapshot['tables']['admins'])
+    && !isset($snapshot['tables']['login_attempts'])
+    && count($snapshot['tables']['lot_categories'])===3
+    && count(array_filter($snapshot['tables']['lot_categories'],
+      static fn($cat)=>(int)$cat['id']===$categoryId && $cat['name']==='CI Eenmalige categorie'))===1
+    && !str_contains(json_encode($snapshot),'ci-admin@example.invalid'),
+    'V8 snapshot exports catalog categories and excludes administrator and login records');
+verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
   && $snapshot['tables']['lots'][0]['last_edited_at']==='2026-11-11 07:30:00',
-  'Snapshot v7 stores linked sellers and last lot editor');
+  'Snapshot v8 stores linked sellers and last lot editor');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
        'Snapshot contains sale location and auction number');
 verify(isset($hashes['uploads/'.$sellerRelative]) && is_file($sellerPhoto),
@@ -192,7 +200,11 @@ assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
 $pdo->prepare('UPDATE lot_sellers SET artist_published=0 WHERE id=?')->execute([$sellerId]);
 $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
-$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
+$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Live beheerder behouden'");
+$pdo->prepare('INSERT INTO login_attempts (ip_hash) VALUES (?)')
+    ->execute([hash('sha256','post-snapshot-test-ip')]);
+$pdo->prepare('UPDATE lot_categories SET name=? WHERE id=?')
+    ->execute(['CI Later gewijzigde categorie',$categoryId]);
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
 unlink($sellerPhoto);
@@ -210,10 +222,13 @@ $pdo->prepare('INSERT INTO visitor_stats_ip_exclusions (ip_address,admin_id) VAL
 snap_restore($pdo, $name);
 verify((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 2
     && !analytics_ip_exclusion_enabled($pdo), 'Restore preserves current IP/admin associations and switch instead of resetting them');
-verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 0,
-       'Snapshot restore invalidates pending invitation tokens');
-verify($pdo->query("SELECT last_login_at FROM admins LIMIT 1")->fetchColumn() === null,
-       'Snapshot restores nullable last-login timestamp');
+verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 1,
+       'Catalog restore preserves current pending admin invitation');
+verify($pdo->query("SELECT email FROM admins LIMIT 1")->fetchColumn() === 'changed-ci-admin@example.invalid'
+    && $pdo->query("SELECT name FROM admins LIMIT 1")->fetchColumn() === 'Live beheerder behouden',
+    'Catalog restore preserves current administrators and login credentials');
+verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 2,
+    'Catalog restore preserves login attempts created after the snapshot');
 
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
 
@@ -241,12 +256,9 @@ verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_n
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');
-verify($pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn() === $originalAdmin,
-       'Restore returns the original administrator');
-verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === $originalAdminName,
-       'Restore preserves administrator display name');
-verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 1,
-       'Restore returns login attempts');
+verify($pdo->query('SELECT name FROM lot_categories WHERE id='.$categoryId)->fetchColumn() === 'CI Eenmalige categorie'
+    && $pdo->query('SELECT category FROM lots WHERE lot_number=101')->fetchColumn() === 'CI Eenmalige categorie',
+    'Restore returns category registry and original lot category without affecting users');
 verify((int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE lot_id='.$lotId)->fetchColumn() === 1,
        'Restore returns image database record and foreign key');
 verify(is_file($original) && hash_file('sha256', $original) === $checksum,
@@ -282,7 +294,7 @@ verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetch
        'New schema restore recovers the offline state');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
-// Old snapshots are intentionally unsupported after this schema migration.
+// Old snapshots are intentionally unsupported; no existing ZIP is modified.
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
