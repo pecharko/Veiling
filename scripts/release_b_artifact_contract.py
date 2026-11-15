@@ -9,11 +9,15 @@ import json
 import sys
 
 from ovh_deploy_evidence_contract import validate as validate_evidence
-from release_b_status import RELEASE_ARTIFACT_PREFIXES, SHA
+from release_b_status import RELEASE_ARTIFACT_PREFIXES, RELEASE_WORKFLOW_PATHS, SHA
 
 def reconcile(run, evidence, manifest, expected_release_id):
     if not isinstance(run, dict) or run.get("name") not in RELEASE_ARTIFACT_PREFIXES:
         raise ValueError("Unsupported deployment workflow")
+    if run.get("path") != RELEASE_WORKFLOW_PATHS[run["name"]]:
+        raise ValueError("Unrecognized workflow path")
+    if not isinstance(run.get("repository"), dict) or run["repository"].get("full_name") != "pecharko/Veiling":
+        raise ValueError("Unrecognized repository")
     if run.get("event") != "workflow_dispatch" or run.get("head_branch") != "main":
         raise ValueError("Untrusted event or branch")
     if (not isinstance(run.get("head_sha"), str)
