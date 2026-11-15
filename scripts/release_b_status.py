@@ -59,7 +59,7 @@ def main():
     print("## Post-release status (read-only; not acceptance)")
     print()
     for key, value in report.items():
-        print(f"- **{key}**: \`{value}\`")
+        print(f"- **{key}**: `{value}`")
     print()
     print("No approval, deployment, independent OVH readback or browser acceptance is inferred.")
 
