@@ -32,7 +32,6 @@ def fixtures():
         "head_sha": SHA,
         "status": "completed",
         "conclusion": "success",
-        "inputs": {"release_id": RID},
     }
     evidence = {
         "schema": 1,
@@ -69,8 +68,26 @@ def fixtures():
         "size": len(serialize(manifest)),
         "content": base64.b64encode(serialize(manifest)).decode(),
     }
+    jobs = {"total_count": 1, "jobs": [{
+        "id": 456, "run_id": 123, "name": "release",
+        "status": "completed", "conclusion": "success",
+        "steps": [
+            {"name": "Offline manifest validation and source hashes",
+             "conclusion": "success"},
+            {"name": "Verify exact per-release final authorization",
+             "conclusion": "success"},
+            {"name": "Backup and upload exactly manifest files with drift gate and rollback",
+             "conclusion": "success"},
+        ]
+    }]}
+    log = (
+        f"2026-11-14T23:08:20.6803142Z   RELEASE_ID: {RID}\n"
+        f"2026-11-14T23:08:20.6804216Z   DEPLOY_CONFIRMATION: DEPLOY-{RID}-{SHA}\n"
+    ).encode()
     responses = {
         f"{REPO}/actions/runs/123": serialize(run),
+        f"{REPO}/actions/runs/123/jobs?per_page=100": serialize(jobs),
+        f"{REPO}/actions/jobs/456/logs": log,
         f"{REPO}/actions/runs/123/artifacts?per_page=100": serialize(artifact_list),
         f"{REPO}/actions/artifacts/55/zip": raw_zip,
         f"{REPO}/contents/releases/{RID}.json?ref={SHA}": serialize(response),
@@ -89,7 +106,7 @@ class FakeFetch:
         return value
 
 class GitHubProvenanceTests(unittest.TestCase):
-    def test_read_only_four_fetches_and_open_status(self):
+    def test_read_only_six_fetches_and_open_status(self):
         responses, *_ = fixtures()
         fetch = FakeFetch(responses)
         result = collect_verified_browser_inputs(123, fetch)
@@ -98,7 +115,9 @@ class GitHubProvenanceTests(unittest.TestCase):
         self.assertEqual(result["github_provenance"], "GITHUB_API_GET_SOURCE_BOUND")
         self.assertFalse(result["independent_browser_origin_authenticated"])
         self.assertEqual(result["release_administration"], "OPEN")
-        self.assertEqual(len(fetch.calls), 4)
+        self.assertEqual(len(fetch.calls), 6)
+        self.assertFalse(result["original_dispatch_inputs_authenticated"])
+        self.assertEqual(result["release_job_id"], 456)
         self.assertTrue(all(path.startswith(REPO + "/") for path, _ in fetch.calls))
 
     def test_wrong_run_rejected_before_artifact_fetch(self):
@@ -115,6 +134,39 @@ class GitHubProvenanceTests(unittest.TestCase):
             self.assertLessEqual(len(fetch.calls), 3)
 
     def test_wrong_dispatch_release_id(self):
+        values, run, *_ = fixtures()
+        values[f"{REPO}/actions/runs/123"] = serialize({
+            **run, "inputs": {"release_id": "other-id"}
+        })
+        with self.assertRaises(ValueError):
+            collect_verified_browser_inputs(123, FakeFetch(values))
+
+    def test_successful_job_provenance_fail_closed(self):
+        values, *_ = fixtures()
+        jobs_path = f"{REPO}/actions/runs/123/jobs?per_page=100"
+        log_path = f"{REPO}/actions/jobs/456/logs"
+        baseline = json.loads(values[jobs_path])
+        log = values[log_path]
+        cases = [
+            ({"total_count": 0, "jobs": []}, log),
+            ({"total_count": 2, "jobs": baseline["jobs"] * 2}, log),
+            ({"total_count": 1, "jobs": [
+                {**baseline["jobs"][0], "conclusion": "failure"}]}, log),
+            ({"total_count": 1, "jobs": [
+                {**baseline["jobs"][0], "run_id": 124}]}, log),
+            (baseline, b""),
+            (baseline, log.replace(RID.encode(), b"wrong-release")),
+            (baseline, log.replace(SHA.encode(), ("f" * 40).encode())),
+            (baseline, log + b"2026-11-14T23:08:30Z   RELEASE_ID: wrong-release\n"),
+        ]
+        for jobs, log_bytes in cases:
+            fixture, *_ = fixtures()
+            fixture[jobs_path] = serialize(jobs)
+            fixture[log_path] = log_bytes
+            with self.subTest(jobs=jobs, log=log_bytes[:30]), self.assertRaises(ValueError):
+                collect_verified_browser_inputs(123, FakeFetch(fixture))
+
+    def test_run_inputs_conflict_with_authenticated_job_environment(self):
         values, run, *_ = fixtures()
         values[f"{REPO}/actions/runs/123"] = serialize({
             **run, "inputs": {"release_id": "other-id"}

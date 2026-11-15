@@ -15,6 +15,7 @@ import tempfile
 from release_b_zip_review import evidence_artifact, read_evidence_zip, MAX_ZIP
 from release_b_artifact_contract import reconcile
 from release_b_public_browser import preflight_browser_run
+from release_b_job_log_binding import bind_executed_release, release_job_id, MAX_JOB_LOG
 
 REPO = "pecharko/Veiling"
 RELEASE = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
@@ -114,8 +115,15 @@ def collect_verified_browser_inputs(run_id, fetch=api_get):
     rid = evidence.get("release_id")
     if not isinstance(rid, str) or not RELEASE.fullmatch(rid):
         raise ValueError("Invalid release identifier")
-    if not isinstance(run.get("inputs"), dict) or run["inputs"].get("release_id") != rid:
-        raise ValueError("Original deployment input differs from artifact")
+    # REST run metadata omits workflow_dispatch inputs. Independently
+    # correlate the successfully completed release-job environment log.
+    jobs = json_response(fetch(
+        f"{base}/actions/runs/{run_id}/jobs?per_page=100",
+        max_bytes=MAX_LIST_JSON), MAX_LIST_JSON)
+    release_job = release_job_id(run, jobs)
+    log_bytes = fetch(f"{base}/actions/jobs/{release_job}/logs",
+                      max_bytes=MAX_JOB_LOG)
+    binding = bind_executed_release(run, rid, jobs, log_bytes)
     sha = run["head_sha"]
     response = json_response(
         fetch(f"{base}/contents/releases/{rid}.json?ref={sha}",
@@ -124,13 +132,20 @@ def collect_verified_browser_inputs(run_id, fetch=api_get):
     result = reconcile(run, evidence, manifest, rid)
     if result["status"] != "UPLOADER_ARTIFACT_CONTENT_CONSISTENT_ONLY":
         raise ValueError("Deployment artifact content inconsistent")
-    identity = preflight_browser_run(run, evidence)
+    # Compatibility with the earlier run-input contract; this field is
+    # synthesized ONLY from a separately validated GitHub job log.
+    # It does NOT assert that original dispatch inputs were retrieved.
+    bound_run = {**run, "inputs": {"release_id": binding["release_id"]}}
+    identity = preflight_browser_run(bound_run, evidence)
     return {
         "run_id": identity["run_id"],
         "release_id": identity["release_id"],
         "release_sha": identity["release_sha"],
         "github_artifact_id": artifact_id,
         "github_provenance": "GITHUB_API_GET_SOURCE_BOUND",
+        "job_log_binding": binding["binding_origin"],
+        "release_job_id": binding["job_id"],
+        "original_dispatch_inputs_authenticated": False,
         "independent_browser_origin_authenticated": False,
         "independent_ovh_readback": "PENDING",
         "release_administration": "OPEN",
