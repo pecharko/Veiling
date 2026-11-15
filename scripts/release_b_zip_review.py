@@ -12,7 +12,7 @@ import zipfile
 from pathlib import Path
 
 from release_b_artifact_contract import reconcile
-from release_b_status import RELEASE_ARTIFACT_PREFIXES, RELEASE_WORKFLOW_PATHS
+from release_b_status import RELEASE_ARTIFACT_PREFIXES, RELEASE_WORKFLOW_PATHS, SHA
 
 RELEASE_ID = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 MAX_ZIP = 256 * 1024
@@ -31,6 +31,8 @@ def evidence_artifact(run, artifacts):
         raise ValueError("Not a main dispatch")
     if run.get("status") != "completed" or run.get("conclusion") != "success":
         raise ValueError("Incomplete deployment")
+    if not isinstance(run.get("head_sha"), str) or not SHA.fullmatch(run["head_sha"]):
+        raise ValueError("Invalid run SHA")
     run_id = run.get("id")
     if type(run_id) is not int or run_id <= 0:
         raise ValueError("Invalid run id")
