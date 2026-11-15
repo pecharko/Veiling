@@ -222,7 +222,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <div class="seller-fields-section seller-artist-fields" id="seller-artist-fields" <?=$values['seller_type']==='kunstenaar'?'':'hidden'?>>
         <h3>Kunstenaarsgegevens</h3>
         <div class="seller-fields-grid">
-          <label>Kunstenaarsnaam <span class="lot-required">*</span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
+          <label><span>Kunstenaarsnaam <span class="lot-required">*</span></span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
           <label>Website kunstenaar (optioneel)<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
         </div>
         <div class="seller-introduction">
