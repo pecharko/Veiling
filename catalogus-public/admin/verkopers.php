@@ -153,7 +153,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
                 <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
               <?php else: ?>
-                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
+                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
