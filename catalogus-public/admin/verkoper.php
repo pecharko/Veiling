@@ -195,7 +195,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         <h3>Kunstenaarsgegevens</h3>
         <div class="seller-fields-grid">
           <label>Kunstenaarsnaam <span class="lot-required">*</span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
-          <label>Website kunstenaar <span class="lot-required">*</span><input required name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
+          <label>Website kunstenaar (optioneel)<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
         </div>
         <div class="seller-introduction">
           <label for="artist-slogan">Slogan van de kunstenaar (optioneel)</label>
@@ -350,7 +350,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
     const artist=type.value==='kunstenaar';
     fields.hidden=!artist;
     fields.querySelectorAll('input,textarea').forEach(input => {
-      input.required=artist && (input.name==='artist_name' || input.name==='artist_url');
+      input.required=artist && input.name==='artist_name';
       input.disabled=!artist;
     });
   }
