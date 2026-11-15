@@ -34,6 +34,16 @@ def validate_path(path):
     return path
 
 
+def check_parent_directories(sftp, base, path):
+    # Reject symlinked parent segments; every component must be a directory.
+    current = ""
+    for segment in (base.strip("/") + "/" + posixpath.dirname(path)).split("/"):
+        current += "/" + segment
+        info = sftp.lstat(current)
+        if not stat.S_ISDIR(info.st_mode):
+            raise ValueError("Unsafe remote directory or symlink")
+
+
 def read_one(sftp, full_path):
     """Only lstat + open(rb) are allowed. Never write, remove or rename."""
     info = sftp.lstat(full_path)
@@ -80,6 +90,7 @@ def collect(sftp, remote_root, upload, collection_id):
         remote_path = posixpath.join(base, path)
         if not remote_path.startswith(base + "/"):
             raise ValueError("Remote root escape")
+        check_parent_directories(sftp, base, path)
         rows.append({"path": path, "remote_sha256": read_one(sftp, remote_path)})
     return {
         "schema": 1,
