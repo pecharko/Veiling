@@ -9,6 +9,10 @@ import re
 import sys
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
+RELEASE_WORKFLOW_PATHS = {
+    "Shared OVH manifest release with rollback": ".github/workflows/shared-ovh-release.yml",
+    "Snapshot v8 catalog-only protected two-file release": ".github/workflows/snapshot-v8-protected-release.yml",
+}
 RELEASE_ARTIFACT_PREFIXES = {
     "Shared OVH manifest release with rollback": "shared-ovh",
     "Snapshot v8 catalog-only protected two-file release": "snapshot-v8",
@@ -24,7 +28,11 @@ def summarize(run, artifacts):
     if type(run_id) is not int or run_id <= 0 or not isinstance(run["head_sha"], str) or not SHA.fullmatch(run["head_sha"]):
         raise ValueError("Invalid run identity")
     if run["name"] not in RELEASE_ARTIFACT_PREFIXES or run["event"] != "workflow_dispatch" or run["head_branch"] != "main":
-        raise ValueError("Not the shared production deployment run")
+        raise ValueError("Not the approved production deployment run")
+    if run.get("path") != RELEASE_WORKFLOW_PATHS[run["name"]]:
+        raise ValueError("Deployment workflow path mismatch")
+    if not isinstance(run.get("repository"), dict) or run["repository"].get("full_name") != "pecharko/Veiling":
+        raise ValueError("Deployment repository mismatch")
     if not isinstance(artifacts.get("artifacts"), list):
         raise ValueError("Missing artifact listing")
     if any(not isinstance(a, dict) for a in artifacts["artifacts"]):
