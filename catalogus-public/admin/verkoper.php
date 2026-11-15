@@ -182,6 +182,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
     <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?ucfirst($screenLabel).' bewerken':'Nieuwe '.$screenLabel?></h2><p>Algemene gegevens zijn verplicht. Bankgegevens blijven optioneel. Het type kan na aanmaak niet worden gewijzigd.</p></div></div>
     <?php if ($editId!==null && $values['seller_type']==='kunstenaar'): ?>
+      <?php $canPublishNow=isset($photoByKey['portrait_1']) && seller_artist_has_portrait_path((string)$photoByKey['portrait_1']['path']); ?>
       <div class="seller-fields-section">
         <h3>Publicatiestatus kunstenaar</h3>
         <?php if (seller_can_publish_artist($actorRole)): ?>
@@ -192,7 +193,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
             <label for="seller-edit-artist-status">Publicatiestatus
               <select id="seller-edit-artist-status" name="artist_status">
                 <option value="new" <?=(int)($values['artist_published']??0)===2?'selected':''?>>Nieuw</option>
-                <option value="published" <?=(int)($values['artist_published']??0)===1?'selected':''?>>Gepubliceerd</option>
+                <?php if ($canPublishNow): ?><option value="published" <?=(int)($values['artist_published']??0)===1?'selected':''?>>Gepubliceerd</option><?php elseif ((int)($values['artist_published']??0)===1): ?><option value="" selected disabled>Gepubliceerd (portret ontbreekt)</option><?php endif; ?>
                 <option value="unpublished" <?=(int)($values['artist_published']??0)===0?'selected':''?>>Niet gepubliceerd</option>
               </select>
             </label>
