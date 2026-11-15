@@ -29,3 +29,11 @@ De extra offline checker `scripts/release_b_artifact_contract.py` vergelijkt de 
 - De bestaande owner-only merge/productiegates, snapshots/restore, cron, DB, secrets en hostkey-/rollbackchecks blijven onaangeroerd.
 
 **Deze PR verandert geen productieruntime.** Voor beschermde `.github/workflows/` en `scripts/` blijft een afzonderlijke exacte mergebeslissing vereist. Deze rapportage vervangt geen bestaande verplichte gates.
+
+## Veilige tweede fase — GitHub-artifactinhoud controleren
+
+De read-only `workflow_run` controleert nu na een bestaande productie-release eerst de precieze GitHub-run (repo, workflowbestand, trigger, SHA en run-ID), zoekt vervolgens de **unieke, niet-verlopen, run-gebonden** evidenceartifact en haalt die uitsluitend via een geauthenticeerde GitHub API GET op. Een nieuwe helper `scripts/release_b_zip_review.py` inspecteert de ZIP zonder uitpakken op schijf of uitvoering van inhoud, met strikte limieten voor ZIP-grootte, aantal bestanden, naam, JSON-grootte en compressieverhouding.
+
+Het bijbehorende `releases/<release-id>.json` wordt uit GitHub opgehaald op de **exacte immutable run-head-SHA**, niet uit de huidige `main` en nooit uit een PR. De bestaande inhoudsvalidator vergelijkt die manifesthashes met het evidence-JSON. De rapportage blijft `UPLOADER_ARTIFACT_CONTENT_CONSISTENT_ONLY`; `independent_ovh_readback=PENDING` en `browser_acceptance=PENDING` blijven open. De workflow heeft alleen `contents: read` en `actions: read`, geen muterende API, geen `workflow_dispatch` en geen netwerkcontact met OVH.
+
+**Belangrijke grens:** API-authenticatie bewijst welke GitHub-artifactbytes en welke manifestversie zijn opgehaald, niet dat de deployment echt succesvol was op de onafhankelijke OVH-server. De ZIP wordt nooit als vertrouwde code uitgevoerd. Oude releases zonder de vereiste artifact/manifestmetadata blijven onvolledig en krijgen geen automatische acceptatie. De workflow is alleen actief na een later afzonderlijk geautoriseerde release; het mergen ervan voert geen deployment uit.
