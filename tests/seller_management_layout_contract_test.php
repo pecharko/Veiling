@@ -45,7 +45,7 @@ if (!str_contains($overview, "<th scope=\"col\">Portret</th><th scope=\"col\">Ku
   throw new RuntimeException('Artist table must show portrait and artist name instead of private name.');
 if (!str_contains($overview, "<th scope=\"col\">Naam</th><th scope=\"col\">Kavels</th><th scope=\"col\">Acties</th>"))
   throw new RuntimeException('Private-seller table must show only name, lots and actions.');
-foreach (['seller_images', "image_kind='portrait' AND slot=1", 'seller_artist_has_portrait_path($portrait)', 'seller-portrait-thumb', 'seller-portrait-placeholder', '<?=e(url($portrait))?>', '$groupType===\'kunstenaar\'?5:3'] as $required) {
+foreach (['seller_images', "image_kind='portrait' AND slot=1", 'seller_artist_has_portrait_path($portrait)', 'seller-portrait-thumb', 'seller-portrait-placeholder', '<?=e(url($portrait))?>', '$groupType===\'kunstenaar\'?6:3'] as $required) {
   if (!str_contains($overview,$required)) throw new RuntimeException('Artist portrait cell missing safety or rendering contract: '.$required);
 }
 if (!str_contains($css, '.seller-portrait-thumb') || !str_contains($css, '.seller-portrait-placeholder'))
