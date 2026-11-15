@@ -31,6 +31,10 @@ $checks=[
     && str_contains($read('catalogus-public/admin/verkopers.php'), "badge.classList.add(statusClasses[data.status]);"),
   'async endpoint reports saved artist status'=>str_contains($read('catalogus-public/admin/verkopers.php'), "'ok'=>true,'status'=>\$status")
     && str_contains($read('catalogus-public/admin/verkopers.php'), "HTTP_X_REQUESTED_WITH"),
+  'async status handles unexpected HTML response safely'=>str_contains($read('catalogus-public/admin/verkopers.php'), "response.headers.get('content-type')")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'response.redirected')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'application/json')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'select.value=previous;'),
   'listing excludes published selection without valid portrait'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'seller_artist_has_portrait_path($portrait)')
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'if($safePortrait)')
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'Gepubliceerd (portret ontbreekt)'),
