@@ -213,6 +213,10 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
           headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
           credentials:'same-origin'
         });
+        const contentType=response.headers.get('content-type') || '';
+        if (response.redirected || !contentType.toLowerCase().includes('application/json')) {
+          throw new Error('De server gaf geen geldig antwoord. Controleer of je nog bent aangemeld in de lokale administratie en vernieuw de pagina.');
+        }
         const data=await response.json();
         if (!response.ok || !data.ok || data.status!==select.value) {
           throw new Error(data.error || 'Status kon niet worden opgeslagen.');
