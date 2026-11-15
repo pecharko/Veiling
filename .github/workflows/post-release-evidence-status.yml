@@ -1,5 +1,11 @@
 name: Post-release evidence status (read-only)
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/post-release-evidence-status.yml'
+      - 'scripts/release_b_status.py'
+      - 'tests/release_b_status_test.py'
+      - 'docs/automation-level-b-plan-20261115.md'
   workflow_run:
     workflows:
       - Shared OVH manifest release with rollback
@@ -8,8 +14,17 @@ permissions:
   contents: read
   actions: read
 jobs:
+  contract:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
+      - run: python3 -m py_compile scripts/release_b_status.py
   report:
-    if: github.event.workflow_run.event == 'workflow_dispatch'
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
