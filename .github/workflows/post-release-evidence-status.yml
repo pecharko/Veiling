@@ -1,0 +1,41 @@
+name: Post-release evidence status (read-only)
+on:
+  workflow_run:
+    workflows:
+      - Shared OVH manifest release with rollback
+    types: [completed]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  report:
+    if: github.event.workflow_run.event == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout trusted main only
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Collect authenticated run metadata (no artifact contents)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+          RELEASE_RUN_ID: ${{ github.event.workflow_run.id }}
+        run: |
+          set -euo pipefail
+          gh api "repos/$GH_REPOSITORY/actions/runs/$RELEASE_RUN_ID" > /tmp/release-run.json
+          gh api "repos/$GH_REPOSITORY/actions/runs/$RELEASE_RUN_ID/artifacts?per_page=100" > /tmp/release-artifacts.json
+          python3 - <<'PY'
+          import json
+          with open("/tmp/release-run.json", encoding="utf-8") as f:
+              run = json.load(f)
+          with open("/tmp/release-artifacts.json", encoding="utf-8") as f:
+              artifacts = json.load(f)
+          with open("/tmp/release-b-input.json", "w", encoding="utf-8") as f:
+              json.dump({"run": run, "artifacts": artifacts}, f)
+          PY
+          python3 scripts/release_b_status.py < /tmp/release-b-input.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify offline status contract
+        run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
