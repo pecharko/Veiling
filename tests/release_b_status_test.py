@@ -37,7 +37,8 @@ class ReleaseBStatusTest(unittest.TestCase):
         self.assertEqual(result["browser_acceptance"], "PENDING")
 
     def test_snapshot_v8_requires_matching_artifacts(self):
-        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release"}
+        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release",
+               "path": ".github/workflows/snapshot-v8-protected-release.yml"}
         result = summarize(run, self.artifacts(
             "shared-ovh-evidence-123", "shared-ovh-rollback-123"))
         self.assertEqual(result["status"], "INCOMPLETE_ARTIFACTS")
