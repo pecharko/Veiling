@@ -251,8 +251,12 @@ try {
   claim($status === 200 && str_contains($html,'lot-editor-form'), 'Authenticated kavel editor reachable');
   claim(str_contains($html, 'name="title"') && str_contains($html, 'maxlength="50"'),
       'New lot title input is limited to 50 characters');
+  $pickerJs=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/lot-seller-picker.js');
   claim(str_contains($html,'name="donation_confirmed" value="0"')
-    && str_contains($html,'geen uitbetaling gebeuren naar de schenker'),
+    && str_contains($html,'lot-seller-picker.js')
+    && is_string($pickerJs)
+    && str_contains($pickerJs,'geen uitbetaling gebeuren naar de schenker')
+    && str_contains($pickerJs,'window.confirm(warning)'),
     'New lot exposes explicit donation confirmation on save');
   [$donationStatus, $donationPage] = request_page('/admin/kavel.php', [
     'csrf'=>token($html),'action'=>'save','id'=>'0',
