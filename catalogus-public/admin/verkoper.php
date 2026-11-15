@@ -34,13 +34,21 @@ $ajaxReply=static function(int $code,array $body): void {
 if (is_post()) {
   check_csrf();
   $action=(string)($_POST['action']??'');
-  if (!in_array($action,['save','upload-photo','delete-photo'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
+  if (!in_array($action,['save','upload-photo','delete-photo','artist-publication'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
   $rawId=$_POST['seller_id']??'';
   $postId=$rawId==='' ? null : filter_var($rawId,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if ($postId===false || $postId!==$editId) { http_response_code(400); exit('Ongeldige verkoperselectie.'); }
   $values=array_merge($defaults,array_intersect_key($_POST,$defaults));
   try {
     catalog_lock_for_request($pdo);
+    if ($action==='artist-publication') {
+      if ($editId===null) throw new InvalidArgumentException('Bewaar eerst de kunstenaar.');
+      $status=(string)($_POST['artist_status']??'');
+      if (!in_array($status,['new','published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
+      seller_set_artist_publication($pdo,$editId,['unpublished'=>0,'published'=>1,'new'=>2][$status],$actorRole,$actorId);
+      flash('Publicatiestatus kunstenaar aangepast.');
+      redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+    }
     if ($action==='upload-photo' || $action==='delete-photo') {
       if ($editId===null) throw new InvalidArgumentException('Bewaar eerst de verkoper.');
       $kind=(string)($_POST['image_kind']??'');
@@ -163,7 +171,27 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
     <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
     <?php if ($editId!==null && $values['seller_type']==='kunstenaar'): ?>
-      <p class="dashboard-subtitle"><strong>Publicatiestatus:</strong> <?=((int)($values['artist_published']??0)===1?'Gepubliceerd':((int)($values['artist_published']??0)===2?'Nieuw':'Niet gepubliceerd'))?>. De status wordt uitsluitend door de Veilingmeester of Administrator gewijzigd via Verkopers beheren.</p>
+      <div class="seller-fields-section">
+        <h3>Publicatiestatus kunstenaar</h3>
+        <?php if (seller_can_publish_artist($actorRole)): ?>
+          <form method="post" class="seller-status-form">
+            <?=csrf_field()?>
+            <input type="hidden" name="action" value="artist-publication">
+            <input type="hidden" name="seller_id" value="<?=(int)$editId?>">
+            <label for="seller-edit-artist-status">Publicatiestatus
+              <select id="seller-edit-artist-status" name="artist_status">
+                <option value="new" <?=(int)($values['artist_published']??0)===2?'selected':''?>>Nieuw</option>
+                <option value="published" <?=(int)($values['artist_published']??0)===1?'selected':''?>>Gepubliceerd</option>
+                <option value="unpublished" <?=(int)($values['artist_published']??0)===0?'selected':''?>>Niet gepubliceerd</option>
+              </select>
+            </label>
+            <button type="submit" class="secondary">Wijzig status</button>
+          </form>
+          <p class="lot-editor-help">Publiceren kan alleen als de kunstenaar een opgeslagen portretfoto heeft. Bewaar nieuwe portretten eerst.</p>
+        <?php else: ?>
+          <p class="dashboard-subtitle"><strong>Status:</strong> <?=((int)($values['artist_published']??0)===1?'Gepubliceerd':((int)($values['artist_published']??0)===2?'Nieuw':'Niet gepubliceerd'))?>. Alleen Veilingmeester en Administrator mogen deze wijzigen.</p>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
     <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form" data-seller-upload="1">
       <?=csrf_field()?>
