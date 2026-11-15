@@ -228,6 +228,7 @@ $pdo->prepare('INSERT INTO login_attempts (ip_hash) VALUES (?)')
     ->execute([hash('sha256','post-snapshot-test-ip')]);
 $pdo->prepare('UPDATE lot_categories SET name=? WHERE id=?')
     ->execute(['CI Later gewijzigde categorie',$categoryId]);
+$pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Categorie na snapshot')");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
 unlink($sellerPhoto);
@@ -284,8 +285,9 @@ verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_n
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');
 verify($pdo->query('SELECT name FROM lot_categories WHERE id='.$categoryId)->fetchColumn() === 'CI Eenmalige categorie'
-    && $pdo->query('SELECT category FROM lots WHERE lot_number=101')->fetchColumn() === 'CI Eenmalige categorie',
-    'Restore returns category registry and original lot category without affecting users');
+    && $pdo->query('SELECT category FROM lots WHERE lot_number=101')->fetchColumn() === 'CI Eenmalige categorie'
+    && (int)$pdo->query("SELECT COUNT(*) FROM lot_categories WHERE name='CI Categorie na snapshot'")->fetchColumn()===0,
+    'Restore returns exactly the archived category registry, removing later changes without affecting users');
 verify((int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE lot_id='.$lotId)->fetchColumn() === 1,
        'Restore returns image database record and foreign key');
 verify(is_file($original) && hash_file('sha256', $original) === $checksum,
