@@ -12,6 +12,12 @@ function seller_can_manage(string $role): bool { return in_array($role,['adminis
 function seller_can_publish_artist(string $role): bool {
   return in_array($role,['administrator','veilingmeester'],true);
 }
+/** Only a stored, safe, physically available artist portrait permits publication. */
+function seller_artist_has_portrait_path(string $path): bool {
+  return preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D',$path)===1
+    && is_file(dirname(__DIR__).'/catalogus-public/'.$path);
+}
+
 /** Caller validates CSRF and acquires the catalog lock; only an artist may be published. */
 function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string $role,int $actorId): void {
   if ($sellerId<1 || $actorId<1 || !in_array($status,[0,1,2],true) || !seller_can_publish_artist($role)) {
@@ -27,8 +33,7 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
       $portraitQuery=$pdo->prepare("SELECT path FROM seller_images WHERE seller_id=? AND image_kind='portrait' AND slot=1");
       $portraitQuery->execute([$sellerId]);
       $portrait=$portraitQuery->fetchColumn();
-      if (!is_string($portrait) || !preg_match('~^uploads/[a-zA-Z0-9/_.-]+\\.(?:webp|jpg|png)$~D',$portrait)
-          || str_contains($portrait,'..') || !is_file(dirname(__DIR__).'/catalogus-public/'.$portrait)) {
+      if (!is_string($portrait) || !seller_artist_has_portrait_path($portrait)) {
         throw new InvalidArgumentException('Publiceren kan alleen met een opgeslagen portretfoto van de kunstenaar.');
       }
     }
