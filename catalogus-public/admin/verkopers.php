@@ -39,7 +39,8 @@ if (is_post()) {
       flash('Publicatiestatus kunstenaar aangepast.');
       $returnStatus=in_array(($_GET['status']??''),['new','published','unpublished'],true)?(string)$_GET['status']:'';
       $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
-      $returnParams=['status'=>$returnStatus,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
+      $returnReadiness=in_array(($_GET['readiness']??''),['no_portrait','missing_text','texts_ready','complete'],true)?(string)$_GET['readiness']:'';
+      $returnParams=['status'=>$returnStatus,'readiness'=>$returnReadiness,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
       foreach (['kunstenaar','particulier'] as $returnGroup) {
         $key='pagina_'.$returnGroup;
         $returnParams[$key]=max(1,(int)($_GET[$key]??1));
