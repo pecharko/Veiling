@@ -21,6 +21,13 @@ $checks=[
   'editor status restricted to manager'=>str_contains($read('catalogus-public/admin/verkoper.php'), 'seller_can_publish_artist($actorRole)')
     && str_contains($read('catalogus-public/admin/verkoper.php'), "seller_set_artist_publication(\$pdo,\$editId,")
     && str_contains($read('catalogus-public/admin/verkoper.php'), 'name="artist_status"'),
+  'listing autosaves status change without confirmation button'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'onchange="this.form.requestSubmit()"')
+    && !str_contains($read('catalogus-public/admin/verkopers.php'), '>Wijzig status</button>'),
+  'listing excludes published selection without valid portrait'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'seller_artist_has_portrait_path($portrait)')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'if($safePortrait)')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'Gepubliceerd (portret ontbreekt)'),
+  'portrait eligibility shared by UI and server'=>str_contains($read('private/lot_sellers.php'), 'function seller_artist_has_portrait_path(')
+    && str_contains($read('private/lot_sellers.php'), '!seller_artist_has_portrait_path($portrait)'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
   'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['new','published','unpublished']")
