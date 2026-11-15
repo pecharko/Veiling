@@ -17,7 +17,7 @@ foreach(compact('lotEditor','lotAudit','lotMigration','lotForm','auction','aucti
   if(!is_string($source)) throw new RuntimeException('Missing source: '.$name);
 foreach(['ADD COLUMN last_edited_by_admin_id','ADD COLUMN last_edited_at'] as $term)
   if(!str_contains($lotMigration,$term))throw new RuntimeException('Lot audit migration missing '.$term);
-foreach(['last_edited_by_admin_id','last_edited_at','41lokeren-v7-lot-audit'] as $term)
+foreach(['last_edited_by_admin_id','last_edited_at','41lokeren-v8-catalog-only'] as $term)
   if(!str_contains($snapshot,$term))throw new RuntimeException('Snapshot missing '.$term);
 foreach(['lot_effective_fields_changed($lot,$values)','lot_audit_touch($pdo,$id',
   'Laatste wijziging:','Aangemaakt door:','lot_audit_label('] as $term)
