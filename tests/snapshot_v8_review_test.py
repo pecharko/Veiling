@@ -45,6 +45,33 @@ class V8ReviewTests(unittest.TestCase):
             with self.subTest(marker=marker), self.assertRaises(ValueError):
                 review_source(self.source.replace(marker, "REMOVED"))
 
+    def test_historical_deploy_jobs_remain_exclusive_and_fail_closed(self):
+        workflows = (
+            ("bank-snapshot-release.yml", "BANK-SNAPSHOT-DEPLOY-bank-snapshot-20261110-$GITHUB_SHA", "scripts.deploy_bank_snapshot"),
+            ("lot-audit-snapshot-v7-release.yml", "LOT-AUDIT-SNAPSHOT-V7-DEPLOY-lot-audit-snapshot-v7-20261111-$GITHUB_SHA", "scripts.deploy_lot_audit_snapshot_v7"),
+            ("artist-slogan-snapshot-release.yml", "ARTIST-SLOGAN-SNAPSHOT-DEPLOY-artist-slogan-snapshot-20261112-$GITHUB_SHA", "scripts.deploy_artist_slogan_snapshot"),
+        )
+        for filename, confirmation, adapter in workflows:
+            with self.subTest(workflow=filename):
+                src = (ROOT / ".github/workflows" / filename).read_text(encoding="utf-8")
+                validate, deploy = src.split("\\n  deploy:\\n", 1)
+                self.assertIn("if: github.event_name == 'pull_request'", validate)
+                self.assertIn("scripts.snapshot_v8_review", validate)
+                self.assertNotIn("environment: production", validate)
+                self.assertNotIn("secrets.", validate)
+                self.assertNotIn("scripts.snapshot_v8_review", deploy)
+                self.assertNotIn("snapshot_v8_review_test.py", deploy)
+                self.assertIn("if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'", deploy)
+                self.assertIn(confirmation, deploy)
+                self.assertIn("git fetch --no-tags origin main", deploy)
+                self.assertIn("OVH_SFTP_KNOWN_HOSTS", deploy)
+                self.assertIn("environment: production", deploy)
+                self.assertIn(adapter + " plan", deploy)
+                self.assertIn(adapter + " deploy", deploy)
+                self.assertIn("deployment-evidence.json", deploy)
+                self.assertIn("deployment-backups/", deploy)
+                self.assertIn("if: always()", deploy)
+
     def test_no_deploy_network_or_authorization(self):
         module = (ROOT / "scripts/snapshot_v8_review.py").read_text(encoding="utf-8")
         self.assertNotIn("paramiko", module)
