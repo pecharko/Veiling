@@ -294,8 +294,16 @@ $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
 $canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
 $availableCategories = lot_category_names($pdo);
-try { $availableSellers=seller_choices($pdo); }
-catch (PDOException $ex) { error_log('[Kavel verkopers] Laden mislukt.'); $availableSellers=[]; }
+$selectedSeller=null;
+if (filter_var($d['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])!==false) {
+  try {
+    $sellerQuery=$pdo->prepare('SELECT id,name,artist_name,seller_type FROM lot_sellers WHERE id=?');
+    $sellerQuery->execute([(int)$d['seller_id']]);
+    $selectedSeller=$sellerQuery->fetch(PDO::FETCH_ASSOC) ?: null;
+  } catch (PDOException $ex) { error_log('[Kavel verkoper] Selectie laden mislukt.'); }
+}
+$selectedSellerName=$selectedSeller===null ? '' : (string)($selectedSeller['seller_type']==='kunstenaar' ? ($selectedSeller['artist_name']?:$selectedSeller['name']) : $selectedSeller['name']);
+$selectedSellerType=$selectedSeller===null ? '' : ($selectedSeller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier');
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een eigen conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
 $cancelAuctionWarning = 'Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -350,7 +358,41 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
-            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a id="lot-create-seller" data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe particuliere verkoper aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe verkoper</a> <a data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/kunstenaar-bewerken.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe kunstenaar aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe kunstenaar</a><?php endif; ?></div>
+            <div class="lot-editor-seller-picker lot-full">
+              <span class="lot-editor-label">Verkoper</span>
+              <select name="seller_id" id="lot-seller-id" aria-label="Geselecteerde verkoper" hidden>
+                <option value="">Geen verkoper geselecteerd</option>
+                <?php if($selectedSeller): ?><option value="<?=(int)$selectedSeller['id']?>" selected><?=e($selectedSellerName.' · '.$selectedSellerType)?></option><?php endif; ?>
+              </select>
+              <div class="lot-seller-selection">
+                <span class="lot-seller-selection-icon" aria-hidden="true">👤</span>
+                <strong id="lot-seller-selected"><?=e($selectedSeller?$selectedSellerName.' · '.$selectedSellerType:'Geen verkoper geselecteerd (schenking)')?></strong>
+                <button type="button" class="secondary" id="lot-seller-open" data-search-url="<?=e(url('admin/seller-search.php'))?>" <?=$canEditLot?'':'disabled'?>>Zoek verkoper</button>
+              </div>
+              <?php if (seller_can_manage(effective_admin_role()) && $canEditLot): ?>
+              <div class="lot-seller-create-links">
+                <a data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php',['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener">+ Nieuwe particulier</a>
+                <a data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/kunstenaar-bewerken.php',['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener">+ Nieuwe kunstenaar</a>
+              </div>
+              <?php endif; ?>
+              <dialog id="lot-seller-dialog" class="lot-seller-dialog" aria-labelledby="lot-seller-dialog-title">
+                <div class="lot-seller-dialog-body">
+                  <div class="lot-seller-dialog-heading"><h2 id="lot-seller-dialog-title">Verkoper selecteren</h2><button class="secondary" type="button" data-seller-close aria-label="Sluiten">✕</button></div>
+                  <label for="lot-seller-search">Zoeken op naam of kunstenaarsnaam</label>
+                  <input id="lot-seller-search" data-seller-search type="search" autocomplete="off" placeholder="Typ een naam…">
+                  <div class="lot-seller-tabs" role="group" aria-label="Filter op verkoperstype">
+                    <button type="button" data-seller-type="" aria-pressed="true">Alle</button>
+                    <button type="button" data-seller-type="kunstenaar" aria-pressed="false">Kunstenaars</button>
+                    <button type="button" data-seller-type="particulier" aria-pressed="false">Particulieren</button>
+                  </div>
+                  <div class="lot-seller-results" data-seller-results aria-live="polite">Zoeken…</div>
+                  <div class="lot-seller-dialog-footer">
+                    <button class="secondary" type="button" data-seller-empty>Geen verkoper (schenking)</button>
+                    <button class="secondary" type="button" data-seller-close>Annuleren</button>
+                  </div>
+                </div>
+              </dialog>
+            </div>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
           </div>
@@ -449,68 +491,5 @@ if ($error === $cancelAuctionWarning) {
 </div>
 <script src="<?=e(url('admin/lot-unsaved-warning.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-unsaved-warning.js'), 0, 12)]))?>" defer></script>
 
-<script>
-(() => {
-  'use strict';
-  const lotForm=document.getElementById('lot-editor-form');
-  const createLinks=[...document.querySelectorAll('[data-create-seller]')];
-  const sellerSelect=lotForm?.querySelector('select[name="seller_id"]');
-  const donationConfirmed=lotForm?.querySelector('input[name="donation_confirmed"]');
-  if (lotForm && sellerSelect && donationConfirmed) {
-    const donationWarning='Er is geen verkoper geselecteerd, deze kavel wordt beschouwd als geschonken voor de veiling er zal geen uitbetaling gebeuren naar de schenker, ga jij hiermee akkoord?';
-    sellerSelect.addEventListener('change', () => { donationConfirmed.value='0'; });
-    lotForm.addEventListener('submit', event => {
-      if (sellerSelect.value!=='') {
-        donationConfirmed.value='0';
-        return;
-      }
-      if (donationConfirmed.value==='1') return;
-      if (!window.confirm(donationWarning)) {
-        event.preventDefault();
-        donationConfirmed.value='0';
-        sellerSelect.focus();
-        return;
-      }
-      donationConfirmed.value='1';
-    });
-  }
-  if (!createLinks.length || !sellerSelect) return;
-  let refreshOnFocus=false;
-  async function refreshSellers(preferredId=null) {
-    try {
-      // Load the latest seller options without discarding unsaved lot fields.
-      const response=await fetch(window.location.href,{credentials:'same-origin',cache:'no-store'});
-      if (!response.ok) return;
-      const copy=new DOMParser().parseFromString(await response.text(),'text/html');
-      const latest=copy.querySelector('select[name="seller_id"]');
-      if (!latest) return;
-      const known=new Set(Array.from(sellerSelect.options,option=>option.value));
-      for (const option of latest.options) {
-        if (!option.value || known.has(option.value)) continue;
-        sellerSelect.add(new Option(option.text,option.value));
-        known.add(option.value);
-      }
-      if (preferredId!==null && known.has(String(preferredId))) {
-        sellerSelect.value=String(preferredId);
-        sellerSelect.dispatchEvent(new Event('change',{bubbles:true}));
-      }
-    } catch (_) {
-      // An unavailable refresh never clears the current lot form.
-    }
-  }
-  createLinks.forEach(link=>link.addEventListener('click', () => { refreshOnFocus=true; }));
-  window.addEventListener('message', event => {
-    if (event.origin!==window.location.origin || event.data?.type!=='lot-seller-created') return;
-    const sellerId=Number(event.data.sellerId);
-    if (!Number.isSafeInteger(sellerId) || sellerId<1) return;
-    refreshOnFocus=false;
-    void refreshSellers(sellerId);
-  });
-  window.addEventListener('focus', () => {
-    if (!refreshOnFocus) return;
-    refreshOnFocus=false;
-    void refreshSellers();
-  });
-})();
-</script>
+<script src="<?=e(url('admin/lot-seller-picker.js', ['v'=>substr((string)hash_file('sha256', __DIR__ . '/lot-seller-picker.js'), 0, 12)]))?>" defer></script>
 <?php admin_bottom(); ?>
