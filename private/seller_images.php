@@ -54,6 +54,13 @@ function seller_image_delete(PDO $pdo,int $sellerId,string $kind,int $slot,?int 
     $st->execute([$sellerId,$kind,$slot]);
     $path=$st->fetchColumn();
     if ($path===false) throw new InvalidArgumentException('Foto niet gevonden.');
+    if ($kind==='portrait') {
+      $statusQuery=$pdo->prepare('SELECT artist_published FROM lot_sellers WHERE id=? FOR UPDATE');
+      $statusQuery->execute([$sellerId]);
+      if ((int)$statusQuery->fetchColumn()===1) {
+        throw new InvalidArgumentException('Trek eerst de publicatie van de kunstenaar in voordat je de portretfoto verwijdert.');
+      }
+    }
     $pdo->prepare('DELETE FROM seller_images WHERE seller_id=? AND image_kind=? AND slot=?')->execute([$sellerId,$kind,$slot]);
     if ($actorId!==null) $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$actorId,seller_actor_name($pdo,$actorId),$sellerId]);
     $pdo->commit();
