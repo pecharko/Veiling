@@ -14,6 +14,8 @@ from pathlib import Path
 
 from release_b_independent_sftp import collect, validate_root, validate_manifest
 from ovh_deploy_evidence_contract import validate as validate_uploader
+from release_b_artifact_contract import reconcile as reconcile_github_run
+from release_b_status import RELEASE_WORKFLOW_PATHS
 
 HOST = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$")
 USER = re.compile(r"^[A-Za-z0-9_.@-]{1,128}$")
@@ -36,10 +38,27 @@ def config(env):
     root = validate_root(env["OVH_READONLY_SFTP_BASE"])
     return host, user, env["OVH_READONLY_SFTP_PASSWORD"], known, root
 
-def read_from_independent_account(env, upload, collection_id, manifest):
-    # Validate untrusted evidence *before* opening a network session.
+def preflight(run, upload, manifest):
+    """Validate an externally authenticated GitHub run before SFTP use.
+
+    Input JSON alone cannot prove GitHub provenance: the caller must obtain run
+    metadata and manifest from authenticated GitHub API at the immutable SHA.
+    """
+    if not isinstance(run, dict) or run.get("name") != "Shared OVH manifest release with rollback":
+        raise ValueError("Only the shared OVH read-only route is supported")
+    if run.get("path") != RELEASE_WORKFLOW_PATHS["Shared OVH manifest release with rollback"]:
+        raise ValueError("Unexpected deployment workflow")
     validate_uploader(upload)
+    checked = reconcile_github_run(run, upload, manifest, upload["release_id"])
+    if checked["status"] != "UPLOADER_ARTIFACT_CONTENT_CONSISTENT_ONLY":
+        raise ValueError("Deployment evidence does not correlate")
     validate_manifest(upload, manifest)
+    return checked
+
+
+def read_from_independent_account(env, run, upload, collection_id, manifest):
+    # Validate *every* untrusted input before inspecting credentials or network.
+    preflight(run, upload, manifest)
     host, user, password, known, root = config(env)
     import paramiko
     with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", delete=False) as stream:
@@ -62,17 +81,18 @@ def read_from_independent_account(env, upload, collection_id, manifest):
         client.close()
 
 def main():
-    if len(sys.argv) != 4:
-        raise ValueError("Usage: release_b_collect_readonly.py uploader-evidence.json immutable-manifest.json collection-id")
-    evidence_file = Path(sys.argv[1])
-    if evidence_file.is_symlink() or not evidence_file.is_file() or evidence_file.stat().st_size > 131072:
-        raise ValueError("Invalid uploader evidence file")
-    upload = json.loads(evidence_file.read_text(encoding="utf-8"))
-    manifest_file = Path(sys.argv[2])
-    if manifest_file.is_symlink() or not manifest_file.is_file() or not 0 < manifest_file.stat().st_size <= 65536:
-        raise ValueError("Invalid immutable manifest file")
-    manifest = json.loads(manifest_file.read_text(encoding="utf-8"))
-    report = read_from_independent_account(os.environ, upload, sys.argv[3], manifest)
+    if len(sys.argv) != 5:
+        raise ValueError("Usage: release_b_collect_readonly.py github-run.json uploader-evidence.json immutable-manifest.json collection-id")
+    def read_bounded(filename, max_size):
+        candidate = Path(filename)
+        if (candidate.is_symlink() or not candidate.is_file() or
+                not 0 < candidate.stat().st_size <= max_size):
+            raise ValueError("Invalid evidence input")
+        return json.loads(candidate.read_text(encoding="utf-8"))
+    run = read_bounded(sys.argv[1], 65536)
+    upload = read_bounded(sys.argv[2], 131072)
+    manifest = read_bounded(sys.argv[3], 65536)
+    report = read_from_independent_account(os.environ, run, upload, sys.argv[4], manifest)
     print(json.dumps(report, sort_keys=True))
 
 if __name__ == "__main__":
