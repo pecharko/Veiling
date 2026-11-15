@@ -10,6 +10,7 @@ import base64
 import json
 import re
 import subprocess
+import tempfile
 
 from release_b_zip_review import evidence_artifact, read_evidence_zip, MAX_ZIP
 from release_b_artifact_contract import reconcile
@@ -30,15 +31,20 @@ def api_get(path, *, max_bytes):
         raise ValueError("Non-allowlisted GitHub API route")
     if not isinstance(max_bytes, int) or not 0 < max_bytes <= 262144:
         raise ValueError("Invalid GitHub response bound")
+    # Spool the API response to a temporary file instead of collecting an
+    # unbounded response in Python memory. Read at most max_bytes + 1 bytes.
     try:
-        result = subprocess.run(["gh", "api", "--method", "GET", path],
-                                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                                check=True, timeout=30)
-    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        with tempfile.TemporaryFile() as output:
+            subprocess.run(["gh", "api", "--method", "GET", path],
+                           stdout=output, stderr=subprocess.DEVNULL,
+                           check=True, timeout=30)
+            output.seek(0)
+            bounded = output.read(max_bytes + 1)
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         raise ValueError("Authenticated GitHub GET was not successful") from None
-    if not 0 < len(result.stdout) <= max_bytes:
+    if not 0 < len(bounded) <= max_bytes:
         raise ValueError("Invalid GitHub response size")
-    return result.stdout
+    return bounded
 
 
 def json_response(raw, maximum):
