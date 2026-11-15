@@ -68,6 +68,7 @@ if (is_post()) {
 try {
   $rows=seller_list($pdo);
   $portraitPaths=$pdo->query("SELECT seller_id,path FROM seller_images WHERE image_kind='portrait' AND slot=1")->fetchAll(PDO::FETCH_KEY_PAIR);
+  $workPaths=$pdo->query("SELECT seller_id,path FROM seller_images WHERE image_kind='work'")->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
   error_log('[Verkopersbeheer] Laden mislukt.');
@@ -81,19 +82,35 @@ admin_top($screenTitle);
 ?>
 <?php
 $filterStatus=in_array(($_GET['status']??''),['new','published','unpublished'],true)?(string)$_GET['status']:'';
+$filterReadiness=in_array(($_GET['readiness']??''),['no_portrait','missing_text','texts_ready','complete'],true)?(string)$_GET['readiness']:'';
 $search=mb_substr(trim((string)($_GET['q']??'')),0,100);
 $perPage=in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)($_GET['per_page']??20):20;
 function seller_page_url(string $groupType,int $page): string {
-  $params=array_intersect_key($_GET,array_flip(['q','status','per_page','pagina_kunstenaar','pagina_particulier']));
+  $params=array_intersect_key($_GET,array_flip(['q','status','readiness','per_page','pagina_kunstenaar','pagina_particulier']));
   $params['pagina_'.$groupType]=$page;
   return url($GLOBALS['sellerScreen']==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
 }
 $artistCount=count(array_filter($rows,static fn($row)=>$row['seller_type']==='kunstenaar'));
 $privateCount=count($rows)-$artistCount;
-$filteredRows=array_values(array_filter($rows,static function($row) use ($sellerScreen,$filterStatus,$search):bool {
+// Calculate readiness for all artists before filtering/pagination (no per-row DB queries).
+$validWorkBySeller=[];
+foreach ($workPaths as $workPhoto) {
+  if (seller_artist_has_portrait_path((string)$workPhoto['path'])) $validWorkBySeller[(int)$workPhoto['seller_id']]=true;
+}
+foreach ($rows as &$row) {
+  if ($row['seller_type']!=='kunstenaar') continue;
+  $row['publication_readiness']=seller_artist_publication_readiness(
+    $row,
+    seller_artist_has_portrait_path((string)($portraitPaths[(int)$row['id']]??'')),
+    isset($validWorkBySeller[(int)$row['id']])
+  );
+}
+unset($row);
+$filteredRows=array_values(array_filter($rows,static function($row) use ($sellerScreen,$filterStatus,$filterReadiness,$search):bool {
   if ($row['seller_type']!==$sellerScreen) return false;
   if ($filterStatus!=='' && $row['seller_type']==='kunstenaar'
       && (int)$row['artist_published']!==['unpublished'=>0,'published'=>1,'new'=>2][$filterStatus]) return false;
+  if ($sellerScreen==='kunstenaar' && $filterReadiness!=='' && ($row['publication_readiness']??'')!==$filterReadiness) return false;
   return $search==='' || mb_stripos((string)$row['name'],$search)!==false
     || mb_stripos((string)$row['artist_name'],$search)!==false;
 }));
@@ -108,7 +125,8 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
     </div>
     <form class="dashboard-filters seller-filters <?=$sellerScreen==='kunstenaar'?'':'seller-filters-private'?>" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
-      <?php if($sellerScreen==='kunstenaar'): ?><label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label><?php endif; ?>
+      <?php if($sellerScreen==='kunstenaar'): ?><label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label>
+      <label><span class="sr-only">Klaar om te publiceren</span><select name="readiness" aria-label="Klaar om te publiceren"><option value="">Alle gereedheidsniveaus</option><option value="no_portrait" <?=$filterReadiness==='no_portrait'?'selected':''?>>Rood – geen portret</option><option value="missing_text" <?=$filterReadiness==='missing_text'?'selected':''?>>Oranje – tekst ontbreekt</option><option value="texts_ready" <?=$filterReadiness==='texts_ready'?'selected':''?>>Lichtgroen – teksten compleet</option><option value="complete" <?=$filterReadiness==='complete'?'selected':''?>>Donkergroen – profiel compleet</option></select></label><?php endif; ?>
       <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
@@ -129,7 +147,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
       <table class="dashboard-table seller-table">
         <thead><tr>
           <?php if ($groupType==='kunstenaar'): ?>
-            <th scope="col">Portret</th><th scope="col">Kunstenaar</th><th scope="col">Publicatie</th><th scope="col">Kavels</th><th scope="col">Acties</th>
+            <th scope="col">Portret</th><th scope="col">Kunstenaar</th><th scope="col">Publicatie</th><th scope="col">Klaar om te publiceren</th><th scope="col">Kavels</th><th scope="col">Acties</th>
           <?php else: ?>
             <th scope="col">Naam</th><th scope="col">Kavels</th><th scope="col">Acties</th>
           <?php endif; ?>
@@ -152,13 +170,19 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
                 </td>
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
                 <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
+                <?php
+                  $readiness=(string)$r['publication_readiness'];
+                  $readinessLabels=['no_portrait'=>'Geen portret','missing_text'=>'Tekst ontbreekt','texts_ready'=>'Teksten compleet','complete'=>'Profiel compleet'];
+                  $readinessHelp=['no_portrait'=>'Een opgeslagen portretfoto ontbreekt','missing_text'=>'Slogan of korte voorstelling ontbreekt','texts_ready'=>'Portret, slogan en voorstelling aanwezig; nog geen werkfoto','complete'=>'Portret, slogan, voorstelling en minstens één werkfoto aanwezig'];
+                ?>
+                <td><span class="seller-readiness is-<?=e($readiness)?>" title="<?=e($readinessHelp[$readiness])?>"><?=e($readinessLabels[$readiness])?></span></td>
               <?php else: ?>
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
                 <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?>
-                  <form method="post" class="seller-status-form" action="<?=e(url($screenUrl,array_merge(['status'=>$filterStatus,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
+                  <form method="post" class="seller-status-form" action="<?=e(url($screenUrl,array_merge(['status'=>$filterStatus,'readiness'=>$filterReadiness,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
                     <?=csrf_field()?>
                     <input type="hidden" name="action" value="artist-publication">
                     <input type="hidden" name="seller_id" value="<?=(int)$r['id']?>">
@@ -180,7 +204,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$groupRows): ?><tr><td colspan="<?=$groupType==='kunstenaar'?5:3?>">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url($screenUrl))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$groupRows): ?><tr><td colspan="<?=$groupType==='kunstenaar'?6:3?>">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url($screenUrl))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
