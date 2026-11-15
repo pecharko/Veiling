@@ -33,7 +33,7 @@ def browser_check(page, *, release_id, release_sha, run_id, session_id):
             if not page.get_by_text(heading, exact=False).first.is_visible(timeout=5000):
                 outcome = "FAIL"
                 break
-            if not page.url.startswith(ORIGIN + "/"):
+            if page.url != ORIGIN + suffix:
                 outcome = "FAIL"
                 break
         except Exception:
