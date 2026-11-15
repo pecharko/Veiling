@@ -12,6 +12,23 @@ function seller_can_manage(string $role): bool { return in_array($role,['adminis
 function seller_can_publish_artist(string $role): bool {
   return in_array($role,['administrator','veilingmeester'],true);
 }
+/** Only a stored, safe, physically available artist portrait permits publication. */
+function seller_artist_has_portrait_path(string $path): bool {
+  return preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D',$path)===1
+    && is_file(dirname(__DIR__).'/catalogus-public/'.$path);
+}
+
+/**
+ * Publication-readiness indicator for an artist, independent of live publication status.
+ * A missing stored portrait always takes precedence over profile completeness.
+ * Values are kept stable for the artist-list filter and for regression tests.
+ */
+function seller_artist_publication_readiness(array $seller,bool $hasPortrait,bool $hasWork): string {
+  if (!$hasPortrait) return 'no_portrait';
+  if (trim((string)($seller['artist_slogan']??''))==='' || trim((string)($seller['artist_intro']??''))==='') return 'missing_text';
+  return $hasWork ? 'complete' : 'texts_ready';
+}
+
 /** Caller validates CSRF and acquires the catalog lock; only an artist may be published. */
 function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string $role,int $actorId): void {
   if ($sellerId<1 || $actorId<1 || !in_array($status,[0,1,2],true) || !seller_can_publish_artist($role)) {
@@ -23,6 +40,14 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
     $st->execute([$sellerId]);
     $seller=$st->fetch(PDO::FETCH_ASSOC);
     if (!$seller || $seller['seller_type']!=='kunstenaar') throw new InvalidArgumentException('Kunstenaar niet gevonden.');
+    if ($status===1) {
+      $portraitQuery=$pdo->prepare("SELECT path FROM seller_images WHERE seller_id=? AND image_kind='portrait' AND slot=1");
+      $portraitQuery->execute([$sellerId]);
+      $portrait=$portraitQuery->fetchColumn();
+      if (!is_string($portrait) || !seller_artist_has_portrait_path($portrait)) {
+        throw new InvalidArgumentException('Publiceren kan alleen met een opgeslagen portretfoto van de kunstenaar.');
+      }
+    }
     if ((int)$seller['artist_published']!==$status) {
       $name=seller_actor_name($pdo,$actorId);
       $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
@@ -91,7 +116,6 @@ function seller_clean(mixed $input): array {
   [$fields['bank_account_name'],$fields['bank_account_iban']]=lot_bank_validate($fields['bank_account_name'],$fields['bank_account_iban']);
   if ($type==='kunstenaar') {
     if ($fields['artist_name']==='') throw new InvalidArgumentException('Kunstenaarsnaam is verplicht voor een kunstenaar.');
-    if ($fields['artist_url']==='') throw new InvalidArgumentException('Website kunstenaar is verplicht voor een kunstenaar.');
     [$fields['artist_name'],$fields['artist_url']]=lot_artist_validate($fields['artist_name'],$fields['artist_url']);
   } else {
     $fields['artist_name']='';
@@ -131,11 +155,9 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       $current=$check->fetch(PDO::FETCH_ASSOC);
       if (!$current) throw new InvalidArgumentException('Verkoper niet gevonden.');
       if (!seller_can_edit($role,$actorId,$current)) throw new InvalidArgumentException('Geen bewerkingsrechten voor deze verkoper.');
-      // Changing a published artist into a private seller would indirectly hide
-      // their public profile. Only publication managers may make that transition.
-      if ($current['seller_type']==='kunstenaar' && (int)$current['artist_published']===1
-          && $data['seller_type']!=='kunstenaar' && !seller_can_publish_artist($role)) {
-        throw new InvalidArgumentException('Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.');
+      // Seller type is immutable after creation, for every role (including administrator).
+      if ($current['seller_type']!==$data['seller_type']) {
+        throw new InvalidArgumentException('Het type verkoper kan na aanmaak niet worden gewijzigd.');
       }
       // Compare canonical validated values against the locked DB row. A plain
       // save of an unchanged form must not advance the last-editor audit fields.
@@ -146,11 +168,6 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       if (!$changed) {
         $pdo->commit();
         return $id;
-      }
-      // Converting an artist to a private seller always discards publication.
-      if ($current['seller_type']==='kunstenaar' && $data['seller_type']!=='kunstenaar') {
-        $data['artist_published']=0;
-        $keys=array_keys($data);
       }
       $sets=implode(',',array_map(static fn($key)=>$key.'=?',$keys));
       $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');

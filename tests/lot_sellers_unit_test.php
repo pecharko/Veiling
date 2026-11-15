@@ -12,6 +12,8 @@ $normal=seller_clean([
 checkSeller($normal['name']==='Fictieve kunstenaar','Seller name normalized');
 checkSeller($normal['bank_account_iban']==='BE68539007547034','Seller IBAN checksum/normalization');
 checkSeller($normal['artist_url']==='https://www.example.org','Artist URL normalized');
+$artistWithoutWebsite=seller_clean(array_merge($normal,['artist_url'=>'']));
+checkSeller($artistWithoutWebsite['artist_url']==='', 'Artist website may be empty');
 checkSeller($normal['mobile_number']==='', 'Mobile is optional for artists');
 $base=[
   'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'persoon@example.invalid',
@@ -40,7 +42,6 @@ foreach ([
   array_merge($base,['house_number'=>'']),
   array_merge($base,['postal_code'=>'']),
   array_merge($base,['municipality'=>'']),
-  array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'Demo','artist_url'=>'']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'','artist_url'=>'https://example.org']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'Demo','artist_url'=>'javascript:alert(1)']),
 ] as $bad) {

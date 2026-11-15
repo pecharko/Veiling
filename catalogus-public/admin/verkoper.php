@@ -5,6 +5,10 @@ require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/seller_images.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
+$sellerScreen=($sellerScreen??'particulier')==='kunstenaar'?'kunstenaar':'particulier';
+$screenUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php';
+$editorUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaar-bewerken.php':'admin/verkoper.php';
+$screenLabel=$sellerScreen==='kunstenaar'?'kunstenaar':'verkoper';
 $pdo=db();
 $error='';
 $actorId=(int)$_SESSION['admin_id'];
@@ -20,8 +24,12 @@ if (isset($_GET['id'])) {
   if ($editId===false) { http_response_code(404); exit('Verkoper niet gevonden.'); }
 }
 $values=$defaults;
+$values['seller_type']=$sellerScreen;
 // Check ownership on every edit view and before any write, including photo actions.
-if ($editId!==null) seller_require_edit($pdo,$editId,$actorRole,$actorId);
+if ($editId!==null) {
+  $existing=seller_require_edit($pdo,$editId,$actorRole,$actorId);
+  if ($existing['seller_type']!==$sellerScreen) { http_response_code(404); exit('Verkoper niet gevonden.'); }
+}
 $ajaxPhoto=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && in_array(($_POST['action']??''),['upload-photo','delete-photo'],true);
 $ajaxSave=is_post() && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && ($_POST['action']??'')==='save';
 $ajaxReply=static function(int $code,array $body): void {
@@ -34,13 +42,24 @@ $ajaxReply=static function(int $code,array $body): void {
 if (is_post()) {
   check_csrf();
   $action=(string)($_POST['action']??'');
-  if (!in_array($action,['save','upload-photo','delete-photo'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
+  if (!in_array($action,['save','upload-photo','delete-photo','artist-publication'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
   $rawId=$_POST['seller_id']??'';
   $postId=$rawId==='' ? null : filter_var($rawId,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if ($postId===false || $postId!==$editId) { http_response_code(400); exit('Ongeldige verkoperselectie.'); }
+  if ($action==='save' && ($_POST['seller_type']??'')!==$sellerScreen) {
+    http_response_code(400); exit('Het type verkoper is vast en kan niet gewijzigd worden.');
+  }
   $values=array_merge($defaults,array_intersect_key($_POST,$defaults));
   try {
     catalog_lock_for_request($pdo);
+    if ($action==='artist-publication') {
+      if ($editId===null) throw new InvalidArgumentException('Bewaar eerst de kunstenaar.');
+      $status=(string)($_POST['artist_status']??'');
+      if (!in_array($status,['new','published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
+      seller_set_artist_publication($pdo,$editId,['unpublished'=>0,'published'=>1,'new'=>2][$status],$actorRole,$actorId);
+      flash('Publicatiestatus kunstenaar aangepast.');
+      redirect($editorUrl,['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+    }
     if ($action==='upload-photo' || $action==='delete-photo') {
       if ($editId===null) throw new InvalidArgumentException('Bewaar eerst de verkoper.');
       $kind=(string)($_POST['image_kind']??'');
@@ -57,7 +76,7 @@ if (is_post()) {
         $ajaxReply(200,['ok'=>true,'image_url'=>url((string)$uploaded['path']),'image_id'=>(int)$uploaded['id'],'slot'=>(int)$slot,'kind'=>$kind]);
       }
       flash($action==='upload-photo'?'Foto bewaard.':'Foto verwijderd.');
-      redirect('admin/verkoper.php',['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+      redirect($editorUrl,['id'=>$editId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     $savedId=seller_save($pdo,$editId,$_POST,$actorId,$actorRole);
     if ($values['seller_type']!=='kunstenaar') seller_image_clear($pdo,$savedId);
@@ -76,16 +95,16 @@ if (is_post()) {
     }
     if ($failed) {
       flash('Verkoper bewaard, maar niet alle foto’s lukten: '.implode('; ',$failed),'warning');
-      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
-      redirect('admin/verkoper.php',['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
+      redirect($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
     if ($fromLot) {
-      if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkoper.php',['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId])]);
-      redirect('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
+      if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId])]);
+      redirect($editorUrl, ['from_lot'=>1,'lot_id'=>$returnLotId,'completed'=>1,'seller_id'=>$savedId]);
     }
     flash('Verkoper opgeslagen.');
-    if ($ajaxSave) $ajaxReply(200,['redirect'=>url('admin/verkopers.php')]);
-    redirect('admin/verkopers.php');
+    if ($ajaxSave) $ajaxReply(200,['redirect'=>url($screenUrl)]);
+    redirect($screenUrl);
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
   } catch (PDOException $ex) {
@@ -133,7 +152,7 @@ if ($fromLot && ($_GET['completed']??'')==='1' && filter_var($_GET['seller_id']?
   exit;
 }
 // On a failed photo action, redisplay the stored seller rather than an empty form.
-if (is_post() && $editId!==null && ($_POST['action']??'')!=='save' && $error!=='') {
+if (is_post() && $editId!==null && in_array(($_POST['action']??''),['upload-photo','delete-photo','artist-publication'],true) && $error!=='') {
   $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
   $st->execute([$editId]);
   $saved=$st->fetch(PDO::FETCH_ASSOC);
@@ -148,22 +167,43 @@ if ($editId!==null) {
 $photos=$editId!==null?seller_image_rows($pdo,$editId):[];
 $photoByKey=[];
 foreach($photos as $photo)$photoByKey[$photo['image_kind'].'_'.$photo['slot']]=$photo;
-admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
+admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken');
 ?>
 <div class="seller-manager seller-editor-page">
   <div class="seller-editor-toolbar">
-    <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':'Terug naar verkopers'?></a>
+    <div><a class="lot-editor-back" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>← <?=$fromLot?'Terug naar kavel':($sellerScreen==='kunstenaar'?'Terug naar kunstenaars':'Terug naar verkopers')?></a>
       <p class="dashboard-subtitle">Beheer persoonsgegevens en bankgegevens op één afgeschermde plek.</p></div>
     <div class="lot-editor-toolbar-actions">
-      <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
-      <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
+      <a class="secondary seller-editor-cancel" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
+      <button class="primary seller-save-trigger" type="submit" form="seller-manager-form"><?=$editId!==null?'Wijzigingen opslaan':($sellerScreen==='kunstenaar'?'Kunstenaar opslaan':'Verkoper opslaan')?></button>
     </div>
   </div>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="lot-editor-card seller-editor-card" id="seller-form" aria-labelledby="seller-editor-heading">
-    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?'Verkoper bewerken':'Nieuwe verkoper'?></h2><p>Alle algemene gegevens zijn verplicht. Bankgegevens zijn voorlopig optioneel. Voor kunstenaars gelden ook de extra kunstenaarsvelden.</p></div></div>
+    <div class="lot-editor-card-header"><span class="lot-editor-step" aria-hidden="true">01</span><div><h2 id="seller-editor-heading"><?=$editId!==null?ucfirst($screenLabel).' bewerken':'Nieuwe '.$screenLabel?></h2><p>Algemene gegevens zijn verplicht. Bankgegevens blijven optioneel. Het type kan na aanmaak niet worden gewijzigd.</p></div></div>
     <?php if ($editId!==null && $values['seller_type']==='kunstenaar'): ?>
-      <p class="dashboard-subtitle"><strong>Publicatiestatus:</strong> <?=((int)($values['artist_published']??0)===1?'Gepubliceerd':((int)($values['artist_published']??0)===2?'Nieuw':'Niet gepubliceerd'))?>. De status wordt uitsluitend door de Veilingmeester of Administrator gewijzigd via Verkopers beheren.</p>
+      <?php $canPublishNow=isset($photoByKey['portrait_1']) && seller_artist_has_portrait_path((string)$photoByKey['portrait_1']['path']); ?>
+      <div class="seller-fields-section">
+        <h3>Publicatiestatus kunstenaar</h3>
+        <?php if (seller_can_publish_artist($actorRole)): ?>
+          <form method="post" class="seller-status-form">
+            <?=csrf_field()?>
+            <input type="hidden" name="action" value="artist-publication">
+            <input type="hidden" name="seller_id" value="<?=(int)$editId?>">
+            <label for="seller-edit-artist-status">Publicatiestatus
+              <select id="seller-edit-artist-status" name="artist_status">
+                <option value="new" <?=(int)($values['artist_published']??0)===2?'selected':''?>>Nieuw</option>
+                <?php if ($canPublishNow): ?><option value="published" <?=(int)($values['artist_published']??0)===1?'selected':''?>>Gepubliceerd</option><?php elseif ((int)($values['artist_published']??0)===1): ?><option value="" selected disabled>Gepubliceerd (portret ontbreekt)</option><?php endif; ?>
+                <option value="unpublished" <?=(int)($values['artist_published']??0)===0?'selected':''?>>Niet gepubliceerd</option>
+              </select>
+            </label>
+            <button type="submit" class="secondary">Wijzig status</button>
+          </form>
+          <p class="lot-editor-help">Publiceren kan alleen als de kunstenaar een opgeslagen portretfoto heeft. Bewaar nieuwe portretten eerst.</p>
+        <?php else: ?>
+          <p class="dashboard-subtitle"><strong>Status:</strong> <?=((int)($values['artist_published']??0)===1?'Gepubliceerd':((int)($values['artist_published']??0)===2?'Nieuw':'Niet gepubliceerd'))?>. Alleen Veilingmeester en Administrator mogen deze wijzigen.</p>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
     <form method="post" enctype="multipart/form-data" class="seller-manager-form" id="seller-manager-form" data-seller-upload="1">
       <?=csrf_field()?>
@@ -172,7 +212,8 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <div class="seller-fields-section">
         <h3>Algemene gegevens</h3>
         <div class="seller-fields-grid">
-          <label class="seller-field-wide">Type verkoper<select name="seller_type" id="seller-type" required><option value="particulier" <?=$values['seller_type']==='particulier'?'selected':''?>>Particulier</option><option value="kunstenaar" <?=$values['seller_type']==='kunstenaar'?'selected':''?>>Kunstenaar</option></select></label>
+          <input type="hidden" name="seller_type" id="seller-type" value="<?=e($sellerScreen)?>">
+          <p class="lot-editor-help seller-field-wide"><strong>Type:</strong> <?=$sellerScreen==='kunstenaar'?'Kunstenaar':'Particulier'?> (vast na aanmaak)</p>
           <label class="seller-field-wide">Naam <span class="lot-required">*</span><input name="name" maxlength="150" required value="<?=e((string)$values['name'])?>"></label>
           <label class="seller-field-wide">E-mail <span class="lot-required">*</span><input required name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
           <label class="seller-field-wide">Mobiel nummer <span class="seller-optional">(optioneel)</span><input type="tel" name="mobile_number" maxlength="30" autocomplete="tel" inputmode="tel" value="<?=e((string)$values['mobile_number'])?>" placeholder="0470 12 34 56 of +32 470 12 34 56" aria-describedby="seller-mobile-help"></label>
@@ -194,8 +235,8 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
       <div class="seller-fields-section seller-artist-fields" id="seller-artist-fields" <?=$values['seller_type']==='kunstenaar'?'':'hidden'?>>
         <h3>Kunstenaarsgegevens</h3>
         <div class="seller-fields-grid">
-          <label>Kunstenaarsnaam <span class="lot-required">*</span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
-          <label>Website kunstenaar <span class="lot-required">*</span><input required name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
+          <label><span>Kunstenaarsnaam <span class="lot-required">*</span></span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
+          <label>Website kunstenaar (optioneel)<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
         </div>
         <div class="seller-introduction">
           <label for="artist-slogan">Slogan van de kunstenaar (optioneel)</label>
@@ -248,7 +289,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
         </div>
       </div>
       <div class="seller-form-actions">
-        <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url('admin/verkopers.php'))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
+        <a class="secondary" href="<?=e($fromLot?$returnLotUrl:url($screenUrl))?>" <?=$fromLot?'data-return-to-lot="1"':''?>>Annuleren</a>
         <button class="primary seller-save-trigger" type="submit" id="seller-save-button"><?=$editId!==null?'Wijzigingen opslaan':'Verkoper opslaan'?></button>
       </div>
       <div id="seller-save-progress" class="seller-save-progress" role="status" aria-live="polite" hidden>
@@ -350,7 +391,7 @@ admin_top($editId===null?'Nieuwe verkoper':'Verkoper bewerken');
     const artist=type.value==='kunstenaar';
     fields.hidden=!artist;
     fields.querySelectorAll('input,textarea').forEach(input => {
-      input.required=artist && (input.name==='artist_name' || input.name==='artist_url');
+      input.required=artist && input.name==='artist_name';
       input.disabled=!artist;
     });
   }

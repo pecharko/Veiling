@@ -11,7 +11,38 @@ $checks=[
   'publisher role whitelist'=>str_contains($read('private/lot_sellers.php'), "in_array(\$role,['administrator','veilingmeester'],true)"),
   'published artist edit disabled for assistants'=>str_contains($read('private/lot_sellers.php'), "if ((\$seller['seller_type']??'')==='kunstenaar' && (int)(\$seller['artist_published']??0)===1) return false;"),
   'published artist deletion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar verwijderen.'),
-  'published artist type conversion denied to assistant'=>str_contains($read('private/lot_sellers.php'), 'Enkel veilingmeester of administrator kan een gepubliceerde kunstenaar omzetten.'),
+  'seller type permanently immutable for all roles'=>str_contains($read('private/lot_sellers.php'), "if (\$current['seller_type']!==\$data['seller_type'])")
+    && str_contains($read('private/lot_sellers.php'), 'Het type verkoper kan na aanmaak niet worden gewijzigd.'),
+  'artist publication requires saved portrait'=>str_contains($read('private/lot_sellers.php'), 'Publiceren kan alleen met een opgeslagen portretfoto')
+    && str_contains($read('private/lot_sellers.php'), "image_kind='portrait'")
+    && str_contains($read('private/lot_sellers.php'), 'is_file('),
+  'published artist portrait cannot be removed'=>str_contains($read('private/seller_images.php'), "if (\$kind==='portrait')")
+    && str_contains($read('private/seller_images.php'), "artist_published")
+    && str_contains($read('private/seller_images.php'), 'Trek eerst de publicatie'),
+  'editor status restricted to manager'=>str_contains($read('catalogus-public/admin/verkoper.php'), 'seller_can_publish_artist($actorRole)')
+    && str_contains($read('catalogus-public/admin/verkoper.php'), "seller_set_artist_publication(\$pdo,\$editId,")
+    && str_contains($read('catalogus-public/admin/verkoper.php'), 'name="artist_status"'),
+  'listing autosaves status change without confirmation button'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'onchange="this.form.requestSubmit()"')
+    && !str_contains($read('catalogus-public/admin/verkopers.php'), '>Wijzig status</button>'),
+  'status update uses async request without page reload'=>str_contains($read('catalogus-public/admin/verkopers.php'), "form.addEventListener('submit',async event =>")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'event.preventDefault();')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "method:'POST'")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'body:payload,')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'select.value=previous;')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "badge.classList.add(statusClasses[data.status]);"),
+  'async endpoint reports saved artist status'=>str_contains($read('catalogus-public/admin/verkopers.php'), "'ok'=>true,'status'=>\$status")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "HTTP_X_REQUESTED_WITH"),
+  'status request uses form action attribute despite input named action'=>str_contains($read('catalogus-public/admin/verkopers.php'), "fetch(form.getAttribute('action'),")
+    && !str_contains($read('catalogus-public/admin/verkopers.php'), 'fetch(form.action,'),
+  'async status handles unexpected HTML response safely'=>str_contains($read('catalogus-public/admin/verkopers.php'), "response.headers.get('content-type')")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'response.redirected')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'application/json')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'select.value=previous;'),
+  'listing excludes published selection without valid portrait'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'seller_artist_has_portrait_path($portrait)')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'if($safePortrait)')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'Gepubliceerd (portret ontbreekt)'),
+  'portrait eligibility shared by UI and server'=>str_contains($read('private/lot_sellers.php'), 'function seller_artist_has_portrait_path(')
+    && str_contains($read('private/lot_sellers.php'), '!seller_artist_has_portrait_path($portrait)'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
   'admin status action validates input'=>str_contains($read('catalogus-public/admin/verkopers.php'), "['new','published','unpublished']")
