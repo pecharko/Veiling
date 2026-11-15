@@ -324,4 +324,12 @@ if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could no
 // Old snapshots are intentionally unsupported; no existing ZIP is modified.
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
+// Test cleanup, only in the isolated auction_test database. The catalog
+// restore itself must never mutate these authentication records.
+$pdo->prepare('UPDATE admins SET email=?,name=? WHERE id=1')
+    ->execute([$originalAdmin,$originalAdminName]);
+$pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')
+    ->execute([hash('sha256','post-snapshot-test-ip')]);
+$pdo->prepare('DELETE FROM admin_invitations WHERE token_hash=?')
+    ->execute([$pendingTokenHash]);
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";
