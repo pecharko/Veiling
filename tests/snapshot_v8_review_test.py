@@ -54,7 +54,7 @@ class V8ReviewTests(unittest.TestCase):
         for filename, confirmation, adapter in workflows:
             with self.subTest(workflow=filename):
                 src = (ROOT / ".github/workflows" / filename).read_text(encoding="utf-8")
-                validate, deploy = src.split("\\n  deploy:\\n", 1)
+                validate, deploy = src.split("\n  deploy:\n", 1)
                 self.assertIn("if: github.event_name == 'pull_request'", validate)
                 self.assertIn("scripts.snapshot_v8_review", validate)
                 self.assertNotIn("environment: production", validate)
