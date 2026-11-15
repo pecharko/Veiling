@@ -120,7 +120,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <?php if ($groupType==='kunstenaar'): ?>
                 <?php
                   $portrait=(string)($portraitPaths[(int)$r['id']]??'');
-                  $safePortrait=preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D',$portrait)===1;
+                  $safePortrait=seller_artist_has_portrait_path($portrait);
                 ?>
                 <td class="seller-portrait-cell">
                   <?php if ($safePortrait): ?>
@@ -136,7 +136,24 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
-                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?><form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>"><?=csrf_field()?><input type="hidden" name="action" value="artist-publication"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><label class="sr-only" for="artist-status-<?=(int)$r['id']?>">Status van <?=e((string)$r['artist_name'])?></label><select id="artist-status-<?=(int)$r['id']?>" name="artist_status"><option value="new" <?=(int)$r['artist_published']===2?'selected':''?>>Nieuw</option><option value="published" <?=(int)$r['artist_published']===1?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=(int)$r['artist_published']===0?'selected':''?>>Niet gepubliceerd</option></select><button class="secondary" type="submit">Wijzig status</button></form><?php endif; ?>
+                <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?>
+                  <form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
+                    <?=csrf_field()?>
+                    <input type="hidden" name="action" value="artist-publication">
+                    <input type="hidden" name="seller_id" value="<?=(int)$r['id']?>">
+                    <label class="sr-only" for="artist-status-<?=(int)$r['id']?>">Status van <?=e((string)$r['artist_name'])?></label>
+                    <select id="artist-status-<?=(int)$r['id']?>" name="artist_status" onchange="this.form.requestSubmit()" aria-label="Publicatiestatus van <?=e((string)$r['artist_name'])?>">
+                      <?php if($artistStatus===1 && !$safePortrait): ?>
+                        <option value="" selected disabled>Gepubliceerd (portret ontbreekt)</option>
+                      <?php endif; ?>
+                      <option value="new" <?=$artistStatus===2?'selected':''?>>Nieuw</option>
+                      <?php if($safePortrait): ?>
+                        <option value="published" <?=$artistStatus===1?'selected':''?>>Gepubliceerd</option>
+                      <?php endif; ?>
+                      <option value="unpublished" <?=$artistStatus===0?'selected':''?>>Niet gepubliceerd</option>
+                    </select>
+                  </form>
+                <?php endif; ?>
                 <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
