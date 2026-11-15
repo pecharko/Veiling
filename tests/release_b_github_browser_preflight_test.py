@@ -81,8 +81,8 @@ def fixtures():
         ]
     }]}
     log = (
-        f"2026-11-14T23:08:20.6803142Z   RELEASE_ID: {RID}\\n"
-        f"2026-11-14T23:08:20.6804216Z   DEPLOY_CONFIRMATION: DEPLOY-{RID}-{SHA}\\n"
+        f"2026-11-14T23:08:20.6803142Z   RELEASE_ID: {RID}\n"
+        f"2026-11-14T23:08:20.6804216Z   DEPLOY_CONFIRMATION: DEPLOY-{RID}-{SHA}\n"
     ).encode()
     responses = {
         f"{REPO}/actions/runs/123": serialize(run),
@@ -157,7 +157,7 @@ class GitHubProvenanceTests(unittest.TestCase):
             (baseline, b""),
             (baseline, log.replace(RID.encode(), b"wrong-release")),
             (baseline, log.replace(SHA.encode(), ("f" * 40).encode())),
-            (baseline, log + b"2026-11-14T23:08:30Z   RELEASE_ID: wrong-release\\n"),
+            (baseline, log + b"2026-11-14T23:08:30Z   RELEASE_ID: wrong-release\n"),
         ]
         for jobs, log_bytes in cases:
             fixture, *_ = fixtures()
