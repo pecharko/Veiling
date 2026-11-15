@@ -6,6 +6,8 @@ on:
       - 'scripts/release_b_status.py'
       - 'scripts/release_b_artifact_contract.py'
       - 'scripts/release_b_zip_review.py'
+      - 'scripts/release_b_independent_contract.py'
+      - 'tests/release_b_independent_contract_test.py'
       - 'tests/release_b_zip_review_test.py'
       - 'tests/release_b_artifact_contract_test.py'
       - 'tests/release_b_status_test.py'
@@ -29,7 +31,8 @@ jobs:
       - run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
       - run: python3 -B -m unittest discover -s tests -p release_b_artifact_contract_test.py -v
       - run: python3 -B -m unittest discover -s tests -p release_b_zip_review_test.py -v
-      - run: python3 -m py_compile scripts/release_b_status.py scripts/release_b_artifact_contract.py scripts/release_b_zip_review.py
+      - run: python3 -B -m unittest discover -s tests -p release_b_independent_contract_test.py -v
+      - run: python3 -m py_compile scripts/release_b_status.py scripts/release_b_artifact_contract.py scripts/release_b_zip_review.py scripts/release_b_independent_contract.py
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/post-release-evidence-status.yml
   report:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'workflow_dispatch'
