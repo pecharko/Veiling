@@ -20,7 +20,7 @@ SAFE_PART = re.compile(r"^[A-Za-z0-9_.-]+$")
 def validate_root(root):
     if (not isinstance(root, str) or not root.startswith("/") or root == "/"
             or "\\" in root or any(p in ("", ".", "..") for p in root[1:].split("/"))
-            or any(not SAFE_PART.fullmatch(p) for p in root[1:].split("/"))):
+            or any(not SAFE_PART.fullmatch(p) or p.startswith(".") for p in root[1:].split("/"))):
         raise ValueError("Invalid independent readback root")
     return root.rstrip("/")
 
