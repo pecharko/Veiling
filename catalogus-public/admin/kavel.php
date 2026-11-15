@@ -350,7 +350,7 @@ if ($error === $cancelAuctionWarning) {
             <label class="lot-editor-checkbox lot-full lot-editor-auction-flag"><input type="checkbox" name="auction_only" value="1" <?=!empty($d['auction_only'])?'checked':''?>> Uitsluitend veiling (niet op Markt publiceren)</label>
             <label class="lot-editor-lot-number"><span class="lot-editor-label">Lotnummer <span class="lot-required">*</span></span><input type="number" name="lot_number" min="1" max="999999" value="<?=e($d['lot_number'])?>" required></label>
             <div class="lot-editor-category-control"><label class="lot-editor-category">Categorie<select name="category"><option value="">Geen categorie</option><?php foreach ($availableCategories as $categoryName): ?><option value="<?=e($categoryName)?>" <?=$d['category']===$categoryName?'selected':''?>><?=e($categoryName)?></option><?php endforeach; ?></select></label><?php if (lot_category_can_manage(effective_admin_role())): ?><a class="secondary lot-editor-category-edit" href="<?=e(url('admin/categorieen.php'))?>" target="_blank" rel="noopener" aria-label="Categorieën bewerken (opent in een nieuw tabblad)">Bewerken</a><?php endif; ?></div>
-            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a id="lot-create-seller" class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe verkoper aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe verkoper</a><?php endif; ?></div>
+            <div class="lot-editor-category-control lot-editor-seller-control"><label class="lot-editor-category">Verkoper<select name="seller_id" aria-label="Verkoper kiezen"><option value="">Geen verkoper geselecteerd</option><?php foreach($availableSellers as $seller): ?><option value="<?=(int)$seller['id']?>" <?=(string)($d['seller_id']??'')===(string)$seller['id']?'selected':''?>><?=e($seller['name'].' · '.($seller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier'))?></option><?php endforeach; ?></select></label><?php if (seller_can_manage(effective_admin_role())): ?><a id="lot-create-seller" data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/verkoper.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe particuliere verkoper aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe verkoper</a> <a data-create-seller class="secondary lot-editor-category-edit" href="<?=e(url('admin/kunstenaar-bewerken.php', ['from_lot'=>1,'lot_id'=>$id]))?>" target="_blank" rel="opener" aria-label="Nieuwe kunstenaar aanmaken en terugkeren naar kavel (opent in nieuw tabblad)">+ Nieuwe kunstenaar</a><?php endif; ?></div>
             <label class="lot-full"><span class="lot-editor-label">Titel <span class="lot-required">*</span></span><input type="text" name="title" value="<?=e($d['title'])?>" maxlength="50" required placeholder="Bijvoorbeeld: Champagnepakket"></label>
             <label class="lot-full">Ondertitel<input type="text" name="subtitle" value="<?=e($d['subtitle'])?>" maxlength="50" placeholder="Aanvullende informatie"></label>
           </div>
@@ -453,7 +453,7 @@ if ($error === $cancelAuctionWarning) {
 (() => {
   'use strict';
   const lotForm=document.getElementById('lot-editor-form');
-  const createLink=document.getElementById('lot-create-seller');
+  const createLinks=[...document.querySelectorAll('[data-create-seller]')];
   const sellerSelect=lotForm?.querySelector('select[name="seller_id"]');
   const donationConfirmed=lotForm?.querySelector('input[name="donation_confirmed"]');
   if (lotForm && sellerSelect && donationConfirmed) {
@@ -474,7 +474,7 @@ if ($error === $cancelAuctionWarning) {
       donationConfirmed.value='1';
     });
   }
-  if (!createLink || !sellerSelect) return;
+  if (!createLinks.length || !sellerSelect) return;
   let refreshOnFocus=false;
   async function refreshSellers(preferredId=null) {
     try {
@@ -498,7 +498,7 @@ if ($error === $cancelAuctionWarning) {
       // An unavailable refresh never clears the current lot form.
     }
   }
-  createLink.addEventListener('click', () => { refreshOnFocus=true; });
+  createLinks.forEach(link=>link.addEventListener('click', () => { refreshOnFocus=true; }));
   window.addEventListener('message', event => {
     if (event.origin!==window.location.origin || event.data?.type!=='lot-seller-created') return;
     const sellerId=Number(event.data.sellerId);
