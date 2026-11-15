@@ -91,7 +91,6 @@ function seller_clean(mixed $input): array {
   [$fields['bank_account_name'],$fields['bank_account_iban']]=lot_bank_validate($fields['bank_account_name'],$fields['bank_account_iban']);
   if ($type==='kunstenaar') {
     if ($fields['artist_name']==='') throw new InvalidArgumentException('Kunstenaarsnaam is verplicht voor een kunstenaar.');
-    if ($fields['artist_url']==='') throw new InvalidArgumentException('Website kunstenaar is verplicht voor een kunstenaar.');
     [$fields['artist_name'],$fields['artist_url']]=lot_artist_validate($fields['artist_name'],$fields['artist_url']);
   } else {
     $fields['artist_name']='';
