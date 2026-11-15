@@ -1,0 +1,28 @@
+# VeilingDeploy niveau B — veilige automatisering (voorstel, geen productieautorisatie)
+
+## Huidige grens (gecontroleerd op main 2026-11-15)
+- Ontwikkeling: Codex in een actieve sessie, lokale Docker/Playwright waar beschikbaar en een gezamenlijke PR.
+- CI-feedback: `.github/workflows/development-ci-feedback.yml` is read-only en geeft advies. Het repareert nooit zelfstandig code na een beëindigde chat.
+- Release: `.github/workflows/verified-deploy-controller.yml` blijft de bestaande owner-bound dispatchroute. `scripts/shared_ovh_release.py` bewaakt de SHA-256-manifesten, gepinde SFTP-hostkey, actuele drift, back-up, rollback en uploaderreadback.
+- GitHub-hosted HTTP-tests kunnen door de OVH WAF 403 terugkrijgen. Dat is **geen** browsersucces en evenmin bewijs van onbeschikbaarheid.
+- Bestaande `deployment-evidence.json` bevat uploaderreadback, niet onafhankelijke OVH-readback; `browser_acceptance` staat na uitrol op PENDING.
+
+## Wat deze eerste veilige implementatie toevoegt
+De nieuwe workflow `post-release-evidence-status.yml` reageert alleen op voltooiing van de bestaande shared-OVH workflow. Via een beperkt `actions: read` token leest hij de run en de lijst met artifacts. Het script `release_b_status.py` maakt een compacte Actions Summary met exacte run/SHA, status en ontbrekende bewijsstappen. Dit is nadrukkelijk **geen** verificatie van de artifactinhoud of van de onafhankelijke live server. De summary krijgt altijd `independent_ovh_readback=PENDING`, `browser_acceptance=PENDING` en `release_administration=OPEN`, ook bij succesvolle workflow. Onvolledige/ongeldige API-invoer faalt gesloten. Geen secrets, SFTP, uploads, DB, workflow_dispatch, issuecommentaar of releasecontrollerwijziging.
+
+## B-vervolg dat een afzonderlijke review vereist
+
+1. **Ontwikkeling / CI:** behoud een single-PR met source + tests + (waar passend) manifest. Automatiseer alleen de rapportage/diagnose. Een persistente autonome Codex-writer vereist een afzonderlijk ontwerp voor identiteit, werkboomisolatie, file-allowlist, rechten, audit, idempotentie en stop bij ambigue writes. Maak de adviser niet stilzwijgend een writer.
+2. **Releasecontroller:** gebruik uitsluitend de bestaande owner-verificatie en specifieke finale toestemming. Een interfaceknop kan een exacte autorisatietekst samenstellen, maar nooit zelf een producerende API aanroepen. Niet algemeen autoriseren via `go`.
+3. **Browseracceptatie:** lokale Playwright-preview met fictieve data waar mogelijk. Voor publiek live HTTPS alleen een vertrouwde echte client buiten GitHub-hosted WAF-blokkades. Privéadmin alleen met afzonderlijk beveiligde, niet-gepubliceerde sessie. Publiceer nooit cookies, HTML met persoonsgegevens of screenshots van admin naar publieke artifacts. De werkelijke productieacceptatie moet releasegebonden zijn.
+4. **OVH-readback:** bouw een afzonderlijke **read-only** uitvoerder met apart bewijs van oorsprong, onafhankelijke identiteit, exacte release-id/main SHA, gepinde hostkey, exact bestandsmanifest en hashes. Het uitvoerresultaat moet herleidbaar zijn tot de bron; een uploaderlog of artifactnaam telt nooit als onafhankelijke meting. Geen productiecredentials toevoegen aan PR-code of onbeveiligde runner.
+5. **Releaseadministratie:** maak pas na gevalideerde deploymentartifactinhoud, onafhankelijke readback en browseracceptatie een formeel acceptatieverslag. Blijft een controle ontbreken, laat de status `OPEN/PENDING`. Implementeer geen impliciete issue/PR-writes op een privileged `workflow_run` event.
+
+## Acceptatiecriteria
+- Run-ID, SHA, trigger en bronworkflow worden gevalideerd; geen conclusies uit een PR-run of vreemde workflow.
+- Succesvolle workflow zonder rollback- en evidenceartifact wordt als onvolledig gerapporteerd.
+- Een groene job of beschikbare artifactnamen promoveert geen release tot VERIFIED of ACCEPTED.
+- Ongeldige of verlopen gegevens stoppen zichtbaar; geen automatische retry van writes.
+- De bestaande owner-only merge/productiegates, snapshots/restore, cron, DB, secrets en hostkey-/rollbackchecks blijven onaangeroerd.
+
+**Deze PR verandert geen productieruntime.** Voor beschermde `.github/workflows/` en `scripts/` blijft een afzonderlijke exacte mergebeslissing vereist. Deze rapportage vervangt geen bestaande verplichte gates.
