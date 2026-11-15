@@ -120,7 +120,7 @@ try {
   claim($sellerRequiredStatus===200 && str_contains($missingSellerPage,'E-mail is verplicht.')
     && (int)db()->query("SELECT COUNT(*) FROM lot_sellers WHERE name='Incomplete'")->fetchColumn()===0,
     'Server rejects incomplete new seller without writing a row');
-  [$sellerStatus] = request_page('/admin/verkoper.php', [
+  [$sellerStatus] = request_page('/admin/kunstenaar-bewerken.php', [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_type'=>'kunstenaar',
     'name'=>'Demo kunstenaar','email'=>'demo@example.invalid','street'=>'Fictieve straat',
     'house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
@@ -140,7 +140,7 @@ try {
     && $sellerRecord['created_by_name']!=='' && $sellerRecord['updated_by_name']!==''
     && $sellerRecord['created_at']!==null && $sellerRecord['updated_at']!==null,
     'Original creator and last updater recorded on first save');
-  [$sellerStatus, $sellerEditPage] = request_page('/admin/verkoper.php?id='.$sellerId);
+  [$sellerStatus, $sellerEditPage] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId);
   claim($sellerStatus===200 && str_contains($sellerEditPage,'value="Demo kunstenaar"'),
     'Seller form preloads existing data');
   claim(str_contains($sellerEditPage,'name="artist_intro"')
@@ -156,7 +156,7 @@ try {
     'Seller editor provides top save action and lot-style artwork photo picker');
   // A save that changes no canonical seller field must preserve last-update audit.
   db()->prepare("UPDATE lot_sellers SET updated_at='2020-01-01 00:00:00',updated_by_name='Earlier editor' WHERE id=?")->execute([$sellerId]);
-  [$noChangeStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+  [$noChangeStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
     'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
@@ -173,7 +173,7 @@ try {
   imagefill($artistImage,0,0,imagecolorallocate($artistImage,20,100,80));
   imagepng($artistImage,$artistFixture);
   imagedestroy($artistImage);
-  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+  [$sellerStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar','email'=>'demo@example.invalid',
     'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
@@ -185,32 +185,31 @@ try {
   claim($sellerStatus===303 && $imagePath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$imagePath)
     && db()->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve korte voorstelling',
     'Artist introduction and first work photo saved with seller');
-  [$sellerStatus] = request_page('/admin/verkoper.php?id='.$sellerId, [
+  [$sellerStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
     'street'=>'Fictieve straat','house_number'=>'10','postal_code'=>'9160','municipality'=>'Lokeren',
     'bank_account_name'=>'Demo particulier','bank_account_iban'=>'BE68 5390 0754 7034'
   ]);
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
-  claim($sellerStatus===303 && $sellerRecord['seller_type']==='particulier'
-    && $sellerRecord['artist_name']==='' && $sellerRecord['artist_url']===''
-    && $sellerRecord['artist_intro']===''
-    && (int)db()->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===0,
-    'Seller can change type and private artist fields are cleared');
+  claim($sellerStatus===400 && $sellerRecord['seller_type']==='kunstenaar'
+    && $sellerRecord['artist_name']==='Demo Art'
+    && (int)db()->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
+    'Seller type stays immutable, including for administrators');
   claim((int)$sellerRecord['created_by_admin_id']===$creatorActor
     && (int)$sellerRecord['updated_by_admin_id']===$creatorActor,
     'Editing keeps original creator and updates last editor');
-  [$sellerStatus, $badSellerPage] = request_page('/admin/verkoper.php?id='.$sellerId, [
+  [$sellerStatus, $badSellerPage] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId, [
     'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>(string)$sellerId,
-    'seller_type'=>'particulier','name'=>'Demo particulier',
+    'seller_type'=>'kunstenaar','name'=>'Demo kunstenaar',
     'email'=>'bad-email','street'=>'Fictieve straat','house_number'=>'10',
     'postal_code'=>'9160','municipality'=>'Lokeren',
     'bank_account_iban'=>'BE68 5390 0754 7035'
   ]);
   claim($sellerStatus===200 && str_contains($badSellerPage,'geldig e-mailadres')
-    && db()->query("SELECT name FROM lot_sellers WHERE id=$sellerId")->fetchColumn()==='Demo particulier',
+    && db()->query("SELECT name FROM lot_sellers WHERE id=$sellerId")->fetchColumn()==='Demo kunstenaar',
     'Invalid seller fields rejected without mutation');
-  [$sellerStatus] = request_page('/admin/verkopers.php', [
+  [$sellerStatus] = request_page('/admin/kunstenaars.php', [
     'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerId
   ]);
   claim($sellerStatus===303
