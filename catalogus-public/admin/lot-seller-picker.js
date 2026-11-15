@@ -4,6 +4,7 @@
   const select=form?.querySelector('select[name="seller_id"]');
   const button=document.getElementById('lot-seller-open');
   const display=document.getElementById('lot-seller-selected');
+  const selectedIcon=document.getElementById('lot-seller-selection-icon');
   const dialog=document.getElementById('lot-seller-dialog');
   const search=dialog?.querySelector('[data-seller-search]');
   const results=dialog?.querySelector('[data-seller-results]');
@@ -15,6 +16,21 @@
   const createLinks=[...document.querySelectorAll('[data-create-seller]')];
   const warning='Er is geen verkoper geselecteerd, deze kavel wordt beschouwd als geschonken voor de veiling er zal geen uitbetaling gebeuren naar de schenker, ga jij hiermee akkoord?';
   let requestNumber=0, timeout=null, controller=null, filter='', lastFocus=null, refreshOnFocus=false;
+  function showSelectedIcon(item) {
+    if (!selectedIcon) return;
+    selectedIcon.replaceChildren();
+    const fallback=item?.type==='kunstenaar'?'🎨':'👤';
+    if (item?.type==='kunstenaar' && item.portrait) {
+      const img=document.createElement('img');
+      img.src=item.portrait;
+      img.alt='';
+      img.width=38;
+      img.height=38;
+      img.decoding='async';
+      img.addEventListener('error',()=>{if(img.isConnected)selectedIcon.textContent=fallback;},{once:true});
+      selectedIcon.append(img);
+    } else selectedIcon.textContent=fallback;
+  }
   function setSeller(item) {
     select.replaceChildren(new Option('Geen verkoper geselecteerd',''));
     if (item) {
@@ -24,6 +40,7 @@
       select.value='';
       display.textContent='Geen verkoper geselecteerd (schenking)';
     }
+    showSelectedIcon(item);
     select.dispatchEvent(new Event('change',{bubbles:true}));
     if (donation) donation.value='0';
     dialog.close();
