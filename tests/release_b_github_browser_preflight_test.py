@@ -5,6 +5,8 @@ import json
 import sys
 import unittest
 import zipfile
+import subprocess
+from unittest.mock import patch
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
@@ -87,7 +89,7 @@ def fixtures():
     responses = {
         f"{REPO}/actions/runs/123": serialize(run),
         f"{REPO}/actions/runs/123/jobs?per_page=100": serialize(jobs),
-        f"{REPO}/actions/jobs/456/logs": log,
+        f"{REPO}/actions/runs/123/jobs/456/logs": log,
         f"{REPO}/actions/runs/123/artifacts?per_page=100": serialize(artifact_list),
         f"{REPO}/actions/artifacts/55/zip": raw_zip,
         f"{REPO}/contents/releases/{RID}.json?ref={SHA}": serialize(response),
@@ -220,6 +222,45 @@ class GitHubProvenanceTests(unittest.TestCase):
             with self.subTest(value=value), self.assertRaises(ValueError):
                 collect_verified_browser_inputs(value, fetch)
             self.assertEqual(fetch.calls, [])
+
+    def test_real_gh_run_log_transport_is_bound_to_run_and_job(self):
+        from release_b_github_browser_preflight import MAX_RUN_JSON
+        captured = []
+        def fake_run(command, **kwargs):
+            captured.append(command)
+            kwargs["stdout"].write(b"2026-11-14T23:08:20Z RELEASE_ID: test-release\\n")
+            return subprocess.CompletedProcess(command, 0)
+        with patch("release_b_github_browser_preflight.subprocess.run", side_effect=fake_run):
+            data = api_get(
+                f"{REPO}/actions/runs/123/jobs/456/logs",
+                max_bytes=MAX_RUN_JSON)
+        self.assertIn(b"RELEASE_ID", data)
+        self.assertEqual(captured, [
+            ["gh", "run", "view", "123", "--repo", "pecharko/Veiling",
+             "--job", "456", "--log"]
+        ])
+
+    def test_gh_run_log_transport_fails_closed(self):
+        route = f"{REPO}/actions/runs/123/jobs/456/logs"
+        with patch("release_b_github_browser_preflight.subprocess.run",
+                   side_effect=subprocess.CalledProcessError(1, ["gh", "run"])):
+            with self.assertRaises(ValueError):
+                api_get(route, max_bytes=1024)
+        def oversized(command, **kwargs):
+            kwargs["stdout"].write(b"x" * 1025)
+            return subprocess.CompletedProcess(command, 0)
+        with patch("release_b_github_browser_preflight.subprocess.run",
+                   side_effect=oversized):
+            with self.assertRaises(ValueError):
+                api_get(route, max_bytes=1024)
+        with patch("release_b_github_browser_preflight.subprocess.run") as no_call:
+            for invalid in (f"{REPO}/actions/runs/0/jobs/456/logs",
+                            f"{REPO}/actions/runs/123/jobs/0/logs",
+                            f"{REPO}/actions/jobs/456/logs",
+                            f"{REPO}/actions/runs/123/jobs/456/logs/extra"):
+                with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                    api_get(invalid, max_bytes=1024)
+            no_call.assert_not_called()
 
     def test_api_transport_blocks_untrusted_route_before_subprocess(self):
         with self.assertRaises(ValueError):
