@@ -24,6 +24,8 @@ MAX_RUN_JSON = 65536
 MAX_LIST_JSON = 131072
 MAX_MANIFEST_RESPONSE = 100000
 MAX_MANIFEST = 65536
+# Internal bounded transport route, not a GitHub REST API endpoint.
+JOB_LOG_ROUTE = re.compile(r"^repos/pecharko/Veiling/actions/runs/([1-9][0-9]*)/jobs/([1-9][0-9]*)/logs$")
 
 
 def api_get(path, *, max_bytes):
@@ -34,9 +36,22 @@ def api_get(path, *, max_bytes):
         raise ValueError("Invalid GitHub response bound")
     # Spool the API response to a temporary file instead of collecting an
     # unbounded response in Python memory. Read at most max_bytes + 1 bytes.
+    # The REST job-log endpoint responds with a temporary redirect. gh api
+    # does not reliably follow its binary download on macOS. gh run view
+    # --log is the tested authenticated CLI transport for this one log.
+    # The internal path binds *both* immutable run and verified job IDs.
+    log_route = JOB_LOG_ROUTE.fullmatch(path)
+    if log_route:
+        run_id, job_id = log_route.groups()
+        command = ["gh", "run", "view", run_id, "--repo", REPO,
+                   "--job", job_id, "--log"]
+    elif "/logs" in path:
+        raise ValueError("Non-allowlisted GitHub log route")
+    else:
+        command = ["gh", "api", "--method", "GET", path]
     try:
         with tempfile.TemporaryFile() as output:
-            subprocess.run(["gh", "api", "--method", "GET", path],
+            subprocess.run(command,
                            stdout=output, stderr=subprocess.DEVNULL,
                            check=True, timeout=30)
             output.seek(0)
@@ -121,7 +136,7 @@ def collect_verified_browser_inputs(run_id, fetch=api_get):
         f"{base}/actions/runs/{run_id}/jobs?per_page=100",
         max_bytes=MAX_LIST_JSON), MAX_LIST_JSON)
     release_job = release_job_id(run, jobs)
-    log_bytes = fetch(f"{base}/actions/jobs/{release_job}/logs",
+    log_bytes = fetch(f"{base}/actions/runs/{run_id}/jobs/{release_job}/logs",
                       max_bytes=MAX_JOB_LOG)
     binding = bind_executed_release(run, rid, jobs, log_bytes)
     sha = run["head_sha"]

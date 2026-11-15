@@ -15,7 +15,13 @@ RELEASE = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 SHA = re.compile(r"^[0-9a-f]{40}$")
 MAX_JOBS = 100
 MAX_JOB_LOG = 262144
-LOG_LINE = re.compile(r"^\d{4}-\d\d-\d\dT[^\s]+Z\s+(RELEASE_ID|DEPLOY_CONFIRMATION):\s+(\S+)\s*$")
+# gh run view --log prefixes lines with job and step labels (tab-separated).
+# Accept only those bounded, non-control label fields before the timestamp.
+LOG_LINE = re.compile(
+    r"^(?:[^\t\r\n]{1,120}\t){0,2}"
+    r"\d{4}-\d\d-\d\dT[^\s]+Z\s+"
+    r"(RELEASE_ID|DEPLOY_CONFIRMATION):\s+(\S+)\s*$"
+)
 
 def release_job_id(run, jobs):
     if not isinstance(jobs, dict) or type(jobs.get("total_count")) is not int:
