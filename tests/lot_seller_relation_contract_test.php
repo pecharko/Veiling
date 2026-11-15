@@ -23,7 +23,7 @@ foreach ([$catalog,$detail] as $source) {
   foreach (['bank_account_iban','bank_account_name','seller.email','seller.street'] as $private)
     if (str_contains($source,$private)) throw new RuntimeException('Private seller data in public view.');
 }
-foreach (["'lot_sellers'","'seller_id'","41lokeren-v7-lot-audit"] as $key)
+foreach (["'lot_sellers'","'seller_id'","41lokeren-v8-catalog-only"] as $key)
   if (!str_contains($snap,$key)) throw new RuntimeException('Seller-aware snapshots missing '.$key);
 $picker=file_get_contents($root.'/catalogus-public/admin/lot-seller-picker.js');
 if (!is_string($picker) || !str_contains($picker,'lot-seller-created')
