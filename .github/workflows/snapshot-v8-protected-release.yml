@@ -1,0 +1,115 @@
+name: Snapshot v8 catalog-only protected two-file release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/snapshot-v8-protected-release.yml'
+      - 'scripts/deploy_snapshot_v8.py'
+      - 'tests/deploy_snapshot_v8_test.py'
+      - 'tests/snapshot_v8_protected_workflow_test.py'
+      - 'releases/snapshot-v8-catalog-only-20261115.json'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'SNAPSHOT-V8-DEPLOY-snapshot-v8-catalog-only-20261115-<exact immutable main SHA>; separate owner authorization required'
+        required: true
+        type: string
+      backup_ready:
+        description: 'SNAPSHOT-V8-FULL-BACKUP-VERIFIED-20261115; independent full DB + photo backup, tested recovery plan and old ZIP retention confirmed'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ovh-production-deploy' || format('snapshot-v8-review-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate snapshot v8 dedicated controller offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_snapshot_v8_test.py -v
+          python3 -B -m unittest discover -s tests -p snapshot_v8_protected_workflow_test.py -v
+          python3 -B -m unittest discover -s tests -p snapshot_v8_review_test.py -v
+          python3 -B -m scripts.snapshot_v8_review
+          python3 -B -m py_compile scripts/deploy_snapshot_v8.py
+          php -l private/snapshots.php
+          php -l catalogus-public/admin/backup.php
+      - name: Require authenticated two-file manifest before merge
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Fail closed until an independently authenticated pinned-hostkey
+          # read-only OVH preflight supplies both SHA-256 baselines.
+          python3 -B -m scripts.deploy_snapshot_v8 plan
+      - name: Validate dedicated release workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/snapshot-v8-protected-release.yml
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    env:
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      SNAPSHOT_V8_BACKUP_READY: ${{ inputs.backup_ready }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Check immutable main, exact owner confirmation and full backup attestation
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          test "$DEPLOY_CONFIRMATION" = "SNAPSHOT-V8-DEPLOY-snapshot-v8-catalog-only-20261115-$GITHUB_SHA"
+          test "$SNAPSHOT_V8_BACKUP_READY" = "SNAPSHOT-V8-FULL-BACKUP-VERIFIED-20261115"
+          test "$GITHUB_REPOSITORY" = "pecharko/Veiling"
+          test "$GITHUB_WORKFLOW_REF" = "pecharko/Veiling/.github/workflows/snapshot-v8-protected-release.yml@refs/heads/main"
+      - name: Verify exact v8 manifest, protected sources and offline tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_snapshot_v8_test.py -v
+          python3 -B -m unittest discover -s tests -p snapshot_v8_protected_workflow_test.py -v
+          python3 -B -m scripts.snapshot_v8_review
+          python3 -B -m scripts.deploy_snapshot_v8 plan
+          php -l private/snapshots.php
+          php -l catalogus-public/admin/backup.php
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Fresh pinned-hostkey OVH drift check, source backup, upload, readback and rollback
+        run: python3 -B -m scripts.deploy_snapshot_v8 deploy
+      - name: Retain protected v8 release evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-v8-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Retain protected two-file source rollback backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snapshot-v8-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
