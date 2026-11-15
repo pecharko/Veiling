@@ -6,15 +6,13 @@ $css=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/admin.css');
 if (!is_string($overview) || !is_string($editor) || !is_string($css)) throw new RuntimeException('Seller layout source missing.');
 foreach ([
   'class="dashboard-modern seller-manager"',
-  'class="dashboard-stats seller-stats"',
   'class="dashboard-panel"',
   'class="dashboard-panel-heading"',
   'class="dashboard-filters seller-filters"',
   'class="dashboard-table seller-table"',
   'class="dashboard-edit"',
-  '>+ Nieuwe verkoper</a>',
-  "url('admin/verkoper.php'))",
-  "url('admin/verkoper.php',['id'=>(int)\$r['id']])",
+  'url($editorUrl)',
+  'url($editorUrl,[\'id\'=>(int)$r[\'id\']])',
 ] as $required) {
   if (!str_contains($overview,$required)) throw new RuntimeException('Missing seller overview element: '.$required);
 }
@@ -38,8 +36,7 @@ if (!str_contains($editor,"input.required=artist && input.name==='artist_name';"
   throw new RuntimeException('Artist required fields must toggle with seller type');
 if (str_contains($overview,'id="seller-form"') || str_contains($overview,'name="bank_account_iban"')
     || str_contains($overview,'seller_save(')) throw new RuntimeException('Seller overview must not embed new/edit form.');
-if (strpos($overview, "'kunstenaar'=>'Kunstenaars'") >= strpos($overview, "'particulier'=>'Particulieren'")) throw new RuntimeException('Artists must precede private sellers');
-foreach (['Kunstenaars','Particulieren','foreach($groupRows as $r)','seller-list-<?=e($groupType)?>-heading'] as $required) {
+foreach (['Kunstenaars','Particuliere verkopers','foreach($groupRows as $r)','seller-list-<?=e($groupType)?>-heading'] as $required) {
   if (!str_contains($overview,$required)) throw new RuntimeException('Missing separate seller group: '.$required);
 }
 if (str_contains($overview, '<th scope="col">Type</th>'))
@@ -54,7 +51,7 @@ foreach (['seller_images', "image_kind='portrait' AND slot=1", 'seller_artist_ha
 if (!str_contains($css, '.seller-portrait-thumb') || !str_contains($css, '.seller-portrait-placeholder'))
   throw new RuntimeException('Missing compact portrait styles.');
 if (!str_contains($overview,'require_auth()')) throw new RuntimeException('Seller overview must require an authenticated role.');
-foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
+foreach (['.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
 }
 // Required marker and label must occupy one header row, so the two artist inputs align.
@@ -65,8 +62,18 @@ if (!str_contains($editor, '<span>Kunstenaarsnaam <span class="lot-required">*</
 if (!str_contains($overview, 'name="status" aria-label="Publicatiestatus kunstenaars"')
     || !str_contains($overview, "['unpublished'=>0,'published'=>1,'new'=>2][\$filterStatus]")
     || !str_contains($overview, "\$row['seller_type']==='kunstenaar'")
-    || !str_contains($overview, "href=\"#seller-list-particulier-heading\"")
+    || !str_contains($overview, "\$row['seller_type']!==\$sellerScreen")
     || str_contains($overview, 'name="type"')) {
   throw new RuntimeException('Publication status must filter artists only; seller type filter removed.');
 }
-echo "PASS separate seller list and new/edit form share the kavels design.\n";
+$artistRoute=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/kunstenaars.php');
+$artistEditorRoute=file_get_contents(dirname(__DIR__).'/catalogus-public/admin/kunstenaar-bewerken.php');
+if (!is_string($artistRoute) || !is_string($artistEditorRoute)
+    || !str_contains($artistRoute, "\$sellerScreen='kunstenaar';")
+    || !str_contains($artistEditorRoute, "\$sellerScreen='kunstenaar';")
+    || !str_contains($overview, "\$sellerScreen= (") && !str_contains($overview, "\$sellerScreen=(\$sellerScreen??'particulier')")
+    || !str_contains($editor, 'id="seller-type" value="<?=e($sellerScreen)?>"')
+    || str_contains($editor, '<select name="seller_type"')) {
+  throw new RuntimeException('Artist/private administration must be isolated and seller type fixed.');
+}
+echo "PASS split artist/private seller editor screens and fixed seller type.\n";
