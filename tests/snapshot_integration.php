@@ -196,6 +196,29 @@ if ($databaseJson === false) throw new RuntimeException('Missing db JSON');
 $bad->addFromString('database.json', $databaseJson . ' ');
 $bad->close();
 assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is rejected by checksum validation');
+ 
+// Construct an authentic-looking, checksum-consistent older format in a
+// disposable ZIP. Existing customer snapshots remain untouched.
+$legacyName='snapshot-20990103-000000-deadbeefdead.zip';
+$legacyPath=snap_path($legacyName);
+if (!copy(snap_path($name),$legacyPath)) throw new RuntimeException('Cannot create disposable legacy fixture');
+$legacyZip=new ZipArchive();
+if($legacyZip->open($legacyPath)!==true)throw new RuntimeException('Cannot edit legacy fixture');
+$legacyPayload=json_decode((string)$legacyZip->getFromName('database.json'),true,512,JSON_THROW_ON_ERROR);
+$legacyManifest=json_decode((string)$legacyZip->getFromName('manifest.json'),true,512,JSON_THROW_ON_ERROR);
+$legacyPayload['format']='41lokeren-v7-lot-audit';
+$legacyManifest['format']='41lokeren-v7-lot-audit';
+$legacyDatabaseJson=json_encode($legacyPayload,JSON_THROW_ON_ERROR);
+$legacyManifest['sha256']['database.json']=hash('sha256',$legacyDatabaseJson);
+$legacyZip->addFromString('database.json',$legacyDatabaseJson);
+$legacyZip->addFromString('manifest.json',json_encode($legacyManifest,JSON_THROW_ON_ERROR));
+$legacyZip->close();
+assert_throws(fn()=>snap_verified($legacyName),'Niet-ondersteund snapshotformaat',
+    'Older v7 snapshot is refused even when its archive checksums are valid');
+verify(snap_verified($name)[0]['format']==='41lokeren-v8-catalog-only',
+    'Rejected old format does not modify the current v8 snapshot');
+if(!unlink($legacyPath))throw new RuntimeException('Cannot delete disposable legacy fixture');
+
 
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
 $pdo->prepare('UPDATE lot_sellers SET artist_published=0 WHERE id=?')->execute([$sellerId]);
