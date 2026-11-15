@@ -141,7 +141,7 @@ if ($fromLot && ($_GET['completed']??'')==='1' && filter_var($_GET['seller_id']?
   exit;
 }
 // On a failed photo action, redisplay the stored seller rather than an empty form.
-if (is_post() && $editId!==null && ($_POST['action']??'')!=='save' && $error!=='') {
+if (is_post() && $editId!==null && in_array(($_POST['action']??''),['upload-photo','delete-photo','artist-publication'],true) && $error!=='') {
   $st=$pdo->prepare('SELECT * FROM lot_sellers WHERE id=?');
   $st->execute([$editId]);
   $saved=$st->fetch(PDO::FETCH_ASSOC);
