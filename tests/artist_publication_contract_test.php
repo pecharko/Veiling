@@ -19,7 +19,7 @@ $checks=[
     && str_contains($read('private/seller_images.php'), "artist_published")
     && str_contains($read('private/seller_images.php'), 'Trek eerst de publicatie'),
   'editor status restricted to manager'=>str_contains($read('catalogus-public/admin/verkoper.php'), 'seller_can_publish_artist($actorRole)')
-    && str_contains($read('catalogus-public/admin/verkoper.php'), "seller_set_artist_publication($pdo,$editId,")
+    && str_contains($read('catalogus-public/admin/verkoper.php'), "seller_set_artist_publication(\$pdo,\$editId,")
     && str_contains($read('catalogus-public/admin/verkoper.php'), 'name="artist_status"'),
   'publication service checks role and artist type'=>str_contains($read('private/lot_sellers.php'), 'seller_can_publish_artist($role)')
     && str_contains($read('private/lot_sellers.php'), 'seller_set_artist_publication(PDO $pdo'),
