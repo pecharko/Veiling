@@ -146,7 +146,7 @@ class GitHubProvenanceTests(unittest.TestCase):
     def test_successful_job_provenance_fail_closed(self):
         values, *_ = fixtures()
         jobs_path = f"{REPO}/actions/runs/123/jobs?per_page=100"
-        log_path = f"{REPO}/actions/jobs/456/logs"
+        log_path = f"{REPO}/actions/runs/123/jobs/456/logs"
         baseline = json.loads(values[jobs_path])
         log = values[log_path]
         cases = [
@@ -256,7 +256,7 @@ class GitHubProvenanceTests(unittest.TestCase):
         with patch("release_b_github_browser_preflight.subprocess.run") as no_call:
             for invalid in (f"{REPO}/actions/runs/0/jobs/456/logs",
                             f"{REPO}/actions/runs/123/jobs/0/logs",
-                            f"{REPO}/actions/jobs/456/logs",
+                            f"{REPO}/actions/runs/123/jobs/456/logs",
                             f"{REPO}/actions/runs/123/jobs/456/logs/extra"):
                 with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                     api_get(invalid, max_bytes=1024)
