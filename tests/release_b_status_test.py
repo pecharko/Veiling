@@ -23,6 +23,22 @@ class ReleaseBStatusTest(unittest.TestCase):
         self.assertEqual(result["browser_acceptance"], "PENDING")
         self.assertEqual(result["release_administration"], "OPEN")
 
+    def test_protected_snapshot_v8_run_is_tracked_but_not_accepted(self):
+        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release"}
+        result = summarize(run, self.artifacts(
+            "snapshot-v8-evidence-123", "snapshot-v8-rollback-123"))
+        self.assertEqual(result["status"], "REVIEW_ARTIFACT_CONTENTS")
+        self.assertEqual(result["release_workflow"], run["name"])
+        self.assertFalse(result["deployment_contents_verified"])
+        self.assertEqual(result["independent_ovh_readback"], "PENDING")
+        self.assertEqual(result["browser_acceptance"], "PENDING")
+
+    def test_snapshot_v8_requires_matching_artifacts(self):
+        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release"}
+        result = summarize(run, self.artifacts(
+            "shared-ovh-evidence-123", "shared-ovh-rollback-123"))
+        self.assertEqual(result["status"], "INCOMPLETE_ARTIFACTS")
+
     def test_missing_artifact_fails_closed(self):
         result = summarize(RUN, self.artifacts("shared-ovh-evidence-123"))
         self.assertEqual(result["status"], "INCOMPLETE_ARTIFACTS")
