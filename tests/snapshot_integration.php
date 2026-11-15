@@ -215,6 +215,10 @@ $legacyZip->addFromString('manifest.json',json_encode($legacyManifest,JSON_THROW
 $legacyZip->close();
 assert_throws(fn()=>snap_verified($legacyName),'Niet-ondersteund snapshotformaat',
     'Older v7 snapshot is refused even when its archive checksums are valid');
+assert_throws(fn()=>snap_restore($pdo,$legacyName),'Niet-ondersteund snapshotformaat',
+    'Older v7 snapshot cannot enter the restore photo or database swap');
+verify(!restore_journal_pending() && is_file($original) && is_file($sellerPhoto),
+    'Rejected v7 restore preserves the active photo tree and leaves no maintenance journal');
 verify(snap_verified($name)[0]['format']==='41lokeren-v8-catalog-only',
     'Rejected old format does not modify the current v8 snapshot');
 if(!unlink($legacyPath))throw new RuntimeException('Cannot delete disposable legacy fixture');
