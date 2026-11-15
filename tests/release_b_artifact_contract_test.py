@@ -12,7 +12,9 @@ DIGEST = "b" * 64
 OLD = "c" * 64
 RUN = {"id": 123, "name": "Shared OVH manifest release with rollback",
        "event": "workflow_dispatch", "head_sha": SHA, "head_branch": "main",
-       "status": "completed", "conclusion": "success"}
+       "status": "completed", "conclusion": "success",
+       "repository": {"full_name": "pecharko/Veiling"},
+       "path": ".github/workflows/shared-ovh-release.yml"}
 MANIFEST = {"schema": 1, "files": [
     {"path": "catalogus-public/assets/sample.css", "source_sha256": DIGEST, "remote_sha256": OLD}
 ]}
@@ -35,7 +37,9 @@ class ReleaseBArtifactContractTest(unittest.TestCase):
     def test_reject_run_mismatch(self):
         for key, value in (("id", 124), ("head_sha", "d" * 40),
                            ("event", "pull_request"), ("head_branch", "preview/ui"),
-                           ("status", "in_progress"), ("conclusion", "failure")):
+                           ("status", "in_progress"), ("conclusion", "failure"),
+                           ("path", ".github/workflows/other.yml"),
+                           ("repository", {"full_name": "attacker/other"})):
             with self.subTest(key=key), self.assertRaises(ValueError):
                 reconcile({**RUN, key: value}, EVIDENCE, MANIFEST, "sample-release")
 
@@ -58,7 +62,8 @@ class ReleaseBArtifactContractTest(unittest.TestCase):
             reconcile(RUN, EVIDENCE, altered, "sample-release")
 
     def test_supports_snapshot_v8_without_cross_release_promotions(self):
-        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release"}
+        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release",
+               "path": ".github/workflows/snapshot-v8-protected-release.yml"}
         result = reconcile(run, EVIDENCE, MANIFEST, "sample-release")
         self.assertEqual(result["status"], "UPLOADER_ARTIFACT_CONTENT_CONSISTENT_ONLY")
         self.assertEqual(result["browser_acceptance"], "PENDING")
