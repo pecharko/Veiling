@@ -23,6 +23,15 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
     $st->execute([$sellerId]);
     $seller=$st->fetch(PDO::FETCH_ASSOC);
     if (!$seller || $seller['seller_type']!=='kunstenaar') throw new InvalidArgumentException('Kunstenaar niet gevonden.');
+    if ($status===1) {
+      $portraitQuery=$pdo->prepare("SELECT path FROM seller_images WHERE seller_id=? AND image_kind='portrait' AND slot=1");
+      $portraitQuery->execute([$sellerId]);
+      $portrait=$portraitQuery->fetchColumn();
+      if (!is_string($portrait) || !preg_match('~^uploads/[a-zA-Z0-9/_.-]+\\.(?:webp|jpg|png)$~D',$portrait)
+          || str_contains($portrait,'..') || !is_file(dirname(__DIR__).'/catalogus-public/'.$portrait)) {
+        throw new InvalidArgumentException('Publiceren kan alleen met een opgeslagen portretfoto van de kunstenaar.');
+      }
+    }
     if ((int)$seller['artist_published']!==$status) {
       $name=seller_actor_name($pdo,$actorId);
       $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
