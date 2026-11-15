@@ -57,4 +57,8 @@ if (!str_contains($overview,'require_auth()')) throw new RuntimeException('Selle
 foreach (['.seller-stats','.seller-fields-grid','.seller-artist-fields[hidden]','@media(max-width:650px)'] as $required) {
   if (!str_contains($css,$required)) throw new RuntimeException('Missing responsive seller styling: '.$required);
 }
+// Required marker and label must occupy one header row, so the two artist inputs align.
+if (!str_contains($editor, '<span>Kunstenaarsnaam <span class="lot-required">*</span></span><input required name="artist_name"')) {
+  throw new RuntimeException('Artist name label must keep required marker inline above input.');
+}
 echo "PASS separate seller list and new/edit form share the kavels design.\n";
