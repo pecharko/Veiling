@@ -693,19 +693,20 @@ try {
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
   // Artist publication is role-protected, and publication locks even an assistant's own artist.
-  [$assistantArtistStatus] = request_page('/admin/verkoper.php', [
+  [$assistantArtistStatus] = request_page('/admin/kunstenaar-bewerken.php', [
     'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'kunstenaar',
     'name'=>'Eigen testkunstenaar','email'=>'eigen-kunstenaar@example.invalid',
     'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
-    'artist_name'=>'Eigen Atelier','artist_url'=>'https://example.org'
-  ]);
+    'artist_name'=>'Eigen Atelier','artist_url'=>'https://example.org',
+    'photo_portrait_1'=>new CURLFile($artistFixture,'image/png','eigen-portret.png')
+  ],true);
   $ownArtistId=(int)db()->query("SELECT id FROM lot_sellers WHERE email='eigen-kunstenaar@example.invalid'")->fetchColumn();
   claim($assistantArtistStatus===303 && $ownArtistId>0
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
     'Assistant creates artist with new status by default');
-  [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId);
   claim($ownArtistStatus===200, 'Assistant can edit own unpublished artist');
-  [$blockedPublish,$blockedPublishPage]=request_page('/admin/verkopers.php', [
+  [$blockedPublish,$blockedPublishPage]=request_page('/admin/kunstenaars.php', [
     'csrf'=>token($ownArtistEditor),'action'=>'artist-publication',
     'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'
   ]);
@@ -713,10 +714,10 @@ try {
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
     'Forged assistant publication request is denied');
   db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
-  [$adminArtistListStatus,$adminArtistList]=request_page('/admin/verkopers.php');
-  claim($adminArtistListStatus===200 && str_contains($adminArtistList,'Wijzig status'),
+  [$adminArtistListStatus,$adminArtistList]=request_page('/admin/kunstenaars.php');
+  claim($adminArtistListStatus===200 && str_contains($adminArtistList,'seller-status-form'),
     'Administrator sees artist status controls');
-  [$adminPublishStatus]=request_page('/admin/verkopers.php', [
+  [$adminPublishStatus]=request_page('/admin/kunstenaars.php', [
     'csrf'=>token($adminArtistList),'action'=>'artist-publication',
     'seller_id'=>(string)$ownArtistId,'artist_status'=>'published'
   ]);
@@ -724,9 +725,9 @@ try {
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===1,
     'Administrator publishes artist');
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
-  [$lockedArtistStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  [$lockedArtistStatus]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId);
   claim($lockedArtistStatus===403, 'Assistant cannot open own published artist editor');
-  [$lockedArtistSaveStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId, [
+  [$lockedArtistSaveStatus]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId, [
     'csrf'=>token($ownArtistEditor),'action'=>'save','seller_id'=>(string)$ownArtistId,
     'seller_type'=>'kunstenaar','name'=>'Unauthorized change','email'=>'eigen-kunstenaar@example.invalid',
     'street'=>'Voorbeeldstraat','house_number'=>'7','postal_code'=>'9160','municipality'=>'Lokeren',
@@ -735,20 +736,20 @@ try {
   claim($lockedArtistSaveStatus===403
     && db()->query('SELECT name FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()==='Eigen testkunstenaar',
     'Assistant cannot save changes to own published artist');
-  [$lockedArtistPhotoStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId, [
+  [$lockedArtistPhotoStatus]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId, [
     'csrf'=>token($ownArtistEditor),'action'=>'delete-photo','seller_id'=>(string)$ownArtistId,
     'kind'=>'work','slot'=>'1'
   ]);
   claim($lockedArtistPhotoStatus===403, 'Assistant cannot change photos of own published artist');
-  [$lockedArtistDeleteStatus,$lockedArtistDeletePage]=request_page('/admin/verkopers.php', [
+  [$lockedArtistDeleteStatus,$lockedArtistDeletePage]=request_page('/admin/kunstenaars.php', [
     'csrf'=>token($ownArtistEditor),'action'=>'delete','seller_id'=>(string)$ownArtistId
   ]);
   claim($lockedArtistDeleteStatus===403 && str_contains($lockedArtistDeletePage,'Geen bewerkingsrechten')
     && (int)db()->query('SELECT COUNT(*) FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===1,
     'Assistant cannot delete own published artist');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
-  [$masterArtistListStatus,$masterArtistList]=request_page('/admin/verkopers.php');
-  [$masterUnpublishStatus]=request_page('/admin/verkopers.php', [
+  [$masterArtistListStatus,$masterArtistList]=request_page('/admin/kunstenaars.php');
+  [$masterUnpublishStatus]=request_page('/admin/kunstenaars.php', [
     'csrf'=>token($masterArtistList),'action'=>'artist-publication',
     'seller_id'=>(string)$ownArtistId,'artist_status'=>'unpublished'
   ]);
@@ -756,7 +757,7 @@ try {
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===0,
     'Veilingmeester may unpublish artist');
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
-  [$unlockedArtistStatus]=request_page('/admin/verkoper.php?id='.$ownArtistId);
+  [$unlockedArtistStatus]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId);
   claim($unlockedArtistStatus===200, 'Assistant regains own artist edit access after unpublishing');
   // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
   db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
@@ -785,7 +786,7 @@ try {
     'Unowned seller is read-only in assistant seller overview');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
-  claim($masterListStatus===200 && str_contains($masterListPage,'Alle verkopers')
+  claim($masterListStatus===200 && str_contains($masterListPage,'Verkopers beheren')
     && !str_contains($masterListPage,'Aangemaakt door / op')
     && !str_contains($masterListPage,'Laatst gewijzigd door / op'),
     'Auctioneer sees seller overview without audit columns');
@@ -849,7 +850,7 @@ try {
     'Auction-only on market aborts entire publication transaction');
 
   // A lot now stores only the seller foreign key; private bank data is not duplicated.
-  [$status, $newSellerForm] = request_page('/admin/verkoper.php');
+  [$status, $newSellerForm] = request_page('/admin/kunstenaar-bewerken.php');
   $sellerCreate=[
     'csrf'=>token($newSellerForm),'action'=>'save','seller_type'=>'kunstenaar',
     'name'=>'Fictieve maker','email'=>'maker@example.invalid','street'=>'Teststraat',
@@ -857,12 +858,12 @@ try {
     'bank_account_name'=>'Fictieve maker','bank_account_iban'=>'BE68 5390 0754 7034',
     'artist_name'=>'Demo artiest','artist_url'=>'https://example.org/artist'
   ];
-  [$status] = request_page('/admin/verkoper.php',$sellerCreate);
+  [$status] = request_page('/admin/kunstenaar-bewerken.php',$sellerCreate);
   $artistSellerId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Fictieve maker'")->fetchColumn();
   claim($status===303 && $artistSellerId>0,'Artist seller created in private seller registry');
   [$status, $artistForm] = request_page('/admin/kavel.php');
   claim($status===200 && str_contains($artistForm,'name="seller_id"')
-    && str_contains($artistForm,'+ Nieuwe verkoper')
+    && str_contains($artistForm,'+ Nieuwe particulier')
     && !str_contains($artistForm,'name="artist_name"')
     && !str_contains($artistForm,'name="bank_account_iban"'),
     'Lot form uses seller selector and private seller creation link only');
