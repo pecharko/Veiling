@@ -18,9 +18,9 @@ MAX_JOB_LOG = 262144
 # gh run view --log prefixes lines with job and step labels (tab-separated).
 # Accept only those bounded, non-control label fields before the timestamp.
 LOG_LINE = re.compile(
-    r"^(?:[^\\t\\r\\n]{1,120}\\t){0,2}"
-    r"\\d{4}-\\d\\d-\\d\\dT[^\\s]+Z\\s+"
-    r"(RELEASE_ID|DEPLOY_CONFIRMATION):\\s+(\\S+)\\s*$"
+    r"^(?:[^\t\r\n]{1,120}\t){0,2}"
+    r"\d{4}-\d\d-\d\dT[^\s]+Z\s+"
+    r"(RELEASE_ID|DEPLOY_CONFIRMATION):\s+(\S+)\s*$"
 )
 
 def release_job_id(run, jobs):
