@@ -19,8 +19,17 @@ if ($lintExit!==0) throw new RuntimeException('Seller search endpoint has invali
 
 $checks=[
   'no giant seller dropdown'=>!str_contains($editor,'seller_choices($pdo)')
-    && str_contains($editor,'SELECT id,name,artist_name,seller_type FROM lot_sellers WHERE id=?')
+    && str_contains($editor,"LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=?")
     && str_contains($editor,'select name="seller_id" id="lot-seller-id"'),
+  'selected artist portrait shown on initial render and when selection changes'=>str_contains($editor,'$selectedSellerPortrait=')
+    && str_contains($editor,'seller_artist_has_portrait_path((string)($selectedSeller[\'portrait_path\']??\'\'))')
+    && str_contains($editor,'id="lot-seller-selection-icon"')
+    && str_contains($editor,'<img src="<?=e($selectedSellerPortrait)?>"')
+    && str_contains($js,'function showSelectedIcon(item)')
+    && str_contains($js,'showSelectedIcon(item);')
+    && str_contains($js,"selectedIcon.replaceChildren();")
+    && str_contains($js,"img.addEventListener('error'")
+    && str_contains($css,'.lot-seller-selection-icon img'),
   'searchable modal accessible from lot editor'=>str_contains($editor,'id="lot-seller-dialog"')
     && str_contains($editor,'aria-labelledby="lot-seller-dialog-title"')
     && str_contains($editor,'data-seller-search')
