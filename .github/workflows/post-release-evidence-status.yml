@@ -62,8 +62,9 @@ jobs:
           python3 scripts/release_b_status.py < /tmp/release-b-input.json >> "$GITHUB_STEP_SUMMARY"
       - name: Verify offline status contract
         run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
-      - name: Independently correlate GitHub artifact contents with immutable release manifest
+      - name: Correlate GitHub artifact contents with immutable release manifest (not independent OVH readback)
         env:
+          PYTHONPATH: scripts
           GH_TOKEN: ${{ github.token }}
           GH_REPOSITORY: ${{ github.repository }}
         shell: bash
