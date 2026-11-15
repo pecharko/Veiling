@@ -8,7 +8,9 @@ from release_b_status import summarize
 SHA = "a" * 40
 RUN = {"id": 123, "name": "Shared OVH manifest release with rollback",
        "event": "workflow_dispatch", "head_sha": SHA, "head_branch": "main",
-       "status": "completed", "conclusion": "success"}
+       "status": "completed", "conclusion": "success",
+       "repository": {"full_name": "pecharko/Veiling"},
+       "path": ".github/workflows/shared-ovh-release.yml"}
 
 class ReleaseBStatusTest(unittest.TestCase):
     def artifacts(self, *names):
@@ -24,7 +26,8 @@ class ReleaseBStatusTest(unittest.TestCase):
         self.assertEqual(result["release_administration"], "OPEN")
 
     def test_protected_snapshot_v8_run_is_tracked_but_not_accepted(self):
-        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release"}
+        run = {**RUN, "name": "Snapshot v8 catalog-only protected two-file release",
+               "path": ".github/workflows/snapshot-v8-protected-release.yml"}
         result = summarize(run, self.artifacts(
             "snapshot-v8-evidence-123", "snapshot-v8-rollback-123"))
         self.assertEqual(result["status"], "REVIEW_ARTIFACT_CONTENTS")
@@ -56,7 +59,9 @@ class ReleaseBStatusTest(unittest.TestCase):
 
     def test_wrong_source_rejected(self):
         for changed in ({"head_branch": "preview/ui"}, {"event": "pull_request"},
-                        {"name": "Other workflow"}, {"head_sha": "bad"}):
+                        {"name": "Other workflow"}, {"head_sha": "bad"},
+                        {"path": ".github/workflows/other.yml"},
+                        {"repository": {"full_name": "attacker/other"}}):
             with self.assertRaises(ValueError):
                 summarize({**RUN, **changed}, self.artifacts())
 
