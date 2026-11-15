@@ -4,6 +4,11 @@ require dirname(__DIR__,2).'/private/bootstrap.php';
 require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
+$sellerScreen=($sellerScreen??'particulier')==='kunstenaar'?'kunstenaar':'particulier';
+$screenUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php';
+$editorUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaar-bewerken.php':'admin/verkoper.php';
+$screenTitle=$sellerScreen==='kunstenaar'?'Kunstenaars beheren':'Verkopers beheren';
+$screenSingular=$sellerScreen==='kunstenaar'?'kunstenaar':'verkoper';
 $pdo=db();
 $error='';
 if (is_post()) {
@@ -11,6 +16,13 @@ if (is_post()) {
   if (!in_array(($_POST['action']??''),['delete','artist-publication'],true)) { http_response_code(400); exit('Ongeldige actie.'); }
   $sellerId=filter_var($_POST['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
   if ($sellerId===false || $sellerId===null) { http_response_code(400); exit('Ongeldige verkoper.'); }
+  // Never allow an artist operation on the private-seller screen or vice versa.
+  $screenCheck=$pdo->prepare('SELECT seller_type FROM lot_sellers WHERE id=?');
+  $screenCheck->execute([(int)$sellerId]);
+  if ($screenCheck->fetchColumn()!==$sellerScreen) { http_response_code(404); exit('Verkoper niet gevonden.'); }
+  if (($_POST['action']??'')==='artist-publication' && $sellerScreen!=='kunstenaar') {
+    http_response_code(403); exit('Deze actie is enkel beschikbaar bij kunstenaars.');
+  }
   try {
     catalog_lock_for_request($pdo);
     if (!seller_can_manage(effective_admin_role())) { http_response_code(403); exit('Geen toegang.'); }
@@ -32,13 +44,13 @@ if (is_post()) {
         $key='pagina_'.$returnGroup;
         $returnParams[$key]=max(1,(int)($_GET[$key]??1));
       }
-      header('Location: '.url('admin/verkopers.php',$returnParams).'#seller-row-'.(int)$sellerId,true,303);
+      header('Location: '.url($screenUrl,$returnParams).'#seller-row-'.(int)$sellerId,true,303);
       exit;
     }
     seller_require_edit($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     seller_delete($pdo,(int)$sellerId,effective_admin_role(),(int)$_SESSION['admin_id']);
     flash('Verkoper verwijderd.');
-    redirect('admin/verkopers.php');
+    redirect($screenUrl);
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
   } catch (PDOException $ex) {
@@ -60,12 +72,12 @@ try {
 } catch (PDOException $e) {
   error_log('[Verkopersbeheer] Laden mislukt.');
   http_response_code(503);
-  admin_top('Verkopers beheren');
+  admin_top($screenTitle);
   echo '<div class="alert warning" role="alert">Verkopersbeheer is nog niet beschikbaar. Controleer of de afzonderlijke databasemigratie in de lokale testomgeving is toegepast.</div>';
   admin_bottom();
   exit;
 }
-admin_top('Verkopers beheren');
+admin_top($screenTitle);
 ?>
 <?php
 $filterStatus=in_array(($_GET['status']??''),['new','published','unpublished'],true)?(string)$_GET['status']:'';
@@ -74,11 +86,12 @@ $perPage=in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)($_GET['pe
 function seller_page_url(string $groupType,int $page): string {
   $params=array_intersect_key($_GET,array_flip(['q','status','per_page','pagina_kunstenaar','pagina_particulier']));
   $params['pagina_'.$groupType]=$page;
-  return url('admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
+  return url($GLOBALS['sellerScreen']==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
 }
 $artistCount=count(array_filter($rows,static fn($row)=>$row['seller_type']==='kunstenaar'));
 $privateCount=count($rows)-$artistCount;
-$filteredRows=array_values(array_filter($rows,static function($row) use ($filterStatus,$search):bool {
+$filteredRows=array_values(array_filter($rows,static function($row) use ($sellerScreen,$filterStatus,$search):bool {
+  if ($row['seller_type']!==$sellerScreen) return false;
   if ($filterStatus!=='' && $row['seller_type']==='kunstenaar'
       && (int)$row['artist_published']!==['unpublished'=>0,'published'=>1,'new'=>2][$filterStatus]) return false;
   return $search==='' || mb_stripos((string)$row['name'],$search)!==false
@@ -86,26 +99,21 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
 }));
 ?>
 <div class="dashboard-modern seller-manager">
-  <p class="dashboard-subtitle">Beheer kunstenaars en particulieren op dezelfde manier als je kavels beheert. Contactgegevens en bankgegevens blijven privé.</p>
+  <p class="dashboard-subtitle"><?=$sellerScreen==='kunstenaar'?'Beheer kunstenaars, portretten en publicatiestatus. Contact- en bankgegevens blijven privé.':'Beheer particuliere verkopers en hun contact- en bankgegevens op één afgeschermde plaats.'?></p>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
-  <div class="dashboard-stats seller-stats" aria-label="Verkopersstatistieken">
-    <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php'))?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>ALLE VERKOPERS</small><div><strong><?=count($rows)?></strong> verkopers</div></div></a>
-    <a class="dashboard-stat" href="#seller-list-kunstenaar-heading"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>KUNSTENAARS</small><div><strong><?=$artistCount?></strong> kunstenaars</div></div></a>
-    <a class="dashboard-stat" href="#seller-list-particulier-heading"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>PARTICULIEREN</small><div><strong><?=$privateCount?></strong> particulieren</div></div></a>
-  </div>
   <section class="dashboard-panel" aria-labelledby="seller-filter-heading">
     <div class="dashboard-panel-heading">
-      <div><h2 id="seller-filter-heading">Verkopers beheren</h2><p>Zoek binnen kunstenaars en particulieren. Beide groepen worden afzonderlijk weergegeven.</p></div>
-      <a class="primary" href="<?=e(url('admin/verkoper.php'))?>">+ Nieuwe verkoper</a>
+      <div><h2 id="seller-filter-heading"><?=e($screenTitle)?></h2><p>Zoek binnen <?=e($sellerScreen==='kunstenaar'?'kunstenaars':'particuliere verkopers')?>.</p></div>
+      <a class="primary" href="<?=e(url($editorUrl))?>">+ Nieuwe <?=e($screenSingular)?></a>
     </div>
     <form class="dashboard-filters seller-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
-      <label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label>
+      <?php if($sellerScreen==='kunstenaar'): ?><label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label><?php endif; ?>
       <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
   </section>
-  <?php foreach (['kunstenaar'=>'Kunstenaars','particulier'=>'Particulieren'] as $groupType=>$groupLabel): ?>
+  <?php foreach ([$sellerScreen=>($sellerScreen==='kunstenaar'?'Kunstenaars':'Particuliere verkopers')] as $groupType=>$groupLabel): ?>
     <?php
       $allGroupRows=array_values(array_filter($filteredRows,static fn($row)=>$row['seller_type']===$groupType));
       $groupTotal=count($allGroupRows);
@@ -142,7 +150,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
                     <span class="seller-portrait-placeholder" role="img" aria-label="Geen portret beschikbaar">👤</span>
                   <?php endif; ?>
                 </td>
-                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
+                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
                 <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
               <?php else: ?>
                 <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url('admin/verkoper.php',['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
@@ -150,7 +158,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
                 <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?>
-                  <form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['status'=>$filterStatus,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
+                  <form method="post" class="seller-status-form" action="<?=e(url($screenUrl,array_merge(['status'=>$filterStatus,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
                     <?=csrf_field()?>
                     <input type="hidden" name="action" value="artist-publication">
                     <input type="hidden" name="seller_id" value="<?=(int)$r['id']?>">
@@ -172,7 +180,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               </div></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$groupRows): ?><tr><td colspan="<?=$groupType==='kunstenaar'?5:3?>">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url('admin/verkopers.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+          <?php if (!$groupRows): ?><tr><td colspan="<?=$groupType==='kunstenaar'?5:3?>">Geen <?=e(mb_strtolower($groupLabel))?> gevonden. <a href="<?=e(url($screenUrl))?>">Wis filters</a>.</td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
