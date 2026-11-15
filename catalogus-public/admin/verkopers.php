@@ -106,7 +106,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
       <div><h2 id="seller-filter-heading"><?=e($screenTitle)?></h2><p>Zoek binnen <?=e($sellerScreen==='kunstenaar'?'kunstenaars':'particuliere verkopers')?>.</p></div>
       <a class="primary" href="<?=e(url($editorUrl))?>">+ Nieuwe <?=e($screenSingular)?></a>
     </div>
-    <form class="dashboard-filters seller-filters" method="get" role="search">
+    <form class="dashboard-filters seller-filters <?=$sellerScreen==='kunstenaar'?'':'seller-filters-private'?>" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
       <?php if($sellerScreen==='kunstenaar'): ?><label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label><?php endif; ?>
       <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
