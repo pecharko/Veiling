@@ -297,13 +297,14 @@ $availableCategories = lot_category_names($pdo);
 $selectedSeller=null;
 if (filter_var($d['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])!==false) {
   try {
-    $sellerQuery=$pdo->prepare('SELECT id,name,artist_name,seller_type FROM lot_sellers WHERE id=?');
+    $sellerQuery=$pdo->prepare("SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=?");
     $sellerQuery->execute([(int)$d['seller_id']]);
     $selectedSeller=$sellerQuery->fetch(PDO::FETCH_ASSOC) ?: null;
   } catch (PDOException $ex) { error_log('[Kavel verkoper] Selectie laden mislukt.'); }
 }
 $selectedSellerName=$selectedSeller===null ? '' : (string)($selectedSeller['seller_type']==='kunstenaar' ? ($selectedSeller['artist_name']?:$selectedSeller['name']) : $selectedSeller['name']);
 $selectedSellerType=$selectedSeller===null ? '' : ($selectedSeller['seller_type']==='kunstenaar'?'Kunstenaar':'Particulier');
+$selectedSellerPortrait=$selectedSeller!==null && $selectedSeller['seller_type']==='kunstenaar' && seller_artist_has_portrait_path((string)($selectedSeller['portrait_path']??'')) ? url((string)$selectedSeller['portrait_path']) : null;
 admin_top($lot?'Kavel '.str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT).' bewerken':'Nieuw kavel');
 if (!$canEditLot) echo '<div class="alert warning" role="alert">Alleen de maker van een eigen conceptkavel, de Veilingmeester of de Administrator mag dit kavel wijzigen. Dit kavel is alleen-lezen.</div>';
 $cancelAuctionWarning = 'Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
@@ -365,7 +366,7 @@ if ($error === $cancelAuctionWarning) {
                 <?php if($selectedSeller): ?><option value="<?=(int)$selectedSeller['id']?>" selected><?=e($selectedSellerName.' · '.$selectedSellerType)?></option><?php endif; ?>
               </select>
               <div class="lot-seller-selection">
-                <span class="lot-seller-selection-icon" aria-hidden="true">👤</span>
+                <span class="lot-seller-selection-icon" id="lot-seller-selection-icon" aria-hidden="true"><?php if($selectedSellerPortrait): ?><img src="<?=e($selectedSellerPortrait)?>" alt="" width="38" height="38" loading="lazy" decoding="async"><?php else: ?><?=$selectedSeller && $selectedSeller['seller_type']==='kunstenaar'?'🎨':'👤'?><?php endif; ?></span>
                 <strong id="lot-seller-selected"><?=e($selectedSeller?$selectedSellerName.' · '.$selectedSellerType:'Geen verkoper geselecteerd (schenking)')?></strong>
                 <button type="button" class="secondary" id="lot-seller-open" data-search-url="<?=e(url('admin/seller-search.php'))?>" <?=$canEditLot?'':'disabled'?>>Zoek verkoper</button>
               </div>
