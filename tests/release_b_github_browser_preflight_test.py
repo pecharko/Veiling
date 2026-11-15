@@ -83,8 +83,8 @@ def fixtures():
         ]
     }]}
     log = (
-        f"2026-11-14T23:08:20.6803142Z   RELEASE_ID: {RID}\n"
-        f"2026-11-14T23:08:20.6804216Z   DEPLOY_CONFIRMATION: DEPLOY-{RID}-{SHA}\n"
+        f"release\tRun actions/checkout@v4\t2026-11-14T23:08:20.6803142Z   RELEASE_ID: {RID}\n"
+        f"release\tRun actions/checkout@v4\t2026-11-14T23:08:20.6804216Z   DEPLOY_CONFIRMATION: DEPLOY-{RID}-{SHA}\n"
     ).encode()
     responses = {
         f"{REPO}/actions/runs/123": serialize(run),
