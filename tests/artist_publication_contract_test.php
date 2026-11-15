@@ -15,7 +15,7 @@ $checks=[
   'artist publication requires saved portrait'=>str_contains($read('private/lot_sellers.php'), 'Publiceren kan alleen met een opgeslagen portretfoto')
     && str_contains($read('private/lot_sellers.php'), "image_kind='portrait'")
     && str_contains($read('private/lot_sellers.php'), 'is_file('),
-  'published artist portrait cannot be removed'=>str_contains($read('private/seller_images.php'), "if ($kind==='portrait')")
+  'published artist portrait cannot be removed'=>str_contains($read('private/seller_images.php'), "if (\$kind==='portrait')")
     && str_contains($read('private/seller_images.php'), "artist_published")
     && str_contains($read('private/seller_images.php'), 'Trek eerst de publicatie'),
   'editor status restricted to manager'=>str_contains($read('catalogus-public/admin/verkoper.php'), 'seller_can_publish_artist($actorRole)')
