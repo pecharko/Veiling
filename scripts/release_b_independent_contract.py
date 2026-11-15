@@ -12,7 +12,6 @@ from ovh_deploy_evidence_contract import validate as validate_upload
 
 SHA = re.compile(r"^[0-9a-f]{40}$")
 DIGEST = re.compile(r"^[0-9a-f]{64}$")
-RUN_ID = re.compile(r"^[1-9][0-9]*$")
 RELEASE = re.compile(r"^[a-z0-9][a-z0-9-]{2,60}$")
 
 def fields(obj, required):
