@@ -8,7 +8,7 @@ $snap=file_get_contents($root.'/private/snapshots.php');
 $migration=file_get_contents($root.'/database/migrations/20261111_lot_seller_dedup.sql');
 if (!is_string($editor)||!is_string($catalog)||!is_string($detail)
   ||!is_string($snap)||!is_string($migration)) throw new RuntimeException('Missing source under review.');
-foreach (['name="seller_id"','+ Nieuwe verkoper','seller_valid_id($pdo','seller_id=? WHERE id=?','INSERT INTO lots'] as $key)
+foreach (['name="seller_id"','+ Nieuwe particulier','seller_valid_id($pdo','seller_id=? WHERE id=?','INSERT INTO lots'] as $key)
   if (!str_contains($editor,$key)) throw new RuntimeException('Missing lot seller relation: '.$key);
 foreach (['artist_name','artist_url','bank_account_name','bank_account_iban'] as $field) {
   if (str_contains($editor,'name="'.$field.'"') || str_contains($editor,'lots SET '.$field))
@@ -25,6 +25,10 @@ foreach ([$catalog,$detail] as $source) {
 }
 foreach (["'lot_sellers'","'seller_id'","41lokeren-v7-lot-audit"] as $key)
   if (!str_contains($snap,$key)) throw new RuntimeException('Seller-aware snapshots missing '.$key);
-if (!str_contains($editor,'new DOMParser()') || !str_contains($editor,'sellerSelect.add('))
-  throw new RuntimeException('New seller must be available without losing unsaved lot input.');
+$picker=file_get_contents($root.'/catalogus-public/admin/lot-seller-picker.js');
+if (!is_string($picker) || !str_contains($picker,'lot-seller-created')
+    || !str_contains($picker,'new Option(')
+    || !str_contains($picker,'fetchSellers({id})')
+    || !str_contains($editor,'lot-seller-picker.js'))
+  throw new RuntimeException('New seller must be selectable without losing unsaved lot input.');
 echo "PASS central seller relation, public privacy, snapshot format and approved column scope.\n";
