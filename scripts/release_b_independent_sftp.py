@@ -11,6 +11,7 @@ import re
 import stat
 
 from ovh_deploy_evidence_contract import validate as validate_uploader
+from shared_ovh_release import ALLOWED_SUFFIX, PROTECTED, HASH
 
 MAX_FILE = 8 * 1024 * 1024
 COLLECTION_ID = re.compile(r"^[a-z0-9][a-z0-9-]{7,80}$")
@@ -31,7 +32,39 @@ def validate_path(path):
             or any(not SAFE_PART.fullmatch(p) or p in ("", ".", "..") or p.startswith(".")
                    for p in path.split("/"))):
         raise ValueError("Unsafe independent readback target")
+    if not path.endswith(ALLOWED_SUFFIX) or any(path.startswith(p) for p in PROTECTED):
+        raise ValueError("Protected or unsupported release target")
     return path
+
+
+def validate_manifest(upload, manifest):
+    """Require all paths and source/baseline hashes match a separately reviewed manifest.
+
+    The caller must authenticate the immutable GitHub provenance of *both* inputs.
+    This function is a consistency gate, not an attestation of provenance.
+    """
+    if not isinstance(manifest, dict) or set(manifest) != {"schema", "files"} or type(manifest["schema"]) is not int or manifest["schema"] != 1:
+        raise ValueError("Invalid release manifest")
+    entries = manifest["files"]
+    if not isinstance(entries, list) or len(entries) != len(upload["files"]):
+        raise ValueError("Manifest file count mismatch")
+    expected = {}
+    for item in entries:
+        if not isinstance(item, dict) or set(item) != {"path", "source_sha256", "remote_sha256"}:
+            raise ValueError("Invalid release manifest entry")
+        path = validate_path(item["path"])
+        if path in expected:
+            raise ValueError("Duplicate manifest path")
+        if not isinstance(item["source_sha256"], str) or not HASH.fullmatch(item["source_sha256"]):
+            raise ValueError("Invalid manifest source digest")
+        baseline = item["remote_sha256"]
+        if not isinstance(baseline, str) or (baseline != "ABSENT" and not HASH.fullmatch(baseline)):
+            raise ValueError("Invalid manifest baseline digest")
+        expected[path] = (item["source_sha256"], baseline)
+    observed = {row["path"]: (row["source_sha256"], row["baseline_sha256"]) for row in upload["files"]}
+    if expected != observed:
+        raise ValueError("Uploader evidence differs from approved manifest")
+    return list(expected)
 
 
 def check_parent_directories(sftp, base, path):
@@ -70,7 +103,7 @@ def read_one(sftp, full_path):
     return hasher.hexdigest()
 
 
-def collect(sftp, remote_root, upload, collection_id):
+def collect(sftp, remote_root, upload, collection_id, manifest):
     """Collect independently supplied read-only SFTP hashes for exact files.
 
     This output is a *claim*, not an authenticated attestation by itself.
@@ -81,9 +114,7 @@ def collect(sftp, remote_root, upload, collection_id):
     if not isinstance(collection_id, str) or not COLLECTION_ID.fullmatch(collection_id):
         raise ValueError("Invalid collection id")
     base = validate_root(remote_root)
-    paths = [validate_path(item["path"]) for item in upload["files"]]
-    if len(paths) != len(set(paths)):
-        raise ValueError("Duplicate targets")
+    paths = validate_manifest(upload, manifest)
     # Prevalidate all paths *before* any network read.
     rows = []
     for path in paths:
