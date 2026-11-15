@@ -10,6 +10,8 @@ on:
       - 'scripts/release_b_independent_sftp.py'
       - 'scripts/release_b_collect_readonly.py'
       - 'scripts/release_b_public_browser.py'
+      - 'scripts/release_b_closeout_report.py'
+      - 'tests/release_b_closeout_report_test.py'
       - 'scripts/release_b_browser_run.py'
       - 'tests/release_b_independent_sftp_test.py'
       - 'tests/release_b_collect_readonly_test.py'
@@ -42,6 +44,8 @@ jobs:
       - run: python3 -B -m unittest discover -s tests -p release_b_independent_sftp_test.py -v
       - run: python3 -B -m unittest discover -s tests -p release_b_collect_readonly_test.py -v
       - run: python3 -B -m unittest discover -s tests -p release_b_public_browser_test.py -v
+      - run: python3 -B -m unittest discover -s tests -p release_b_closeout_report_test.py -v
+      - run: python3 -m py_compile scripts/release_b_closeout_report.py
       - run: python3 -m py_compile scripts/release_b_independent_sftp.py scripts/release_b_collect_readonly.py scripts/release_b_public_browser.py scripts/release_b_browser_run.py
       - run: python3 -m py_compile scripts/release_b_status.py scripts/release_b_artifact_contract.py scripts/release_b_zip_review.py scripts/release_b_independent_contract.py
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/post-release-evidence-status.yml
@@ -74,6 +78,7 @@ jobs:
               json.dump({"run": run, "artifacts": artifacts}, f)
           PY
           python3 scripts/release_b_status.py < /tmp/release-b-input.json >> "$GITHUB_STEP_SUMMARY"
+          python3 scripts/release_b_closeout_report.py < /tmp/release-b-input.json >> "$GITHUB_STEP_SUMMARY"
       - name: Verify offline status contract
         run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
       - name: Correlate GitHub artifact contents with immutable release manifest (not independent OVH readback)
