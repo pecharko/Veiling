@@ -18,6 +18,12 @@ if (is_post()) {
       $status=(string)($_POST['artist_status']??'');
       if (!in_array($status,['new','published','unpublished'],true)) throw new InvalidArgumentException('Ongeldige publicatiestatus.');
       seller_set_artist_publication($pdo,(int)$sellerId,['unpublished'=>0,'published'=>1,'new'=>2][$status],effective_admin_role(),(int)$_SESSION['admin_id']);
+      if (($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest') {
+        header('Content-Type: application/json; charset=utf-8');
+        header('Cache-Control: no-store');
+        echo json_encode(['ok'=>true,'status'=>$status],JSON_UNESCAPED_UNICODE);
+        exit;
+      }
       flash('Publicatiestatus kunstenaar aangepast.');
       $returnType=in_array(($_GET['type']??''),['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
       $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
@@ -36,8 +42,15 @@ if (is_post()) {
   } catch (InvalidArgumentException $ex) {
     $error=$ex->getMessage();
   } catch (PDOException $ex) {
-    error_log('[Verkopersbeheer] Verwijderen mislukt.');
-    $error='Verwijderen mislukt. Controleer de database.';
+    error_log('[Verkopersbeheer] Wijziging mislukt.');
+    $error='Wijziging mislukt. Controleer de database.';
+  }
+  if (($_POST['action']??'')==='artist-publication' && ($_SERVER['HTTP_X_REQUESTED_WITH']??'')==='XMLHttpRequest' && $error!=='') {
+    http_response_code(422);
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    echo json_encode(['ok'=>false,'error'=>$error],JSON_UNESCAPED_UNICODE);
+    exit;
   }
 }
 try {
@@ -173,4 +186,54 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
   <?php endforeach; ?>
 
 </div>
+<script>
+(() => {
+  const statusLabels={new:'Nieuw',published:'Gepubliceerd',unpublished:'Niet gepubliceerd'};
+  const statusClasses={new:'is-new',published:'is-published',unpublished:'is-unpublished'};
+  document.querySelectorAll('form.seller-status-form').forEach(form => {
+    const select=form.querySelector('select[name="artist_status"]');
+    if (!select) return;
+    select.dataset.savedValue=select.value;
+    const notice=document.createElement('span');
+    notice.className='sr-only';
+    notice.setAttribute('role','status');
+    notice.setAttribute('aria-live','polite');
+    form.appendChild(notice);
+    form.addEventListener('submit',async event => {
+      event.preventDefault();
+      if (select.disabled || select.value===select.dataset.savedValue) return;
+      const previous=select.dataset.savedValue;
+      select.disabled=true;
+      notice.textContent='Publicatiestatus opslaan…';
+      try {
+        const response=await fetch(form.action,{
+          method:'POST',
+          body:new FormData(form),
+          headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
+          credentials:'same-origin'
+        });
+        const data=await response.json();
+        if (!response.ok || !data.ok || data.status!==select.value) {
+          throw new Error(data.error || 'Status kon niet worden opgeslagen.');
+        }
+        select.dataset.savedValue=select.value;
+        const row=form.closest('tr');
+        const badge=row?.querySelector('.seller-publication-status');
+        if (badge) {
+          badge.textContent=statusLabels[data.status];
+          badge.classList.remove('is-new','is-published','is-unpublished');
+          badge.classList.add(statusClasses[data.status]);
+        }
+        notice.textContent='Publicatiestatus opgeslagen.';
+      } catch (error) {
+        select.value=previous;
+        notice.textContent='Opslaan mislukt.';
+        window.alert(error instanceof Error ? error.message : 'Status kon niet worden opgeslagen.');
+      } finally {
+        select.disabled=false;
+      }
+    });
+  });
+})();
+</script>
 <?php admin_bottom(); ?>
