@@ -130,7 +130,7 @@ function require_auth(): void {
   $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
   if (str_contains($script, '/admin/') && $role !== 'administrator') {
     $page = basename($script);
-    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
+    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'seller-search.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
     // The original administrator or veilingmeester can always restore their role.
     if (admin_role_switch_targets(stored_admin_role()) !== []) $allowed[] = 'rol-wissel.php';
     if ($role === 'veilingmeester') $allowed[] = 'categorieen.php';
