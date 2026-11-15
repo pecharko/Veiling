@@ -48,6 +48,11 @@ def preflight(run, upload, manifest):
         raise ValueError("Only the shared OVH read-only route is supported")
     if run.get("path") != RELEASE_WORKFLOW_PATHS["Shared OVH manifest release with rollback"]:
         raise ValueError("Unexpected deployment workflow")
+    run_inputs = run.get("inputs")
+    if (not isinstance(run_inputs, dict) or
+            not isinstance(run_inputs.get("release_id"), str) or
+            run_inputs["release_id"] != upload.get("release_id")):
+        raise ValueError("Deployment release_id input does not match evidence")
     validate_uploader(upload)
     checked = reconcile_github_run(run, upload, manifest, upload["release_id"])
     if checked["status"] != "UPLOADER_ARTIFACT_CONTENT_CONSISTENT_ONLY":
