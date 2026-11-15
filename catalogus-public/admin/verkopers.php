@@ -207,7 +207,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
       select.disabled=true;
       notice.textContent='Publicatiestatus opslaan…';
       try {
-        const response=await fetch(form.action,{
+        const response=await fetch(form.getAttribute('action'),{
           method:'POST',
           body:payload,
           headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},
