@@ -23,6 +23,14 @@ $checks=[
     && str_contains($read('catalogus-public/admin/verkoper.php'), 'name="artist_status"'),
   'listing autosaves status change without confirmation button'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'onchange="this.form.requestSubmit()"')
     && !str_contains($read('catalogus-public/admin/verkopers.php'), '>Wijzig status</button>'),
+  'status update uses async request without page reload'=>str_contains($read('catalogus-public/admin/verkopers.php'), "form.addEventListener('submit',async event =>")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'event.preventDefault();')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "method:'POST'")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'body:payload,')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), 'select.value=previous;')
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "badge.classList.add(statusClasses[data.status]);"),
+  'async endpoint reports saved artist status'=>str_contains($read('catalogus-public/admin/verkopers.php'), "'ok'=>true,'status'=>\$status")
+    && str_contains($read('catalogus-public/admin/verkopers.php'), "HTTP_X_REQUESTED_WITH"),
   'listing excludes published selection without valid portrait'=>str_contains($read('catalogus-public/admin/verkopers.php'), 'seller_artist_has_portrait_path($portrait)')
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'if($safePortrait)')
     && str_contains($read('catalogus-public/admin/verkopers.php'), 'Gepubliceerd (portret ontbreekt)'),
