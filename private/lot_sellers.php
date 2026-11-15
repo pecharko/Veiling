@@ -18,6 +18,17 @@ function seller_artist_has_portrait_path(string $path): bool {
     && is_file(dirname(__DIR__).'/catalogus-public/'.$path);
 }
 
+/**
+ * Publication-readiness indicator for an artist, independent of live publication status.
+ * A missing stored portrait always takes precedence over profile completeness.
+ * Values are kept stable for the artist-list filter and for regression tests.
+ */
+function seller_artist_publication_readiness(array $seller,bool $hasPortrait,bool $hasWork): string {
+  if (!$hasPortrait) return 'no_portrait';
+  if (trim((string)($seller['artist_slogan']??''))==='' || trim((string)($seller['artist_intro']??''))==='') return 'missing_text';
+  return $hasWork ? 'complete' : 'texts_ready';
+}
+
 /** Caller validates CSRF and acquires the catalog lock; only an artist may be published. */
 function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string $role,int $actorId): void {
   if ($sellerId<1 || $actorId<1 || !in_array($status,[0,1,2],true) || !seller_can_publish_artist($role)) {
