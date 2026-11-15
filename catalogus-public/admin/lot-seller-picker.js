@@ -45,7 +45,15 @@
       const icon=document.createElement('span');
       icon.className='lot-seller-result-icon';
       icon.setAttribute('aria-hidden','true');
-      icon.textContent=item.type==='kunstenaar'?'🎨':'👤';
+      if (item.type==='kunstenaar' && item.portrait) {
+        const img=document.createElement('img');
+        img.src=item.portrait;
+        img.alt='';
+        img.loading='lazy';
+        icon.append(img);
+      } else {
+        icon.textContent=item.type==='kunstenaar'?'🎨':'👤';
+      }
       const info=document.createElement('span');
       const name=document.createElement('strong');
       name.textContent=item.name;
@@ -102,7 +110,7 @@
     search.focus();
     void fetchSellers();
   });
-  dialog.querySelector('[data-seller-close]')?.addEventListener('click',()=>dialog.close());
+  dialog.querySelectorAll('[data-seller-close]').forEach(close=>close.addEventListener('click',()=>dialog.close()));
   dialog.querySelector('[data-seller-empty]')?.addEventListener('click',()=>setSeller(null));
   dialog.addEventListener('click',event=>{if(event.target===dialog)dialog.close();});
   dialog.addEventListener('close',()=>{clearTimeout(timeout);controller?.abort();(lastFocus?.isConnected?lastFocus:button).focus();});
