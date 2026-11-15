@@ -109,7 +109,7 @@ $checksum = hash_file('sha256', $original);
 $sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
 $sellerPhoto=$uploads.'/'.$sellerRelative;
 if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
-$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1 WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1, updated_by_admin_id=1, updated_by_name='CI Beheerder', updated_at='2026-11-11 07:45:00' WHERE id=?")->execute([$sellerId]);
 $pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
   ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
@@ -233,7 +233,7 @@ unlink($original);
 unlink($sellerPhoto);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
-// A token issued after the snapshot must never survive restoration.
+// Invitations issued after a catalog snapshot must remain valid after restoration.
 $pendingTokenHash=hash('sha256', 'disposable-snapshot-invite');
 $pdo->prepare("INSERT INTO admin_invitations (name,email,role,token_hash,created_at,expires_at)
  VALUES ('Snapshot invite','ci-snapshot-invite@example.invalid','assistant',?,UTC_TIMESTAMP(),
@@ -269,6 +269,10 @@ verify(is_file($sellerPhoto)
 verify((int)$pdo->query('SELECT last_edited_by_admin_id FROM lots WHERE lot_number=101')->fetchColumn()===1
   && $pdo->query('SELECT last_edited_at FROM lots WHERE lot_number=101')->fetchColumn()==='2026-11-11 07:30:00',
   'Snapshot restores effective lot audit editor and timestamp');
+verify((int)$pdo->query('SELECT updated_by_admin_id FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()===1
+  && $pdo->query('SELECT updated_by_name FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='CI Beheerder'
+  && $pdo->query('SELECT updated_at FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='2026-11-11 07:45:00',
+  'Snapshot preserves seller audit attribution and timestamp');
 verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetchColumn()===$sellerId
     && (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===1,
     'Restore preserves seller records and lot foreign keys');
