@@ -44,11 +44,13 @@ foreach ([
   [$users, 'data-search=', 'User list can be searched by name'],
   [$lot, 'SELECT name FROM admins WHERE id=?', 'Creator is resolved by name rather than email'],
   [$lot, 'admin_name_label((string)$creatorName)', 'Creator missing name is labelled safely'],
-  [$snapshot, "'admins'=>['id','name','email'", 'Snapshots include administrator name'],
-  [$snapshot, "col==='name' ? ''", 'Legacy snapshot restore defaults name to empty'],
-  [$recovery, "if(!array_key_exists('name', \$row))", 'Read-only diagnosis handles legacy snapshot names'],
+  [$snapshot, "const SNAP_TABLES = ['settings','lot_categories'", 'Catalog-only snapshots include categories, not account records'],
+  [$snapshot, "'lot_categories'=>['id','name']", 'Category identifiers and names are snapshotted'],
+  [$recovery, 'Catalog-only v8 snapshots never compare user or login state.', 'Read-only recovery ignores live account names'],
 ] as [$contents,$needle,$reason]) {
   name_contract(str_contains($contents,$needle),$reason);
 }
-echo "PASS admin name, migration, creator and snapshot contracts\n";
+name_contract(!str_contains($snapshot, "'admins'=>"), 'Snapshot must not export administrator passwords or names');
+name_contract(!str_contains($snapshot, "'login_attempts'=>"), 'Snapshot must not export login attempts');
+echo "PASS admin names and catalog-only v8 snapshot separation\n";
 

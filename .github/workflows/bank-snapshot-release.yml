@@ -78,6 +78,14 @@ jobs:
                           subprocess.run(['git','worktree','remove','--force',str(history)],check=True)
               else:
                   print('v7 reviewed offline; independent OVH baseline and v7 release manifest still required')
+          elif b'41lokeren-v8-catalog-only' in source:
+              # PR review only: independently validate the new catalog-only
+              # source. This does not grant the historical bank deploy job
+              # permission to accept v8, and does not change its manifest.
+              subprocess.run([sys.executable, '-B', '-m', 'unittest', 'discover', '-s',
+                              'tests', '-p', 'snapshot_v8_review_test.py', '-v'], check=True)
+              subprocess.run([sys.executable, '-B', '-m',
+                              'scripts.snapshot_v8_review'], check=True)
           else:
               raise SystemExit('Unrecognized protected snapshot source drift')
           PY

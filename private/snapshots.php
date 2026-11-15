@@ -4,15 +4,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/catalog_mutex.php';
 require_once __DIR__ . '/restore_journal.php';
 require_once __DIR__ . '/visitor_geo_snapshot.php';
-const SNAP_TABLES = ['settings','admins','lot_sellers','lots','lot_images','seller_images','login_attempts'];
+const SNAP_TABLES = ['settings','lot_categories','lot_sellers','lots','lot_images','seller_images'];
 const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
- 'admins'=>['id','name','email','password_hash','created_at','role','is_active','last_login_at'],
+ 'lot_categories'=>['id','name'],
  'lot_sellers'=>['id','seller_type','name','email','mobile_number','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url','artist_intro','artist_slogan','artist_published','created_by_admin_id','created_by_name','created_at','updated_by_admin_id','updated_by_name','updated_at'],
  'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at','last_edited_by_admin_id','last_edited_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'seller_images'=>['id','seller_id','image_kind','slot','path','created_at'],
- 'login_attempts'=>['id','ip_hash','attempted_at'],
 ];
 function snap_dir(): string {return __DIR__.'/backups';}
 function snap_uploads(): string {return dirname(__DIR__).'/catalogus-public/uploads';}
@@ -87,7 +86,7 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   if($bytes>350*1024*1024)throw new RuntimeException('Foto’s groter dan 350 MB. Maak eerst een handmatige kopie of vergroot hostingruimte.');
   $free=@disk_free_space(snap_dir());if(!snap_has_physical_capacity($free,$bytes))throw new RuntimeException('Te weinig vrije ruimte voor een snapshot.');
   // The catalog snapshot never captures visitor statistics, even when geo is installed.
-  $format='41lokeren-v7-lot-audit';
+  $format='41lokeren-v8-catalog-only';
   $payload=['format'=>$format,'created_at'=>gmdate('c'),'tables'=>$rows];
   $data=json_encode($payload,JSON_THROW_ON_ERROR|JSON_INVALID_UTF8_SUBSTITUTE);
   if(strlen($data)>30*1024*1024)throw new RuntimeException('Snapshotdatabase te groot.');
@@ -120,7 +119,7 @@ function snap_verified(string $name): array {
   $m=$zip->getFromName('manifest.json');$d=$zip->getFromName('database.json');
   if($m===false||$d===false||strlen($d)>30*1024*1024)throw new RuntimeException('Ongeldige snapshotinhoud.');
   $manifest=json_decode($m,true,512,JSON_THROW_ON_ERROR);$database=json_decode($d,true,512,JSON_THROW_ON_ERROR);
-  if(($database['format']??null)!=='41lokeren-v7-lot-audit'||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
+  if(($database['format']??null)!=='41lokeren-v8-catalog-only'||($manifest['format']??null)!==$database['format'])throw new RuntimeException('Niet-ondersteund snapshotformaat.');
   if(!isset($database['tables'])||array_keys($database['tables'])!==SNAP_TABLES)throw new RuntimeException('Onvolledige databasetabellen.');
   $hashes=$manifest['sha256']??null;if(!is_array($hashes)||count($hashes)>20000||!isset($hashes['database.json']))throw new RuntimeException('Ongeldige bestandslijst.');
   if(!hash_equals($hashes['database.json'],hash('sha256',$d)))throw new RuntimeException('Database checksum ongeldig.');
@@ -135,7 +134,7 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !(($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link'])) || ($t==='admins' && !array_diff(SNAP_INSERT[$t],array_keys($row),['role','is_active','name','last_login_at'])) )))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -147,7 +146,7 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_require_clear();
   catalog_data_lock($pdo);$catalogLocked=true;
   [$database,$hashes,$size]=snap_verified($name);
-  if(($database['format']??null)!=='41lokeren-v7-lot-audit')throw new RuntimeException('Oude snapshots worden na de verkopersmigratie niet ondersteund.');
+  if(($database['format']??null)!=='41lokeren-v8-catalog-only')throw new RuntimeException('Oude snapshots worden na deze snapshotwijziging niet ondersteund.');
   $stage=dirname(snap_uploads()).'/.restore-'.bin2hex(random_bytes(8));
   if(!mkdir($stage,0700))throw new RuntimeException('Kan tijdelijke fotomap niet maken.');
   $zip=new ZipArchive();if($zip->open(snap_path($name))!==true)throw new RuntimeException('Kan snapshot niet openen.');
@@ -190,15 +189,12 @@ function snap_restore(PDO $pdo,string $name): void {
   restore_journal_phase($journal,'photos_active');
   try{
    $pdo->beginTransaction();
-   // Reset tokens refer to pre-restore credentials: invalidate atomically with the restore.
-   // The table is not part of snapshot exports; older installations may lack it.
-   $resetTable = $pdo->query("SHOW TABLES LIKE 'admin_password_resets'")->fetchColumn();
-   if ($resetTable) $pdo->exec('DELETE FROM admin_password_resets');
-   // Invites are not part of snapshot exports: invalidate pending invite tokens on restore.
-   $inviteTable = $pdo->query("SHOW TABLES LIKE 'admin_invitations'")->fetchColumn();
-   if ($inviteTable) $pdo->exec('DELETE FROM admin_invitations');
-   foreach(['lot_images','seller_images','login_attempts','lots','lot_sellers','settings','admins'] as $table)$pdo->exec('DELETE FROM '.$table);
-   foreach(['settings','admins','lot_sellers','lots','lot_images','seller_images','login_attempts'] as $table){
+   // Preserve live authentication state. Accounts, login history, invitations
+   // and password resets are deliberately excluded from snapshot and restore.
+   // Delete catalog children before parents; restore categories before lots.
+   foreach(['lot_images','seller_images','lots','lot_sellers','lot_categories','settings'] as $table)
+     $pdo->exec('DELETE FROM '.$table);
+   foreach(SNAP_TABLES as $table){
     $columns=SNAP_INSERT[$table];
     if($table==='settings') {
      foreach(['is_site_online','catalog_split_active','show_report_issue_link'] as $optional) {
@@ -207,10 +203,10 @@ function snap_restore(PDO $pdo,string $name): void {
       }
      }
     }
-    if($table==='admins') { foreach(['role','is_active','last_login_at'] as $column) { if(!$pdo->query("SHOW COLUMNS FROM admins LIKE '".$column."'")->fetch()) $columns=array_values(array_filter($columns,fn($candidate)=>$candidate!==$column)); } }
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
-    foreach($database['tables'][$table] as $row)$stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='admins' && $col==='role' ? 'administrator' : ($table==='admins' && $col==='is_active' ? 1 : ($table==='admins' && $col==='name' ? '' : ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : null))))), $columns));
+    foreach($database['tables'][$table] as $row)
+     $stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : null)), $columns));
    }
    // Keep permanent lot-number reservations monotonic across snapshot restores.
    // A restore may reintroduce lots deleted after the snapshot was taken.

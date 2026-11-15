@@ -86,6 +86,9 @@ $pdo->prepare("INSERT INTO lots (lot_number,title,description,details,status,sal
     ->execute([101,'Kunstwerk voor snapshot','Beschrijving','Details','published','veiling',1]);
 $lotId = (int)$pdo->lastInsertId();
 $pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lotId]);
+$pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Eenmalige categorie')");
+$categoryId=(int)$pdo->lastInsertId();
+$pdo->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['CI Eenmalige categorie',$lotId]);
 $pdo->prepare("UPDATE lots SET last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
@@ -106,7 +109,7 @@ $checksum = hash_file('sha256', $original);
 $sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
 $sellerPhoto=$uploads.'/'.$sellerRelative;
 if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
-$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1 WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1, updated_by_admin_id=1, updated_by_name='CI Beheerder', updated_at='2026-11-11 07:45:00' WHERE id=?")->execute([$sellerId]);
 $pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
   ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
@@ -136,14 +139,19 @@ verify(count($listing) === 1 && $listing[0]['name'] === $name && $listing[0]['si
 [$snapshot, $hashes, $photoBytes] = snap_verified($name);
 verify(!isset($snapshot['tables']['visitor_stats_ip_exclusions']) && !isset($snapshot['tables']['visitor_stats_ip_exclusion_state'])
     && !str_contains(json_encode($snapshot), '192.0.2.77'), 'IP/admin exclusions and their switch are absent from snapshot data');
-verify(count($snapshot['tables']['lots']) === 1 && count($snapshot['tables']['admins']) === 1,
-       'Snapshot contains all intended database records');
-verify($snapshot['format']==='41lokeren-v7-lot-audit' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
+verify(count($snapshot['tables']['lots'])===1 && !isset($snapshot['tables']['admins'])
+    && !isset($snapshot['tables']['login_attempts'])
+    && count($snapshot['tables']['lot_categories'])===3
+    && count(array_filter($snapshot['tables']['lot_categories'],
+      static fn($cat)=>(int)$cat['id']===$categoryId && $cat['name']==='CI Eenmalige categorie'))===1
+    && !str_contains(json_encode($snapshot),'ci-admin@example.invalid'),
+    'V8 snapshot exports catalog categories and excludes administrator and login records');
+verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
   && $snapshot['tables']['lots'][0]['last_edited_at']==='2026-11-11 07:30:00',
-  'Snapshot v7 stores linked sellers and last lot editor');
+  'Snapshot v8 stores linked sellers and last lot editor');
 verify($snapshot['tables']['lots'][0]['sale_location'] === 'veiling' && (int)$snapshot['tables']['lots'][0]['auction_number'] === 1,
        'Snapshot contains sale location and auction number');
 verify(isset($hashes['uploads/'.$sellerRelative]) && is_file($sellerPhoto),
@@ -188,17 +196,49 @@ if ($databaseJson === false) throw new RuntimeException('Missing db JSON');
 $bad->addFromString('database.json', $databaseJson . ' ');
 $bad->close();
 assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is rejected by checksum validation');
+ 
+// Construct an authentic-looking, checksum-consistent older format in a
+// disposable ZIP. Existing customer snapshots remain untouched.
+$legacyName='snapshot-20990103-000000-deadbeefdead.zip';
+$legacyPath=snap_path($legacyName);
+if (!copy(snap_path($name),$legacyPath)) throw new RuntimeException('Cannot create disposable legacy fixture');
+$legacyZip=new ZipArchive();
+if($legacyZip->open($legacyPath)!==true)throw new RuntimeException('Cannot edit legacy fixture');
+$legacyPayload=json_decode((string)$legacyZip->getFromName('database.json'),true,512,JSON_THROW_ON_ERROR);
+$legacyManifest=json_decode((string)$legacyZip->getFromName('manifest.json'),true,512,JSON_THROW_ON_ERROR);
+$legacyPayload['format']='41lokeren-v7-lot-audit';
+$legacyManifest['format']='41lokeren-v7-lot-audit';
+$legacyDatabaseJson=json_encode($legacyPayload,JSON_THROW_ON_ERROR);
+$legacyManifest['sha256']['database.json']=hash('sha256',$legacyDatabaseJson);
+$legacyZip->addFromString('database.json',$legacyDatabaseJson);
+$legacyZip->addFromString('manifest.json',json_encode($legacyManifest,JSON_THROW_ON_ERROR));
+$legacyZip->close();
+assert_throws(fn()=>snap_verified($legacyName),'Niet-ondersteund snapshotformaat',
+    'Older v7 snapshot is refused even when its archive checksums are valid');
+assert_throws(fn()=>snap_restore($pdo,$legacyName),'Niet-ondersteund snapshotformaat',
+    'Older v7 snapshot cannot enter the restore photo or database swap');
+verify(!restore_journal_pending() && is_file($original) && is_file($sellerPhoto),
+    'Rejected v7 restore preserves the active photo tree and leaves no maintenance journal');
+verify(snap_verified($name)[0]['format']==='41lokeren-v8-catalog-only',
+    'Rejected old format does not modify the current v8 snapshot');
+if(!unlink($legacyPath))throw new RuntimeException('Cannot delete disposable legacy fixture');
+
 
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
 $pdo->prepare('UPDATE lot_sellers SET artist_published=0 WHERE id=?')->execute([$sellerId]);
 $pdo->exec("UPDATE settings SET title='Veranderde veiling'");
-$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Ongeldige snapshotnaam'");
+$pdo->exec("UPDATE admins SET email='changed-ci-admin@example.invalid', name='Live beheerder behouden'");
+$pdo->prepare('INSERT INTO login_attempts (ip_hash) VALUES (?)')
+    ->execute([hash('sha256','post-snapshot-test-ip')]);
+$pdo->prepare('UPDATE lot_categories SET name=? WHERE id=?')
+    ->execute(['CI Later gewijzigde categorie',$categoryId]);
+$pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Categorie na snapshot')");
 $pdo->exec('DELETE FROM lot_images WHERE lot_id=' . $lotId);
 unlink($original);
 unlink($sellerPhoto);
 file_put_contents($uploads . '/' . $extra, 'New data that is not in original snapshot');
 
-// A token issued after the snapshot must never survive restoration.
+// Invitations issued after a catalog snapshot must remain valid after restoration.
 $pendingTokenHash=hash('sha256', 'disposable-snapshot-invite');
 $pdo->prepare("INSERT INTO admin_invitations (name,email,role,token_hash,created_at,expires_at)
  VALUES ('Snapshot invite','ci-snapshot-invite@example.invalid','assistant',?,UTC_TIMESTAMP(),
@@ -210,10 +250,13 @@ $pdo->prepare('INSERT INTO visitor_stats_ip_exclusions (ip_address,admin_id) VAL
 snap_restore($pdo, $name);
 verify((int)$pdo->query('SELECT COUNT(*) FROM visitor_stats_ip_exclusions')->fetchColumn() === 2
     && !analytics_ip_exclusion_enabled($pdo), 'Restore preserves current IP/admin associations and switch instead of resetting them');
-verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 0,
-       'Snapshot restore invalidates pending invitation tokens');
-verify($pdo->query("SELECT last_login_at FROM admins LIMIT 1")->fetchColumn() === null,
-       'Snapshot restores nullable last-login timestamp');
+verify((int)$pdo->query("SELECT COUNT(*) FROM admin_invitations")->fetchColumn() === 1,
+       'Catalog restore preserves current pending admin invitation');
+verify($pdo->query("SELECT email FROM admins LIMIT 1")->fetchColumn() === 'changed-ci-admin@example.invalid'
+    && $pdo->query("SELECT name FROM admins LIMIT 1")->fetchColumn() === 'Live beheerder behouden',
+    'Catalog restore preserves current administrators and login credentials');
+verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 2,
+    'Catalog restore preserves login attempts created after the snapshot');
 
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
 
@@ -231,6 +274,10 @@ verify(is_file($sellerPhoto)
 verify((int)$pdo->query('SELECT last_edited_by_admin_id FROM lots WHERE lot_number=101')->fetchColumn()===1
   && $pdo->query('SELECT last_edited_at FROM lots WHERE lot_number=101')->fetchColumn()==='2026-11-11 07:30:00',
   'Snapshot restores effective lot audit editor and timestamp');
+verify((int)$pdo->query('SELECT updated_by_admin_id FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()===1
+  && $pdo->query('SELECT updated_by_name FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='CI Beheerder'
+  && $pdo->query('SELECT updated_at FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='2026-11-11 07:45:00',
+  'Snapshot preserves seller audit attribution and timestamp');
 verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetchColumn()===$sellerId
     && (int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===1,
     'Restore preserves seller records and lot foreign keys');
@@ -241,12 +288,10 @@ verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_n
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');
-verify($pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn() === $originalAdmin,
-       'Restore returns the original administrator');
-verify($pdo->query('SELECT name FROM admins LIMIT 1')->fetchColumn() === $originalAdminName,
-       'Restore preserves administrator display name');
-verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() === 1,
-       'Restore returns login attempts');
+verify($pdo->query('SELECT name FROM lot_categories WHERE id='.$categoryId)->fetchColumn() === 'CI Eenmalige categorie'
+    && $pdo->query('SELECT category FROM lots WHERE lot_number=101')->fetchColumn() === 'CI Eenmalige categorie'
+    && (int)$pdo->query("SELECT COUNT(*) FROM lot_categories WHERE name='CI Categorie na snapshot'")->fetchColumn()===0,
+    'Restore returns exactly the archived category registry, removing later changes without affecting users');
 verify((int)$pdo->query('SELECT COUNT(*) FROM lot_images WHERE lot_id='.$lotId)->fetchColumn() === 1,
        'Restore returns image database record and foreign key');
 verify(is_file($original) && hash_file('sha256', $original) === $checksum,
@@ -282,7 +327,15 @@ verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetch
        'New schema restore recovers the offline state');
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
-// Old snapshots are intentionally unsupported after this schema migration.
+// Old snapshots are intentionally unsupported; no existing ZIP is modified.
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
+// Test cleanup, only in the isolated auction_test database. The catalog
+// restore itself must never mutate these authentication records.
+$pdo->prepare('UPDATE admins SET email=?,name=? WHERE id=1')
+    ->execute([$originalAdmin,$originalAdminName]);
+$pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')
+    ->execute([hash('sha256','post-snapshot-test-ip')]);
+$pdo->prepare('DELETE FROM admin_invitations WHERE token_hash=?')
+    ->execute([$pendingTokenHash]);
 echo "Snapshot integration: {$count} checks passed on isolated MySQL/PHP.\n";

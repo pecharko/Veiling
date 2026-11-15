@@ -103,7 +103,7 @@ try {
         'full matching target state remains read-only and journal stays pending');
     mixed_check($targetReport['database_table_states']['lots'] === 'target_only'
         && $targetReport['database_table_states']['settings'] === 'target_only'
-        && $targetReport['database_table_states']['admins'] === 'both',
+        && $targetReport['database_table_states']['lot_categories'] === 'both',
         'per-table labels distinguish changed and unchanged snapshot tables');
 
     $json = json_encode($targetReport, JSON_THROW_ON_ERROR);

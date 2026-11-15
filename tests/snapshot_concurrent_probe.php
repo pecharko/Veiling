@@ -20,10 +20,10 @@ if($pdo->query('SELECT DATABASE()')->fetchColumn()!=='auction_test'){
  throw new RuntimeException('Unexpected database.');
 }
 $source=(string)file_get_contents($root.'/private/snapshots.php');
-$needle='foreach(SNAP_TABLES as $table){';
+$needle='$rows=[];foreach(SNAP_TABLES as $table){';
 if(substr_count($source,$needle)!==1)throw new RuntimeException('Review changed snapshot SELECT loop.');
 $replacement=<<<'PHP'
-foreach(SNAP_TABLES as $table){
+$rows=[];foreach(SNAP_TABLES as $table){
   if($table==='lots' && getenv('CI_PAUSE_READ')==='1'){
     file_put_contents((string)getenv('CI_READY_FLAG'),'ready');
     for($i=0;$i<200&&!is_file((string)getenv('CI_RELEASE_FLAG'));$i++)usleep(50000);

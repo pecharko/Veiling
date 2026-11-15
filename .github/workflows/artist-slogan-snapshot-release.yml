@@ -35,7 +35,14 @@ jobs:
           set -euo pipefail
           python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
           sha256sum private/snapshots.php
-          python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          # This is PR-only validation. The historical deployment below
+          # still requires the immutable artist-slogan v7 source and manifest.
+          if grep -Fq '41lokeren-v8-catalog-only' private/snapshots.php; then
+            python3 -B -m unittest discover -s tests -p snapshot_v8_review_test.py -v
+            python3 -B -m scripts.snapshot_v8_review
+          else
+            python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          fi
           php -l private/snapshots.php
           python3 - <<'PY'
           from scripts.shared_ovh_release import PROTECTED

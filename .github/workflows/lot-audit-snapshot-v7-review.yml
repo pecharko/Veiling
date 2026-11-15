@@ -39,8 +39,16 @@ jobs:
           # Current protected snapshot revision uses only its own manifest
           # and independently owner-bound dispatch workflow.
           if grep -F -x 'private/snapshots.php' <(git diff --name-only "$PR_BASE_SHA" HEAD); then
-            python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
-            python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+            # PR validation only: v8 is reviewed with its own fail-closed,
+            # offline security tests. Historical v7 release checks remain
+            # pinned to their immutable source, never rebound to v8.
+            if grep -Fq '41lokeren-v8-catalog-only' private/snapshots.php; then
+              python3 -B -m unittest discover -s tests -p snapshot_v8_review_test.py -v
+              python3 -B -m scripts.snapshot_v8_review
+            else
+              python3 -B -m unittest discover -s tests -p deploy_artist_slogan_snapshot_test.py -v
+              python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+            fi
           fi
       - name: Lint candidate snapshot source
         run: php -l private/snapshots.php

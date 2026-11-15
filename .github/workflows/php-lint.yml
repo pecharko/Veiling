@@ -233,11 +233,36 @@ jobs:
           python3 -m py_compile scripts/deploy_photo_import_retirement.py
           python3 scripts/deploy_photo_import_retirement.py plan
 
-      - name: Verify audited six-file release plan offline
+      - name: Verify audited six-file historical release plan offline
+        shell: bash
         run: |
-          python3 -m py_compile scripts/deploy_audit_release.py
-          python3 scripts/deploy_audit_release.py plan
-          python3 tests/audit_release_plan_test.py
+          set -euo pipefail
+          # The six-file audit release is immutable. Its checks belong to
+          # the original audited tree, not the live source of a later PR.
+          history="$(mktemp -d "$RUNNER_TEMP/historical-audit.XXXXXXXX")"
+          trap 'git worktree remove --force "$history"' EXIT
+          git worktree add --detach "$history" 263edcabd6c386c46619062529e0cd0c27363958
+          (
+            cd "$history"
+            python3 -m py_compile scripts/deploy_audit_release.py
+            python3 scripts/deploy_audit_release.py plan
+            python3 tests/audit_release_plan_test.py
+          )
+
+      - name: Validate current snapshot source by explicit format offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -Fq '41lokeren-v8-catalog-only' private/snapshots.php; then
+            python3 -B -m unittest discover -s tests -p snapshot_v8_review_test.py -v
+            python3 -B -m scripts.snapshot_v8_review
+          elif grep -Fq '41lokeren-v7-lot-audit' private/snapshots.php; then
+            echo 'Historical v7 snapshot; immutable historical release checks remain separate.'
+          else
+            echo 'Unreviewed snapshot format; fail closed.'
+            exit 1
+          fi
+          php -l private/snapshots.php
 
       - name: Verify eight-file recovery release source manifest (offline)
         shell: bash
