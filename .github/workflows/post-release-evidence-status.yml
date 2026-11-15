@@ -5,6 +5,8 @@ on:
       - '.github/workflows/post-release-evidence-status.yml'
       - 'scripts/release_b_status.py'
       - 'scripts/release_b_artifact_contract.py'
+      - 'scripts/release_b_zip_review.py'
+      - 'tests/release_b_zip_review_test.py'
       - 'tests/release_b_artifact_contract_test.py'
       - 'tests/release_b_status_test.py'
       - 'docs/automation-level-b-plan-20261115.md'
@@ -26,7 +28,8 @@ jobs:
           persist-credentials: false
       - run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
       - run: python3 -B -m unittest discover -s tests -p release_b_artifact_contract_test.py -v
-      - run: python3 -m py_compile scripts/release_b_status.py scripts/release_b_artifact_contract.py
+      - run: python3 -B -m unittest discover -s tests -p release_b_zip_review_test.py -v
+      - run: python3 -m py_compile scripts/release_b_status.py scripts/release_b_artifact_contract.py scripts/release_b_zip_review.py
       - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/post-release-evidence-status.yml
   report:
     if: github.event_name == 'workflow_run' && github.event.workflow_run.event == 'workflow_dispatch'
@@ -59,3 +62,51 @@ jobs:
           python3 scripts/release_b_status.py < /tmp/release-b-input.json >> "$GITHUB_STEP_SUMMARY"
       - name: Verify offline status contract
         run: python3 -B -m unittest discover -s tests -p release_b_status_test.py -v
+      - name: Correlate GitHub artifact contents with immutable release manifest (not independent OVH readback)
+        env:
+          PYTHONPATH: scripts
+          GH_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Nothing executable is loaded from the artifact. GitHub API GETs only.
+          python3 - <<'PY' > /tmp/b-evidence-binding.txt
+          import json
+          from scripts.release_b_zip_review import evidence_artifact
+          with open("/tmp/release-run.json", encoding="utf-8") as f:
+              run = json.load(f)
+          with open("/tmp/release-artifacts.json", encoding="utf-8") as f:
+              artifacts = json.load(f)
+          print(evidence_artifact(run, artifacts))
+          print(run["head_sha"])
+          PY
+          ARTIFACT_ID="$(sed -n '1p' /tmp/b-evidence-binding.txt)"
+          RUN_SHA="$(sed -n '2p' /tmp/b-evidence-binding.txt)"
+          gh api "repos/$GH_REPOSITORY/actions/artifacts/$ARTIFACT_ID/zip" > /tmp/b-evidence.zip
+          python3 - <<'PY' > /tmp/b-release-id.txt
+          from pathlib import Path
+          from scripts.release_b_zip_review import read_evidence_zip
+          print(read_evidence_zip(Path("/tmp/b-evidence.zip").read_bytes())["release_id"])
+          PY
+          RELEASE_ID="$(cat /tmp/b-release-id.txt)"
+          gh api "repos/$GH_REPOSITORY/contents/releases/$RELEASE_ID.json?ref=$RUN_SHA" > /tmp/b-manifest-response.json
+          python3 - <<'PY'
+          import base64
+          import json
+          from pathlib import Path
+          obj = json.loads(Path("/tmp/b-manifest-response.json").read_text(encoding="utf-8"))
+          if obj.get("type") != "file" or obj.get("encoding") != "base64":
+              raise ValueError("Expected immutable GitHub manifest file")
+          if type(obj.get("size")) is not int or not 0 < obj["size"] <= 65536:
+              raise ValueError("Invalid manifest size")
+          encoded = obj.get("content")
+          if not isinstance(encoded, str) or len(encoded) > 100000:
+              raise ValueError("Invalid manifest encoding")
+          raw = base64.b64decode("".join(encoded.split()), validate=True)
+          if len(raw) != obj["size"]:
+              raise ValueError("Manifest size mismatch")
+          Path("/tmp/b-manifest.json").write_bytes(raw)
+          PY
+          python3 scripts/release_b_zip_review.py /tmp/release-run.json /tmp/release-artifacts.json /tmp/b-evidence.zip /tmp/b-manifest.json >> "$GITHUB_STEP_SUMMARY"
+          echo 'Uploader evidence and manifest are consistent only; independent OVH and browser acceptance remain PENDING.' >> "$GITHUB_STEP_SUMMARY"
