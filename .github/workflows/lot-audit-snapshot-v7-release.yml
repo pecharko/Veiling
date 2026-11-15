@@ -44,7 +44,15 @@ jobs:
           trap 'git worktree remove --force "$history"' EXIT
           git worktree add --detach "$history" "$HISTORIC_V7_SHA"
           (cd "$history" && python3 -B -m scripts.deploy_lot_audit_snapshot_v7 plan)
-          python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          # Historic v7 deploy plan remains pinned. A different v8 source
+          # is independently reviewed in PR CI; the dispatch job below stays
+          # exactly v7-only with its original owner/schema confirmation.
+          if grep -Fq '41lokeren-v8-catalog-only' private/snapshots.php; then
+            python3 -B -m unittest discover -s tests -p snapshot_v8_review_test.py -v
+            python3 -B -m scripts.snapshot_v8_review
+          else
+            python3 -B -m scripts.deploy_artist_slogan_snapshot plan
+          fi
           php -l private/snapshots.php
           python3 - <<'PY'
           from scripts.shared_ovh_release import PROTECTED
