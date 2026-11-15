@@ -45,6 +45,8 @@ jobs:
           python3 -B -m py_compile scripts/deploy_snapshot_v8.py
           php -l private/snapshots.php
           php -l catalogus-public/admin/backup.php
+      - name: Validate dedicated release workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/snapshot-v8-protected-release.yml
       - name: Require authenticated two-file manifest before merge
         shell: bash
         run: |
@@ -52,8 +54,6 @@ jobs:
           # Fail closed until an independently authenticated pinned-hostkey
           # read-only OVH preflight supplies both SHA-256 baselines.
           python3 -B -m scripts.deploy_snapshot_v8 plan
-      - name: Validate dedicated release workflow syntax
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/snapshot-v8-protected-release.yml
 
   deploy:
     if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
