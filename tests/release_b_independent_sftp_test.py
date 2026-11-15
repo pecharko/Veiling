@@ -29,7 +29,7 @@ class FakeSFTP:
         self.calls.append(("lstat", path))
         info = Info()
         info.st_size = len(self.raw)
-        info.st_mode = self.mode
+        info.st_mode = (stat.S_IFDIR | 0o555) if path in ("/site", "/site/www", "/site/www/catalogus-public") else self.mode
         return info
     def open(self, path, mode):
         self.calls.append(("open", path, mode))
@@ -43,7 +43,7 @@ class ReadbackTests(unittest.TestCase):
         r = collect(sftp, "/site/www", UPLOAD, "collection-20261115-01")
         self.assertEqual(r["files"], [{"path": "catalogus-public/asset.css",
                                          "remote_sha256": "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08"}])
-        self.assertEqual([x[0] for x in sftp.calls], ["lstat", "open", "lstat"])
+        self.assertEqual([x[0] for x in sftp.calls], ["lstat"] * 3 + ["lstat", "open", "lstat"])
         self.assertEqual(r["origin"], "separate-read-only-sftp-collector")
 
     def test_reject_invalid_paths_before_network_use(self):
@@ -59,6 +59,18 @@ class ReadbackTests(unittest.TestCase):
         for root in ("/", "/site/../www", "/site//www", "site/www", "/site/.private"):
             with self.subTest(root=root), self.assertRaises(ValueError):
                 validate_root(root)
+
+    def test_reject_parent_symlink(self):
+        class ParentSymlink(FakeSFTP):
+            def lstat(self, path):
+                info = super().lstat(path)
+                if path == "/site/www":
+                    info.st_mode = stat.S_IFLNK | 0o777
+                return info
+        sftp = ParentSymlink()
+        with self.assertRaises(ValueError):
+            collect(sftp, "/site/www", UPLOAD, "collection-20261115-01")
+        self.assertFalse(any(call[0] == "open" for call in sftp.calls))
 
     def test_reject_symlinks(self):
         sftp = FakeSFTP()
