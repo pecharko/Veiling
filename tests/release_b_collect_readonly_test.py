@@ -17,7 +17,8 @@ RUN = {"id": 123, "name": "Shared OVH manifest release with rollback",
        "path": ".github/workflows/shared-ovh-release.yml",
        "repository": {"full_name": "pecharko/Veiling"},
        "event": "workflow_dispatch", "head_branch": "main",
-       "head_sha": "a"*40, "status": "completed", "conclusion": "success"}
+       "head_sha": "a"*40, "status": "completed", "conclusion": "success",
+       "inputs": {"release_id": "release-example"}}
 UPLOAD = {"schema": 1, "release_id": "release-example", "release_sha": "a"*40,
           "run_id": 123, "status": "VERIFIED", "rollback_artifact": None,
           "browser_acceptance": "PENDING",
@@ -50,6 +51,12 @@ class RunBindingTests(unittest.TestCase):
             with self.subTest(manifest=manifest), self.assertRaises(ValueError):
                 read_from_independent_account(ENV, RUN, UPLOAD,
                                              "collection-20261115-01", manifest)
+
+    def test_missing_or_mismatched_dispatch_release_id_rejected(self):
+        for inputs in (None, {}, {"release_id": "different-release"},
+                       {"release_id": 123}):
+            with self.subTest(inputs=inputs), self.assertRaises(ValueError):
+                preflight({**RUN, "inputs": inputs}, UPLOAD, MANIFEST)
 
     def test_evidence_release_binding_failure(self):
         with self.assertRaises(ValueError):
