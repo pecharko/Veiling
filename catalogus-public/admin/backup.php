@@ -27,6 +27,8 @@ if(is_post()){
    $pdo=db();
    catalog_data_lock($pdo);
    try{
+    // Reject invalid and pre-v8 archives before creating a safety ZIP.
+    snap_verified($name);
     $safety=snap_create($pdo);
     snap_restore($pdo,$name);
    }finally{catalog_data_unlock($pdo);}
@@ -87,7 +89,7 @@ admin_top('Back-up & herstel');
 <form method="post" onsubmit="return confirm('Weet je zeker dat je de VOLLEDIGE catalogus wilt terugzetten naar deze snapshot?');"><?=csrf_field()?><input type="hidden" name="action" value="restore"><label for="restore-snapshot">Kies het herstelpunt</label><select required class="backup-select" name="snapshot" id="restore-snapshot"><option value="">Selecteer snapshot</option><?php foreach($available as $item):?><option value="<?=e($item['name'])?>"><?=e(date('d/m/Y H:i',$item['time']))?> (<?=e(number_format($item['size']/1024/1024,1,',','.'))?> MB)</option><?php endforeach;?></select><label for="restore-confirm">Typ HERSTEL om te bevestigen</label><input class="backup-confirm" name="confirm" id="restore-confirm" required autocomplete="off" placeholder="HERSTEL"><div><button type="submit" class="backup-danger" <?=!$available?'disabled':''?>>Geselecteerde snapshot herstellen</button></div></form></section>
 <section class="backup-card"><h2>Opslag beheren</h2><p>Je hosting heeft beperkte opslag. Verwijder oude herstelpunten pas nadat je ze lokaal hebt gedownload en gecontroleerd.</p>
 <form method="post" onsubmit="return confirm('Deze snapshot definitief van de server verwijderen?');"><?=csrf_field()?><input type="hidden" name="action" value="delete"><label for="delete-snapshot">Snapshot verwijderen</label><select required class="backup-select" name="snapshot" id="delete-snapshot"><option value="">Selecteer snapshot</option><?php foreach($available as $item):?><option value="<?=e($item['name'])?>"><?=e($item['name'])?></option><?php endforeach;?></select><label for="delete-confirm">Typ VERWIJDER</label><input class="backup-confirm" name="confirm" id="delete-confirm" required autocomplete="off" placeholder="VERWIJDER"><div><button type="submit" class="secondary" <?=!$available?'disabled':''?>>Snapshot van server wissen</button></div></form>
-<hr class="backup-sep"><p class="backup-subtle">Een gedownloade ZIP kun je later via RemoteDrive/SFTP uploaden naar <code>private/backups/</code>. Daarna verschijnt die in de lijst en kun je hem herstellen. Bewaar ZIP-bestanden zorgvuldig: ze bevatten ook beheerdersgegevens.</p></section>
+<hr class="backup-sep"><p class="backup-subtle">Een gedownloade v8-ZIP kun je later via RemoteDrive/SFTP uploaden naar <code>private/backups/</code> om de catalogus te herstellen. Oudere ZIP-bestanden blijven bewaarbaar en downloadbaar, maar kunnen niet meer worden hersteld. Bewaar alle ZIP-bestanden zorgvuldig: ze bevatten contact- en bankgegevens; oudere formaten kunnen ook beheerdersgegevens bevatten.</p></section>
 </div></div>
 <?php if(effective_admin_role()==='administrator'):?>
 <section class="backup-card" aria-label="Volledige kavelreset">
