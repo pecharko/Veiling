@@ -25,9 +25,9 @@ if (is_post()) {
         exit;
       }
       flash('Publicatiestatus kunstenaar aangepast.');
-      $returnType=in_array(($_GET['type']??''),['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
+      $returnStatus=in_array(($_GET['status']??''),['new','published','unpublished'],true)?(string)$_GET['status']:'';
       $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
-      $returnParams=['type'=>$returnType,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
+      $returnParams=['status'=>$returnStatus,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
       foreach (['kunstenaar','particulier'] as $returnGroup) {
         $key='pagina_'.$returnGroup;
         $returnParams[$key]=max(1,(int)($_GET[$key]??1));
@@ -68,18 +68,19 @@ try {
 admin_top('Verkopers beheren');
 ?>
 <?php
-$filterType=in_array($_GET['type'] ?? '', ['kunstenaar','particulier'],true)?(string)$_GET['type']:'';
+$filterStatus=in_array(($_GET['status']??''),['new','published','unpublished'],true)?(string)$_GET['status']:'';
 $search=mb_substr(trim((string)($_GET['q']??'')),0,100);
 $perPage=in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)($_GET['per_page']??20):20;
 function seller_page_url(string $groupType,int $page): string {
-  $params=$_GET;
+  $params=array_intersect_key($_GET,array_flip(['q','status','per_page','pagina_kunstenaar','pagina_particulier']));
   $params['pagina_'.$groupType]=$page;
   return url('admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
 }
 $artistCount=count(array_filter($rows,static fn($row)=>$row['seller_type']==='kunstenaar'));
 $privateCount=count($rows)-$artistCount;
-$filteredRows=array_values(array_filter($rows,static function($row) use ($filterType,$search):bool {
-  if ($filterType!=='' && $row['seller_type']!==$filterType) return false;
+$filteredRows=array_values(array_filter($rows,static function($row) use ($filterStatus,$search):bool {
+  if ($filterStatus!=='' && $row['seller_type']==='kunstenaar'
+      && (int)$row['artist_published']!==['unpublished'=>0,'published'=>1,'new'=>2][$filterStatus]) return false;
   return $search==='' || mb_stripos((string)$row['name'],$search)!==false
     || mb_stripos((string)$row['artist_name'],$search)!==false;
 }));
@@ -89,8 +90,8 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <div class="dashboard-stats seller-stats" aria-label="Verkopersstatistieken">
     <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php'))?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>ALLE VERKOPERS</small><div><strong><?=count($rows)?></strong> verkopers</div></div></a>
-    <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php',['type'=>'kunstenaar']))?>"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>KUNSTENAARS</small><div><strong><?=$artistCount?></strong> kunstenaars</div></div></a>
-    <a class="dashboard-stat" href="<?=e(url('admin/verkopers.php',['type'=>'particulier']))?>"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>PARTICULIEREN</small><div><strong><?=$privateCount?></strong> particulieren</div></div></a>
+    <a class="dashboard-stat" href="#seller-list-kunstenaar-heading"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>KUNSTENAARS</small><div><strong><?=$artistCount?></strong> kunstenaars</div></div></a>
+    <a class="dashboard-stat" href="#seller-list-particulier-heading"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>PARTICULIEREN</small><div><strong><?=$privateCount?></strong> particulieren</div></div></a>
   </div>
   <section class="dashboard-panel" aria-labelledby="seller-filter-heading">
     <div class="dashboard-panel-heading">
@@ -99,13 +100,12 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
     </div>
     <form class="dashboard-filters seller-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
-      <label><span class="sr-only">Type verkoper</span><select name="type"><option value="">Alle verkopers</option><option value="kunstenaar" <?=$filterType==='kunstenaar'?'selected':''?>>Kunstenaars</option><option value="particulier" <?=$filterType==='particulier'?'selected':''?>>Particulieren</option></select></label>
+      <label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label>
       <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
   </section>
   <?php foreach (['kunstenaar'=>'Kunstenaars','particulier'=>'Particulieren'] as $groupType=>$groupLabel): ?>
-    <?php if ($filterType!=='' && $filterType!==$groupType) continue; ?>
     <?php
       $allGroupRows=array_values(array_filter($filteredRows,static fn($row)=>$row['seller_type']===$groupType));
       $groupTotal=count($allGroupRows);
@@ -150,7 +150,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($filter
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
                 <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?>
-                  <form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['type'=>$filterType,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
+                  <form method="post" class="seller-status-form" action="<?=e(url('admin/verkopers.php',array_merge(['status'=>$filterStatus,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
                     <?=csrf_field()?>
                     <input type="hidden" name="action" value="artist-publication">
                     <input type="hidden" name="seller_id" value="<?=(int)$r['id']?>">
