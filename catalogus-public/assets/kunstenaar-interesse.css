@@ -1,0 +1,65 @@
+/* Artist participation page: self-contained, brochure-inspired example. */
+.artist-invite{background:radial-gradient(circle at 100% 0,rgba(236,204,190,.28),transparent 44%),#fffaf5;color:#302822;min-height:65vh}
+.artist-invite>.shell{padding-top:34px;padding-bottom:88px}
+.artist-invite-skip{position:absolute;left:-9999px;top:10px;z-index:50;background:#fff;color:#850015;padding:12px 20px}
+.artist-invite-skip:focus{left:10px}
+.artist-invite-return{margin-bottom:44px}
+.artist-invite-heading{max-width:900px;margin-bottom:46px}
+.artist-invite-heading .front-eyebrow{color:#8f7668;letter-spacing:.2em;font-size:11px}
+.artist-invite-heading h1{color:#850015;font:700 clamp(38px,4.6vw,66px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.045em;margin:12px 0 21px;text-wrap:balance}
+.artist-invite-heading>p:last-child{font:400 clamp(17px,1.65vw,21px)/1.65 Georgia,'Times New Roman',serif;color:#684a43;margin:0}
+.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1.06fr) minmax(340px,.94fr);gap:clamp(26px,5vw,86px);align-items:start}
+.artist-invite-copy{max-width:710px;padding-top:3px}
+.artist-invite-copy p{font:400 16px/1.85 Inter,Arial,sans-serif;color:#4c453e;margin:0 0 23px}
+.artist-invite-copy strong{font-weight:800;color:#5d2330}
+.artist-invite-copy a:not(.front-btn){color:#850015;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.artist-invite-contact{margin-top:12px}
+.artist-invite-example{background:#fff;border:1px solid #ecdcd2;border-radius:20px;padding:clamp(18px,3vw,34px);box-shadow:0 18px 55px rgba(93,50,39,.06);min-width:0}
+.artist-invite-example-intro{margin-bottom:22px}
+.artist-invite-example-intro .front-eyebrow{font-size:10px;letter-spacing:.19em;color:#94715e;margin-bottom:8px}
+.artist-invite-example h2{font:700 clamp(23px,2.45vw,31px)/1.18 Georgia,'Times New Roman',serif;letter-spacing:-.025em;color:#850015;margin:0 0 8px}
+.artist-invite-example-intro>p:last-child,.artist-invite-example-note{color:#796c62;font:400 13px/1.65 Inter,Arial,sans-serif;margin:0}
+.artist-invite-example-note{margin:15px auto 0;max-width:430px}
+.artist-invite-sample{max-width:430px;margin:0 auto;background:#eee7dd;border:1px solid #e3d4c7;border-radius:11px;padding:12px;box-shadow:0 12px 24px rgba(48,33,28,.07)}
+.artist-invite-sample-notice{font:800 9px/1.2 Inter,Arial,sans-serif;letter-spacing:.2em;color:#815849;text-align:right;margin:0 0 9px}
+.artist-invite-sample-sheet{background:#faf8f5;padding:clamp(15px,2.6vw,26px);color:#302822}
+.artist-invite-sample-heading{text-align:center;margin:0 0 19px}
+.artist-invite-sample-heading>p{font:800 8px/1.3 Inter,Arial,sans-serif;letter-spacing:.18em;color:#897a70;margin:0 0 5px}
+.artist-invite-sample-heading h3{font:400 clamp(29px,3vw,43px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.055em;color:#28221f;margin:0 0 11px}
+.artist-invite-sample-tagline{display:flex;align-items:center;justify-content:center;gap:8px}
+.artist-invite-sample-tagline span{height:1px;width:27px;min-width:12px;background:#baa89d}
+.artist-invite-sample-tagline p{font:italic 13px/1.3 Georgia,serif;color:#4c3a31;margin:0;text-align:center}
+.artist-invite-sample-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.artist-invite-sample-column{display:flex;flex-direction:column;gap:14px;min-width:0}
+.artist-invite-sample-portrait{height:205px;background:linear-gradient(135deg,#ccbaa8,#e5dcd3 65%,#b99c8c);position:relative;overflow:hidden}
+.artist-invite-sample-portrait:before{content:"";position:absolute;top:23%;left:36%;width:29%;height:26%;border-radius:50%;background:#7c6159;box-shadow:0 -10px 0 2px #544c49}
+.artist-invite-sample-portrait:after{content:"";position:absolute;bottom:-17%;left:17%;width:68%;height:62%;background:#8b7570;border-radius:55% 55% 5% 5%}
+.artist-invite-sample-bio{font:400 12px/1.5 Georgia,serif;color:#5c4b40;margin:0;padding:5px 0}
+.artist-invite-sample-art{min-height:108px;aspect-ratio:4/3;border:7px solid #f0ebe5;box-shadow:inset 0 0 0 1px rgba(50,40,37,.1)}
+.artist-invite-sample-art--one{background:radial-gradient(ellipse at 28% 40%,#a64250 0 17%,transparent 18%),radial-gradient(ellipse at 75% 64%,#d8a458 0 22%,transparent 23%),linear-gradient(38deg,#233e46 15%,#af8e79 56%,#e2cdb4)}
+.artist-invite-sample-art--two{background:linear-gradient(135deg,transparent 28%,#6c7b71 29% 45%,transparent 46%),radial-gradient(circle at 69% 38%,#ad685b 0 18%,transparent 19%),linear-gradient(130deg,#f4e7d4,#cba988)}
+.artist-invite-sample-art--three{background:radial-gradient(circle at 35% 50%,#cfaf71 0 28%,transparent 29%),linear-gradient(55deg,transparent 38%,#314f50 39% 57%,transparent 58%),linear-gradient(125deg,#d0beb1,#8c6873)}
+.artist-invite a:focus-visible,.artist-invite-skip:focus-visible{outline:3px solid #a85d1b;outline-offset:4px}
+@media(max-width:900px){
+  .artist-invite-grid{grid-template-columns:1fr;gap:28px}
+  .artist-invite-copy{max-width:760px}
+  .artist-invite-example{max-width:640px;width:100%;box-sizing:border-box}
+  .artist-invite>.shell{padding-bottom:55px}
+}
+@media(max-width:600px){
+  .artist-invite>.shell{padding-top:22px;padding-bottom:42px}
+  .artist-invite-return{margin-bottom:30px}
+  .artist-invite-heading{margin-bottom:25px}
+  .artist-invite-heading h1{font-size:clamp(34px,9vw,44px)}
+  .artist-invite-copy p{font-size:15px;line-height:1.75}
+  .artist-invite-contact{width:100%;box-sizing:border-box}
+  .artist-invite-example{padding:17px}
+  .artist-invite-sample{padding:10px}
+  .artist-invite-sample-sheet{padding:16px 12px}
+  .artist-invite-sample-columns{gap:9px}
+  .artist-invite-sample-column{gap:9px}
+  .artist-invite-sample-portrait{height:165px}
+  .artist-invite-sample-art{min-height:76px;border-width:4px}
+  .artist-invite-sample-bio{font-size:11px}
+}
+@media print{.artist-invite-skip,.artist-invite-return,.artist-invite-contact{display:none!important}.artist-invite{background:#fff}}
