@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "c8f8cae5374cd154950c97cdb92c05aa1f40238752607b09e413a17b1efe9c3a",
+      "remote_sha256": "e10f1e11492078aebb602a3624597e87b472a2b43045aa976270236d23aa4e45"
+    },
+    {
+      "path": "catalogus-public/goede-doel.php",
+      "source_sha256": "5df1ff2d299843b90a8dd16102401ba171789ee7a064b56f51c9fa852535356a",
+      "remote_sha256": "93a6bfb281398abde5d48c234e59a5e488990ed79e45b9e8f204966968a7d89e"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "4dffd199639496e860c5fa3865f3c2adc090cd298e3e7e03ba5f90f344e0cb54",
+      "remote_sha256": "f058b950c3139304bd8c41a5b4e423ec5c74c2557bac96b34aa6a08f96284305"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "a5b172cad4c8e233ecb2e5468cd0ba9e47bbe3ca818365dd40f08fe6452e9ffe",
+      "remote_sha256": "ff2f806865bf5173d5ffb2d1f205d4f0d764745c0bed574e2859ca81775619e9"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "40e8553cb964959502042b7c71cd46b219bffc47fbc1dd87405f4f66e33b2d9b",
+      "remote_sha256": "37db89227557238b4a772fba6ff454eddcc328f6f935ede91af3fe3ce251999a"
+    }
+  ]
+}
