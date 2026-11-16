@@ -1,0 +1,42 @@
+<?php
+declare(strict_types=1);
+// Offline regression for the homepage hero artist CTA.
+$root = dirname(__DIR__);
+$home = file_get_contents($root . '/catalogus-public/index.php');
+$css = file_get_contents($root . '/catalogus-public/assets/home-v18.css');
+$artists = file_get_contents($root . '/catalogus-public/kunstenaars.php');
+if (!is_string($home) || !is_string($css) || !is_string($artists)) {
+    throw new RuntimeException('Homepage or artists page missing.');
+}
+$heroStart = strpos($home, 'class="front-hero-actions"');
+$heroEnd = $heroStart === false ? false : strpos($home, '</div>', $heroStart);
+if ($heroStart === false || $heroEnd === false) {
+    throw new RuntimeException('Homepage hero actions missing.');
+}
+$actions = substr($home, $heroStart, $heroEnd - $heroStart);
+$links = [
+    "url('goede-doel.php')" => 'Meer over het goede doel',
+    "url('vorige-editie.php')" => 'Bekijk de vorige editie',
+    "url('kunstenaars.php')" => 'Maak kennis met de deelnemende kunstenaars',
+];
+foreach ($links as $href => $label) {
+    if (!str_contains($actions, $href) || !str_contains($actions, $label)) {
+        throw new RuntimeException('Missing homepage CTA: ' . $label);
+    }
+}
+if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>">Maak kennis met de deelnemende kunstenaars')) {
+    throw new RuntimeException('Artists CTA must reuse established outline button and safe URL.');
+}
+if (strpos($actions, "url('kunstenaars.php')") < strpos($actions, "url('vorige-editie.php')")) {
+    throw new RuntimeException('Artists CTA must follow previous edition CTA.');
+}
+if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>')) {
+    throw new RuntimeException('Artists CTA must remain available before catalog publication.');
+}
+if (!str_contains($css, '.front-hero-actions { display:flex;') || !str_contains($css, 'flex-wrap:wrap;')) {
+    throw new RuntimeException('Hero actions must wrap responsively.');
+}
+if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
+    throw new RuntimeException('Artists destination must keep coming-soon behavior.');
+}
+echo "PASS homepage artists CTA route, text, existing design and responsive wrap.\n";

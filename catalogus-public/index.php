@@ -128,6 +128,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
             <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a><?php endif; ?>
             <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel <span aria-hidden="true">→</span></a>
             <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
+            <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Maak kennis met de deelnemende kunstenaars <span aria-hidden="true">→</span></a>
           </div>
         </div>
         <div class="front-hero-gallery" aria-hidden="true">
