@@ -81,8 +81,6 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
       <h1 id="impression-title">Een veiling<br>om op <em>terug<br> te kijken.</em></h1>
       <p class="impression-lead">Bijzondere stukken. Een betrokken publiek.<br>En vooral: samen iets betekenen.</p>
       <p class="impression-intro">De vorige editie bracht kunst, ontmoeting en engagement samen. Deze beelden nemen je mee naar het kijkmoment, de zaal en de veiling op het podium.</p>
-      <a class="front-btn front-btn-primary" href="#in-beeld">Beleef de sfeer <span aria-hidden="true">↓</span></a>
-      <div class="impression-hero-footnote"><span class="impression-footnote-line" aria-hidden="true"></span> Een geslaagde editie, in negen beelden.</div>
     </div>
     <div class="impression-hero-visual">
       <?php impression_photo($photos[0], 0, 'impression-cover'); ?>
