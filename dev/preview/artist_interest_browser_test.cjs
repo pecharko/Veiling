@@ -28,17 +28,17 @@ const browserPath = process.env.PREVIEW_BROWSER_EXECUTABLE ||
       assert.equal(new URL(page.url()).hostname,'localhost');
       assert.equal(await page.locator('h1').textContent(),'Ik ben kunstenaar en heb interesse');
       assert.equal(await page.locator('.artist-invite-sample').count(),1);
-      assert.equal(await page.locator('.artist-invite-sample-art').count(),3);
+      assert.equal(await page.locator('.artist-invite-sample-art').count(),2);
       assert.equal((await page.locator('.artist-invite-sample-heading h3').textContent()).trim(),
-        'Mira Veld','The isolated preview should feature its published fictional artist');
+        'Elise Van Acker','The example should feature Elise Van Acker consistently');
       const galleryImages = page.locator('.artist-invite-sample img');
-      assert.equal(await galleryImages.count(),4,'Portrait and three works must be actual image elements');
-      for (let i=0; i<4; i++) {
+      assert.equal(await galleryImages.count(),3,'Portrait and two works must be actual image elements');
+      for (let i=0; i<3; i++) {
         const image = galleryImages.nth(i);
         await image.scrollIntoViewIfNeeded();
         await image.evaluate(img=>img.decode());
         assert.equal(await image.evaluate(img=>img.complete && img.naturalWidth>0),true,
-          'Each fictional artist image must load');
+          'Each supplied artist image must load');
       }
       const sampleWidth = await page.locator('.artist-invite-sample').evaluate(el=>el.getBoundingClientRect().width);
       assert(sampleWidth <= 320,'Example brochure should be visibly compact');
@@ -52,7 +52,7 @@ const browserPath = process.env.PREVIEW_BROWSER_EXECUTABLE ||
       await page.screenshot({path:target,fullPage:true,animations:'disabled'});
     }
     await context.close();
-    console.log('PASS artist interest page from homepage, mail link, brochure and responsive desktop/mobile');
+    console.log('PASS Elise Van Acker example with portrait and two artworks on desktop/mobile');
   } finally {
     await browser.close();
   }
