@@ -64,8 +64,7 @@ body{background:#fffaf6;color:var(--ink)}
 .site-header .brand .brand-mark span { display: none !important; }
 
 
-/* 41 Lokeren v1.8.6 — vaste bovenbalk op alle schermbreedtes.
-   Werkt op de homepage en kavelpagina's. Navigatie blijft ongewijzigd. */
+/* 41 Lokeren: sticky header on desktop only; unchanged navigation. */
 @media screen {
   .site-header {
     position: -webkit-sticky !important;
@@ -73,6 +72,19 @@ body{background:#fffaf6;color:var(--ink)}
     top: 0;
     z-index: 100;
     box-shadow: 0 5px 18px rgba(65, 29, 30, .07);
+  }
+}
+/* On phones and narrow tablets the public header leaves the viewport when
+   scrolling. Keep the element in normal document flow, including iOS Safari. */
+@media screen and (max-width: 800px) {
+  .site-header {
+    position: relative !important;
+    top: auto !important;
+  }
+  /* Override the admin preview banner's more specific sticky offset on
+     mobile. The banner stays visible; the public header stays in flow. */
+  .admin-preview-banner ~ header.site-header {
+    top: auto !important;
   }
 }
 

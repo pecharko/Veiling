@@ -1,4 +1,4 @@
-/* Isolated fixture only: actual login, menu popup, responsive sticky layout. */
+/* Isolated fixture only: actual login, menu popup, mobile-scroll and desktop-sticky layout. */
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright');
 (async () => {
@@ -29,11 +29,20 @@ const { chromium } = require('playwright');
       });
       const box = await banner.boundingBox();
       assert.ok(box && Math.abs(box.y) < 1 && box.height > 0 && box.height < 800, 'Banner stays at viewport top');
-      const header = await preview.locator('.site-header').boundingBox();
-      assert.ok(header && header.y >= box.height - 1, 'Sticky navigation stays below the wrapped banner');
+      const header = preview.locator('.site-header');
+      const headerStyle = await header.evaluate(el => getComputedStyle(el).position);
+      const headerTop = await header.evaluate(el => el.getBoundingClientRect().top);
+      if (width <= 800) {
+        assert.equal(headerStyle, 'relative', 'Mobile preview navigation must scroll normally');
+        assert.ok(headerTop < -30, 'Mobile header has scrolled out below the fixed admin banner');
+      } else {
+        assert.equal(headerStyle, 'sticky', 'Desktop navigation must remain sticky');
+        assert.ok(headerTop >= box.height - 1,
+          'Desktop sticky navigation stays below the wrapped admin banner');
+      }
       assert.equal(await preview.evaluate(() => window.scrollY > 1000), true, 'Actually scrolled');
     }
     await context.close();
-    process.stdout.write('PASS actual desktop/mobile preview banner scrolling and header offset\n');
+    process.stdout.write('PASS preview banner fixed; mobile header scrolls away; desktop header stays sticky\n');
   } finally { await browser.close(); }
 })().catch(error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; });
