@@ -40,4 +40,5 @@ foreach ($pages as $pageName) {
         throw new RuntimeException('Shared mobile stylesheet must be cache-busted on public page: ' . $pageName);
     }
 }
+require __DIR__ . '/artist_compact_previous_edition_contract_test.php';
 echo "PASS: non-sticky public header at <=800px, sticky desktop header, seven cache-busted public pages\n";
