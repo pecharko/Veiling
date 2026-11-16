@@ -18,13 +18,13 @@ foreach (["url('index.php')", '>Home</a>', '>Bekijk kavels</a>', "url('goede-doe
         throw new RuntimeException('Required navigation item missing: ' . $expected);
     }
 }
-if (!str_contains($source, '<a class="back-link" href="<?=e(url(\'index.php\'))?>#catalogus">← Terug</a>')) {
-    throw new RuntimeException('Artists overview back link must say Terug and retain catalog destination.');
+if (!str_contains($source, '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>')) {
+    throw new RuntimeException('Artists overview must use the charity page-style homepage return button.');
 }
-if (str_contains($source, '← Terug naar de catalogus')) {
-    throw new RuntimeException('Old back link wording must be absent.');
+if (str_contains($source, 'class="back-link"') || str_contains($source, '← Terug naar de catalogus')) {
+    throw new RuntimeException('Old artists overview back link must be absent.');
 }
 if (!str_contains($source, '<h1>Ontmoet onze kunstenaars</h1>')) {
     throw new RuntimeException('Artists overview heading must remain intact.');
 }
-echo "PASS artist navigation includes charity link and short catalog back link without self-link.\n";
+echo "PASS artist navigation includes charity link and homepage-style return button without self-link.\n";
