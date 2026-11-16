@@ -18,6 +18,22 @@ foreach (['require_public_site_online()', 'admin_preview_banner()', 'public_soci
         throw new RuntimeException('Dedicated page missing: ' . $expected);
     }
 }
+$mainStart = strpos($page, '<main id="inhoud">');
+$announcement = strpos($page, '<section class="cause-announcement"');
+$story = strpos($page, '<section class="shell cause-story"');
+$last = strpos($page, '<section class="shell cause-last"');
+if ($mainStart === false || $announcement === false || $story === false || $last === false
+    || !($mainStart < $announcement && $announcement < $story && $story < $last)) {
+    throw new RuntimeException('Good-cause announcement must be the first section.');
+}
+if (!str_contains($page, '<h1 id="cause-announcement-title">')
+    || str_contains($page, 'Een veiling met<br>')
+    || str_contains($page, 'cause-hero')) {
+    throw new RuntimeException('Old introductory hero must be removed and announcement should be H1.');
+}
+if (str_contains($css, '.cause-hero')) {
+    throw new RuntimeException('Obsolete hero CSS remains.');
+}
 if (!str_contains($page, 'Binnenkort stellen we het goede doel voor.')) {
     throw new RuntimeException('Unannounced beneficiary must not be invented.');
 }
