@@ -86,4 +86,4 @@ if (substr_count($page, 'href="mailto:veiling@41lokeren.be"') !== 2) {
     throw new RuntimeException('Artist participation contact must use the specified mail address.');
 }
 
-echo "PASS: artist-interest page and homepage CTA with static brochure, copy and mobile styles.\n";
+echo "PASS: artist-interest page with validated published-artist brochure photos, compact layout and contact text.\n";
