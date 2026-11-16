@@ -105,7 +105,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
         <?php if ($published): ?><a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a><?php endif; ?>
         <a href="#informatie">Veilinginfo</a>
-        <a href="#goede-doel">Het goede doel</a>
+        <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
         <?php if ((int)($s['show_report_issue_link'] ?? 0) === 1): ?><a href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer">Probleem melden</a><?php endif; ?>
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
         <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a>
@@ -127,7 +127,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
           <div class="front-hero-actions">
             <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a><?php endif; ?>
-            <a class="front-btn front-btn-outline" href="#goede-doel">Meer over het goede doel <span aria-hidden="true">→</span></a>
+            <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel <span aria-hidden="true">→</span></a>
             <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
           </div>
         </div>
