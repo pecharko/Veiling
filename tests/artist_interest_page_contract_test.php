@@ -39,37 +39,40 @@ foreach ([
     'artist-invite-sample-portrait',
     'artist-invite-sample-art--one',
     'artist-invite-sample-art--two',
-    'artist-invite-sample-art--three',
+    'Elise Van Acker',
+    'assets/voorbeeld-elise-van-acker-portret.webp',
+    'assets/voorbeeld-elise-van-acker-werk-01.webp',
+    'assets/voorbeeld-elise-van-acker-werk-02.webp',
 ] as $required) {
     if (!str_contains($page, $required)) {
         throw new RuntimeException('Missing artist interest page requirement: ' . $required);
     }
 }
-// Only already-published public artist details can be used in the sample.
-foreach ([
-    "s.seller_type='kunstenaar'",
-    's.artist_published=1',
-    "s.artist_name='Mira Veld'",
-    "s.artist_name<>''",
-    'FROM seller_images',
-    "image_kind='portrait'",
-    "image_kind='work'",
-    "cfg('setup_key') === 'local-preview-only-nonproduction'",
-    'LOCAL_PREVIEW_ISOLATED',
-    'is_file(__DIR__',
-    'e($sampleName)',
-    'e(url($samplePortrait))',
-    'e(url($sampleWorks[1]))',
-    'e(url($sampleWorks[2]))',
-    'e(url($sampleWorks[3]))',
-] as $required) {
-    if (!str_contains($page, $required)) {
-        throw new RuntimeException('Missing safe published-artist photo selection: ' . $required);
-    }
+// The user-supplied example must always use exactly one portrait and two
+// paintings, independently of preview DB content or artist publication.
+$sampleStart = strpos($page, '<div class="artist-invite-sample"');
+$sampleEnd = strpos($page, '<p class="artist-invite-example-note">', $sampleStart ?: 0);
+if ($sampleStart === false || $sampleEnd === false) {
+    throw new RuntimeException('Example brochure source missing.');
 }
-foreach (['SELECT *', 'bank_account', 'phone', 'mobile', 'street', 'postal_code', 'email', '<form'] as $forbidden) {
-    if (str_contains($page, $forbidden)) {
-        throw new RuntimeException('Artist example must not expose sensitive seller fields or collect user submissions.');
+$sample = substr($page, $sampleStart, $sampleEnd - $sampleStart);
+if (substr_count($sample, '<img ') !== 3 || substr_count($sample, 'artist-invite-sample-art--') !== 2
+    || str_contains($sample, 'artist-invite-sample-art--three')
+    || str_contains($page, 'Mira Veld')) {
+    throw new RuntimeException('Example must show Elise Van Acker, one portrait and only two works.');
+}
+if (str_contains($page, 'SELECT ') || str_contains($page, 'db()->') || str_contains($page, '<form')) {
+    throw new RuntimeException('The example must remain static and independent of the seller database.');
+}
+foreach (['portret','werk-01','werk-02'] as $kind) {
+    $photoFile = $root . '/catalogus-public/assets/voorbeeld-elise-van-acker-' . $kind . '.webp';
+    if (!is_file($photoFile) || filesize($photoFile) < 1000) {
+        throw new RuntimeException('Missing optimized artist example asset: ' . $kind);
+    }
+    $header = file_get_contents($photoFile, false, null, 0, 12);
+    if (!is_string($header) || substr($header, 0, 4) !== 'RIFF'
+        || substr($header, 8, 4) !== 'WEBP') {
+        throw new RuntimeException('Artist photo is not a valid WebP asset: ' . $kind);
     }
 }
 if (!str_contains($css, 'max-width:300px')
@@ -86,4 +89,4 @@ if (substr_count($page, 'href="mailto:veiling@41lokeren.be"') !== 2) {
     throw new RuntimeException('Artist participation contact must use the specified mail address.');
 }
 
-echo "PASS: artist-interest page with validated published-artist brochure photos, compact layout and contact text.\n";
+echo "PASS: artist-interest page with Elise Van Acker portrait, two artworks, compact layout and contact text.\n";
