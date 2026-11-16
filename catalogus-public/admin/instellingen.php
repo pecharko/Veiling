@@ -78,7 +78,7 @@ $completedCount = count(array_filter($checkFields));
 $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelden ingevuld';
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $catalogSplitEnabled = (int)($s['catalog_split_active'] ?? 0) === 1;
-$artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 0) === 1;
+$artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 1) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
 $reportIssueEnabled = (int)($s['show_report_issue_link'] ?? 0) === 1;
 $publicStateText = !$siteOnline ? 'Website offline — bezoekers zien Binnenkort online' : ($publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar');
