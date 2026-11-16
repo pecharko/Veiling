@@ -36,7 +36,7 @@ if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-out
 if (!str_contains($css, '.front-hero-actions { display:flex;') || !str_contains($css, 'flex-wrap:wrap;')) {
     throw new RuntimeException('Hero actions must wrap responsively.');
 }
-if (!str_contains($artists, "if (!$artistsOverviewEnabled):")) {
+if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
     throw new RuntimeException('Artists destination must keep coming-soon behavior.');
 }
 echo "PASS homepage artists CTA route, text, existing design and responsive wrap.\n";
