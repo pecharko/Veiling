@@ -162,7 +162,10 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       <div class="front-impact-copy">
         <p class="front-eyebrow front-impact-eyebrow">SAMEN MAKEN WE HET VERSCHIL</p>
         <h2 id="front-impact-title">Een bijzondere veiling<br>voor het goede doel</h2>
-        <p>Nu <a class="front-impact-text-link" href="<?=e(url('goede-doel.php'))?>">het goede doel</a> bekend is, zijn we gestart met het verzamelen van kunstwerken. We richten ons in de eerste plaats naar kunstenaars die we via deze veiling een platform geven om een breder publiek te bereiken. <a class="front-impact-text-link" href="<?=e(url('kunstenaars.php'))?>">Een overzicht van de deelnemende kunstenaars</a> is beschikbaar via deze website. Daarnaast richten we ons ook naar iedereen die een interessant kunstwerk wil laten veilen voor het goede doel.</p>
+        <p>Nu <a class="front-impact-text-link" href="<?=e(url('goede-doel.php'))?>">het goede doel</a> bekend is, zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.</p>
+        <p>Daarbij geven we graag het podium aan kunstenaars die hun werk aan een breder publiek willen voorstellen en tegelijk willen bijdragen aan een waardevol initiatief. Ontdek alvast <a class="front-impact-text-link" href="<?=e(url('kunstenaars.php'))?>">de deelnemende kunstenaars</a> en laat je inspireren door hun werk.</p>
+        <p>Ook wie zelf een bijzonder kunstwerk bezit en dit graag ter beschikking stelt voor de veiling, nodigen we van harte uit om mee te werken.</p>
+        <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
         <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
           <button class="front-btn front-btn-sage front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse</button>
           <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
