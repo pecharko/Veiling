@@ -64,7 +64,7 @@ try {
     ip_http('/index.php',null,'127.0.0.2','anonymous-same-ip');
     ip_check(ip_views()===$before && ip_views('visitor_geo_daily')===$geoBefore,'Known IP suppresses home, lot and geo across anonymous sessions');
     ip_http('/index.php',null,'127.0.0.3','guest');
-    ip_check(ip_views()===$before+1 && ip_views('visitor_geo_daily')===$geoBefore+1,'Different ordinary IP still records both visitor and geo views');
+    ip_check(ip_views()===$before && ip_views('visitor_geo_daily')===$geoBefore,'Different non-Belgian localhost IP stays excluded from visitor and geo counts');
     [$status]=ip_http('/admin/statistieken.php',['action'=>'toggle_ip_exclusion','enabled'=>'0','csrf'=>'invalid']);
     ip_check($status===403 && analytics_ip_exclusion_enabled($pdo),'CSRF blocks switch mutations');
     [$status]=ip_http('/admin/statistieken.php',['action'=>'toggle_ip_exclusion','enabled'=>'0','csrf'=>'invalid'],'127.0.0.2','assistant');
@@ -78,7 +78,7 @@ try {
     ip_http('/index.php',['admin_preview_action'=>'start','csrf'=>$csrf]);
     $before=ip_views();$geoBefore=ip_views('visitor_geo_daily');
     [, $page]=ip_http('/index.php');ip_http('/kavel.php?nr=999111');
-    ip_check(ip_views()===$before+2 && ip_views('visitor_geo_daily')===$geoBefore+2 && str_contains($page,'Statistieken kunnen worden verzameld'),'Disabled switch counts even active preview sessions and banner says so');
+    ip_check(ip_views()===$before && ip_views('visitor_geo_daily')===$geoBefore && str_contains($page,'Statistieken kunnen worden verzameld'),'Disabling IP exclusion never bypasses Belgium-only collection during preview');
     ip_check(ip_login('127.0.0.5','off-login')===303 && ip_rows()===4,'Login continues registering addresses while exclusion is off');
     [$status]=ip_http('/admin/statistieken.php',['action'=>'toggle_ip_exclusion','enabled'=>'1','csrf'=>$csrf]);
     ip_check($status===303 && analytics_ip_exclusion_enabled($pdo) && ip_rows()===4,'Re-enabling reuses the complete preserved list');
@@ -87,7 +87,7 @@ try {
     ip_http('/index.php',['admin_preview_action'=>'start','csrf'=>$csrf],'127.0.0.6');
     ip_check(ip_rows()===4,'Preview click from changed network never registers or changes an IP');
     $before=ip_views();ip_http('/index.php',null,'127.0.0.6');
-    ip_check(ip_views()===$before+1,'Unknown address counts even if a preview session is active');
+    ip_check(ip_views()===$before,'Unresolved address is excluded even while a preview session is active');
     ip_http('/admin/logout.php',['csrf'=>$csrf]);$before=ip_views();ip_http('/index.php');
     ip_check(ip_views()===$before,'Logout never removes the persistent IP exclusion');
     $pdo->exec('RENAME TABLE visitor_stats_ip_exclusions TO visitor_stats_ip_exclusions_ci_hidden');
