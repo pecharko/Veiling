@@ -13,7 +13,7 @@ foreach ([
     'show_artists_overview = :show_artists_overview',
     'name="show_artists_overview"',
     "['show_artists_overview'] ?? 1",
-    'Kunstenaars overzicht tonen op website',
+    'Kunstenaarsoverzicht tonen op website',
     'check_csrf();',
 ] as $expected) {
     if (!str_contains($admin, $expected)) {
