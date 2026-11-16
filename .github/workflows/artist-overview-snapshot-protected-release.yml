@@ -1,0 +1,108 @@
+name: Artist overview snapshot protected one-file release
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/artist-overview-snapshot-protected-release.yml'
+      - 'scripts/deploy_artist_overview_snapshot.py'
+      - 'tests/deploy_artist_overview_snapshot_test.py'
+      - 'tests/artist_overview_snapshot_workflow_test.py'
+      - 'releases/artist-overview-snapshot-20261116.json'
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'ARTIST-OVERVIEW-SNAPSHOT-DEPLOY-artist-overview-snapshot-20261116-<exact immutable main SHA>; owner approval required'
+        required: true
+        type: string
+      backup_ready:
+        description: 'ARTIST-OVERVIEW-FULL-BACKUP-VERIFIED-20261116; independently checked full database AND photo backup, rollback and existing ZIP retention required'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.event_name == 'workflow_dispatch' && 'ovh-production-deploy' || format('artist-overview-snapshot-review-{0}', github.event.pull_request.number) }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Offline immutable one-file snapshot release contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_overview_snapshot_test.py -v
+          python3 -B -m unittest discover -s tests -p artist_overview_snapshot_workflow_test.py -v
+          python3 -B -m py_compile scripts/deploy_artist_overview_snapshot.py
+          python3 -B -m scripts.deploy_artist_overview_snapshot plan
+          php -l private/snapshots.php
+          python3 - <<'PY'
+          from scripts.shared_ovh_release import PROTECTED
+          assert 'private/snapshots' in PROTECTED
+          PY
+      - name: Validate dedicated workflow syntax
+        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 .github/workflows/artist-overview-snapshot-protected-release.yml
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 25
+    env:
+      DEPLOY_CONFIRMATION: ${{ inputs.confirmation }}
+      ARTIST_OVERVIEW_FULL_BACKUP_READY: ${{ inputs.backup_ready }}
+      OVH_SFTP_HOST: ${{ secrets.OVH_SFTP_HOST }}
+      OVH_SFTP_USER: ${{ secrets.OVH_SFTP_USER }}
+      OVH_SFTP_PASSWORD: ${{ secrets.OVH_SFTP_PASSWORD }}
+      OVH_SFTP_KNOWN_HOSTS: ${{ secrets.OVH_SFTP_KNOWN_HOSTS }}
+      OVH_SFTP_BASE: ${{ vars.OVH_SFTP_BASE }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify exact immutable main, owner approval and verified full backup
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = 'pecharko/Veiling'
+          test "$GITHUB_WORKFLOW_REF" = 'pecharko/Veiling/.github/workflows/artist-overview-snapshot-protected-release.yml@refs/heads/main'
+          git fetch --no-tags origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          test "$DEPLOY_CONFIRMATION" = "ARTIST-OVERVIEW-SNAPSHOT-DEPLOY-artist-overview-snapshot-20261116-$GITHUB_SHA"
+          test "$ARTIST_OVERVIEW_FULL_BACKUP_READY" = 'ARTIST-OVERVIEW-FULL-BACKUP-VERIFIED-20261116'
+      - name: Verify guarded one-file source, manifest and offline security tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -B -m unittest discover -s tests -p deploy_artist_overview_snapshot_test.py -v
+          python3 -B -m unittest discover -s tests -p artist_overview_snapshot_workflow_test.py -v
+          python3 -B -m scripts.deploy_artist_overview_snapshot plan
+          php -l private/snapshots.php
+      - name: Install pinned SFTP client
+        run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+      - name: Fresh pinned-hostkey drift check, source backup, exact upload, readback and rollback
+        run: python3 -B -m scripts.deploy_artist_overview_snapshot deploy
+      - name: Retain verified upload and rollback evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-overview-snapshot-evidence-${{ github.run_id }}
+          path: deployment-evidence.json
+          retention-days: 7
+          if-no-files-found: warn
+      - name: Retain protected source rollback backup
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: artist-overview-snapshot-rollback-${{ github.run_id }}
+          path: deployment-backups/
+          retention-days: 7
+          if-no-files-found: warn
