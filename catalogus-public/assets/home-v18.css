@@ -141,3 +141,39 @@ html { scroll-padding-top: 100px; }
 .front-impact-actions .front-impact-action { min-height:50px; max-width:100%; white-space:normal; text-align:center; cursor:not-allowed; opacity:.72; box-shadow:none; }
 .front-impact-actions .front-impact-action:hover { transform:none; }
 @media(max-width:650px) { .front-impact-actions { flex-direction:column; align-items:stretch; } }
+
+/* lokale correctie impactsectie 2026-11-16: begin */
+/* Houd lange copy en de brede foto in een compacte, responsieve tweekolomssectie. */
+.front-impact.shell {
+  box-sizing: border-box;
+  height: auto;
+  min-height: 0;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+}
+.front-impact-copy { min-width: 0; max-width: none; }
+.front-impact-media {
+  min-width: 0;
+  align-self: center;
+  height: auto;
+  max-height: 440px;
+  overflow: hidden;
+}
+.front-impact-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  max-height: 440px;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+@media (max-width: 950px) and (min-width: 651px) {
+  .front-impact { gap: 22px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .front-impact-media img { max-height: 360px; }
+}
+@media (max-width: 650px) {
+  .front-impact.shell { grid-template-columns: 1fr; min-height: 0; }
+  .front-impact-media { display: none !important; }
+}
+/* lokale correctie impactsectie 2026-11-16: einde */
