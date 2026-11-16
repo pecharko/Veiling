@@ -22,6 +22,9 @@ class PublicPrivacyTests(unittest.TestCase):
         self.assertIn("Verantwoordelijke organisatie:</strong> 41 Lokeren",page)
         self.assertIn("rechtsgrond en de proportionaliteit van de bewaartermijn",page)
         self.assertIn("interne kavel-ID",page)
+        self.assertIn("Alleen bezoeken waarvan België (BE) wordt herkend", page)
+        self.assertIn("bezoeken met onbekende of niet-verifieerbare herkomst tellen niet mee", page)
+        self.assertIn("geen eerder opgeslagen statistieken", page)
     def test_analytics_code_untouched(self):
         source=(root/"private/visitor_stats.php").read_text()
         self.assertNotIn("DELETE FROM visitor_stats_daily",source)
