@@ -101,10 +101,10 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
-        <a class="front-nav-home" href="<?=e(url('index.php'))?>">Home</a>
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
         <?php if ($published): ?><a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a><?php endif; ?>
         <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
+        <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
         <?php if ((int)($s['show_report_issue_link'] ?? 0) === 1): ?><a href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer">Probleem melden</a><?php endif; ?>
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
         <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a><?php endif; ?>
