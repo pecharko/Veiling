@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "f058b950c3139304bd8c41a5b4e423ec5c74c2557bac96b34aa6a08f96284305",
+      "remote_sha256": "4ca1bf1b5495696e6dff7b1cdc84c4a3d20faf7cc8db233f3ba1678e88d242b7"
+    }
+  ]
+}
