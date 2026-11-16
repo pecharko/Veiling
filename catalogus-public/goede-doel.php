@@ -31,7 +31,7 @@ require_public_site_online();
       <a href="<?=e(url('index.php'))?>">Home</a>
       <a href="<?=e(url('goede-doel.php'))?>" aria-current="page">Het goede doel</a>
       <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-      <a class="front-header-cta" href="<?=e(url('index.php'))?>#informatie">Veilinginfo →</a>
+      <a class="front-header-cta" href="<?=e(url('index.php'))?>">Naar de veiling →</a>
     </nav>
   </div>
 </header>
@@ -58,7 +58,7 @@ require_public_site_online();
     <h2 id="cause-last-title">Ook jouw aanwezigheid maakt het verschil.</h2>
     <p>Kom de bijzondere stukken bekijken, ontdek de verhalen achter de kavels en beleef de veiling mee.</p>
     <div class="cause-actions">
-      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>#informatie">Praktische informatie <span aria-hidden="true">→</span></a>
+      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Bekijk de veiling <span aria-hidden="true">→</span></a>
       <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
     </div>
   </section>
