@@ -81,6 +81,11 @@ body{background:#fffaf6;color:var(--ink)}
     position: relative !important;
     top: auto !important;
   }
+  /* Override the admin preview banner's more specific sticky offset on
+     mobile. The banner stays visible; the public header stays in flow. */
+  .admin-preview-banner ~ header.site-header {
+    top: auto !important;
+  }
 }
 
 /* Sold post-it: approved green paper, 30-degree tilt and slight corner overhang. */
