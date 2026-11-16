@@ -34,7 +34,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
-  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('kunstenaars.php'))?>" aria-current="page">Kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a></nav>
+  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a></nav>
 </div></header>
 <main class="shell artists-overview">
   <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
