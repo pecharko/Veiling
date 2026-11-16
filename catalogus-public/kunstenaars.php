@@ -4,7 +4,7 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 $settings = settings();
-$artistsOverviewEnabled = (int)($settings['show_artists_overview'] ?? 0) === 1;
+$artistsOverviewEnabled = (int)($settings['show_artists_overview'] ?? 1) === 1;
 // Only public artist metadata and a single portrait path are selected.
 // A disabled overview must not query or disclose artists, even in preview.
 $artists = [];
