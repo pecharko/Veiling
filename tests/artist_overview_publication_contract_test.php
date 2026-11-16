@@ -12,7 +12,7 @@ foreach ([
     "'show_artists_overview' => isset(\$_POST['show_artists_overview']) ? 1 : 0",
     'show_artists_overview = :show_artists_overview',
     'name="show_artists_overview"',
-    "['show_artists_overview'] ?? 0",
+    "['show_artists_overview'] ?? 1",
     'Kunstenaars overzicht tonen op website',
     'check_csrf();',
 ] as $expected) {
@@ -35,8 +35,8 @@ foreach ([
 if (str_contains($page, "exit('Kunstenaars niet beschikbaar.')")) {
     throw new RuntimeException('Artists coming-soon page must remain reachable when catalog is unpublished');
 }
-if (!str_contains($seed, 'ADD COLUMN show_artists_overview TINYINT(1) NOT NULL DEFAULT 0')
-    || !str_contains($migration, 'ADD COLUMN show_artists_overview TINYINT(1) NOT NULL DEFAULT 0')) {
-    throw new RuntimeException('Default-off isolated seed or migration missing');
+if (!str_contains($seed, 'ADD COLUMN show_artists_overview TINYINT(1) NOT NULL DEFAULT 1')
+    || !str_contains($migration, 'ADD COLUMN show_artists_overview TINYINT(1) NOT NULL DEFAULT 1')) {
+    throw new RuntimeException('Default-on isolated seed or migration missing');
 }
 echo "PASS artist overview switch and public coming-soon contract\n";
