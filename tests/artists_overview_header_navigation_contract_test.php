@@ -13,7 +13,7 @@ $nav = $match[1];
 if (str_contains($nav, "url('kunstenaars.php')") || str_contains($nav, '>Kunstenaars</a>')) {
     throw new RuntimeException('Artists overview should not show redundant Kunstenaars menu item.');
 }
-foreach (["url('index.php')", '>Home</a>', '>Bekijk kavels</a>', "url('goede-doel.php')", '>Het goede doel</a>'] as $expected) {
+foreach (["url('index.php')", '>Home</a>', '>Bekijk kavels</a>', "url('goede-doel.php')", '>Het goede doel</a>', "url('vorige-editie.php')", '>Vorige editie</a>'] as $expected) {
     if (!str_contains($nav, $expected)) {
         throw new RuntimeException('Required navigation item missing: ' . $expected);
     }
