@@ -166,7 +166,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <p>Ook wie zelf een bijzonder kunstwerk bezit en dit graag ter beschikking stelt voor de veiling, nodigen we van harte uit om mee te werken.</p>
         <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
         <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
-          <button class="front-btn front-btn-sage front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse</button>
+          <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstenaar-interesse.php'))?>">Ik ben kunstenaar en heb interesse</a>
           <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
         </div>
       </div>

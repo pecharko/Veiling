@@ -20,30 +20,58 @@ $checks=0;
 function lc_check(bool $yes,string $message): void { global $checks;if (!$yes) throw new RuntimeException($message);$checks++; }
 function lc_throws(callable $fn,string $message): void { try{$fn();}catch(Throwable $e){lc_check(true,$message);return;}throw new RuntimeException($message); }
 function lc_sum(PDO $pdo,string $table): int { return (int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM '.$table)->fetchColumn(); }
+lc_check(!visitor_stats_exclude_country(['country_code'=>'BE']), 'Belgian visitor passes geo country gate');
+lc_check(visitor_stats_exclude_country(['country_code'=>'NL']) && visitor_stats_exclude_country(['country_code'=>'US'])
+    && visitor_stats_exclude_country(['country_code'=>'ZZ']), 'Foreign and unresolved country codes are excluded');
 foreach (array_keys(GEO_SNAPSHOT_COLUMNS) as $table) $pdo->exec('DROP TABLE IF EXISTS '.$table);
 function lc_install(PDO $pdo,string $path): void {
     $sql=preg_replace('/^\s*--[^\n]*$/m','',(string)file_get_contents(dirname(__DIR__).'/'.$path));
     foreach(explode(';',(string)$sql) as $statement) if(trim($statement)!=='')$pdo->exec($statement);
+}
+// Reproduce confirmed-BE daily and geo writes in the disposable CI database.
+// A local documentation IP cannot pass GeoLite2, so the actual public tracker
+// is checked separately for fail-closed behavior. This fixture never runs in
+// production and does not pretend to test the external BE GeoIP lookup.
+function lc_confirmed_be_fixture(PDO $pdo, ?int $lotId=null, bool $withGeo=false): void {
+    $day=gmdate('Y-m-d');
+    $visitorId=hash('sha256','local-belgian-test:'.$day,true);
+    $pdo->beginTransaction();
+    try {
+        $stmt=$pdo->prepare('INSERT INTO visitor_stats_daily (visit_date,visitor_id,page_kind,lot_id,views)
+          VALUES (?,?,?,?,1) ON DUPLICATE KEY UPDATE views=views+1');
+        $stmt->execute([$day,$visitorId,$lotId===null?'home':'lot',$lotId??0]);
+        if($withGeo) visitor_geo_record_view($pdo,$day,$visitorId,
+            ['country_code'=>'BE','region_code'=>'VOV','city_name'=>'Lokeren']);
+        $pdo->commit();
+    }catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();throw $e;}
 }
 lc_install($pdo,'database/migrations/20261102_visitor_stats_ip_exclusions.sql');
 $pdo->exec('DELETE FROM visitor_stats_ip_exclusions');analytics_ip_set_exclusion($pdo,true);
 lc_install($pdo,'database/visitor_stats.sql');lc_install($pdo,'database/visitor_stats_aggregates.sql');
 $_SERVER=['REQUEST_METHOD'=>'GET','REMOTE_ADDR'=>'192.0.2.10','HTTP_USER_AGENT'=>'Geo lifecycle browser'];
 lc_check(visitor_geo_state($pdo)===null,'No migration means disabled');
-track_catalog_view();lc_check(lc_sum($pdo,'visitor_stats_daily')===1,'Legacy tracking without geo schema still works');
+track_catalog_view();lc_check(lc_sum($pdo,'visitor_stats_daily')===0,'Unresolved origin is rejected without geo schema');
+lc_confirmed_be_fixture($pdo,null,false);
+lc_check(lc_sum($pdo,'visitor_stats_daily')===1,'Confirmed Belgian pre-geo fixture remains supported');
 lc_install($pdo,'database/migrations/20261029_visitor_geo_analytics.sql');
 lc_check(visitor_geo_state($pdo)===['start_date'=>null],'Migration is OFF by default');
-track_catalog_view();lc_check(lc_sum($pdo,'visitor_stats_daily')===2 && lc_sum($pdo,'visitor_geo_daily')===0,'Disabled migration leaves normal tracking intact');
+track_catalog_view();lc_check(lc_sum($pdo,'visitor_stats_daily')===1 && lc_sum($pdo,'visitor_geo_daily')===0,'Unknown origin stays excluded after geo migration');
+lc_confirmed_be_fixture($pdo,null,false);
+lc_check(lc_sum($pdo,'visitor_stats_daily')===2 && lc_sum($pdo,'visitor_geo_daily')===0,'Geo-disabled Belgian fixture keeps normal tracking independent');
 $today=gmdate('Y-m-d');$tomorrow=gmdate('Y-m-d',time()+86400);
 $pdo->prepare('UPDATE visitor_geo_state SET start_date=?')->execute([$tomorrow]);
 track_catalog_view();lc_check(lc_sum($pdo,'visitor_geo_daily')===0,'Future start cannot collect early');
 $pdo->prepare('UPDATE visitor_geo_state SET start_date=?')->execute([$today]);
 track_catalog_view();
-lc_check(lc_sum($pdo,'visitor_geo_daily')===1,'Active tracker writes unknown location without an MMDB');
+lc_check(lc_sum($pdo,'visitor_geo_daily')===0,'Active tracker rejects unknown location without an MMDB');
+lc_confirmed_be_fixture($pdo,null,true);
+lc_check(lc_sum($pdo,'visitor_geo_daily')===1,'Confirmed Belgian fixture populates active geographic counters');
 lc_check(visitor_geo_dashboard($pdo)['status']==='partial','Partial activation-day coverage is not presented as complete');
 $pdo->exec('DELETE FROM visitor_stats_daily');$pdo->exec('DELETE FROM visitor_geo_daily');
 track_catalog_view();track_catalog_view(7);
-lc_check((int)$pdo->query('SELECT COUNT(*) FROM visitor_geo_daily')->fetchColumn()===1 && lc_sum($pdo,'visitor_geo_daily')===2,'Actual tracker deduplicates visitor across home and lot');
+lc_check(lc_sum($pdo,'visitor_stats_daily')===0 && lc_sum($pdo,'visitor_geo_daily')===0,'Unresolved home and lot requests create no rows');
+lc_confirmed_be_fixture($pdo,null,true);lc_confirmed_be_fixture($pdo,7,true);
+lc_check((int)$pdo->query('SELECT COUNT(*) FROM visitor_geo_daily')->fetchColumn()===1 && lc_sum($pdo,'visitor_geo_daily')===2,'Confirmed Belgian fixtures deduplicate visitor across home and lot');
 $_SERVER['HTTP_X_FORWARDED_FOR']='8.8.8.8';track_catalog_view();
 lc_check((int)$pdo->query('SELECT COUNT(*) FROM visitor_geo_daily')->fetchColumn()===1,'Untrusted forwarded IP does not change identifier');
 $before=lc_sum($pdo,'visitor_stats_daily');
@@ -60,8 +88,11 @@ foreach (['dnt','bot','post','empty','secret'] as $skip) {
 if(is_file(analytics_disabled_marker()))throw new RuntimeException('Refusing to alter an existing analytics-disabled marker');
 set_analytics_collection_enabled(false);
 try{track_catalog_view();lc_check(lc_sum($pdo,'visitor_geo_daily')===$before,'Global off switch covers geo');}finally{set_analytics_collection_enabled(true);}
-$pdo->exec('ALTER TABLE visitor_geo_daily ADD CONSTRAINT lc_reject CHECK (views<=3)');
-try{track_catalog_view();lc_check(lc_sum($pdo,'visitor_stats_daily')===$before,'Failed geo write rolls back actual normal tracker write');}finally{$pdo->exec('ALTER TABLE visitor_geo_daily DROP CHECK lc_reject');}
+$pdo->exec('ALTER TABLE visitor_geo_daily ADD CONSTRAINT lc_reject CHECK (views<=2)');
+try{
+    lc_throws(fn()=>lc_confirmed_be_fixture($pdo,null,true),'Rejected Belgian geo fixture rolls back the shared transaction');
+    lc_check(lc_sum($pdo,'visitor_stats_daily')===$before && lc_sum($pdo,'visitor_geo_daily')===$before,'Geo write failure cannot leave an unmatched daily count');
+}finally{$pdo->exec('ALTER TABLE visitor_geo_daily DROP CHECK lc_reject');}
 $pdo->beginTransaction();track_catalog_view();lc_check($pdo->inTransaction() && lc_sum($pdo,'visitor_stats_daily')===$before,'Tracker does not take ownership of caller transaction');$pdo->rollBack();
 catalog_data_lock($peer,0);
 try{track_catalog_view();lc_check(lc_sum($pdo,'visitor_geo_daily')===$before,'Snapshot mutex prevents concurrent tracker mutation');}finally{catalog_data_unlock($peer);}

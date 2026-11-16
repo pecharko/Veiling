@@ -9,12 +9,13 @@ require_once __DIR__ . '/visitor_geo_record.php';
 require_once __DIR__ . '/visitor_geo_lookup.php';
 
 /**
- * Exclude known US-origin traffic from every visitor and lot statistic.
- * Unresolved GeoIP countries (ZZ) are not guessed to be US.
+ * Record statistics only for traffic explicitly resolved to Belgium (BE).
+ * Foreign, invalid and unresolved GeoIP countries (ZZ) contribute to no
+ * visitor, lot or geographic counts. This gate precedes all analytics writes.
  */
 function visitor_stats_exclude_country(array $geo): bool
 {
-    return ($geo['country_code'] ?? null) === 'US';
+    return ($geo['country_code'] ?? null) !== 'BE';
 }
 
 function track_catalog_view(?int $lotId = null): void
@@ -38,8 +39,8 @@ function track_catalog_view(?int $lotId = null): void
         $locked = true;
         restore_journal_require_clear();
         if (analytics_ip_is_excluded($pdo)) return; // Before HMAC/geo/INSERT, for every session at this IP.
-        // Resolve even if geographic reporting is disabled: the US exclusion applies
-        // to both general visitor counts and lot views, not just geo counters.
+        // Resolve even if geographic reporting is disabled: the BE-only gate applies
+        // to all visitor, lot and geo counters, not just geographic reports.
         $resolvedGeo = visitor_geo_resolve($ip);
         if (visitor_stats_exclude_country($resolvedGeo)) return; // Nothing is inserted or aggregated.
         $identifier = hash_hmac('sha256', $day . ':' . $ip . ':' . $agent, $secret, true);

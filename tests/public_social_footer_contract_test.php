@@ -60,3 +60,7 @@ foreach ($release['files'] as $entry) {
     }
 }
 echo "PASS public social footer independent of catalog visibility and valid links only\n";
+
+// The new artist invitation shares the public navigation and footer.
+// Run its source-and-assets contract inside the existing public CI workflow.
+require __DIR__ . '/artist_interest_page_contract_test.php';

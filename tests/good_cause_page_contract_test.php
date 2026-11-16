@@ -54,9 +54,10 @@ foreach ([
     'Nu <a class="front-impact-text-link"',
     'zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.',
     'Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.',
-    'Ik ben kunstenaar en heb interesse</button>',
+    'Ik ben kunstenaar en heb interesse</a>',
     'Ik heb een kunstwerk voor de veiling</button>',
     'type="button" disabled',
+    "href=\"<?=e(url('kunstenaar-interesse.php'))?>\"", 
 ] as $expected) {
     if (!str_contains($impact, $expected)) {
         throw new RuntimeException('Missing good cause participation content: ' . $expected);
@@ -66,7 +67,7 @@ if (str_contains($impact, 'Het goede doel wordt binnenkort bekendgemaakt.')
     || str_contains($impact, 'Ontdek bijzondere objecten en unieke stukken.')) {
     throw new RuntimeException('Old good cause homepage text remains.');
 }
-if (substr_count($impact, 'type="button" disabled') !== 2) {
-    throw new RuntimeException('Both future-workflow actions must be disabled.');
+if (substr_count($impact, 'type="button" disabled') !== 1) {
+    throw new RuntimeException('Only the artwork-donation future workflow must remain disabled.');
 }
 echo "PASS: dedicated good cause page, links, guards and mobile stylesheet.\n";

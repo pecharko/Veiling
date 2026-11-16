@@ -124,6 +124,42 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 0);
     assert.equal(await preview.locator('.lot-estimate').count(), 0);
     await preview.close();
+
+    // The artist interest action and Elise Van Acker brochure need a real
+    // responsive browser check, not just a PHP source contract.
+    const invitationContext = await browser.newContext();
+    const invitationPage = await invitationContext.newPage();
+    for (const width of [1440, 390]) {
+      await invitationPage.setViewportSize({width, height:900});
+      const response = await invitationPage.goto(base + '/index.php', {waitUntil:'domcontentloaded'});
+      assert.equal(response.status(), 200, 'Public homepage should open for artist invitation');
+      const action = invitationPage.getByRole('link', {name:'Ik ben kunstenaar en heb interesse'});
+      assert.equal(await action.count(), 1, 'Artist participation action must be an enabled link');
+      await Promise.all([
+        invitationPage.waitForURL('**/kunstenaar-interesse.php'),
+        action.click(),
+      ]);
+      assert.equal((await invitationPage.locator('h1').textContent()).trim(), 'Ik ben kunstenaar en heb interesse');
+      assert.equal((await invitationPage.locator('.artist-invite-sample h3').textContent()).trim(), 'Elise Van Acker');
+      assert.equal(await invitationPage.locator('.artist-invite-sample-art').count(), 2);
+      const gallery = invitationPage.locator('.artist-invite-sample img');
+      assert.equal(await gallery.count(), 3, 'Elise example must show one portrait and two paintings');
+      const photosLoaded = await gallery.evaluateAll(async images => {
+        await Promise.all(images.map(img => img.decode()));
+        return images.every(img => img.naturalWidth > 0);
+      });
+      assert.equal(photosLoaded, true, 'The three supplied WebP images must load');
+      assert.equal(await invitationPage.locator('a[href="mailto:veiling@41lokeren.be"]').count(), 2);
+      const brochureWidth = await invitationPage.locator('.artist-invite-sample').evaluate(
+        el => el.getBoundingClientRect().width);
+      assert(brochureWidth <= 320, 'Example brochure must remain compact');
+      assert.equal(await invitationPage.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth), true,
+        'No artist-interest horizontal overflow at width ' + width);
+      await invitationPage.screenshot({
+        path:path.join(output,`artist-interest-${width}.png`), fullPage:true, animations:'disabled'});
+    }
+    await invitationContext.close();
     assert.deepEqual(errors, [], 'No browser JavaScript errors');
     await context.close();
     console.log('PASS local catalog and admin desktop/mobile screenshots: ' + output);
