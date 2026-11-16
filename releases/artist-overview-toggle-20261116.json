@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/instellingen.php",
+      "source_sha256": "d6f0577e565565c461f4c508a86dede3f08a0b772f7651145088810106ab95ef",
+      "remote_sha256": "0b610d74a5d38ed3d63c6ed2dcb1869a535b005256f948adadb2343f7ea293d6"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "ff2f806865bf5173d5ffb2d1f205d4f0d764745c0bed574e2859ca81775619e9",
+      "remote_sha256": "5c9b4f55672669d1cda9aca27faa02f08212223249769c2daebd2872fcd32183"
+    }
+  ]
+}

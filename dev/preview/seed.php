@@ -24,6 +24,9 @@ if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'show_report_issue_link'")->fe
 if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'catalog_split_active'")->fetch()) {
     $pdo->exec("ALTER TABLE settings ADD COLUMN catalog_split_active TINYINT(1) NOT NULL DEFAULT 0");
 }
+if (!$pdo->query("SHOW COLUMNS FROM settings LIKE 'show_artists_overview'")->fetch()) {
+    $pdo->exec("ALTER TABLE settings ADD COLUMN show_artists_overview TINYINT(1) NOT NULL DEFAULT 1");
+}
 // Bring existing isolated previews forward to the reviewed artist schema
 // without reseeding lots, deleting uploaded photos, or touching production.
 $artistNameExists = (bool)$pdo->query("SHOW COLUMNS FROM lots LIKE 'artist_name'")->fetch();

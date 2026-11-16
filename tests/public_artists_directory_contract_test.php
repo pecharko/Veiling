@@ -11,10 +11,12 @@ if (!is_string($page) || !is_string($profile) || !is_string($home) || !is_string
 }
 $required = [
     'site online gate' => 'require_public_site_online()',
-    'publication gate' => '($settings[\'is_published\'] ?? 0)',
+    'artist overview publication gate' => '($settings[\'show_artists_overview\'] ?? 1)',
     'artist type' => "s.seller_type='kunstenaar'",
     'artist publication guard' => 's.artist_published=1',
-    'independent artist publication' => 'Publication is governed by artist_published, independent of lot publication.',
+    'artist publication independent of lot publication' => 's.artist_published=1',
+    'disabled overview does not query artists' => 'if ($artistsOverviewEnabled) {',
+    'disabled overview displays coming-soon message' => 'Binnenkort vind je hier een overzicht van de deelnemende kunstenaars.',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",
     'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\']])',
     'image URL escaped' => 'src="<?=e(url($portrait))?>"',

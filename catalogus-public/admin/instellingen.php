@@ -25,6 +25,7 @@ if (is_post()) {
     'practical_info' => mb_substr(trim((string)($_POST['practical_info'] ?? '')), 0, 5000),
     'is_published' => isset($_POST['is_published']) ? 1 : 0,
     'catalog_split_active' => isset($_POST['catalog_split_active']) ? 1 : 0,
+    'show_artists_overview' => isset($_POST['show_artists_overview']) ? 1 : 0,
     'is_site_online' => isset($_POST['is_site_online']) ? 1 : 0,
     'show_report_issue_link' => isset($_POST['show_report_issue_link']) ? 1 : 0,
   ];
@@ -50,6 +51,7 @@ if (is_post()) {
       practical_info = :practical_info,
       is_published = :is_published,
       catalog_split_active = :catalog_split_active,
+      show_artists_overview = :show_artists_overview,
       is_site_online = :is_site_online,
       show_report_issue_link = :show_report_issue_link
       WHERE id = 1');
@@ -76,6 +78,7 @@ $completedCount = count(array_filter($checkFields));
 $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelden ingevuld';
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $catalogSplitEnabled = (int)($s['catalog_split_active'] ?? 0) === 1;
+$artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 1) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
 $reportIssueEnabled = (int)($s['show_report_issue_link'] ?? 0) === 1;
 $publicStateText = !$siteOnline ? 'Website offline — bezoekers zien Binnenkort online' : ($publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar');
@@ -318,6 +321,17 @@ if ($error) {
                 <span class="auction-settings-toggle-copy">
                   <strong>Opsplitsing Veiling / Marktplaats activeren</strong>
                   <span>Uit: alle kavels in één overzicht, zonder prijzen. Aan: Veiling op veilingsnummer met alleen startbod; Marktplaats met alleen marktprijs. Onafhankelijk van de kavelschakelaar.</span>
+                </span>
+              </span>
+            </label>
+
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="show_artists_overview" value="1" <?= $artistsOverviewEnabled ? 'checked' : '' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy">
+                  <strong>Kunstenaarsoverzicht tonen op website</strong>
+                  <span>Uit: bezoekers zien op de kunstenaars-pagina een aankondiging dat het overzicht binnenkort beschikbaar is. Aan: toon de gepubliceerde kunstenaars. Onafhankelijk van de kavelschakelaar.</span>
                 </span>
               </span>
             </label>
