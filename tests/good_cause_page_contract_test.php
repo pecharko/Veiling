@@ -50,7 +50,10 @@ if ($impact === '') {
 }
 foreach ([
     "href=\"<?=e(url('goede-doel.php'))?>\">het goede doel</a>",
-    "href=\"<?=e(url('kunstenaars.php'))?>\">Een overzicht van de deelnemende kunstenaars</a>",
+    "href=\"<?=e(url('kunstenaars.php'))?>\">de deelnemende kunstenaars</a>",
+    'Nu <a class="front-impact-text-link"',
+    'zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.',
+    'Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.',
     'Ik ben kunstenaar en heb interesse</button>',
     'Ik heb een kunstwerk voor de veiling</button>',
     'type="button" disabled',
