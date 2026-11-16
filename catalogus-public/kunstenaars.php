@@ -4,12 +4,11 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 $settings = settings();
-if ((int)($settings['is_published'] ?? 0) !== 1 && !admin_preview_active()) {
-  http_response_code(404);
-  exit('Kunstenaars niet beschikbaar.');
-}
+$artistsOverviewEnabled = (int)($settings['show_artists_overview'] ?? 0) === 1;
 // Only public artist metadata and a single portrait path are selected.
-// Publication is governed by artist_published, independent of lot publication.
+// A disabled overview must not query or disclose artists, even in preview.
+$artists = [];
+if ($artistsOverviewEnabled) {
 $stmt = db()->query("
   SELECT s.id, s.artist_name, s.artist_slogan, si.path AS portrait_path
   FROM lot_sellers s
@@ -19,6 +18,7 @@ $stmt = db()->query("
   ORDER BY s.artist_name, s.id
 ");
 $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
 ?><!doctype html>
 <html lang="nl">
 <head>
@@ -43,7 +43,12 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <h1>Ontmoet onze kunstenaars</h1>
     <p>Elk werk heeft een maker en een verhaal. Ontdek de kunstenaars die deelnemen aan de veiling van 41 Lokeren.</p>
   </div>
-  <?php if (!$artists): ?>
+  <?php if (!$artistsOverviewEnabled): ?>
+    <section class="artists-overview-empty" aria-label="Kunstenaars binnenkort beschikbaar">
+      <h2>Binnenkort beschikbaar</h2>
+      <p>Binnenkort vind je hier een overzicht van de deelnemende kunstenaars.</p>
+    </section>
+  <?php elseif (!$artists): ?>
     <p class="artists-overview-empty">Binnenkort ontdek je hier de deelnemende kunstenaars.</p>
   <?php else: ?>
     <div class="artists-overview-grid">
