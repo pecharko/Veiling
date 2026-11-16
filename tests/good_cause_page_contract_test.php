@@ -40,4 +40,30 @@ if (!str_contains($page, 'Binnenkort stellen we het goede doel voor.')) {
 if (!str_contains($css, '@media(max-width:650px)')) {
     throw new RuntimeException('Missing mobile styles.');
 }
+$impactStart = strpos($home, '<section class="front-impact shell"');
+$impactEnd = strpos($home, '</section>', $impactStart === false ? 0 : $impactStart);
+$impact = $impactStart !== false && $impactEnd !== false
+    ? substr($home, $impactStart, $impactEnd - $impactStart)
+    : '';
+if ($impact === '') {
+    throw new RuntimeException('Good cause homepage section missing.');
+}
+foreach ([
+    "href=\"<?=e(url('goede-doel.php'))?>\">het goede doel</a>",
+    "href=\"<?=e(url('kunstenaars.php'))?>\">Een overzicht van de deelnemende kunstenaars</a>",
+    'Ik ben kunstenaar en heb interesse</button>',
+    'Ik heb een kunstwerk voor de veiling</button>',
+    'type="button" disabled',
+] as $expected) {
+    if (!str_contains($impact, $expected)) {
+        throw new RuntimeException('Missing good cause participation content: ' . $expected);
+    }
+}
+if (str_contains($impact, 'Het goede doel wordt binnenkort bekendgemaakt.')
+    || str_contains($impact, 'Ontdek bijzondere objecten en unieke stukken.')) {
+    throw new RuntimeException('Old good cause homepage text remains.');
+}
+if (substr_count($impact, 'type="button" disabled') !== 2) {
+    throw new RuntimeException('Both future-workflow actions must be disabled.');
+}
 echo "PASS: dedicated good cause page, links, guards and mobile stylesheet.\n";
