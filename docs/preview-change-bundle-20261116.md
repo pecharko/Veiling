@@ -21,9 +21,14 @@ De knop **Ik ben kunstenaar en heb interesse** op de startpagina linkt binnen
 dezelfde website naar `kunstenaar-interesse.php`. De pagina bevat de volledige
 aangeleverde uitnodiging, het klikbare adres `veiling@41lokeren.be`, duidelijke
 afspraken over het zelf te kiezen schenkingpercentage en de beloofde zichtbaarheid
-via website/sociale media. Een compacte, expliciet fictieve voorbeeldbrochure
-met portret, slogan, voorstelling en drie kunstwerken toont de opbouw van de
-bestaande kunstenaarspagina. De aparte knop **Ik heb een kunstwerk voor de veiling**
+via website/sociale media. Een compacte voorbeeldbrochure toont de opbouw van de bestaande
+kunstenaarspagina met **echt opgeslagen beelden**: bij voorkeur de bestaande
+fictieve previewkunstenaar **Mira Veld**, haar portret en haar drie eigen werken.
+De fotopaden worden even streng gecontroleerd als op de echte kunstenaarspagina;
+de pagina toont alleen expliciet gepubliceerde kunstenaars. Als Mira buiten de
+preview ontbreekt, kan een andere reeds gepubliceerde kunstenaar met vier geldige
+foto's als voorbeeld dienen, zonder deze als fictief te bestempelen.
+Het voorbeeld is bewust kleiner gemaakt (maximaal 300 px breed). De aparte knop **Ik heb een kunstwerk voor de veiling**
 blijft bewust uitgeschakeld.
 
 **Broncode:** `catalogus-public/index.php`,
