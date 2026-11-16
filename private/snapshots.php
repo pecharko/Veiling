@@ -6,7 +6,7 @@ require_once __DIR__ . '/restore_journal.php';
 require_once __DIR__ . '/visitor_geo_snapshot.php';
 const SNAP_TABLES = ['settings','lot_categories','lot_sellers','lots','lot_images','seller_images'];
 const SNAP_INSERT = [
- 'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','updated_at'],
+ 'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','is_published','is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','updated_at'],
  'lot_categories'=>['id','name'],
  'lot_sellers'=>['id','seller_type','name','email','mobile_number','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url','artist_intro','artist_slogan','artist_published','created_by_admin_id','created_by_name','created_at','updated_by_admin_id','updated_by_name','updated_at'],
  'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at','last_edited_by_admin_id','last_edited_at'],
@@ -134,7 +134,7 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
@@ -197,7 +197,7 @@ function snap_restore(PDO $pdo,string $name): void {
    foreach(SNAP_TABLES as $table){
     $columns=SNAP_INSERT[$table];
     if($table==='settings') {
-     foreach(['is_site_online','catalog_split_active','show_report_issue_link'] as $optional) {
+     foreach(['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview'] as $optional) {
       if(!$pdo->query("SHOW COLUMNS FROM settings LIKE '".$optional."'")->fetch()) {
        $columns=array_values(array_filter($columns,fn($column)=>$column!==$optional));
       }
@@ -206,7 +206,7 @@ function snap_restore(PDO $pdo,string $name): void {
     $cols=implode(',',$columns);$marks=implode(',',array_fill(0,count($columns),'?'));
     $stmt=$pdo->prepare('INSERT INTO '.$table.' ('.$cols.') VALUES ('.$marks.')');
     foreach($database['tables'][$table] as $row)
-     $stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='settings' && $col==='is_site_online' ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : null)), $columns));
+     $stmt->execute(array_map(fn($col)=>$row[$col] ?? ($table==='settings' && in_array($col,['is_site_online','show_artists_overview'],true) ? 1 : ($table==='settings' && in_array($col,['catalog_split_active','show_report_issue_link'],true) ? 0 : null)), $columns));
    }
    // Keep permanent lot-number reservations monotonic across snapshot restores.
    // A restore may reintroduce lots deleted after the snapshot was taken.

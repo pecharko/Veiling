@@ -325,6 +325,35 @@ $pdo->exec('UPDATE settings SET is_site_online=1');
 snap_restore($pdo, $newSchemaSnapshot);
 verify((int)$pdo->query('SELECT is_site_online FROM settings WHERE id=1')->fetchColumn() === 0,
        'New schema restore recovers the offline state');
+
+// Exercise the exact artist overview migration and the new switch in isolated MySQL.
+// Older snapshot archives are not rewritten or deleted by this schema change.
+$migrationSql=file_get_contents($root.'/database/migrations/20261116_artist_overview_publication.sql');
+if(!is_string($migrationSql))throw new RuntimeException('Artist overview migration missing');
+$pdo->exec($migrationSql);
+verify((int)$pdo->query('SELECT show_artists_overview FROM settings WHERE id=1')->fetchColumn()===1,
+       'Additive artist overview migration defaults to visible');
+$pdo->exec('UPDATE settings SET show_artists_overview=0');
+$artistOverviewSnapshot=snap_create($pdo);
+[$artistOverviewData]=snap_verified($artistOverviewSnapshot);
+verify((int)$artistOverviewData['tables']['settings'][0]['show_artists_overview']===0,
+       'New snapshot verifies and stores disabled artist overview');
+$pdo->exec('UPDATE settings SET show_artists_overview=1');
+snap_restore($pdo,$artistOverviewSnapshot);
+verify((int)$pdo->query('SELECT show_artists_overview FROM settings WHERE id=1')->fetchColumn()===0,
+       'Restore recovers disabled artist overview switch');
+$pdo->exec('UPDATE settings SET show_artists_overview=1');
+$artistOverviewOnSnapshot=snap_create($pdo);
+[$artistOverviewOnData]=snap_verified($artistOverviewOnSnapshot);
+verify((int)$artistOverviewOnData['tables']['settings'][0]['show_artists_overview']===1,
+       'New snapshot verifies and stores enabled artist overview');
+$pdo->exec('UPDATE settings SET show_artists_overview=0');
+snap_restore($pdo,$artistOverviewOnSnapshot);
+verify((int)$pdo->query('SELECT show_artists_overview FROM settings WHERE id=1')->fetchColumn()===1,
+       'Restore recovers enabled artist overview switch');
+foreach([$artistOverviewSnapshot,$artistOverviewOnSnapshot] as $testArchive) {
+    if(!unlink(snap_path($testArchive)))throw new RuntimeException('Could not clean isolated artist overview test snapshot');
+}
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
 // Old snapshots are intentionally unsupported; no existing ZIP is modified.
