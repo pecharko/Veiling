@@ -104,7 +104,6 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <a class="front-nav-home" href="<?=e(url('index.php'))?>">Home</a>
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
         <?php if ($published): ?><a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a><?php endif; ?>
-        <a href="#informatie">Veilinginfo</a>
         <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
         <?php if ((int)($s['show_report_issue_link'] ?? 0) === 1): ?><a href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer">Probleem melden</a><?php endif; ?>
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
@@ -171,7 +170,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
         </div>
       </div>
-      <div class="front-impact-media"><img src="<?=e(url('assets/veiling-kunstselectie.webp'))?>" alt="Illustratie van een kunstselectie met schilderij, vaas en beeldhouwwerk" width="736" height="342" loading="lazy"></div>
+      <div class="front-impact-media"><img src="<?=e(url('assets/samen-kunst-verbindt-foto-1.webp'))?>" alt="Jonge kunstliefhebbers ontdekken samen een hedendaags keramisch kunstwerk in een galerie" width="1672" height="941" loading="lazy"></div>
     </section>
   <?php if ($published): ?>
   <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
@@ -210,6 +209,6 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <?php endif; ?>
   <?php endif; ?></section>
   <?php endif; ?>
-  <section class="info-section" id="informatie"><div class="shell info-layout"><div><p class="eyebrow info-eyebrow">GOED OM TE WETEN</p><h2>Een bijzonder moment<br>om <em>bij te zijn.</em></h2><p><?= $published ? "Alle kavels zijn online te bekijken. De veiling zelf vindt fysiek plaats. Online bieden is niet mogelijk." : "De veiling vindt fysiek plaats. Online bieden is niet mogelijk." ?></p></div><div class="info-card"><h3>Praktische informatie</h3><dl><div><dt>Datum</dt><dd><?=e($date)?></dd></div><div><dt>Uur</dt><dd><?=e($s['event_time'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Locatie</dt><dd><?=e($s['location'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Adres</dt><dd><?=e($s['address'] ?: 'Wordt aangekondigd')?></dd></div></dl><p><?=nl2br(e($s['practical_info'] ?: 'Bieden gebeurt uitsluitend ter plaatse.'))?></p><?php if(!empty($s['contact_email'])): ?><a class="contact-link" href="mailto:<?=e($s['contact_email'])?>">Contacteer de organisatie ↗</a><?php endif; ?></div></div></section>
+
   </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
 </body></html>
