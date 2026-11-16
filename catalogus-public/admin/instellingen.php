@@ -330,7 +330,7 @@ if ($error) {
               <span class="auction-settings-toggle-row">
                 <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
                 <span class="auction-settings-toggle-copy">
-                  <strong>Kunstenaars overzicht tonen op website</strong>
+                  <strong>Kunstenaarsoverzicht tonen op website</strong>
                   <span>Uit: bezoekers zien op de kunstenaars-pagina een aankondiging dat het overzicht binnenkort beschikbaar is. Aan: toon de gepubliceerde kunstenaars. Onafhankelijk van de kavelschakelaar.</span>
                 </span>
               </span>
