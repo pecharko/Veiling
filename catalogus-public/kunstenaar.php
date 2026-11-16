@@ -4,9 +4,10 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_once dirname(__DIR__) . '/private/lot_artist.php';
 require_public_site_online();
-$settings = settings();
+// Artist publication is independent from lot/catalog publication.
+// The directory can list published artists while the catalog itself is hidden.
 $artistId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
-if (!$artistId || ((int)($settings['is_published'] ?? 0) !== 1 && !admin_preview_active())) {
+if (!$artistId) {
   http_response_code(404);
   exit('Kunstenaar niet gevonden.');
 }
