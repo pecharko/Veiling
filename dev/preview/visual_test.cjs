@@ -28,6 +28,47 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `catalogue-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No public overflow ${width}`);
     }
+    // Public header must scroll away on mobile (including narrow tablets),
+    // while staying sticky on desktop. Test both front and generic headers.
+    const headerProbe = await context.newPage();
+    const publicHeaderRoutes = [
+      '/index.php',
+      '/kunstenaars.php',
+      '/kunstenaar-interesse.php',
+      '/goede-doel.php',
+      '/vorige-editie.php',
+    ];
+    for (const width of [390, 768, 800, 801, 1440]) {
+      await headerProbe.setViewportSize({width, height:700});
+      for (const route of publicHeaderRoutes) {
+        const res = await headerProbe.goto(base + route, {waitUntil:'domcontentloaded'});
+        assert.equal(res.status(), 200, 'Public route must load: ' + route);
+        const header = headerProbe.locator('header.site-header');
+        assert.equal(await header.count(), 1, 'Expected one shared header on ' + route);
+        const position = await header.evaluate(el => getComputedStyle(el).position);
+        assert.equal(position, width <= 800 ? 'relative' : 'sticky',
+          'Mobile header policy for ' + route + ' at width ' + width);
+        if (route === '/index.php' && (width === 390 || width === 1440)) {
+          const observation = await headerProbe.evaluate(() => {
+            document.documentElement.style.scrollBehavior = 'auto';
+            window.scrollTo({top:350, behavior:'instant'});
+            return {
+              y: window.scrollY,
+              headerTop: document.querySelector('header.site-header').getBoundingClientRect().top,
+            };
+          });
+          assert(observation.y > 100, 'Homepage must be scrollable in browser');
+          if (width === 390) {
+            assert(observation.headerTop < -30, 'Mobile header must leave the viewport when scrolled');
+          } else {
+            assert(Math.abs(observation.headerTop) <= 3,
+              'Desktop sticky header must remain visible during scrolling');
+          }
+        }
+      }
+    }
+    await headerProbe.close();
+
     // Public artist profile: the lot links internally and exposes no private seller data.
     const artLot = await page.goto(base + '/kavel.php?nr=101');
     assert.equal(artLot.status(), 200, 'Published synthetic artist lot must load');
