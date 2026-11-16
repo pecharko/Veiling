@@ -29,9 +29,9 @@ require_public_site_online();
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
-      <a href="<?=e(url('goede-doel.php'))?>" aria-current="page">Het goede doel</a>
+      <a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a>
+      <a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a>
       <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-      <a class="front-header-cta" href="<?=e(url('index.php'))?>">Naar de veiling →</a>
     </nav>
   </div>
 </header>
