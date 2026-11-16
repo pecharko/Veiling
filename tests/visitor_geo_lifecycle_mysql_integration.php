@@ -20,6 +20,9 @@ $checks=0;
 function lc_check(bool $yes,string $message): void { global $checks;if (!$yes) throw new RuntimeException($message);$checks++; }
 function lc_throws(callable $fn,string $message): void { try{$fn();}catch(Throwable $e){lc_check(true,$message);return;}throw new RuntimeException($message); }
 function lc_sum(PDO $pdo,string $table): int { return (int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM '.$table)->fetchColumn(); }
+lc_check(!visitor_stats_exclude_country(['country_code'=>'BE']), 'Belgian visitor passes geo country gate');
+lc_check(visitor_stats_exclude_country(['country_code'=>'NL']) && visitor_stats_exclude_country(['country_code'=>'US'])
+    && visitor_stats_exclude_country(['country_code'=>'ZZ']), 'Foreign and unresolved country codes are excluded');
 foreach (array_keys(GEO_SNAPSHOT_COLUMNS) as $table) $pdo->exec('DROP TABLE IF EXISTS '.$table);
 function lc_install(PDO $pdo,string $path): void {
     $sql=preg_replace('/^\s*--[^\n]*$/m','',(string)file_get_contents(dirname(__DIR__).'/'.$path));
