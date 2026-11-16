@@ -272,3 +272,43 @@ body{background:#fffaf6;color:var(--ink)}
 @media(max-width:900px){.artists-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.artists-overview{padding-top:20px;padding-bottom:45px}.artists-overview-heading{margin-bottom:30px}.artists-overview-grid{grid-template-columns:1fr;gap:22px}.artists-overview-card-body{padding:20px}}
 @media(prefers-reduced-motion:reduce){.artists-overview-card,.artists-overview-image img{transition:none}}
+
+
+/* Compactere kunstenaarsbrochure - lokale preview */
+.artist-brochure-sheet {
+  max-width: 960px;
+  padding: clamp(24px, 3.2vw, 42px);
+}
+.artist-brochure-heading h1 {
+  font-size: clamp(42px, 6vw, 82px);
+}
+.artist-brochure .artist-profile-slogan {
+  font-size: clamp(16px, 2.1vw, 24px);
+}
+.artist-brochure .artist-profile-intro {
+  font-size: clamp(16px, 1.8vw, 21px);
+  line-height: 1.6;
+}
+.artist-brochure .artist-profile-portrait img {
+  max-height: 390px;
+  width: 100%;
+  object-fit: contain;
+}
+.artist-brochure-artwork img {
+  max-height: 350px;
+  width: 100%;
+  object-fit: contain;
+}
+@media (max-width: 700px) {
+  .artist-brochure-sheet { padding: 22px 16px; }
+  .artist-brochure-heading h1 {
+    font-size: clamp(36px, 8vw, 54px);
+  }
+  .artist-brochure .artist-profile-intro {
+    font-size: 16px;
+  }
+  .artist-brochure .artist-profile-portrait img,
+  .artist-brochure-artwork img {
+    max-height: 320px;
+  }
+}

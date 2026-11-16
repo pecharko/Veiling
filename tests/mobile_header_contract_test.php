@@ -33,9 +33,12 @@ $pages = [
 ];
 foreach ($pages as $pageName) {
     $page = file_get_contents($root . '/catalogus-public/' . $pageName);
+    // The artist brochure intentionally has a newer cache version after its style update.
+    $expectedVersion = $pageName === 'kunstenaar.php' ? 197 : 196;
     if (!is_string($page) || !str_contains($page, 'class="site-header')
-        || !str_contains($page, "assets/catalogus.css'))?>?v=196")) {
+        || !str_contains($page, "assets/catalogus.css'))?>?v=" . $expectedVersion)) {
         throw new RuntimeException('Shared mobile stylesheet must be cache-busted on public page: ' . $pageName);
     }
 }
+require __DIR__ . '/artist_compact_previous_edition_contract_test.php';
 echo "PASS: non-sticky public header at <=800px, sticky desktop header, seven cache-busted public pages\n";

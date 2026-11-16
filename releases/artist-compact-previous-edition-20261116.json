@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "7298e63244360532dcc2205fb38c410732d1256eb64fcf7d21f6374216f3a634",
+      "remote_sha256": "678d452f26ac5617ad2a94f89e16c985d331d788e2018917d0d05e678eb5025f"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "653925af7d44fc3130e3b621cf07edf7e5396e54a855282204311626d025ab22",
+      "remote_sha256": "7ed59f5432c032a827ef301b368d63fb75efab91d4781f718204f75fd251f910"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "716f56626ed77b666f8c2d3f02b056df46179d2cc3d6fbb68410dda38c495e38",
+      "remote_sha256": "d4a6c0b3a834700927e3b8aef205dce59f58d7568c57e1b4e2bbaadcbcc1044e"
+    }
+  ]
+}
