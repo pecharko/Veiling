@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/statistieken.php",
+      "source_sha256": "005a6faea592cafb68f3ca28b6fcfbc376aea183f77edfc1316056545166dbd1",
+      "remote_sha256": "88012144b33a7b57bc1458242c00515bfe3d4948b1a3d6be86396ef2172e721d"
+    },
+    {
+      "path": "catalogus-public/assets/home-v18.css",
+      "source_sha256": "60756803f9e35f34f05cd0e24b6a4c719f9d7894a1b2cc3e053bf87d193462f5",
+      "remote_sha256": "c2109cb86dddff24e892fc49830bdd84e87e55f4af39ba5b44868331e64f9bc0"
+    },
+    {
+      "path": "catalogus-public/assets/kunstenaar-interesse.css",
+      "source_sha256": "fc3421b888f1624fdfe02feba60e8eb7a5a0279c24857aa872cdd512c588776c",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/voorbeeld-elise-van-acker-portret.webp",
+      "source_sha256": "0d79d9de6508329f4b509e24f62bcd265a2e96c7f0f046dfee2533dd796e1a6f",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/voorbeeld-elise-van-acker-werk-01.webp",
+      "source_sha256": "fa0aa050f3989b73af347ab45d65c72b65ec5638ee44311784cb027e6041a56a",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/voorbeeld-elise-van-acker-werk-02.webp",
+      "source_sha256": "b6deb972fc9aa05847512e60a41f0db298cf5dbed965e8fa37d404d1ac262730",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "c0aadd3b3e283ff29a290faa034d2f14c2ec9e2951b8a0c65825b4a691b452ef",
+      "remote_sha256": "4dffd199639496e860c5fa3865f3c2adc090cd298e3e7e03ba5f90f344e0cb54"
+    },
+    {
+      "path": "catalogus-public/kunstenaar-interesse.php",
+      "source_sha256": "d531288ff7c292c89780bef488b101f214b090a05d06e93986f0511508e18c5e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "14fcf456379325cafaea021c7feda668dd020e7cf79fca6185c3dd08d31a4aa0",
+      "remote_sha256": "00e8565e1516c3328354af55dfe61fb42635ae70b6dc0b5635472ceb0374824b"
+    },
+    {
+      "path": "private/visitor_stats.php",
+      "source_sha256": "23895bd238dfc979a20df8bcfdca63f00c6caaa8dfe6f093040e88a34fd40c1e",
+      "remote_sha256": "b3c361e7d447da1d265ac81dc0997e7e0f4899032c6fa3b64462bc02bd298776"
+    }
+  ]
+}
