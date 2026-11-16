@@ -67,7 +67,7 @@ def guarded_load(release_id, *, source_root=None):
 
 def main():
     if len(sys.argv) != 2 or sys.argv[1] not in ("plan", "deploy"):
-        raise ValueError("Usage: deploy_artist_publication_snapshot.py plan|deploy")
+        raise ValueError("Usage: deploy_artist_overview_snapshot.py plan|deploy")
     mode = sys.argv[1]
     old_confirmation = os.environ.get("DEPLOY_CONFIRMATION")
     if mode == "deploy":
