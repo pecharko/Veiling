@@ -23,7 +23,7 @@ foreach ($cases as [$geo, $excluded]) {
 }
 $source = file_get_contents(dirname(__DIR__) . '/private/visitor_stats.php');
 if (!is_string($source)) throw new RuntimeException('Missing visitor tracker source');
-$ip = strpos($source, "$ip = (string) ($_SERVER['REMOTE_ADDR'] ?? '');");
+$ip = strpos($source, "\$ip = (string) (\$_SERVER['REMOTE_ADDR'] ?? '');");
 $resolve = strpos($source, '$resolvedGeo = visitor_geo_resolve($ip);');
 $gate = strpos($source, 'if (visitor_stats_exclude_country($resolvedGeo)) return;');
 $hash = strpos($source, '$identifier = hash_hmac(');
@@ -35,7 +35,7 @@ if ($ip === false || $resolve === false || $gate === false || $hash === false
          && $hash < $general && $general < $geoWrite)) {
     throw new RuntimeException('BE-only check must precede HMAC, all visitor/lot and geo writes');
 }
-if (str_contains($source, "$_SERVER['HTTP_X_FORWARDED_FOR']")
+if (str_contains($source, "\$_SERVER['HTTP_X_FORWARDED_FOR']")
     || !str_contains($source, 'visitor_geo_collection_enabled($state)')) {
     throw new RuntimeException('Country determination must use the trusted remote IP and preserve geo switch');
 }
