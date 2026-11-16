@@ -12,7 +12,10 @@ $nav = $matches[1];
 if (str_contains($nav, 'front-header-cta') || str_contains($nav, 'Bekijk kavels ↗')) {
     throw new RuntimeException('Redundant far-right catalog header CTA still exists.');
 }
-foreach (['>Home</a>', '>Bekijk kavels</a>', 'id="favoriteLink"', '>Kunstenaars</a>', '>Het goede doel</a>'] as $expected) {
+if (str_contains($nav, '>Home</a>') || str_contains($nav, 'front-nav-home')) {
+    throw new RuntimeException('Homepage header must not link to the page itself.');
+}
+foreach (['>Bekijk kavels</a>', 'id="favoriteLink"', '>Kunstenaars</a>', '>Het goede doel</a>', '>Vorige editie</a>', "url('vorige-editie.php')"] as $expected) {
     if (!str_contains($nav, $expected)) throw new RuntimeException('Expected header navigation missing: '.$expected);
 }
 if (!str_contains($home, 'Bekijk de kavels <span aria-hidden="true">↗</span>')
