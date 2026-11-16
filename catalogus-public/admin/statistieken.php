@@ -34,7 +34,7 @@ if (is_post()) {
                 analytics_ip_set_exclusion(db(), $enabled === '1');
                 flash($enabled === '1'
                     ? 'IP-uitsluiting ingeschakeld. Opgeslagen IP-adressen tellen niet mee.'
-                    : 'IP-uitsluiting uitgeschakeld. Statistieken tellen normaal; de IP-lijst blijft bewaard.');
+                    : 'IP-uitsluiting uitgeschakeld. Alleen bezoeken uit België kunnen meetellen; de IP-lijst blijft bewaard.');
                 redirect('admin/statistieken.php');
             } catch (Throwable $e) {
                 $ipToggleError = 'IP-uitsluiting kon niet worden aangepast. Probeer later opnieuw.';
@@ -50,7 +50,7 @@ if (is_post()) {
                 if ($enabled === '0') visitor_geo_set_disabled();
                 set_analytics_collection_enabled($enabled === '1');
                 flash($enabled === '1'
-                    ? 'Bezoekersregistratie ingeschakeld. Nieuwe bezoeken worden weer geteld.'
+                    ? 'Bezoekersregistratie ingeschakeld. Nieuwe bezoeken uit België kunnen weer meetellen.'
                     : 'Bezoekersregistratie uitgeschakeld. Bestaande statistieken blijven bewaard.');
                 redirect('admin/statistieken.php');
             } catch (Throwable $exception) {
@@ -324,7 +324,7 @@ admin_top('Bezoekersstatistieken');
     <h2 id="analytics-switch-title">Bezoekersregistratie</h2>
     <p><strong>Huidige status: <?= $collectionEnabled ? 'Aan' : 'Uit' ?></strong></p>
     <p><?= $collectionEnabled
-      ? 'Nieuwe bezoekers- en kavelweergaven worden geregistreerd.'
+      ? 'Nieuwe bezoekers- en kavelweergaven uit België worden geregistreerd.'
       : 'Nieuwe bezoekers- en kavelweergaven worden niet geregistreerd. De bestaande statistieken blijven beschikbaar.' ?></p>
     <?php if ($toggleError !== ''): ?><div class="alert error" role="alert"><?=e($toggleError)?></div><?php endif; ?>
     <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
@@ -336,7 +336,7 @@ admin_top('Bezoekersstatistieken');
     <div class="dashboard-table-scroll">
       <h3>Geografische bezoekersregistratie</h3>
       <p><strong>Huidige status: <?= $geoEnabled ? 'Aan' : 'Uit' ?></strong></p>
-      <p>Geografische herkomst wordt uitsluitend geschat wanneer zowel de algemene als de geografische bezoekersregistratie aanstaat. Bij uitschakeling blijven bestaande gegevens bewaard.</p>
+      <p>Alleen bezoekers waarvan de geolocatie België bevestigt, tellen mee. Provincie en stad worden uitsluitend geregistreerd wanneer zowel de algemene als de geografische bezoekersregistratie aanstaat. Bij uitschakeling blijven bestaande gegevens bewaard.</p>
       <?php if ($geoStatusError !== ''): ?><div class="alert error" role="alert"><?=e($geoStatusError)?></div><?php endif; ?>
       <?php if ($geoToggleError !== ''): ?><div class="alert error" role="alert"><?=e($geoToggleError)?></div><?php endif; ?>
       <form method="post" action="<?=e(url('admin/statistieken.php'))?>">
