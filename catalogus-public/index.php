@@ -162,9 +162,11 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       <div class="front-impact-copy">
         <p class="front-eyebrow front-impact-eyebrow">SAMEN MAKEN WE HET VERSCHIL</p>
         <h2 id="front-impact-title">Een bijzondere veiling<br>voor het goede doel</h2>
-        <p>Ontdek bijzondere objecten en unieke stukken. Met je interesse en aanwezigheid help je 41 Lokeren een waardevol initiatief te ondersteunen.</p>
-        <p class="front-impact-note">Het goede doel wordt binnenkort bekendgemaakt.</p>
-        <a class="front-btn front-btn-sage" href="#informatie">Praktische informatie <span aria-hidden="true">→</span></a>
+        <p>Nu <a class="front-impact-text-link" href="<?=e(url('goede-doel.php'))?>">het goede doel</a> bekend is, zijn we gestart met het verzamelen van kunstwerken. We richten ons in de eerste plaats naar kunstenaars die we via deze veiling een platform geven om een breder publiek te bereiken. <a class="front-impact-text-link" href="<?=e(url('kunstenaars.php'))?>">Een overzicht van de deelnemende kunstenaars</a> is beschikbaar via deze website. Daarnaast richten we ons ook naar iedereen die een interessant kunstwerk wil laten veilen voor het goede doel.</p>
+        <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
+          <button class="front-btn front-btn-sage front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse</button>
+          <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
+        </div>
       </div>
       <div class="front-impact-media"><img src="<?=e(url('assets/veiling-kunstselectie.webp'))?>" alt="Illustratie van een kunstselectie met schilderij, vaas en beeldhouwwerk" width="736" height="342" loading="lazy"></div>
     </section>
