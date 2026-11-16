@@ -27,4 +27,12 @@ if (str_contains($source, 'class="back-link"') || str_contains($source, '← Ter
 if (!str_contains($source, '<h1>Ontmoet onze kunstenaars</h1>')) {
     throw new RuntimeException('Artists overview heading must remain intact.');
 }
+$css = file_get_contents(dirname(__DIR__) . '/catalogus-public/assets/catalogus.css');
+if (!is_string($css) || !str_contains($css, '.artists-overview .front-btn-outline{')
+    || !str_contains($css, '.artists-overview .front-btn{')) {
+    throw new RuntimeException('Artist directory homepage-style return button must have scoped CSS.');
+}
+if (!str_contains($source, "catalogus.css'))?>?v=195")) {
+    throw new RuntimeException('Artist directory must bust stylesheet cache for updated button style.');
+}
 echo "PASS artist navigation includes charity link and homepage-style return button without self-link.\n";
