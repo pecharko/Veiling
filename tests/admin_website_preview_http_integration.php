@@ -96,8 +96,8 @@ try {
     preview_check($status === 200 && !str_contains($body,'ADMINVOORBEELD') && !str_contains($body,'Preview fixture'), 'Login alone or GET flag cannot enter preview');
     $before = preview_views();
     $geoBefore = (int)$pdo->query('SELECT COALESCE(SUM(views),0) FROM visitor_geo_daily')->fetchColumn();
-    preview_check($geoBefore >= 1, 'Ordinary geo views calibrated before preview');
-    preview_check($before >= 1, 'Real ordinary browser views are counted before preview');
+    preview_check($geoBefore === 0, 'Unresolved localhost traffic has no geographic records before admin preview');
+    preview_check($before === 0, 'Unresolved localhost traffic has no visitor records before admin preview');
     [$status] = preview_request('/index.php', ['admin_preview_action'=>'start','csrf'=>'invalid']);
     preview_check($status === 403, 'Missing valid CSRF blocks preview activation');
     [$status] = preview_request('/index.php', ['admin_preview_action'=>'start','csrf'=>$csrf]);
