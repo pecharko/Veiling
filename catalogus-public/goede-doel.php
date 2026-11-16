@@ -16,7 +16,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=188">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=1">
+  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=2">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -36,12 +36,12 @@ require_public_site_online();
   </div>
 </header>
 <main id="inhoud">
-  <section class="cause-hero">
-    <div class="shell cause-hero-inner">
-      <p class="front-eyebrow">41 LOKEREN · SAMEN IETS BETEKENEN</p>
-      <h1>Een veiling met<br><em>een groter doel.</em></h1>
-      <p>Kunst, lifestyle en vintage brengen mensen samen. Met onze veiling maken we van die ontmoeting een gelegenheid om een waardevol initiatief te ondersteunen.</p>
-      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Ontdek de veiling <span aria-hidden="true">→</span></a>
+  <section class="cause-announcement" aria-labelledby="cause-announcement-title">
+    <div class="shell cause-announcement-inner">
+      <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
+      <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
+      <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
+      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
@@ -52,14 +52,6 @@ require_public_site_online();
     <div class="cause-story-copy">
       <p>41 Lokeren organiseert een veiling voor het goede doel. Kunstenaars, schenkers, bezoekers en vrijwilligers dragen elk op hun manier bij aan een initiatief dat mensen samenbrengt.</p>
       <p>Op de website kun je de kavels ontdekken en je favorieten bewaren. Bieden gebeurt uitsluitend tijdens de fysieke veiling, niet online.</p>
-    </div>
-  </section>
-  <section class="cause-announcement" aria-labelledby="cause-announcement-title">
-    <div class="shell cause-announcement-inner">
-      <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
-      <h2 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h2>
-      <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
-      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
     </div>
   </section>
   <section class="shell cause-last" aria-labelledby="cause-last-title">
