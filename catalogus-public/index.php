@@ -104,8 +104,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <a class="front-nav-home" href="<?=e(url('index.php'))?>">Home</a>
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
         <?php if ($published): ?><a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a><?php endif; ?>
-        <a href="#informatie">Veilinginfo</a>
-        <a href="#goede-doel">Het goede doel</a>
+        <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
         <?php if ((int)($s['show_report_issue_link'] ?? 0) === 1): ?><a href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer">Probleem melden</a><?php endif; ?>
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
         <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a>
@@ -127,7 +126,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
           <div class="front-hero-actions">
             <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a><?php endif; ?>
-            <a class="front-btn front-btn-outline" href="#goede-doel">Meer over het goede doel <span aria-hidden="true">→</span></a>
+            <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel <span aria-hidden="true">→</span></a>
             <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
           </div>
         </div>
@@ -162,11 +161,16 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       <div class="front-impact-copy">
         <p class="front-eyebrow front-impact-eyebrow">SAMEN MAKEN WE HET VERSCHIL</p>
         <h2 id="front-impact-title">Een bijzondere veiling<br>voor het goede doel</h2>
-        <p>Ontdek bijzondere objecten en unieke stukken. Met je interesse en aanwezigheid help je 41 Lokeren een waardevol initiatief te ondersteunen.</p>
-        <p class="front-impact-note">Het goede doel wordt binnenkort bekendgemaakt.</p>
-        <a class="front-btn front-btn-sage" href="#informatie">Praktische informatie <span aria-hidden="true">→</span></a>
+        <p>Nu <a class="front-impact-text-link" href="<?=e(url('goede-doel.php'))?>">het goede doel</a> bekend is, zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.</p>
+        <p>Daarbij geven we graag het podium aan kunstenaars die hun werk aan een breder publiek willen voorstellen en tegelijk willen bijdragen aan een waardevol initiatief. Ontdek alvast <a class="front-impact-text-link" href="<?=e(url('kunstenaars.php'))?>">de deelnemende kunstenaars</a> en laat je inspireren door hun werk.</p>
+        <p>Ook wie zelf een bijzonder kunstwerk bezit en dit graag ter beschikking stelt voor de veiling, nodigen we van harte uit om mee te werken.</p>
+        <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
+        <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
+          <button class="front-btn front-btn-sage front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse</button>
+          <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
+        </div>
       </div>
-      <div class="front-impact-media"><img src="<?=e(url('assets/veiling-kunstselectie.webp'))?>" alt="Illustratie van een kunstselectie met schilderij, vaas en beeldhouwwerk" width="736" height="342" loading="lazy"></div>
+      <div class="front-impact-media"><img src="<?=e(url('assets/samen-kunst-verbindt-foto-1.webp'))?>" alt="Jonge kunstliefhebbers ontdekken samen een hedendaags keramisch kunstwerk in een galerie" width="1672" height="941" loading="lazy"></div>
     </section>
   <?php if ($published): ?>
   <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
@@ -205,6 +209,6 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <?php endif; ?>
   <?php endif; ?></section>
   <?php endif; ?>
-  <section class="info-section" id="informatie"><div class="shell info-layout"><div><p class="eyebrow info-eyebrow">GOED OM TE WETEN</p><h2>Een bijzonder moment<br>om <em>bij te zijn.</em></h2><p><?= $published ? "Alle kavels zijn online te bekijken. De veiling zelf vindt fysiek plaats. Online bieden is niet mogelijk." : "De veiling vindt fysiek plaats. Online bieden is niet mogelijk." ?></p></div><div class="info-card"><h3>Praktische informatie</h3><dl><div><dt>Datum</dt><dd><?=e($date)?></dd></div><div><dt>Uur</dt><dd><?=e($s['event_time'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Locatie</dt><dd><?=e($s['location'] ?: 'Wordt aangekondigd')?></dd></div><div><dt>Adres</dt><dd><?=e($s['address'] ?: 'Wordt aangekondigd')?></dd></div></dl><p><?=nl2br(e($s['practical_info'] ?: 'Bieden gebeurt uitsluitend ter plaatse.'))?></p><?php if(!empty($s['contact_email'])): ?><a class="contact-link" href="mailto:<?=e($s['contact_email'])?>">Contacteer de organisatie ↗</a><?php endif; ?></div></div></section>
+
   </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
 </body></html>

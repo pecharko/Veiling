@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/goede-doel.css",
+      "source_sha256": "c518fc0df3a8192c52d24e36c71de5459d07577a19169b25a4a3a2aca5175e6c",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/home-v18.css",
+      "source_sha256": "c2109cb86dddff24e892fc49830bdd84e87e55f4af39ba5b44868331e64f9bc0",
+      "remote_sha256": "e6902e71fbfde01edb09656640e36cc9e87b1b337aae7a2003108e84585b2fe3"
+    },
+    {
+      "path": "catalogus-public/assets/samen-kunst-verbindt-foto-1.webp",
+      "source_sha256": "2bfdc09bffd5344696498498ff1e7a84858279b4f43b81d5d7b9fa8269f0d64b",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/goede-doel.php",
+      "source_sha256": "93a6bfb281398abde5d48c234e59a5e488990ed79e45b9e8f204966968a7d89e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "4ca1bf1b5495696e6dff7b1cdc84c4a3d20faf7cc8db233f3ba1678e88d242b7",
+      "remote_sha256": "f9b7cba0c06c4badf71a75f49e99679ae134b91e45cd6dce8b9892cb1a1c385b"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "efb1311eed92971bcb1cf3bcb20c3df3d43b4b45a37c86da9b82c8d95eb4241e",
+      "remote_sha256": "92af7a37124b4533d17e7c62c426bdcbd746fc79202293da0a4777f624708625"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "15f0c3d430e0281f9b11c07f3bf044f73f511902a80534005ee0e34aec76b990",
+      "remote_sha256": "527d81736d56c400b8ebb54c1e4f0582fdd11b09cc569d2f5df988d781a4ed98"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "37db89227557238b4a772fba6ff454eddcc328f6f935ede91af3fe3ce251999a",
+      "remote_sha256": "0b567d8858c38b67f5be93fc9a10b4add77b065a6b60a92aa42faf107d3054f3"
+    }
+  ]
+}
