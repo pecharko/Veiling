@@ -53,8 +53,9 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
-      <a href="<?=e(url('vorige-editie.php'))?>" aria-current="page">Vorige editie</a>
-      <a class="front-header-cta" href="<?=e(url('index.php'))?>">Naar de huidige veiling →</a>
+      <a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a>
+      <a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a>
+      <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
     </nav>
   </div>
 </header>
