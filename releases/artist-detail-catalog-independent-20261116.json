@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "243211f5ab4726a7f7ef56eb7689a88d24b74006f2e831521532210ac23e22be",
+      "remote_sha256": "15f0c3d430e0281f9b11c07f3bf044f73f511902a80534005ee0e34aec76b990"
+    }
+  ]
+}
