@@ -45,9 +45,37 @@ foreach ([
         throw new RuntimeException('Missing artist interest page requirement: ' . $required);
     }
 }
-if (str_contains($page, 'SELECT ') || str_contains($page, 'seller_images')
-    || str_contains($page, 'lot_sellers') || str_contains($page, '<form')) {
-    throw new RuntimeException('Example must be static and must not expose seller data or collect submissions.');
+// Only already-published public artist details can be used in the sample.
+foreach ([
+    "s.seller_type='kunstenaar'",
+    's.artist_published=1',
+    "s.artist_name='Mira Veld'",
+    "s.artist_name<>''",
+    'FROM seller_images',
+    "image_kind='portrait'",
+    "image_kind='work'",
+    "cfg('setup_key') === 'local-preview-only-nonproduction'",
+    'LOCAL_PREVIEW_ISOLATED',
+    'is_file(__DIR__',
+    'e($sampleName)',
+    'e(url($samplePortrait))',
+    'e(url($sampleWorks[1]))',
+    'e(url($sampleWorks[2]))',
+    'e(url($sampleWorks[3]))',
+] as $required) {
+    if (!str_contains($page, $required)) {
+        throw new RuntimeException('Missing safe published-artist photo selection: ' . $required);
+    }
+}
+foreach (['SELECT *', 'bank_account', 'phone', 'mobile', 'street', 'postal_code', 'email', '<form'] as $forbidden) {
+    if (str_contains($page, $forbidden)) {
+        throw new RuntimeException('Artist example must not expose sensitive seller fields or collect user submissions.');
+    }
+}
+if (!str_contains($css, 'max-width:300px')
+    || !str_contains($css, '.artist-invite-sample-portrait img')
+    || !str_contains($css, '.artist-invite-sample-art img')) {
+    throw new RuntimeException('Artist example must be compact and use actual photos rather than drawn placeholders.');
 }
 if (!str_contains($css, '@media(max-width:600px)')
     || !str_contains($css, '@media(max-width:900px)')
