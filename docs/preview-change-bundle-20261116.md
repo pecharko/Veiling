@@ -21,20 +21,22 @@ De knop **Ik ben kunstenaar en heb interesse** op de startpagina linkt binnen
 dezelfde website naar `kunstenaar-interesse.php`. De pagina bevat de volledige
 aangeleverde uitnodiging, het klikbare adres `veiling@41lokeren.be`, duidelijke
 afspraken over het zelf te kiezen schenkingpercentage en de beloofde zichtbaarheid
-via website/sociale media. Een compacte voorbeeldbrochure toont de opbouw van de bestaande
-kunstenaarspagina met **echt opgeslagen beelden**: bij voorkeur de bestaande
-fictieve previewkunstenaar **Mira Veld**, haar portret en haar drie eigen werken.
-De fotopaden worden even streng gecontroleerd als op de echte kunstenaarspagina;
-de pagina toont alleen expliciet gepubliceerde kunstenaars. Als Mira buiten de
-preview ontbreekt, kan een andere reeds gepubliceerde kunstenaar met vier geldige
-foto's als voorbeeld dienen, zonder deze als fictief te bestempelen.
-Het voorbeeld is bewust kleiner gemaakt (maximaal 300 px breed). De aparte knop **Ik heb een kunstwerk voor de veiling**
-blijft bewust uitgeschakeld.
+via website/sociale media. De compacte voorbeeldbrochure gebruikt nu de
+**drie door de eigenaar aangeleverde foto's** van de fictieve kunstenaar
+**Elise Van Acker**: haar portret en **twee** werken. Deze zijn apart tot
+kleine WebP-afbeeldingen geoptimaliseerd en opgenomen als vaste publieke
+website-assets, zodat de voorbeeldbrochure zonder database, bestaande
+verkopers of previewuploads correct werkt. De voorbeeldbrochure blijft
+maximaal 300 px breed en is duidelijk als fictief aangeduid. De aparte knop
+**Ik heb een kunstwerk voor de veiling** blijft bewust uitgeschakeld.
 
 **Broncode:** `catalogus-public/index.php`,
 `catalogus-public/kunstenaar-interesse.php`,
 `catalogus-public/assets/home-v18.css`,
-`catalogus-public/assets/kunstenaar-interesse.css`.
+`catalogus-public/assets/kunstenaar-interesse.css`,
+`catalogus-public/assets/voorbeeld-elise-van-acker-portret.webp`,
+`catalogus-public/assets/voorbeeld-elise-van-acker-werk-01.webp`,
+`catalogus-public/assets/voorbeeld-elise-van-acker-werk-02.webp`.
 
 **Gerichte tests:**
 - `php tests/artist_interest_page_contract_test.php`
