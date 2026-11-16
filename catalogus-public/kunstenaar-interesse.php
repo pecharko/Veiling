@@ -61,7 +61,7 @@ foreach ($candidates as $candidate) {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=195">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=1">
+  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=2">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
