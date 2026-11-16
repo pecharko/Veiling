@@ -4,51 +4,6 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 
-// Choose only an explicitly published artist with a complete and valid
-// public portrait/gallery. Prefer the local synthetic artist Mira Veld.
-// Other published artists may serve as a live example outside the preview.
-// Never select contact, payment, audit or unpublished seller information.
-$sampleArtist = null;
-$samplePortrait = '';
-$sampleWorks = [];
-$allowSyntheticImages = getenv('LOCAL_PREVIEW_ISOLATED') === '1'
-  && cfg('setup_key') === 'local-preview-only-nonproduction';
-$candidates = db()->query("
-  SELECT s.id, s.artist_name, s.artist_slogan, s.artist_intro
-  FROM lot_sellers s
-  WHERE s.seller_type='kunstenaar' AND s.artist_published=1 AND s.artist_name<>''
-  ORDER BY CASE WHEN s.artist_name='Mira Veld' THEN 0 ELSE 1 END, s.artist_name, s.id
-  LIMIT 40")->fetchAll(PDO::FETCH_ASSOC);
-$photosStmt = db()->prepare("
-  SELECT image_kind, slot, path
-  FROM seller_images
-  WHERE seller_id=? AND ((image_kind='portrait' AND slot=1)
-    OR (image_kind='work' AND slot BETWEEN 1 AND 3))
-  ORDER BY CASE WHEN image_kind='portrait' THEN 0 ELSE 1 END, slot
-  LIMIT 4");
-foreach ($candidates as $candidate) {
-  $photosStmt->execute([(int)$candidate['id']]);
-  $portrait = '';
-  $works = [];
-  foreach ($photosStmt->fetchAll(PDO::FETCH_ASSOC) as $photo) {
-    $photoPath = (string)$photo['path'];
-    $validUpload = preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\\.(?:webp|jpg|png)$~D', $photoPath) === 1;
-    $validFixture = $allowSyntheticImages
-      && preg_match('~^uploads/preview-fixtures/artist-[1-3]-(?:portrait-1|work-[1-3])\\.webp$~D', $photoPath) === 1;
-    if ((!$validUpload && !$validFixture) || !is_file(__DIR__ . '/' . $photoPath)) continue;
-    if ($photo['image_kind'] === 'portrait' && (int)$photo['slot'] === 1) {
-      $portrait = $photoPath;
-    } elseif ($photo['image_kind'] === 'work') {
-      $works[(int)$photo['slot']] = $photoPath;
-    }
-  }
-  if ($portrait !== '' && isset($works[1], $works[2], $works[3])) {
-    $sampleArtist = $candidate;
-    $samplePortrait = $portrait;
-    $sampleWorks = $works;
-    break;
-  }
-}
 ?><!doctype html>
 <html lang="nl">
 <head>
@@ -61,7 +16,7 @@ foreach ($candidates as $candidate) {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=195">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=2">
+  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=3">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -103,48 +58,36 @@ foreach ($candidates as $candidate) {
           <h2 id="artist-invite-example-title">Zo kan jouw kunstenaarspagina eruitzien</h2>
           <p>Een kleine impressie van de persoonlijke pagina waarmee we jou en je werk voorstellen.</p>
         </div>
-        <?php if ($sampleArtist !== null): ?>
-          <?php $sampleName = (string)$sampleArtist['artist_name']; ?>
-          <div class="artist-invite-sample" aria-label="Voorbeeld van een kunstenaarspagina met portret en kunstwerken">
-            <p class="artist-invite-sample-notice"><?=e($allowSyntheticImages && $sampleName === 'Mira Veld' ? 'FICTIEF VOORBEELD' : 'VOORBEELD VAN EEN DEELNEMENDE KUNSTENAAR')?></p>
-            <div class="artist-invite-sample-sheet">
-              <header class="artist-invite-sample-heading">
-                <p>ONTMOET DE KUNSTENAAR</p>
-                <h3><?=e($sampleName)?></h3>
-                <?php if (trim((string)$sampleArtist['artist_slogan']) !== ''): ?>
-                  <div class="artist-invite-sample-tagline">
-                    <span aria-hidden="true"></span>
-                    <p><?=e($sampleArtist['artist_slogan'])?></p>
-                    <span aria-hidden="true"></span>
-                  </div>
-                <?php endif; ?>
-              </header>
-              <div class="artist-invite-sample-columns">
-                <div class="artist-invite-sample-column">
-                  <figure class="artist-invite-sample-portrait">
-                    <img src="<?=e(url($samplePortrait))?>" alt="Portret van <?=e($sampleName)?>" loading="lazy" decoding="async">
-                  </figure>
-                  <figure class="artist-invite-sample-art artist-invite-sample-art--one">
-                    <img src="<?=e(url($sampleWorks[1]))?>" alt="Kunstwerk 1 van <?=e($sampleName)?>" loading="lazy" decoding="async">
-                  </figure>
-                </div>
-                <div class="artist-invite-sample-column">
-                  <?php if (trim((string)$sampleArtist['artist_intro']) !== ''): ?>
-                    <p class="artist-invite-sample-bio"><?=nl2br(e($sampleArtist['artist_intro']))?></p>
-                  <?php endif; ?>
-                  <figure class="artist-invite-sample-art artist-invite-sample-art--two">
-                    <img src="<?=e(url($sampleWorks[2]))?>" alt="Kunstwerk 2 van <?=e($sampleName)?>" loading="lazy" decoding="async">
-                  </figure>
-                  <figure class="artist-invite-sample-art artist-invite-sample-art--three">
-                    <img src="<?=e(url($sampleWorks[3]))?>" alt="Kunstwerk 3 van <?=e($sampleName)?>" loading="lazy" decoding="async">
-                  </figure>
-                </div>
+        <div class="artist-invite-sample" aria-label="Fictieve kunstenaar Elise Van Acker met portret en twee kunstwerken">
+          <p class="artist-invite-sample-notice">FICTIEF VOORBEELD</p>
+          <div class="artist-invite-sample-sheet">
+            <header class="artist-invite-sample-heading">
+              <p>ONTMOET DE KUNSTENAAR</p>
+              <h3>Elise Van Acker</h3>
+              <div class="artist-invite-sample-tagline">
+                <span aria-hidden="true"></span>
+                <p>Kleur, gevoel en beweging.</p>
+                <span aria-hidden="true"></span>
+              </div>
+            </header>
+            <div class="artist-invite-sample-columns">
+              <div class="artist-invite-sample-column">
+                <figure class="artist-invite-sample-portrait">
+                  <img src="<?=e(url('assets/voorbeeld-elise-van-acker-portret.webp'))?>" alt="Portret van de fictieve kunstenaar Elise Van Acker" width="214" height="280" loading="lazy" decoding="async">
+                </figure>
+                <figure class="artist-invite-sample-art artist-invite-sample-art--one">
+                  <img src="<?=e(url('assets/voorbeeld-elise-van-acker-werk-01.webp'))?>" alt="Abstract schilderij van Elise Van Acker in aardetinten en saliegroen" width="256" height="320" loading="lazy" decoding="async">
+                </figure>
+              </div>
+              <div class="artist-invite-sample-column">
+                <p class="artist-invite-sample-bio">Expressieve penseelstreken, gelaagde kleuren en abstracte composities geven haar werk een eigen karakter.</p>
+                <figure class="artist-invite-sample-art artist-invite-sample-art--two">
+                  <img src="<?=e(url('assets/voorbeeld-elise-van-acker-werk-02.webp'))?>" alt="Abstract schilderij van Elise Van Acker met rode, gele en witte penseelstreken" width="256" height="320" loading="lazy" decoding="async">
+                </figure>
               </div>
             </div>
           </div>
-        <?php else: ?>
-          <p class="artist-invite-example-unavailable">Zodra de deelnemende kunstenaars gepubliceerd zijn, tonen we hier een voorbeeld met een echt portret en drie werken.</p>
-        <?php endif; ?>
+        </div>
         <p class="artist-invite-example-note">Jouw eigen pagina wordt gevuld met je naam, je verhaal en foto's van jouw kunstwerken.</p>
       </aside>
     </div>
