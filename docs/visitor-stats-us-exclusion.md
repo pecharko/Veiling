@@ -1,3 +1,5 @@
+> **Historisch document (vervangen in de preview):** deze US-only aanpak beschrijft de eerdere implementatie. Voor de nieuwe, nog niet gedeployde regel die uitsluitend bevestigde Belgische herkomst toelaat, zie [visitor-stats-be-only.md](visitor-stats-be-only.md). Bestaande productie blijft ongewijzigd tot een afzonderlijk geautoriseerde release.
+
 # Uitsluiting Verenigde Staten uit bezoekerstatistieken
 
 Elke GET-catalogus- of kavelweergave controleert na de bestaande IP-/bot-/DNT-gates via de **lokale GeoLite2 City-database** het land van het vertrouwde client-IP (`REMOTE_ADDR`). Wanneer het land exact **US** is, stopt de tracker **vóór** berekening van de dagelijkse bezoekersidentifier en vóór alle SQL-schrijfoperaties. Daardoor worden Amerikaanse bezoeken niet meegenomen in de algemene teller, kavelstatistieken of geografische tellingen.
