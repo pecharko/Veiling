@@ -21,7 +21,7 @@ foreach ([
     }
 }
 foreach ([
-    '$artistsOverviewEnabled = (int)($settings[\'show_artists_overview\'] ?? 0) === 1;',
+    '$artistsOverviewEnabled = (int)($settings[\'show_artists_overview\'] ?? 1) === 1;',
     'if ($artistsOverviewEnabled) {',
     'if (!$artistsOverviewEnabled):',
     'Binnenkort vind je hier een overzicht van de deelnemende kunstenaars.',
