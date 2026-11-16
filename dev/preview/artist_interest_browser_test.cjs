@@ -29,6 +29,19 @@ const browserPath = process.env.PREVIEW_BROWSER_EXECUTABLE ||
       assert.equal(await page.locator('h1').textContent(),'Ik ben kunstenaar en heb interesse');
       assert.equal(await page.locator('.artist-invite-sample').count(),1);
       assert.equal(await page.locator('.artist-invite-sample-art').count(),3);
+      assert.equal((await page.locator('.artist-invite-sample-heading h3').textContent()).trim(),
+        'Mira Veld','The isolated preview should feature its published fictional artist');
+      const galleryImages = page.locator('.artist-invite-sample img');
+      assert.equal(await galleryImages.count(),4,'Portrait and three works must be actual image elements');
+      for (let i=0; i<4; i++) {
+        const image = galleryImages.nth(i);
+        await image.scrollIntoViewIfNeeded();
+        await image.evaluate(img=>img.decode());
+        assert.equal(await image.evaluate(img=>img.complete && img.naturalWidth>0),true,
+          'Each fictional artist image must load');
+      }
+      const sampleWidth = await page.locator('.artist-invite-sample').evaluate(el=>el.getBoundingClientRect().width);
+      assert(sampleWidth <= 320,'Example brochure should be visibly compact');
       assert.equal(await page.locator('a[href="mailto:veiling@41lokeren.be"]').count(),2);
       assert.match(await page.textContent('body'),/Je bepaalt bovendien helemaal zelf welk deel van de verkoopprijs/);
       assert.match(await page.textContent('body'),/Samen geven we kunst een podium én maken we het verschil/);
