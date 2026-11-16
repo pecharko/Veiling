@@ -234,6 +234,12 @@ body{background:#fffaf6;color:var(--ink)}
 /* Public artist directory: portrait-led, accessible cards. */
 .artists-overview{padding-top:32px;padding-bottom:88px}
 .artists-overview .back-link{display:inline-block;margin-bottom:30px}
+/* Match the good-cause homepage return button without importing global home styles. */
+.artists-overview .front-btn{display:inline-flex;justify-content:center;align-items:center;gap:17px;min-height:50px;padding:14px 21px;border:1.5px solid transparent;border-radius:99px;font:750 13px/1.3 Inter,Arial,sans-serif;text-decoration:none;transition:transform .17s,background .17s,box-shadow .17s;margin-bottom:30px}
+.artists-overview .front-btn:hover{transform:translateY(-2px)}
+.artists-overview .front-btn-outline{border-color:#668073;color:#3c5448;background:rgba(255,255,255,.62)}
+.artists-overview .front-btn-outline:hover{background:#fff;color:#850015}
+@media(prefers-reduced-motion:reduce){.artists-overview .front-btn{transition:none}.artists-overview .front-btn:hover{transform:none}}
 .artists-overview-heading{text-align:center;max-width:720px;margin:0 auto 48px}
 .artists-overview-heading .eyebrow{font-size:11px;letter-spacing:.2em;color:#86776d}
 .artists-overview-heading h1{font:400 clamp(40px,6vw,76px)/1.12 Georgia,serif;letter-spacing:-.045em;color:#302a26;margin:10px 0 16px}

@@ -28,16 +28,16 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <title>Onze kunstenaars · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaars.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=194">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=195">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
-  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('kunstenaars.php'))?>" aria-current="page">Kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a></nav>
+  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
 </div></header>
 <main class="shell artists-overview">
-  <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
+  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
   <div class="artists-overview-heading">
     <p class="eyebrow">DE MENSEN ACHTER DE KUNST</p>
     <h1>Ontmoet onze kunstenaars</h1>
