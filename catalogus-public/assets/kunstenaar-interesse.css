@@ -29,18 +29,20 @@
 .artist-invite-sample-tagline{display:flex;align-items:center;justify-content:center;gap:8px}
 .artist-invite-sample-tagline span{height:1px;width:27px;min-width:12px;background:#baa89d}
 .artist-invite-sample-tagline p{font:italic 11px/1.35 Georgia,serif;color:#4c3a31;margin:0;text-align:center}
-.artist-invite-sample-columns{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.artist-invite-sample-column{display:flex;flex-direction:column;gap:10px;min-width:0}
-.artist-invite-sample-portrait{margin:0;min-width:0;background:#e5ded6;overflow:hidden}
+.artist-invite-sample-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:minmax(156px,auto) auto;gap:10px;align-items:stretch}
+.artist-invite-sample-column{display:contents}
+.artist-invite-sample-portrait{grid-column:1;grid-row:1;margin:0;min-width:0;background:#e5ded6;overflow:hidden}
 
 
-.artist-invite-sample-bio{font:400 11px/1.42 Georgia,serif;color:#5c4b40;margin:0;padding:3px 0;overflow-wrap:anywhere}
+.artist-invite-sample-bio{grid-column:2;grid-row:1;align-self:start;font:400 11px/1.42 Georgia,serif;color:#5c4b40;margin:0;padding:0;overflow-wrap:anywhere}
 .artist-invite-sample-art{margin:0;min-width:0;background:#f0ebe5;padding:4px;overflow:hidden}
 
 
 
 
-.artist-invite-sample-portrait img{display:block;width:100%;height:156px;object-fit:cover;object-position:center}
+.artist-invite-sample-portrait img{display:block;width:100%;height:100%;min-height:156px;object-fit:cover;object-position:center}
+.artist-invite-sample-art--one{grid-column:1;grid-row:2}
+.artist-invite-sample-art--two{grid-column:2;grid-row:2}
 .artist-invite-sample-art img{display:block;width:100%;height:86px;object-fit:contain;background:#f0ebe5}
 .artist-invite-example-unavailable{font:400 13px/1.6 Inter,Arial,sans-serif;color:#796c62;padding:20px;background:#faf8f5;border-radius:8px}
 .artist-invite a:focus-visible,.artist-invite-skip:focus-visible{outline:3px solid #a85d1b;outline-offset:4px}
@@ -61,8 +63,8 @@
   .artist-invite-sample{padding:8px}
   .artist-invite-sample-sheet{padding:14px 10px}
   .artist-invite-sample-columns{gap:9px}
-  .artist-invite-sample-column{gap:9px}
-  .artist-invite-sample-portrait img{height:145px}
+  .artist-invite-sample-columns{grid-template-rows:minmax(145px,auto) auto}
+  .artist-invite-sample-portrait img{min-height:145px}
   .artist-invite-sample-art img{height:78px}
   .artist-invite-sample-bio{font-size:11px}
 }
