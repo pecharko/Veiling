@@ -61,7 +61,7 @@ try {
   <title><?=e($name)?> · Kunstenaar · 41 Lokeren</title>
   <meta name="description" content="<?=e($slogan!=='' ? $slogan : 'Ontdek kunstenaar '.$name.' bij 41 Lokeren.')?>">
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar.php?id=<?=(int)$artistId?>"><?php endif; ?>
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=197"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=1">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=197"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
