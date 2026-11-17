@@ -20,7 +20,7 @@ foreach (["url('index.php')", '>Home</a>', '>Bekijk kavels</a>', "url('goede-doe
 }
 $homepageButton = '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Startpagina</a>';
 if (substr_count($source, $homepageButton) !== 2 ||
-    !str_contains($source, '<div class="artists-overview-bottom-action">')) {
+    !str_contains($source, '<div class="artists-overview-bottom-action" style="display:block;margin-top:0;padding-top:clamp(60px,5vw,80px)">')) {
     throw new RuntimeException('Artists overview requires a Startpagina button above and below the artist list.');
 }
 if (str_contains($source, 'class="back-link"') || str_contains($source, '← Terug naar de catalogus')) {
