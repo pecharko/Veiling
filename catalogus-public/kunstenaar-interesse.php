@@ -14,7 +14,7 @@ require_public_site_online();
   <title>Doe mee als kunstenaar · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar-interesse.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=1">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
   <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=3">
 </head>
@@ -38,7 +38,7 @@ require_public_site_online();
 </header>
 <main id="inhoud" class="artist-invite">
   <div class="shell">
-    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Terug naar de startpagina</a>
     <header class="artist-invite-heading">
       <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
       <h1>Ik ben kunstenaar en heb interesse</h1>
@@ -50,7 +50,7 @@ require_public_site_online();
         <p><strong>Je bepaalt bovendien helemaal zelf welk deel van de verkoopprijs je aan het goede doel wilt schenken.</strong> Zo draag je bij op een manier die voor jou goed voelt.</p>
         <p>Ook voor jou als kunstenaar willen we iets betekenen. We maken er graag werk van om <strong>jou en je kunstwerken extra zichtbaarheid te geven via onze website en de bijbehorende sociale media</strong>. Zo hopen we jouw werk onder de aandacht te brengen van een breder publiek en nieuwe kunstliefhebbers.</p>
         <p>Alvast een warme dankjewel voor je interesse. <strong>Samen geven we kunst een podium én maken we het verschil voor het goede doel!</strong></p>
-        <a class="front-btn front-btn-primary artist-invite-contact" href="mailto:veiling@41lokeren.be">Mail ons jouw interesse <span aria-hidden="true">→</span></a>
+        <a class="front-btn front-btn-primary artist-invite-contact" href="mailto:veiling@41lokeren.be">Mail ons jouw interesse</a>
       </section>
       <aside class="artist-invite-example" aria-labelledby="artist-invite-example-title">
         <div class="artist-invite-example-intro">
