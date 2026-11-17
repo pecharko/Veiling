@@ -24,7 +24,7 @@ foreach ([
     'public_social_footer();',
     '<main id="inhoud"',
     '<nav class="header-nav front-nav"',
-    '<h1>Ik ben kunstenaar en heb interesse</h1>',
+    '<h1 id="artist-invite-title">Ik ben kunstenaar en heb interesse</h1>',
     'assets/kunstenaar-interesse.css',
     'href="<?=e(url(\'index.php\'))?>"',
     'href="mailto:veiling@41lokeren.be"',
@@ -107,17 +107,19 @@ foreach ([
 if (!str_contains($page, "assets/kunstenaar-interesse.css'))?>?v=5")) {
     throw new RuntimeException('Artist interest page must refresh the sample alignment CSS cache.');
 }
-// The lead belongs at the top of the left grid column, level with the
-// illustrated example; on wide screens the mail CTA meets the example bottom.
-$headingClose = strpos($page, '</header>', strpos($page, '<header class="artist-invite-heading">'));
+// The heading now belongs inside the left grid column, so the right-side
+// illustration begins beside the title, as on the artwork-interest page.
 $gridAt = strpos($page, '<div class="artist-invite-grid">');
-$copyAt = strpos($page, '<section class="artist-invite-copy"');
+$copyAt = strpos($page, '<section class="artist-invite-copy" aria-labelledby="artist-invite-title">');
+$headingAt = strpos($page, '<header class="artist-invite-heading">');
+$headingClose = strpos($page, '</header>', $headingAt ?: 0);
 $leadAt = strpos($page, '<p class="artist-invite-lead">');
 $exampleAt = strpos($page, '<aside class="artist-invite-example"');
-if ($headingClose === false || $gridAt === false || $copyAt === false ||
-    $leadAt === false || $exampleAt === false ||
-    !($headingClose < $gridAt && $gridAt < $copyAt && $copyAt < $leadAt && $leadAt < $exampleAt)) {
-    throw new RuntimeException('Introductory paragraph must align with the example at the beginning of the grid.');
+if ($gridAt === false || $copyAt === false || $headingAt === false ||
+    $headingClose === false || $leadAt === false || $exampleAt === false ||
+    !($gridAt < $copyAt && $copyAt < $headingAt && $headingAt < $headingClose &&
+      $headingClose < $leadAt && $leadAt < $exampleAt)) {
+    throw new RuntimeException('Artist heading must be inside the left grid column, beside the example.');
 }
 foreach ([
     '.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.74fr);gap:clamp(26px,4vw,58px);align-items:stretch}',
