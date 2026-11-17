@@ -16,7 +16,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=4">
+  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=5">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -42,10 +42,10 @@ require_public_site_online();
     <header class="artist-invite-heading">
       <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
       <h1>Ik ben kunstenaar en heb interesse</h1>
-      <p>Heb je zin om met één of meerdere kunstwerken bij te dragen aan onze veiling voor het goede doel? Dan horen we heel graag van je!</p>
     </header>
     <div class="artist-invite-grid">
       <section class="artist-invite-copy" aria-label="Deelnemen als kunstenaar">
+        <p class="artist-invite-lead">Heb je zin om met één of meerdere kunstwerken bij te dragen aan onze veiling voor het goede doel? Dan horen we heel graag van je!</p>
         <p>Stuur ons gerust een mailtje naar <a href="mailto:veiling@41lokeren.be"><strong>veiling@41lokeren.be</strong></a>. Een van onze veilingmedewerkers neemt graag persoonlijk contact met je op om meer te vertellen over ons initiatief, hoe de veiling verloopt en wat we samen kunnen betekenen.</p>
         <p><strong>Je bepaalt bovendien helemaal zelf welk deel van de verkoopprijs je aan het goede doel wilt schenken.</strong> Zo draag je bij op een manier die voor jou goed voelt.</p>
         <p>Ook voor jou als kunstenaar willen we iets betekenen. We maken er graag werk van om <strong>jou en je kunstwerken extra zichtbaarheid te geven via onze website en de bijbehorende sociale media</strong>. Zo hopen we jouw werk onder de aandacht te brengen van een breder publiek en nieuwe kunstliefhebbers.</p>
