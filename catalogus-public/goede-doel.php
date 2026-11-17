@@ -42,6 +42,7 @@ require_public_site_online();
       <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
       <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
       <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
