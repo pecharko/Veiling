@@ -30,16 +30,21 @@ function auction_mail_imap_reply($socket, string $tag): ?array {
 function auction_mail_imap_quote(string $value): string {
   return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
 }
-function auction_mail_unread_count(mixed $config): ?int {
-  if (!is_array($config) || ($config['enabled'] ?? false) !== true) return null;
-  if (($config['user'] ?? null) !== 'veiling@41lokeren.be') return null;
+function auction_mail_unread_configured(mixed $config): bool {
+  if (!is_array($config) || ($config['enabled'] ?? false) !== true) return false;
+  if (($config['user'] ?? null) !== 'veiling@41lokeren.be') return false;
   $host = $config['host'] ?? null;
   if (!is_string($host) || !in_array($host, [
       'imap.mail.ovh.ca', 'imap.mail.ovh.net', 'ssl0.ovh.net',
-    ], true)) return null;
+    ], true)) return false;
   $password = $config['password'] ?? null;
-  if (!is_string($password) || $password === '' || strlen($password) > 1024
-      || strpbrk($password, "\r\n\0") !== false) return null;
+  return is_string($password) && $password !== '' && strlen($password) <= 1024
+    && strpbrk($password, "\r\n\0") === false;
+}
+function auction_mail_unread_count(mixed $config): ?int {
+  if (!auction_mail_unread_configured($config)) return null;
+  $host = $config['host'];
+  $password = $config['password'];
 
   $ssl = stream_context_create(['ssl' => [
     'verify_peer' => true,
