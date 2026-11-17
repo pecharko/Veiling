@@ -37,7 +37,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
 </div></header>
 <main class="shell artists-overview">
-  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina</a>
+  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
   <div class="artists-overview-heading">
     <p class="eyebrow">DE MENSEN ACHTER DE KUNST</p>
     <h1>Ontmoet onze kunstenaars</h1>
@@ -79,6 +79,9 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
+  <div class="artists-overview-bottom-action">
+    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+  </div>
 </main>
 <footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><a href="<?=e(url('index.php'))?>#catalogus">Terug naar catalogus</a><?php public_social_footer(); ?></div></footer>
 </body>
