@@ -111,7 +111,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <p class="impression-eyebrow">HET VERHAAL GAAT VERDER</p>
     <h2 id="next-title">De volgende herinnering<br>maken we <em>samen.</em></h2>
     <p>Laat je inspireren door de vorige editie en ontdek wat de huidige veiling in petto heeft.</p>
-    <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Naar de huidige veiling</a></div>
+    <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a></div>
   </section>
 </main>
 <footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><?php public_social_footer(); ?></div></footer>
