@@ -19,7 +19,10 @@ $checks = [
     "in_array(\$activeRole, ['administrator', 'veilingmeester'], true)",
     "https://webmail.mail.ovh.ca/",
     'target="_blank" rel="noopener noreferrer"',
-    'aria-label="Outlook Web App van OVH openen (nieuw tabblad)"',
+    'aria-label="Mail openen via OVH (nieuw tabblad)"',
+    'data-mail-unread-url=',
+    'admin-mail-badge',
+    'Mail ↗',
     "\$publicPreview . \$outlookNav .",
     ": '';",
 ];
