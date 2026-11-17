@@ -16,7 +16,7 @@ if ($heroStart === false || $heroEnd === false) {
 $actions = substr($home, $heroStart, $heroEnd - $heroStart);
 $links = [
     "url('goede-doel.php')" => 'Meer over het goede doel',
-    "url('vorige-editie.php')" => 'Bekijk de vorige editie',
+    "url('vorige-editie.php')" => 'Vorige editie',
     "url('kunstenaars.php')" => 'Maak kennis met de deelnemende kunstenaars',
 ];
 foreach ($links as $href => $label) {
