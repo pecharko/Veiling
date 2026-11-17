@@ -53,11 +53,12 @@ if ($goodCauseAt === false || $previousAt === false || $artistsAt === false || $
 if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>')) {
     throw new RuntimeException('Artists CTA must remain available before catalog publication.');
 }
-if (!str_contains($css, '.front-hero-actions { display:flex; flex-direction:column;') ||
-    !str_contains($css, '.front-hero-action-row { display:flex; flex-wrap:wrap;') ||
-    !str_contains($css, '.front-hero-action-row { gap:8px; }') ||
-    !str_contains($home, "assets/home-v18.css'))?>?v=185")) {
-    throw new RuntimeException('Homepage actions require fixed rows and responsive CSS.');
+if (!str_contains($css, '.front-hero-actions { display:grid; grid-template-columns:max-content max-content;') ||
+    !str_contains($css, '.front-hero-action-row { display:contents; }') ||
+    !str_contains($css, '.front-hero-actions { display:flex; flex-direction:column; align-items:stretch; gap:8px;') ||
+    !str_contains($css, '.front-hero-action-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px;') ||
+    !str_contains($home, "assets/home-v18.css'))?>?v=186")) {
+    throw new RuntimeException('Homepage actions require an actual 2-by-2 desktop grid with mobile wrapping.');
 }
 if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
     throw new RuntimeException('Artists destination must keep coming-soon behavior.');
