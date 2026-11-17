@@ -40,7 +40,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=6">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=7">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -49,7 +49,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <div class="shell header-inner front-header-inner">
     <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
       <span class="brand-mark" aria-hidden="true">41</span>
-      <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+      <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
@@ -60,7 +60,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </div>
 </header>
 <main id="impressie">
-  <div class="impression-top-actions shell">
+  <div class="impression-top-actions shell" style="padding-top:clamp(32px,4vw,56px)">
     <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
   </div>
   <section class="impression-video shell" aria-labelledby="impression-video-title">
