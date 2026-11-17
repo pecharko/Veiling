@@ -15,7 +15,7 @@ if (!is_string($menu)) {
 $checks = [
     "in_array(\$activeRole, ['administrator', 'veilingmeester'], true)",
     "\$activeRole = effective_admin_role();",
-    "https://www.ovhcloud.com/en-gb/mail/",
+    "https://webmail.mail.ovh.ca/",
     'target="_blank" rel="noopener noreferrer"',
     "aria-label=\"Outlook Web App van OVH openen (nieuw tabblad)\"",
     "\$publicPreview . \$outlookNav .",
