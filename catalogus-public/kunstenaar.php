@@ -79,8 +79,11 @@ try {
   <nav class="header-nav" aria-label="Navigatie"></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
-  <?php if ($returnLotNum): ?><a class="back-link" href="<?=e(url('kavel.php', ['nr'=>(int)$returnLotNum]))?>">← Terug naar kavel</a><?php endif; ?>
-  <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
+  <?php if ($returnLotNum): ?>
+    <a class="back-link" href="<?=e(url('kavel.php', ['nr'=>(int)$returnLotNum]))?>">← Terug naar kavel</a>
+  <?php else: ?>
+    <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
+  <?php endif; ?>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">
       <p class="eyebrow">ONTMOET DE KUNSTENAAR</p>

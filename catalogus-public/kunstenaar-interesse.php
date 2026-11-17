@@ -40,12 +40,12 @@ require_public_site_online();
 <main id="inhoud" class="artist-invite">
   <div class="shell">
     <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Startpagina</a>
-    <header class="artist-invite-heading">
-      <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
-      <h1>Ik ben kunstenaar en heb interesse</h1>
-    </header>
     <div class="artist-invite-grid">
-      <section class="artist-invite-copy" aria-label="Deelnemen als kunstenaar">
+      <section class="artist-invite-copy" aria-labelledby="artist-invite-title">
+        <header class="artist-invite-heading">
+          <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
+          <h1 id="artist-invite-title">Ik ben kunstenaar en heb interesse</h1>
+        </header>
         <p class="artist-invite-lead">Heb je zin om met één of meerdere kunstwerken bij te dragen aan onze veiling voor het goede doel? Dan horen we heel graag van je!</p>
         <p>Stuur ons gerust een mailtje naar <a href="mailto:veiling@41lokeren.be"><strong>veiling@41lokeren.be</strong></a>. Een van onze veilingmedewerkers neemt graag persoonlijk contact met je op om meer te vertellen over ons initiatief, hoe de veiling verloopt en wat we samen kunnen betekenen.</p>
         <p><strong>Je bepaalt bovendien helemaal zelf welk deel van de verkoopprijs je aan het goede doel wilt schenken.</strong> Zo draag je bij op een manier die voor jou goed voelt.</p>

@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "6055120aeb3e62f3541c84a994ba45f3d22b0b4d62442710d2713f520b85530c",
+      "remote_sha256": "090c8319cb6c44f584b9c6464787b34672eb6df4aabb2fa0498d29a75a6092bd"
+    },
+    {
+      "path": "catalogus-public/kunstenaar-interesse.php",
+      "source_sha256": "51b8cf07549f12282bbd2d97c400d6acbb7eaa62b750bd22f8775948b0016173",
+      "remote_sha256": "4d1d2b754e935781363f7ac42f75e2a8efc8f656a2b4ec4df908acdc48bc1c33"
+    }
+  ]
+}
