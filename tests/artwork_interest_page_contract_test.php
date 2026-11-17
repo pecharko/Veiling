@@ -10,7 +10,7 @@ $sharedCss = file_get_contents($root . '/catalogus-public/assets/kunstenaar-inte
 if (!is_string($home) || !is_string($page) || !is_string($css) || !is_string($sharedCss)) {
     throw new RuntimeException('Artwork-interest page, styles or homepage missing.');
 }
-$cta = '<a class="front-btn front-btn-outline front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>';
+$cta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>';
 if (!str_contains($home, $cta) ||
     str_contains($home, 'type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling')) {
     throw new RuntimeException('Homepage artwork button must be enabled without changing its classes.');
