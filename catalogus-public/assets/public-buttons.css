@@ -1,0 +1,80 @@
+/* Public button treatment for the local November 2026 preview.
+   Keep the two participation actions (.front-impact-action) unchanged. */
+:root {
+  --public-button-bg: #D8C9B4;
+  --public-button-bg-hover: #CBB79B;
+  --public-button-border: #C5B299;
+  --public-button-border-hover: #BBA589;
+  --public-button-ink: #3B3025;
+}
+
+.front-btn:not(.front-impact-action),
+.front-header .front-header-cta,
+.artists-overview .front-btn,
+.detail-actions .btn,
+.pagination .page-arrow,
+.filter-submit,
+.btn-light {
+  background: var(--public-button-bg) !important;
+  color: var(--public-button-ink) !important;
+  border-color: var(--public-button-border) !important;
+}
+
+.front-btn:not(.front-impact-action):hover,
+.front-header .front-header-cta:hover,
+.artists-overview .front-btn:hover,
+.detail-actions .btn:hover,
+.pagination .page-arrow:hover,
+.filter-submit:hover,
+.btn-light:hover {
+  background: var(--public-button-bg-hover) !important;
+  color: var(--public-button-ink) !important;
+  border-color: var(--public-button-border-hover) !important;
+}
+
+.front-btn:not(.front-impact-action) {
+  gap: 8px;
+}
+
+
+/* Small-screen navigation: logo remains visible, header menu items do not. */
+@media screen and (max-width: 767px) {
+  .site-header .header-nav {
+    display: none !important;
+  }
+}
+
+/* Return to the homepage after the complete artist list (also empty states). */
+.artists-overview-bottom-action {
+  display: block;
+  margin-top: 0;
+  padding-top: clamp(60px, 5vw, 80px);
+}
+.artists-overview .artists-overview-bottom-action .front-btn {
+  margin-bottom: 0;
+}
+
+
+/* Kavel-detailnavigatie: op mobiel alleen < en >, behoud labels voor screenreaders. */
+.detail-side-nav-symbol {
+  display: none;
+}
+@media screen and (max-width: 767px) {
+  .detail-side-nav .detail-side-nav-text {
+    display: none;
+  }
+  .detail-side-nav .detail-side-nav-symbol {
+    display: block;
+    font-size: 26px;
+    font-weight: 750;
+    line-height: 1;
+  }
+  .detail-side-nav a {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    min-height: 48px;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}

@@ -61,9 +61,23 @@ foreach ($release['files'] as $entry) {
 }
 echo "PASS public social footer independent of catalog visibility and valid links only\n";
 
+// All public pages share one visual footer, with the explanatory sentence hidden on phones.
+require __DIR__ . '/public_footer_layout_contract_test.php';
+
 // The new artist invitation shares the public navigation and footer.
 // Run its source-and-assets contract inside the existing public CI workflow.
 require __DIR__ . '/artist_interest_page_contract_test.php';
 
+// Validate the newly enabled second participation button and fictitious lot example.
+require __DIR__ . '/artwork_interest_page_contract_test.php';
+
 // Reuse existing public-page CI to guard mobile header behavior and cache busting.
 require __DIR__ . '/mobile_header_contract_test.php';
+
+// The complete bundled public UI must be exercised by the existing safe PR contract job.
+require __DIR__ . '/public_branding_contract_test.php';
+require __DIR__ . '/public_mobile_buttons_navigation_contract_test.php';
+require __DIR__ . '/homepage_artists_cta_contract_test.php';
+require __DIR__ . '/artists_overview_header_navigation_contract_test.php';
+require __DIR__ . '/good_cause_header_navigation_contract_test.php';
+require __DIR__ . '/previous_edition_header_navigation_contract_test.php';

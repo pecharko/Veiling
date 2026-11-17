@@ -91,14 +91,15 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184"></head>
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=186"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
+</head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <?php admin_preview_banner(); ?>
   <header class="site-header front-header" id="top">
     <div class="shell header-inner front-header-inner">
       <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
         <span class="brand-mark" aria-hidden="true">41</span>
-        <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+        <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
@@ -119,15 +120,19 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         </div>
         <div class="front-hero-copy">
           <p class="front-eyebrow">41 LOKEREN ORGANISEERT</p>
-          <h1 id="front-title">Kunst, lifestyle &amp; vintage<br><em>Veiling voor het goede doel</em></h1>
+          <h1 id="front-title">Kunstveiling<br><em>voor het goede doel</em></h1>
           <div class="front-subtitle-rule" aria-hidden="true"></div>
           <p class="front-hero-subline"><?=e($title)?></p>
-          <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
+          <p class="front-hero-intro">Bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
           <div class="front-hero-actions">
-            <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels <span aria-hidden="true">↗</span></a><?php endif; ?>
-            <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel <span aria-hidden="true">→</span></a>
-            <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
-            <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Maak kennis met de deelnemende kunstenaars <span aria-hidden="true">→</span></a>
+            <div class="front-hero-action-row">
+              <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
+              <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
+            </div>
+            <div class="front-hero-action-row">
+              <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Deelnemende kunstenaars</a>
+              <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
+            </div>
           </div>
         </div>
         <div class="front-hero-gallery" aria-hidden="true">
@@ -167,7 +172,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
         <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
           <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstenaar-interesse.php'))?>">Ik ben kunstenaar en heb interesse</a>
-          <button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>
+          <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk voor de veiling</a>
         </div>
       </div>
       <div class="front-impact-media"><img src="<?=e(url('assets/samen-kunst-verbindt-foto-1.webp'))?>" alt="Jonge kunstliefhebbers ontdekken samen een hedendaags keramisch kunstwerk in een galerie" width="1672" height="941" loading="lazy"></div>
@@ -205,10 +210,10 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <?php else: ?><div class="catalog-grid"><?php foreach($rows as $lot): ?>
     <article class="lot-card"><a class="lot-cover" href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>"><img loading="lazy" src="<?=e(url($lot['cover'] ?: 'assets/placeholder.svg'))?>" alt="<?=e($lot['title'])?>"><span class="lot-badge<?= $splitPreview && $splitSection === 'veiling' ? ' lot-badge--auction-bottom' : '' ?>">KAVEL <?=e(str_pad((string)$lot['lot_number'],3,'0',STR_PAD_LEFT))?></span><?php if (isset($popularLotIds[(int)$lot['id']])): ?><span class="lot-popular-tag<?= $lot['status'] === 'sold' ? ' lot-popular-tag--sold' : '' ?>">Populair</span><?php endif; ?><?php if ($splitPreview && $splitSection === "veiling" && !empty($lot["auction_number"])): ?><span class="lot-preview-number">VEILINGNR. <?= (int)$lot["auction_number"] ?></span><?php endif; ?><?php if ($lot['status'] === 'sold'): ?><span class="lot-sold-badge">Verkocht</span><?php endif; ?></a><div class="lot-card-text"><p class="lot-category"><?=e($lot['category'])?></p><h3><a href="<?=e(url('kavel.php',['nr'=>(int)$lot['lot_number']]))?>" title="<?=e($lot['title'])?>"><?=e($lot['title'])?></a></h3><p class="lot-subtitle"><?=e($lot['subtitle'])?></p><?php if (!empty($lot['artist_name'])): ?><p class="lot-artist"><span class="lot-artist-label">Kunstenaar:</span> <span class="lot-artist-name" title="<?=e($lot['artist_name'])?>"><?=lot_artist_markup($lot)?></span></p><?php endif; ?><div class="lot-footer"><?php if (($previewPrice = catalog_preview_price($lot, $splitPreview)) !== null): ?><div class="lot-estimate"><small><?=e($previewPrice["label"])?></small><strong><?=e($previewPrice["amount"])?></strong></div><?php endif; ?><button class="heart-btn" type="button" data-favorite="<?=(int)$lot['lot_number']?>" aria-label="Bewaar kavel <?=(int)$lot['lot_number']?>" aria-pressed="false">♡</button></div></div></article>
     <?php endforeach; ?></div>
-    <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende →</a><?php endif; ?></nav><?php endif; ?>
+    <?php if (($pages ?? 1)>1): ?><nav class="pagination" aria-label="Paginering"><?php if($page>1): ?><a class="page-arrow" href="<?=e(page_link($page-1))?>">Vorige</a><?php endif; ?><span>Pagina <?=e((string)$page)?> van <?=e((string)$pages)?></span><?php if($page<$pages): ?><a class="page-arrow" href="<?=e(page_link($page+1))?>">Volgende</a><?php endif; ?></nav><?php endif; ?>
     <?php endif; ?>
   <?php endif; ?></section>
   <?php endif; ?>
 
-  </main><footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p>Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
+  </main><footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer><script src="<?=e(url('assets/catalogus.js'))?>" defer></script>
 </body></html>

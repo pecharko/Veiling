@@ -15,8 +15,8 @@ $cta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\
 if (!str_contains($home, $cta) || str_contains($home, 'type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse')) {
     throw new RuntimeException('Homepage artist action must link to an enabled local page.');
 }
-if (!str_contains($home, '<button class="front-btn front-btn-outline front-impact-action" type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling</button>')) {
-    throw new RuntimeException('Separate artwork-interest flow must remain unchanged and disabled.');
+if (!str_contains($home, '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>')) {
+    throw new RuntimeException('Separate artwork-interest CTA must link to the approved static information page.');
 }
 foreach ([
     'require_public_site_online();',
@@ -89,4 +89,46 @@ if (substr_count($page, 'href="mailto:veiling@41lokeren.be"') !== 2) {
     throw new RuntimeException('Artist participation contact must use the specified mail address.');
 }
 
+// Align the sample portrait with its biography in the same grid row;
+// both artworks should start together in the second row, also on mobile.
+foreach ([
+    '.artist-invite-sample-column{display:contents}',
+    '.artist-invite-sample-portrait{grid-column:1;grid-row:1;',
+    '.artist-invite-sample-bio{grid-column:2;grid-row:1;align-self:start;',
+    '.artist-invite-sample-art--one{grid-column:1;grid-row:2}',
+    '.artist-invite-sample-art--two{grid-column:2;grid-row:2}',
+    '.artist-invite-sample-portrait img{display:block;width:100%;height:100%;min-height:156px;',
+    'grid-template-rows:minmax(145px,auto) auto',
+] as $expectedAlignmentRule) {
+    if (!str_contains($css, $expectedAlignmentRule)) {
+        throw new RuntimeException('Missing artist example alignment rule: ' . $expectedAlignmentRule);
+    }
+}
+if (!str_contains($page, "assets/kunstenaar-interesse.css'))?>?v=5")) {
+    throw new RuntimeException('Artist interest page must refresh the sample alignment CSS cache.');
+}
+// The lead belongs at the top of the left grid column, level with the
+// illustrated example; on wide screens the mail CTA meets the example bottom.
+$headingClose = strpos($page, '</header>', strpos($page, '<header class="artist-invite-heading">'));
+$gridAt = strpos($page, '<div class="artist-invite-grid">');
+$copyAt = strpos($page, '<section class="artist-invite-copy"');
+$leadAt = strpos($page, '<p class="artist-invite-lead">');
+$exampleAt = strpos($page, '<aside class="artist-invite-example"');
+if ($headingClose === false || $gridAt === false || $copyAt === false ||
+    $leadAt === false || $exampleAt === false ||
+    !($headingClose < $gridAt && $gridAt < $copyAt && $copyAt < $leadAt && $leadAt < $exampleAt)) {
+    throw new RuntimeException('Introductory paragraph must align with the example at the beginning of the grid.');
+}
+foreach ([
+    '.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.74fr);gap:clamp(26px,4vw,58px);align-items:stretch}',
+    '.artist-invite-copy{display:flex;flex-direction:column;',
+    '.artist-invite-contact{margin-top:auto;align-self:flex-start}',
+    '.artist-invite-copy .artist-invite-lead{',
+    '.artist-invite-grid{grid-template-columns:1fr;gap:28px}',
+    '.artist-invite-contact{margin-top:12px}',
+] as $rule) {
+    if (!str_contains($css, $rule)) {
+        throw new RuntimeException('Missing artist interest vertical alignment rule: ' . $rule);
+    }
+}
 echo "PASS: artist-interest page with Elise Van Acker portrait, two artworks, compact layout and contact text.\n";

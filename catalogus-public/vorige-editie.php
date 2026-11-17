@@ -38,9 +38,10 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <title>De vorige editie in beeld · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/vorige-editie.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=7">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -49,7 +50,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <div class="shell header-inner front-header-inner">
     <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
       <span class="brand-mark" aria-hidden="true">41</span>
-      <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+      <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
@@ -60,6 +61,9 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </div>
 </header>
 <main id="impressie">
+  <div class="impression-top-actions shell" style="padding-top:clamp(32px,4vw,56px)">
+    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+  </div>
   <section class="impression-video shell" aria-labelledby="impression-video-title">
     <div class="impression-video-intro">
       <p class="impression-eyebrow">IN DE KIJKER · TV OOST</p>
@@ -111,10 +115,10 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <p class="impression-eyebrow">HET VERHAAL GAAT VERDER</p>
     <h2 id="next-title">De volgende herinnering<br>maken we <em>samen.</em></h2>
     <p>Laat je inspireren door de vorige editie en ontdek wat de huidige veiling in petto heeft.</p>
-    <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Naar de huidige veiling <span aria-hidden="true">→</span></a></div>
+    <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a></div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 
 </body>
 </html>

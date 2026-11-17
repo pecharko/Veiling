@@ -30,7 +30,29 @@ $previousPos = strpos($nav, '>Vorige editie</a>');
 if (!($homePos < $catalogPos && $catalogPos < $artistsPos && $artistsPos < $previousPos)) {
     throw new RuntimeException('Good cause header order is incorrect.');
 }
-if (!str_contains($source, 'Terug naar de startpagina')) {
+if (!str_contains($source, '>Startpagina</a>') || !str_contains($source, '>Vorige editie</a>')) {
     throw new RuntimeException('Homepage return button must remain.');
+}
+$topSectionStart = strpos($source, '<section class="cause-announcement"');
+$topSectionEnd = strpos($source, '</section>', $topSectionStart ?: 0);
+if ($topSectionStart === false || $topSectionEnd === false) {
+    throw new RuntimeException('Missing top good-cause section.');
+}
+$topSection = substr($source, $topSectionStart, $topSectionEnd - $topSectionStart);
+foreach ([
+    '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Startpagina</a>',
+    '<a class="front-btn front-btn-outline" href="<?=e(url(\'vorige-editie.php\'))?>">Vorige editie</a>',
+] as $button) {
+    if (!str_contains($topSection, $button)) {
+        throw new RuntimeException('Missing requested top button on good-cause page: ' . $button);
+    }
+}
+if (!str_contains($topSection, '<div class="cause-announcement-actions">') ||
+    !str_contains($source, "assets/goede-doel.css'))?>?v=3")) {
+    throw new RuntimeException('Top actions need a responsive group and refreshed stylesheet.');
+}
+$causeCss = file_get_contents(dirname(__DIR__) . '/catalogus-public/assets/goede-doel.css');
+if (!is_string($causeCss) || !str_contains($causeCss, '.cause-announcement-actions{')) {
+    throw new RuntimeException('Missing layout for top good-cause buttons.');
 }
 echo "PASS good cause header includes catalog and artists after Home without redundant links.\n";

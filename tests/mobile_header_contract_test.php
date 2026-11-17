@@ -28,6 +28,7 @@ $pages = [
     'kunstenaars.php',
     'kunstenaar.php',
     'kunstenaar-interesse.php',
+    'kunstwerk-interesse.php',
     'goede-doel.php',
     'vorige-editie.php',
 ];
@@ -41,4 +42,5 @@ foreach ($pages as $pageName) {
     }
 }
 require __DIR__ . '/artist_compact_previous_edition_contract_test.php';
-echo "PASS: non-sticky public header at <=800px, sticky desktop header, seven cache-busted public pages\n";
+require __DIR__ . '/lot_mobile_navigation_contract_test.php';
+echo "PASS: non-sticky public header at <=800px, sticky desktop header, eight cache-busted public pages\n";

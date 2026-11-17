@@ -17,3 +17,6 @@
 .cause-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px}
 @media(max-width:650px){.cause-story{grid-template-columns:1fr;gap:15px;padding-top:60px;padding-bottom:64px}.cause-announcement-inner{padding-top:56px;padding-bottom:60px}.cause-last{padding-top:55px;padding-bottom:68px}.cause-story-copy p,.cause-announcement-inner>p:not(.front-eyebrow),.cause-last p{font-size:14px}.cause-actions .front-btn{white-space:normal}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+
+/* Two return actions in the page introduction, also usable on phones. */
+.cause-announcement-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}

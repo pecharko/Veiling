@@ -1,0 +1,53 @@
+/* 41 Lokeren: uitnodiging voor een kunstwerk, gebaseerd op de kunstenaarsinteressepagina.
+   Fictief kavelvoorbeeld; toont geen live kavels en bevat geen biedfunctionaliteit. */
+.lot-invite .artist-invite-return{margin-bottom:clamp(34px,4vw,54px)}
+.lot-invite .artist-invite-grid{grid-template-columns:minmax(0,.88fr) minmax(0,1.12fr);gap:clamp(30px,4vw,62px);align-items:stretch}
+.lot-invite .artist-invite-copy{max-width:650px}
+.lot-invite .artist-invite-heading{max-width:650px;margin:0 0 clamp(25px,3vw,38px)}
+.lot-invite .artist-invite-heading h1{font-size:clamp(40px,4.2vw,66px);line-height:1.08;text-wrap:balance;margin:14px 0 0}
+.lot-invite .artist-invite-copy .artist-invite-lead{font-family:Georgia,'Times New Roman',serif;font-size:clamp(17px,1.65vw,21px);line-height:1.65;color:#684a43}
+.lot-invite .artist-invite-contact{margin-top:auto;align-self:flex-start}
+.lot-invite .lot-invite-example{max-width:none;width:100%;box-sizing:border-box;padding:clamp(18px,2.1vw,28px);border-radius:18px;align-self:stretch}
+.lot-invite-eyebrow{font:800 10px/1.4 Inter,Arial,sans-serif;letter-spacing:.17em;color:#8f7668;margin:0 0 20px}
+.lot-invite-demo{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:clamp(16px,2vw,27px);min-width:0}
+.lot-invite-media,.lot-invite-details{min-width:0}
+.lot-invite-image{position:relative;background:#efe7df;overflow:hidden;border-radius:9px}
+.lot-invite-image img{width:100%;height:clamp(270px,34vw,410px);display:block;object-fit:cover;object-position:center}
+.lot-invite-badge,.lot-invite-number{position:absolute;background:#850015;color:#fffaf5;font:800 10px/1.4 Inter,Arial,sans-serif;letter-spacing:.045em;padding:9px 12px;border-radius:18px}
+.lot-invite-badge{top:13px;left:13px}
+.lot-invite-number{bottom:13px;left:13px;background:rgba(46,39,33,.85)}
+.lot-invite-thumbs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:11px}
+.lot-invite-thumbs img{display:block;width:100%;height:76px;object-fit:cover;border:3px solid #f0e5dc;background:#eee6dc;border-radius:7px;box-sizing:border-box}
+.lot-invite-thumbs img:first-child{border-color:#850015}
+.lot-invite-kicker{color:#795b4b;font:800 10px/1.45 Inter,Arial,sans-serif;letter-spacing:.15em;margin:0 0 13px}
+.lot-invite-details h3{font:400 clamp(24px,2.7vw,38px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.035em;color:#3b3025;margin:0 0 23px}
+.lot-invite-artist{font:400 13px/1.6 Inter,Arial,sans-serif;color:#59473e;margin:0 0 18px}
+.lot-invite-artist strong{color:#850015;text-decoration:underline;text-underline-offset:3px}
+.lot-invite-price{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#f7ede3;border-radius:10px;padding:16px 15px;margin:0 0 20px;font:700 13px/1.4 Inter,Arial,sans-serif;color:#3b3025}
+.lot-invite-price strong{font-size:21px;color:#850015;white-space:nowrap}
+.lot-invite-description{font:400 13px/1.8 Inter,Arial,sans-serif;color:#5c4b40;margin:0 0 17px}
+.lot-invite-spec{border-top:1px solid #e5d8cc;padding-top:15px}
+.lot-invite-spec strong{font:800 12px/1.5 Inter,Arial,sans-serif;color:#3b3025}
+.lot-invite-spec p{font:400 12px/1.7 Inter,Arial,sans-serif;color:#695b50;margin:5px 0 0}
+.lot-invite-disclaimer{margin:18px 0 0;color:#796c62;font:400 12px/1.6 Inter,Arial,sans-serif}
+@media(max-width:1050px){
+  .lot-invite .artist-invite-grid{grid-template-columns:1fr;gap:32px}
+  .lot-invite .artist-invite-copy{max-width:760px}
+  .lot-invite .lot-invite-example{max-width:780px}
+  .lot-invite .artist-invite-contact{margin-top:14px}
+  .lot-invite-image img{height:390px}
+}
+@media(max-width:600px){
+  .lot-invite .artist-invite-heading h1{font-size:clamp(34px,9vw,46px)}
+  .lot-invite .artist-invite-return{margin-bottom:28px}
+  .lot-invite .artist-invite-copy .artist-invite-lead{font-size:17px}
+  .lot-invite .lot-invite-example{padding:16px}
+  .lot-invite-demo{grid-template-columns:1fr;gap:21px}
+  .lot-invite-image img{height:340px}
+  .lot-invite-thumbs img{height:78px}
+  .lot-invite-details h3{font-size:31px}
+  .lot-invite .artist-invite-contact{width:100%;box-sizing:border-box}
+}
+@media print{
+  .lot-invite .artist-invite-example{break-inside:avoid}
+}

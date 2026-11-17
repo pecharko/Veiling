@@ -14,9 +14,10 @@ require_public_site_online();
   <title>Doe mee als kunstenaar · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar-interesse.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=5">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -25,7 +26,7 @@ require_public_site_online();
   <div class="shell header-inner front-header-inner">
     <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
       <span class="brand-mark" aria-hidden="true">41</span>
-      <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+      <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
@@ -38,19 +39,19 @@ require_public_site_online();
 </header>
 <main id="inhoud" class="artist-invite">
   <div class="shell">
-    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Startpagina</a>
     <header class="artist-invite-heading">
       <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
       <h1>Ik ben kunstenaar en heb interesse</h1>
-      <p>Heb je zin om met één of meerdere kunstwerken bij te dragen aan onze veiling voor het goede doel? Dan horen we heel graag van je!</p>
     </header>
     <div class="artist-invite-grid">
       <section class="artist-invite-copy" aria-label="Deelnemen als kunstenaar">
+        <p class="artist-invite-lead">Heb je zin om met één of meerdere kunstwerken bij te dragen aan onze veiling voor het goede doel? Dan horen we heel graag van je!</p>
         <p>Stuur ons gerust een mailtje naar <a href="mailto:veiling@41lokeren.be"><strong>veiling@41lokeren.be</strong></a>. Een van onze veilingmedewerkers neemt graag persoonlijk contact met je op om meer te vertellen over ons initiatief, hoe de veiling verloopt en wat we samen kunnen betekenen.</p>
         <p><strong>Je bepaalt bovendien helemaal zelf welk deel van de verkoopprijs je aan het goede doel wilt schenken.</strong> Zo draag je bij op een manier die voor jou goed voelt.</p>
         <p>Ook voor jou als kunstenaar willen we iets betekenen. We maken er graag werk van om <strong>jou en je kunstwerken extra zichtbaarheid te geven via onze website en de bijbehorende sociale media</strong>. Zo hopen we jouw werk onder de aandacht te brengen van een breder publiek en nieuwe kunstliefhebbers.</p>
         <p>Alvast een warme dankjewel voor je interesse. <strong>Samen geven we kunst een podium én maken we het verschil voor het goede doel!</strong></p>
-        <a class="front-btn front-btn-primary artist-invite-contact" href="mailto:veiling@41lokeren.be">Mail ons jouw interesse <span aria-hidden="true">→</span></a>
+        <a class="front-btn front-btn-primary artist-invite-contact" href="mailto:veiling@41lokeren.be">Mail ons jouw interesse</a>
       </section>
       <aside class="artist-invite-example" aria-labelledby="artist-invite-example-title">
         <div class="artist-invite-example-intro">
@@ -93,13 +94,6 @@ require_public_site_online();
     </div>
   </div>
 </main>
-<footer class="footer">
-  <div class="shell footer-inner">
-    <span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span>
-    <a href="<?=e(url('privacy.php'))?>">Privacy</a>
-    <a href="<?=e(url('index.php'))?>">Terug naar startpagina</a>
-    <?php public_social_footer(); ?>
-  </div>
-</footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>

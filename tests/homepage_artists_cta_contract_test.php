@@ -8,33 +8,57 @@ $artists = file_get_contents($root . '/catalogus-public/kunstenaars.php');
 if (!is_string($home) || !is_string($css) || !is_string($artists)) {
     throw new RuntimeException('Homepage or artists page missing.');
 }
-$heroStart = strpos($home, 'class="front-hero-actions"');
-$heroEnd = $heroStart === false ? false : strpos($home, '</div>', $heroStart);
-if ($heroStart === false || $heroEnd === false) {
-    throw new RuntimeException('Homepage hero actions missing.');
+if (!preg_match('~<div class="front-hero-actions">\\s*<div class="front-hero-action-row">(?P<top>.*?)</div>\\s*<div class="front-hero-action-row">(?P<bottom>.*?)</div>\\s*</div>~s', $home, $rows)) {
+    throw new RuntimeException('Homepage hero must contain two fixed, separate action rows.');
 }
-$actions = substr($home, $heroStart, $heroEnd - $heroStart);
+$actions = $rows[0];
+$topRow = $rows['top'];
+$bottomRow = $rows['bottom'];
+if (!str_contains($topRow, "url('goede-doel.php')") ||
+    !str_contains($topRow, "url('vorige-editie.php')") ||
+    str_contains($topRow, "url('kunstenaars.php')") ||
+    str_contains($topRow, 'href="#catalogus"') ||
+    !str_contains($bottomRow, "url('kunstenaars.php')") ||
+    !str_contains($bottomRow, 'href="#catalogus"')) {
+    throw new RuntimeException('First row must hold good cause/previous edition; second artists/catalog.');
+}
 $links = [
     "url('goede-doel.php')" => 'Meer over het goede doel',
-    "url('vorige-editie.php')" => 'Bekijk de vorige editie',
-    "url('kunstenaars.php')" => 'Maak kennis met de deelnemende kunstenaars',
+    "url('vorige-editie.php')" => 'Vorige editie',
+    "url('kunstenaars.php')" => 'Deelnemende kunstenaars',
 ];
 foreach ($links as $href => $label) {
     if (!str_contains($actions, $href) || !str_contains($actions, $label)) {
         throw new RuntimeException('Missing homepage CTA: ' . $label);
     }
 }
-if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>">Maak kennis met de deelnemende kunstenaars')) {
+if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>">Deelnemende kunstenaars')) {
     throw new RuntimeException('Artists CTA must reuse established outline button and safe URL.');
 }
 if (strpos($actions, "url('kunstenaars.php')") < strpos($actions, "url('vorige-editie.php')")) {
     throw new RuntimeException('Artists CTA must follow previous edition CTA.');
 }
+$ctaCatalog = '<?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>';
+if (substr_count($actions, $ctaCatalog) !== 1) {
+    throw new RuntimeException('Catalog CTA must retain its original link, style and publication guard.');
+}
+$goodCauseAt = strpos($actions, "url('goede-doel.php')");
+$previousAt = strpos($actions, "url('vorige-editie.php')");
+$artistsAt = strpos($actions, "url('kunstenaars.php')");
+$catalogAt = strpos($actions, 'href="#catalogus"');
+if ($goodCauseAt === false || $previousAt === false || $artistsAt === false || $catalogAt === false ||
+    !($goodCauseAt < $previousAt && $previousAt < $artistsAt && $artistsAt < $catalogAt)) {
+    throw new RuntimeException('Hero CTA order must be: good cause, previous edition, artists, then catalog.');
+}
 if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>')) {
     throw new RuntimeException('Artists CTA must remain available before catalog publication.');
 }
-if (!str_contains($css, '.front-hero-actions { display:flex;') || !str_contains($css, 'flex-wrap:wrap;')) {
-    throw new RuntimeException('Hero actions must wrap responsively.');
+if (!str_contains($css, '.front-hero-actions { display:grid; grid-template-columns:max-content max-content;') ||
+    !str_contains($css, '.front-hero-action-row { display:contents; }') ||
+    !str_contains($css, '.front-hero-actions { display:flex; flex-direction:column; align-items:stretch; gap:8px;') ||
+    !str_contains($css, '.front-hero-action-row { display:flex; flex-wrap:wrap; align-items:center; gap:8px;') ||
+    !str_contains($home, "assets/home-v18.css'))?>?v=186")) {
+    throw new RuntimeException('Homepage actions require an actual 2-by-2 desktop grid with mobile wrapping.');
 }
 if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
     throw new RuntimeException('Artists destination must keep coming-soon behavior.');

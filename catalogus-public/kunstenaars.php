@@ -28,16 +28,17 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <title>Onze kunstenaars · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaars.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
-  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
+  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
 </div></header>
 <main class="shell artists-overview">
-  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
   <div class="artists-overview-heading">
     <p class="eyebrow">DE MENSEN ACHTER DE KUNST</p>
     <h1>Ontmoet onze kunstenaars</h1>
@@ -73,13 +74,16 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <span class="artists-overview-card-body">
           <strong><?=e($name)?></strong>
           <?php if ($slogan !== ''): ?><span class="artists-overview-slogan"><?=e($slogan)?></span><?php endif; ?>
-          <span class="artists-overview-more">Ontdek de kunstenaar <span aria-hidden="true">↗</span></span>
+          <span class="artists-overview-more">Ontdek de kunstenaar</span>
         </span>
       </a>
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
+  <div class="artists-overview-bottom-action" style="display:block;margin-top:0;padding-top:clamp(60px,5vw,80px)">
+    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+  </div>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><a href="<?=e(url('index.php'))?>#catalogus">Terug naar catalogus</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>

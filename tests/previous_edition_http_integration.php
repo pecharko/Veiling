@@ -26,7 +26,7 @@ try {
     foreach ([0,1] as $published) {
         db()->exec('UPDATE settings SET is_site_online=1,is_published=' . $published . ' WHERE id=1');
         [$status,$home] = impression_request('/index.php');
-        impression_check($status === 200 && str_contains($home,'Bekijk de vorige editie')
+        impression_check($status === 200 && str_contains($home,'Vorige editie')
             && str_contains($home,'vorige-editie.php'), 'Homepage links to impression with published=' . $published);
         [$status,$body] = impression_request('/vorige-editie.php');
         impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9 

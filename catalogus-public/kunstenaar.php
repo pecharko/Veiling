@@ -61,12 +61,13 @@ try {
   <title><?=e($name)?> · Kunstenaar · 41 Lokeren</title>
   <meta name="description" content="<?=e($slogan!=='' ? $slogan : 'Ontdek kunstenaar '.$name.' bij 41 Lokeren.')?>">
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar.php?id=<?=(int)$artistId?>"><?php endif; ?>
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=197">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=197"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
-  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
+  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
   <nav class="header-nav"><a href="<?=e(url('kunstenaars.php'))?>">← Alle kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Alle kavels</a></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
@@ -107,6 +108,6 @@ try {
     <?php endif; ?>
   </article>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><a href="<?=e(url('index.php'))?>#catalogus">Terug naar catalogus</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>

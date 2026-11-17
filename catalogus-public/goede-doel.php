@@ -14,9 +14,10 @@ require_public_site_online();
   <title>Het goede doel · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/goede-doel.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=2">
+  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -25,7 +26,7 @@ require_public_site_online();
   <div class="shell header-inner front-header-inner">
     <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
       <span class="brand-mark" aria-hidden="true">41</span>
-      <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+      <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
@@ -41,7 +42,10 @@ require_public_site_online();
       <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
       <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
       <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
-      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+      <div class="cause-announcement-actions">
+      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
+      </div>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
@@ -58,11 +62,11 @@ require_public_site_online();
     <h2 id="cause-last-title">Ook jouw aanwezigheid maakt het verschil.</h2>
     <p>Kom de bijzondere stukken bekijken, ontdek de verhalen achter de kavels en beleef de veiling mee.</p>
     <div class="cause-actions">
-      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Bekijk de veiling <span aria-hidden="true">→</span></a>
-      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
+      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a>
+      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
     </div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><a href="<?=e(url('privacy.php'))?>">Privacy</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>

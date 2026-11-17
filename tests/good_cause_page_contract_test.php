@@ -55,8 +55,8 @@ foreach ([
     'zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.',
     'Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.',
     'Ik ben kunstenaar en heb interesse</a>',
-    'Ik heb een kunstwerk voor de veiling</button>',
-    'type="button" disabled',
+    'Ik heb een kunstwerk voor de veiling</a>',
+    "href=\"<?=e(url('kunstwerk-interesse.php'))?>\"", 
     "href=\"<?=e(url('kunstenaar-interesse.php'))?>\"", 
 ] as $expected) {
     if (!str_contains($impact, $expected)) {
@@ -67,7 +67,16 @@ if (str_contains($impact, 'Het goede doel wordt binnenkort bekendgemaakt.')
     || str_contains($impact, 'Ontdek bijzondere objecten en unieke stukken.')) {
     throw new RuntimeException('Old good cause homepage text remains.');
 }
-if (substr_count($impact, 'type="button" disabled') !== 1) {
-    throw new RuntimeException('Only the artwork-donation future workflow must remain disabled.');
+foreach ([
+    'kunstenaar-interesse.php',
+    'kunstwerk-interesse.php',
+] as $target) {
+    if (!str_contains($impact, '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'' . $target . '\'))?>">')) {
+        throw new RuntimeException('Participation button must use identical green styling: ' . $target);
+    }
+}
+if (str_contains($impact, 'type="button" disabled') ||
+    substr_count($impact, 'front-impact-action"') !== 2) {
+    throw new RuntimeException('Both participation actions must remain enabled.');
 }
 echo "PASS: dedicated good cause page, links, guards and mobile stylesheet.\n";
