@@ -33,4 +33,18 @@ if (!($homePos < $catalogPos && $catalogPos < $artistsPos && $artistsPos < $prev
 if (!str_contains($source, '>Startpagina</a>') || !str_contains($source, '>Vorige editie</a>')) {
     throw new RuntimeException('Homepage return button must remain.');
 }
+$topSectionStart = strpos($source, '<section class="cause-announcement"');
+$topSectionEnd = strpos($source, '</section>', $topSectionStart ?: 0);
+if ($topSectionStart === false || $topSectionEnd === false) {
+    throw new RuntimeException('Missing top good-cause section.');
+}
+$topSection = substr($source, $topSectionStart, $topSectionEnd - $topSectionStart);
+foreach ([
+    '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Startpagina</a>',
+    '<a class="front-btn front-btn-outline" href="<?=e(url(\'vorige-editie.php\'))?>">Vorige editie</a>',
+] as $button) {
+    if (!str_contains($topSection, $button)) {
+        throw new RuntimeException('Missing requested top button on good-cause page: ' . $button);
+    }
+}
 echo "PASS good cause header includes catalog and artists after Home without redundant links.\n";
