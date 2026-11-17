@@ -24,7 +24,8 @@ $names = [
 $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
-    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=3") ||
+    $buttonsVersion = $name === 'kavel.php' ? 4 : 3;
+    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=" . $buttonsVersion) ||
         !str_contains($page, 'class="header-nav')) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
