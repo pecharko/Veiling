@@ -33,4 +33,15 @@ $checks = [
 foreach ($checks as $name => $passed) {
     if (!$passed) throw new RuntimeException('Artist navigation regression: ' . $name);
 }
+// If there is an authenticated public origin lot, the profile must show
+// only its return link. Otherwise it must fall back to the artist directory.
+$navStart = strpos($profile, '<main class="artist-profile shell artist-brochure">');
+$navEnd = strpos($profile, '<article class="artist-brochure-sheet">', $navStart ?: 0);
+if ($navStart === false || $navEnd === false) {
+    throw new RuntimeException('Artist return navigation missing.');
+}
+$nav = substr($profile, $navStart, $navEnd - $navStart);
+if (!preg_match('~<\\?php if \\(\\$returnLotNum\\): \\?>\\s*<a[^>]+>← Terug naar kavel</a>\\s*<\\?php else: \\?>\\s*<a[^>]+>← Terug naar alle kunstenaars</a>\\s*<\\?php endif; \\?>~', $nav)) {
+    throw new RuntimeException('Artist profile must show exactly one contextual return link.');
+}
 echo "PASS published artist directory-to-profile access independent of catalog publication\n";
