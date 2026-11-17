@@ -41,6 +41,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
   <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=7">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -117,7 +118,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a></div>
   </section>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · SAMEN VOOR HET GOEDE DOEL</strong></span><p>Een impressie van de vorige editie.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 
 </body>
 </html>
