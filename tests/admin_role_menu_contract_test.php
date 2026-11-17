@@ -12,4 +12,6 @@ foreach (['require_auth();', 'Administrator', 'Assistent', 'Veilingmeester', 'Ve
 }
 if (!str_contains($css, '.admin-active-role')) throw new RuntimeException('Missing role indicator styling');
 if (!str_contains($bootstrap, "'rollen.php', 'logout.php'")) throw new RuntimeException('Help must be accessible to assistants and veilingmeesters');
+// Run the dedicated OVH Outlook menu guard on existing role-menu CI paths.
+require __DIR__ . '/admin_outlook_owa_menu_contract_test.php';
 echo "PASS role menu and read-only documentation contract\n";
