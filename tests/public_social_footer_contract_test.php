@@ -65,5 +65,8 @@ echo "PASS public social footer independent of catalog visibility and valid link
 // Run its source-and-assets contract inside the existing public CI workflow.
 require __DIR__ . '/artist_interest_page_contract_test.php';
 
+// Validate the newly enabled second participation button and fictitious lot example.
+require __DIR__ . '/artwork_interest_page_contract_test.php';
+
 // Reuse existing public-page CI to guard mobile header behavior and cache busting.
 require __DIR__ . '/mobile_header_contract_test.php';
