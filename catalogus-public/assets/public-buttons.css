@@ -53,3 +53,28 @@
 .artists-overview .artists-overview-bottom-action .front-btn {
   margin-bottom: 0;
 }
+
+
+/* Kavel-detailnavigatie: op mobiel alleen < en >, behoud labels voor screenreaders. */
+.detail-side-nav-symbol {
+  display: none;
+}
+@media screen and (max-width: 767px) {
+  .detail-side-nav .detail-side-nav-text {
+    display: none;
+  }
+  .detail-side-nav .detail-side-nav-symbol {
+    display: block;
+    font-size: 26px;
+    font-weight: 750;
+    line-height: 1;
+  }
+  .detail-side-nav a {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    min-height: 48px;
+    padding: 0;
+    box-sizing: border-box;
+  }
+}
