@@ -122,7 +122,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <h1 id="front-title">Kunstveiling<br><em>voor het goede doel</em></h1>
           <div class="front-subtitle-rule" aria-hidden="true"></div>
           <p class="front-hero-subline"><?=e($title)?></p>
-          <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
+          <p class="front-hero-intro">Bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
           <div class="front-hero-actions">
             <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
             <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
