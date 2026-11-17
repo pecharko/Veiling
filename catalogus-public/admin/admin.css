@@ -451,6 +451,9 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 /* Optional OVH mailbox unread count (Administrator and Veilingmeester only). */
 .admin-mail-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#9a1e34;color:#fff;font-size:11px;font-weight:700;line-height:1;vertical-align:middle}
 .admin-mail-badge[hidden]{display:none}
+/* Actual unread mail count: red circle with a white number. */
+.admin-mail-badge[data-state="count"]{box-sizing:border-box;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#d62828;color:#fff;font-size:12px;font-weight:700;line-height:1}
+
 
 /* Distinguish valid unread counts from unconfigured and unavailable mailbox status. */
 .admin-mail-badge[data-state="disconnected"]{background:#e9ece9;color:#44544a;font-size:10px;font-weight:600;padding:0 7px}
