@@ -2,36 +2,78 @@
 declare(strict_types=1);
 
 /**
- * Read-only inbox counter for the optional OVH MX Plan integration.
- * Requires PHP ext-imap and private config key 'mail_unread' containing
- * an enabled flag, the fixed mailbox username and its password.
- * Never print secrets, message headers, sender details or IMAP errors.
+ * The OVH MX Plan unread counter is opt-in and read-only.
+ *
+ * Requires private (never committed) config:
+ * 'mail_unread' => ['enabled' => true, 'user' => 'veiling@41lokeren.be',
+ *                   'password' => '<mailbox secret>']
+ *
+ * Uses only LOGIN, STATUS INBOX (UNSEEN) and LOGOUT over verified TLS.
+ * No message is opened, downloaded, marked read or displayed.
  */
+function auction_mail_imap_reply($socket, string $tag): ?array {
+  $lines = [];
+  $bytes = 0;
+  for ($i = 0; $i < 100; $i++) {
+    $line = @fgets($socket, 8192);
+    if (!is_string($line) || $line === '') return null;
+    $bytes += strlen($line);
+    if ($bytes > 65536) return null;
+    $lines[] = $line;
+    if (preg_match('/^' . preg_quote($tag, '/') . ' (OK|NO|BAD)\b/i', $line, $m)) {
+      return [strtoupper($m[1]) === 'OK', $lines];
+    }
+  }
+  return null;
+}
+function auction_mail_imap_quote(string $value): string {
+  return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+}
 function auction_mail_unread_count(mixed $config): ?int {
   if (!is_array($config) || ($config['enabled'] ?? false) !== true) return null;
-  if (!function_exists('imap_open') || !function_exists('imap_status')) return null;
   if (($config['user'] ?? null) !== 'veiling@41lokeren.be') return null;
   $password = $config['password'] ?? null;
   if (!is_string($password) || $password === '' || strlen($password) > 1024
       || strpbrk($password, "\r\n\0") !== false) return null;
 
-  // Server name and endpoint are fixed: no URL/hostname inputs from clients.
-  $mailbox = '{imap.mail.ovh.ca:993/imap/ssl/readonly}INBOX';
-  $stream = null;
+  $ssl = stream_context_create(['ssl' => [
+    'verify_peer' => true,
+    'verify_peer_name' => true,
+    'peer_name' => 'imap.mail.ovh.ca',
+    'SNI_enabled' => true,
+    'allow_self_signed' => false,
+  ]]);
+  $socket = @stream_socket_client('tls://imap.mail.ovh.ca:993', $errorNumber, $errorText,
+    5.0, STREAM_CLIENT_CONNECT, $ssl);
+  if (!is_resource($socket)) return null;
+  @stream_set_timeout($socket, 5);
   try {
-    // OP_READONLY makes this connection incapable of marking mail as seen.
-    $stream = @imap_open($mailbox, 'veiling@41lokeren.be', $password, OP_READONLY, 1, [
-      'DISABLE_AUTHENTICATOR' => 'GSSAPI',
-    ]);
-    if ($stream === false) return null;
-    $status = @imap_status($stream, $mailbox, SA_UNSEEN);
-    if (!is_object($status) || !isset($status->unseen)) return null;
-    $count = (int)$status->unseen;
-    return $count >= 0 ? $count : null;
+    $greeting = @fgets($socket, 8192);
+    if (!is_string($greeting) || !str_starts_with($greeting, '* OK')) return null;
+
+    $command = 'A001 LOGIN ' . auction_mail_imap_quote('veiling@41lokeren.be')
+      . ' ' . auction_mail_imap_quote($password) . "\r\n";
+    if (@fwrite($socket, $command) !== strlen($command)) return null;
+    $login = auction_mail_imap_reply($socket, 'A001');
+    if ($login === null || !$login[0]) return null;
+
+    $command = "A002 STATUS INBOX (UNSEEN)\r\n";
+    if (@fwrite($socket, $command) !== strlen($command)) return null;
+    $result = auction_mail_imap_reply($socket, 'A002');
+    if ($result === null || !$result[0]) return null;
+
+    foreach ($result[1] as $line) {
+      if (preg_match('/^\* STATUS (?:"INBOX"|INBOX) \([^)]*\bUNSEEN\s+([0-9]+)\b[^)]*\)/i', $line, $m)) {
+        $count = filter_var($m[1], FILTER_VALIDATE_INT);
+        return is_int($count) && $count >= 0 ? $count : null;
+      }
+    }
+    return null;
   } catch (Throwable $ignored) {
-    return null; // No IMAP error text or credentials in logs/responses.
+    return null;
   } finally {
-    if ($stream !== null && $stream !== false) @imap_close($stream);
-    if (function_exists('imap_errors')) @imap_errors(); // Drain PHP IMAP's internal error buffer.
+    // No server text or credentials are recorded. Even failure never leaks status.
+    @fwrite($socket, "A003 LOGOUT\r\n");
+    @fclose($socket);
   }
 }
