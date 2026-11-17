@@ -11,10 +11,11 @@ if (!is_string($css) ||
 foreach (['#D8C9B4', '#3B3025', '.front-btn:not(.front-impact-action)'] as $rule) {
     if (!str_contains($css, $rule)) throw new RuntimeException('Missing button rule: ' . $rule);
 }
-if (!str_contains($css, 'margin-top: clamp(60px, 5vw, 80px);') ||
+if (!str_contains($css, 'padding-top: clamp(60px, 5vw, 80px);') ||
     !str_contains($css, '.artists-overview-bottom-action {') ||
-    !str_contains($css, 'justify-content: center;')) {
-    throw new RuntimeException('Bottom homepage button needs generous spacing and centered alignment.');
+    !str_contains($css, 'margin-top: 0;') ||
+    !str_contains($css, 'display: block;')) {
+    throw new RuntimeException('Bottom homepage button needs independent spacing below the last artist tile.');
 }
 $names = [
     'index.php', 'kunstenaars.php', 'kunstenaar.php', 'kunstenaar-interesse.php',
@@ -23,7 +24,7 @@ $names = [
 $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
-    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=2") ||
+    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=3") ||
         !str_contains($page, 'class="header-nav')) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
@@ -43,7 +44,8 @@ foreach ([
     }
 }
 $artists = $pages['kunstenaars.php'];
-if (substr_count($artists, '>Startpagina</a>') !== 2 ||
+if (!str_contains($artists, 'class="artists-overview-bottom-action" style="display:block;margin-top:0;padding-top:clamp(60px,5vw,80px)"') ||
+    substr_count($artists, '>Startpagina</a>') !== 2 ||
     strpos($artists, 'artists-overview-bottom-action') < strrpos($artists, '<?php endif; ?>') ||
     strpos($artists, 'artists-overview-bottom-action') > strpos($artists, '</main>')) {
     throw new RuntimeException('Startpagina must appear above and below every state of the artist list.');
