@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "110f1761379c3fb796e276602dc4dbe36823d12a2e4098d4cd0feff4f57a17ca",
+      "remote_sha256": "c2bfe698ab950c5a3396efe9724a7a23e26e03a87e28f91295e3d2e3e6b80182"
+    },
+    {
+      "path": "catalogus-public/admin/mail-ongelezen.php",
+      "source_sha256": "ef306831a365d8bf1daaed741d532568efb1892d69aeb09d5db0d34d9e298d41",
+      "remote_sha256": "9fe48c227ba48755ae82404df8a3802a4cca790118bf6c2c95e7b97accd462a3"
+    },
+    {
+      "path": "catalogus-public/admin/mail-tls-check.php",
+      "source_sha256": "70e50e4899229c0bc16b9275d816e48f7d971a9210b44e8f54af0d0cca1d042e",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/mail-unread.js",
+      "source_sha256": "5158d102f797a5a8b33af7881307c7a627fdffb425e931c2968e041bad10543c",
+      "remote_sha256": "07ff711016bd08bec6f26f3dba983a161ae9fc9ff5db0641295f3acaf677e858"
+    },
+    {
+      "path": "private/mail_tls_probe.php",
+      "source_sha256": "06f5834aeb3aed5ad13c780e0a714631aeb2f160490cae51b7ce0f9bdd8f97f9",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/mail_unread.php",
+      "source_sha256": "f6be49843a960ec351f290b2f1331976fc90d4f729790978e35d2e14b8447bcb",
+      "remote_sha256": "3b321a6727895ddac6a04115738c1398ad17617d5ada59bdbeb195a12aed8f12"
+    }
+  ]
+}
