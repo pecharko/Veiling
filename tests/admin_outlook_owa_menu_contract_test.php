@@ -29,6 +29,7 @@ if (!str_contains($menu, ": '';")) {
     throw new RuntimeException('Outlook link must be absent for assistants');
 }
 foreach (['Outlook Web App (OVH) openen</td><td>Ja</td><td>Nee</td><td>Ja</td>',
+    'veiling@41lokeren.be',
     'Toegang tot de mailbox wordt afzonderlijk door OVH gecontroleerd'] as $check) {
     if (!str_contains($roles, $check)) {
         throw new RuntimeException('Role documentation missing: ' . $check);
