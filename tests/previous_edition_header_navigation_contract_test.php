@@ -50,7 +50,7 @@ if (str_contains($topSection, 'VORIGE EDITIE · 41 LOKEREN') ||
     throw new RuntimeException('Extra previous-edition label must be removed.');
 }
 foreach ([
-    '.impression-top-actions{display:block;padding-top:clamp(32px,4vw,56px);'
+    '.impression-top-actions{display:block;padding-top:clamp(32px,4vw,56px);',
     'margin-bottom:32px',
     '.impression-top-actions .front-btn{min-height:50px;',
     '@media(max-width:720px){.impression-top-actions{',
