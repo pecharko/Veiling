@@ -30,6 +30,18 @@ if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(u
 if (strpos($actions, "url('kunstenaars.php')") < strpos($actions, "url('vorige-editie.php')")) {
     throw new RuntimeException('Artists CTA must follow previous edition CTA.');
 }
+$ctaCatalog = '<?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>';
+if (substr_count($actions, $ctaCatalog) !== 1) {
+    throw new RuntimeException('Catalog CTA must retain its original link, style and publication guard.');
+}
+$goodCauseAt = strpos($actions, "url('goede-doel.php')");
+$previousAt = strpos($actions, "url('vorige-editie.php')");
+$artistsAt = strpos($actions, "url('kunstenaars.php')");
+$catalogAt = strpos($actions, 'href="#catalogus"');
+if ($goodCauseAt === false || $previousAt === false || $artistsAt === false || $catalogAt === false ||
+    !($goodCauseAt < $previousAt && $previousAt < $artistsAt && $artistsAt < $catalogAt)) {
+    throw new RuntimeException('Hero CTA order must be: good cause, previous edition, artists, then catalog.');
+}
 if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>')) {
     throw new RuntimeException('Artists CTA must remain available before catalog publication.');
 }
