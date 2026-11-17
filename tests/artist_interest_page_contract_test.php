@@ -89,4 +89,22 @@ if (substr_count($page, 'href="mailto:veiling@41lokeren.be"') !== 2) {
     throw new RuntimeException('Artist participation contact must use the specified mail address.');
 }
 
+// Align the sample portrait with its biography in the same grid row;
+// both artworks should start together in the second row, also on mobile.
+foreach ([
+    '.artist-invite-sample-column{display:contents}',
+    '.artist-invite-sample-portrait{grid-column:1;grid-row:1;',
+    '.artist-invite-sample-bio{grid-column:2;grid-row:1;align-self:start;',
+    '.artist-invite-sample-art--one{grid-column:1;grid-row:2}',
+    '.artist-invite-sample-art--two{grid-column:2;grid-row:2}',
+    '.artist-invite-sample-portrait img{display:block;width:100%;height:100%;min-height:156px;',
+    'grid-template-rows:minmax(145px,auto) auto',
+] as $expectedAlignmentRule) {
+    if (!str_contains($css, $expectedAlignmentRule)) {
+        throw new RuntimeException('Missing artist example alignment rule: ' . $expectedAlignmentRule);
+    }
+}
+if (!str_contains($page, "assets/kunstenaar-interesse.css'))?>?v=4")) {
+    throw new RuntimeException('Artist interest page must refresh the sample alignment CSS cache.');
+}
 echo "PASS: artist-interest page with Elise Van Acker portrait, two artworks, compact layout and contact text.\n";
