@@ -53,11 +53,12 @@ if (!str_contains($artists, 'class="artists-overview-bottom-action" style="displ
 }
 $home = $pages['index.php'];
 foreach ([
-    'front-btn front-btn-sage front-impact-action',
-    'front-btn front-btn-outline front-impact-action',
-] as $protected) {
-    if (!str_contains($home, $protected)) {
-        throw new RuntimeException('The existing two participation buttons must remain unchanged.');
+    'kunstenaar-interesse.php' => 'Ik ben kunstenaar en heb interesse',
+    'kunstwerk-interesse.php' => 'Ik heb een kunstwerk voor de veiling',
+] as $target => $caption) {
+    $expected = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'' . $target . '\'))?>">' . $caption . '</a>';
+    if (!str_contains($home, $expected)) {
+        throw new RuntimeException('Both participation buttons must share the same green style: ' . $target);
     }
 }
 echo "PASS: public mobile menu hidden, compact CTAs, artist bottom button and preserved participation buttons.\n";
