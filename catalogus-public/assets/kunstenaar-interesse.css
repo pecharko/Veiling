@@ -4,16 +4,16 @@
 .artist-invite-skip{position:absolute;left:-9999px;top:10px;z-index:50;background:#fff;color:#850015;padding:12px 20px}
 .artist-invite-skip:focus{left:10px}
 .artist-invite-return{margin-bottom:44px}
-.artist-invite-heading{max-width:900px;margin-bottom:46px}
+.artist-invite-heading{max-width:900px;margin-bottom:20px}
 .artist-invite-heading .front-eyebrow{color:#8f7668;letter-spacing:.2em;font-size:11px}
 .artist-invite-heading h1{color:#850015;font:700 clamp(38px,4.6vw,66px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.045em;margin:12px 0 21px;text-wrap:balance}
-.artist-invite-heading>p:last-child{font:400 clamp(17px,1.65vw,21px)/1.65 Georgia,'Times New Roman',serif;color:#684a43;margin:0}
-.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.74fr);gap:clamp(26px,4vw,58px);align-items:start}
-.artist-invite-copy{max-width:710px;padding-top:3px}
+.artist-invite-copy .artist-invite-lead{font:400 clamp(17px,1.65vw,21px)/1.65 Georgia,'Times New Roman',serif;color:#684a43;margin:0 0 clamp(25px,3vw,36px)}
+.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.74fr);gap:clamp(26px,4vw,58px);align-items:stretch}
+.artist-invite-copy{display:flex;flex-direction:column;min-width:0;max-width:710px;padding-top:3px}
 .artist-invite-copy p{font:400 16px/1.85 Inter,Arial,sans-serif;color:#4c453e;margin:0 0 23px}
 .artist-invite-copy strong{font-weight:800;color:#5d2330}
 .artist-invite-copy a:not(.front-btn){color:#850015;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
-.artist-invite-contact{margin-top:12px}
+.artist-invite-contact{margin-top:auto;align-self:flex-start}
 .artist-invite-example{background:#fff;border:1px solid #ecdcd2;border-radius:16px;padding:clamp(16px,2.2vw,24px);box-shadow:0 14px 32px rgba(93,50,39,.05);min-width:0;max-width:410px}
 .artist-invite-example-intro{margin-bottom:16px}
 .artist-invite-example-intro .front-eyebrow{font-size:10px;letter-spacing:.19em;color:#94715e;margin-bottom:8px}
@@ -48,6 +48,7 @@
 .artist-invite a:focus-visible,.artist-invite-skip:focus-visible{outline:3px solid #a85d1b;outline-offset:4px}
 @media(max-width:900px){
   .artist-invite-grid{grid-template-columns:1fr;gap:28px}
+  .artist-invite-contact{margin-top:12px}
   .artist-invite-copy{max-width:760px}
   .artist-invite-example{max-width:410px;width:100%;box-sizing:border-box}
   .artist-invite>.shell{padding-bottom:55px}
