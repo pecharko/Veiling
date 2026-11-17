@@ -36,7 +36,9 @@ $mustContain($endpoint, [
     'Cache-Control: no-store',
 ]);
 $mustContain($helper, [
-    'tls://imap.mail.ovh.ca:993',
+    "'tls://' . \$host . ':993'",
+    "'imap.mail.ovh.ca', 'imap.mail.ovh.net', 'ssl0.ovh.net'",
+    "'peer_name' => \$host",
     'verify_peer',
     'verify_peer_name',
     'A002 STATUS INBOX (UNSEEN)',
@@ -60,7 +62,8 @@ if (str_contains($endpoint, 'imap_open(') || str_contains($client, 'password=')
 require_once $root . '/private/mail_unread.php';
 if (auction_mail_unread_count(null) !== null
     || auction_mail_unread_count(['enabled' => false]) !== null
-    || auction_mail_unread_count(['enabled' => true, 'user' => 'invalid', 'password' => 'dummy']) !== null) {
+    || auction_mail_unread_count(['enabled' => true, 'user' => 'invalid', 'password' => 'dummy']) !== null
+    || auction_mail_unread_count(['enabled' => true, 'user' => 'veiling@41lokeren.be', 'host' => 'example.org', 'password' => 'dummy']) !== null) {
     throw new RuntimeException('Unconfigured mailbox must fail closed');
 }
 // Purely offline IMAP protocol parsing, with fictional responses only.
