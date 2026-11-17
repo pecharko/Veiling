@@ -21,7 +21,14 @@ if (!in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true)
 }
 
 require_once dirname(__DIR__, 2) . '/private/mail_unread.php';
-$count = auction_mail_unread_count(cfg('mail_unread'));
+$config = cfg('mail_unread');
+if (!auction_mail_unread_configured($config)) {
+  // Explicitly distinguish "not yet linked" from an IMAP/network failure.
+  // Only already-authorized admins/auctioneers can read this status.
+  echo '{"available":false,"reason":"not_configured"}';
+  exit;
+}
+$count = auction_mail_unread_count($config);
 if ($count === null) {
   // An unconfigured or inaccessible mailbox is not equivalent to zero unread.
   http_response_code(503);
