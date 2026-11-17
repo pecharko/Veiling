@@ -48,7 +48,7 @@
 .artists-overview-bottom-action {
   display: flex;
   justify-content: center;
-  margin-top: clamp(28px, 4vw, 52px);
+  margin-top: clamp(60px, 5vw, 80px);
 }
 .artists-overview .artists-overview-bottom-action .front-btn {
   margin-bottom: 0;
