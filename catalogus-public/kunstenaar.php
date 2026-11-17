@@ -66,7 +66,7 @@ try {
 <body>
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
-  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span></a>
+  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
   <nav class="header-nav"><a href="<?=e(url('kunstenaars.php'))?>">← Alle kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Alle kavels</a></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
