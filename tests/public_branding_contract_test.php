@@ -9,6 +9,7 @@ $public = [
     'kunstenaars.php',
     'kunstenaar.php',
     'kunstenaar-interesse.php',
+    'kunstwerk-interesse.php',
     'goede-doel.php',
     'vorige-editie.php',
 ];
