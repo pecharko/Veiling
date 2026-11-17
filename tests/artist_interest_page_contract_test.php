@@ -104,7 +104,31 @@ foreach ([
         throw new RuntimeException('Missing artist example alignment rule: ' . $expectedAlignmentRule);
     }
 }
-if (!str_contains($page, "assets/kunstenaar-interesse.css'))?>?v=4")) {
+if (!str_contains($page, "assets/kunstenaar-interesse.css'))?>?v=5")) {
     throw new RuntimeException('Artist interest page must refresh the sample alignment CSS cache.');
+}
+// The lead belongs at the top of the left grid column, level with the
+// illustrated example; on wide screens the mail CTA meets the example bottom.
+$headingClose = strpos($page, '</header>', strpos($page, '<header class="artist-invite-heading">'));
+$gridAt = strpos($page, '<div class="artist-invite-grid">');
+$copyAt = strpos($page, '<section class="artist-invite-copy"');
+$leadAt = strpos($page, '<p class="artist-invite-lead">');
+$exampleAt = strpos($page, '<aside class="artist-invite-example"');
+if ($headingClose === false || $gridAt === false || $copyAt === false ||
+    $leadAt === false || $exampleAt === false ||
+    !($headingClose < $gridAt && $gridAt < $copyAt && $copyAt < $leadAt && $leadAt < $exampleAt)) {
+    throw new RuntimeException('Introductory paragraph must align with the example at the beginning of the grid.');
+}
+foreach ([
+    '.artist-invite-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,.74fr);gap:clamp(26px,4vw,58px);align-items:stretch}',
+    '.artist-invite-copy{display:flex;flex-direction:column;',
+    '.artist-invite-contact{margin-top:auto;align-self:flex-start}',
+    '.artist-invite-copy .artist-invite-lead{',
+    '.artist-invite-grid{grid-template-columns:1fr;gap:28px}',
+    '.artist-invite-contact{margin-top:12px}',
+] as $rule) {
+    if (!str_contains($css, $rule)) {
+        throw new RuntimeException('Missing artist interest vertical alignment rule: ' . $rule);
+    }
 }
 echo "PASS: artist-interest page with Elise Van Acker portrait, two artworks, compact layout and contact text.\n";
