@@ -42,6 +42,10 @@ function lot_artist_markup(array $lot): string {
   $publishedId = (int)($lot['published_artist_id'] ?? 0);
   // An unpublished or unlinked seller must never produce an artist hyperlink.
   if ($publishedId < 1) return $safeName;
-  $href = htmlspecialchars(url('kunstenaar.php', ['id'=>$publishedId]), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+  $params = ['id' => $publishedId];
+  // Preserve the originating lot so the artist brochure can offer a precise return link.
+  $lotNum = (int)($lot['lot_number'] ?? 0);
+  if ($lotNum > 0) $params['kavel'] = $lotNum;
+  $href = htmlspecialchars(url('kunstenaar.php', $params), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
   return '<a href="' . $href . '">' . $safeName . '</a>';
 }
