@@ -130,7 +130,7 @@ function require_auth(): void {
   $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
   if (str_contains($script, '/admin/') && $role !== 'administrator') {
     $page = basename($script);
-    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'seller-search.php', 'veiling-organisatie.php', 'rollen.php', 'logout.php'];
+    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'seller-search.php', 'veiling-organisatie.php', 'rollen.php', 'mail-ongelezen.php', 'logout.php'];
     // The original administrator or veilingmeester can always restore their role.
     if (admin_role_switch_targets(stored_admin_role()) !== []) $allowed[] = 'rol-wissel.php';
     if ($role === 'veilingmeester') $allowed[] = 'categorieen.php';
@@ -263,11 +263,11 @@ function admin_top(string $title): void {
   // OVH OWA authenticates separately; this is only an outbound menu shortcut.
   // Use the effective session role so temporary Assistant view hides the link.
   $outlookNav = in_array($activeRole, ['administrator', 'veilingmeester'], true)
-    ? '<a href="https://webmail.mail.ovh.ca/" target="_blank" rel="noopener noreferrer" aria-label="Outlook Web App van OVH openen (nieuw tabblad)">Outlook ↗</a>'
+    ? '<a href="https://webmail.mail.ovh.ca/" target="_blank" rel="noopener noreferrer" aria-label="Mail openen via OVH (nieuw tabblad)" data-mail-unread-url="' . e(url('admin/mail-ongelezen.php')) . '">Mail ↗<span class="admin-mail-badge" aria-hidden="true" hidden></span></a>'
     : '';
   echo '<!doctype html><html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>' . e($title) . ' · Beheer veiling</title><link rel="icon" type="image/png" href="' . e(url('favicon.png')) . '"><link rel="stylesheet" href="' . e(url('admin/admin.css')) . '"></head><body><header class="admin-header"><div class="admin-brand-row"><a href="' . $home . '" class="admin-logo">Website Beheer</a>' . $roleIndicator . $reportIssue . '</div><nav><a href="' . $home . '">Kavels</a><a href="' . e(url('admin/kunstenaars.php')) . '">Kunstenaars</a><a href="' . e(url('admin/verkopers.php')) . '">Verkopers</a><a href="' . $auctionOrganise . '">Veiling organisatie</a>' . ($isAdministrator ? '<a href="' . $settings . '">Veilinginfo</a><a href="' . $check . '">Systeemcheck</a><a href="' . $backup . '">Back-up &amp; herstel</a><a href="' . $stats . '">Statistieken</a><a href="' . $users . '">Gebruikersbeheer</a>' : '') . $publicPreview . $outlookNav . '<a href="' . $rolesHelp . '">Rollen &amp; rechten</a>' . $roleSwitchNav . '<form class="admin-logout-form" method="post" action="' . $logout . '">' . csrf_field() . '<button class="admin-logout-button" type="submit">Uitloggen</button></form></nav></header><main class="admin-main"><div class="page-heading"><p class="eyebrow">VEILINGCATALOGUS · BEHEEROMGEVING</p><h1>' . e($title) . '</h1></div>';
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
-  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer></body></html>';
+  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer><script src="' . e(url('admin/mail-unread.js')) . '" defer></script></body></html>';
 }
