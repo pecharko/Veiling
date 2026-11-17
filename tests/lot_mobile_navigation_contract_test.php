@@ -12,11 +12,15 @@ foreach ([
     'detail-side-nav-prev' => ['Vorig kavel', '&lt;'],
     'detail-side-nav-next' => ['Volgend kavel', '&gt;'],
 ] as $class => [$name, $symbol]) {
-    $pattern = '~<a class="' . preg_quote($class, '~') . '"[^>]*aria-label="' .
-        preg_quote($name, '~') . '"[^>]*>\s*<span class="detail-side-nav-text">' .
-        preg_quote($name, '~') . '</span>\s*<span class="detail-side-nav-symbol" aria-hidden="true">' .
-        preg_quote($symbol, '~') . '</span></a>~';
-    if (!preg_match($pattern, $detail)) {
+    $start = strpos($detail, '<a class="' . $class . '"');
+    $end = $start === false ? false : strpos($detail, '</a>', $start);
+    if ($start === false || $end === false) {
+        throw new RuntimeException('Lot navigation link missing: ' . $class);
+    }
+    $link = substr($detail, $start, $end + 4 - $start);
+    if (!str_contains($link, 'aria-label="' . $name . '"') ||
+        !str_contains($link, '<span class="detail-side-nav-text">' . $name . '</span>') ||
+        !str_contains($link, '<span class="detail-side-nav-symbol" aria-hidden="true">' . $symbol . '</span>')) {
         throw new RuntimeException('Missing mobile arrow or accessible full label for ' . $class);
     }
 }
@@ -38,8 +42,8 @@ foreach ([
         throw new RuntimeException('Missing lot-navigation CSS requirement: ' . $rule);
     }
 }
-if (!str_contains($detail, "url('kavel.php',['nr'=>(int)$prev])") ||
-    !str_contains($detail, "url('kavel.php',['nr'=>(int)$next])")) {
+if (!str_contains($detail, "url('kavel.php',['nr'=>(int)\$prev])") ||
+    !str_contains($detail, "url('kavel.php',['nr'=>(int)\$next])")) {
     throw new RuntimeException('Previous and next lot links must keep their original destinations.');
 }
 echo "PASS mobile lot navigation shows only < and >, desktop labels and accessible names remain.\n";
