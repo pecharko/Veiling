@@ -3,7 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_administrator();
 require_no_index();
-header('Content-Security-Policy: default-src \'none\'; style-src \'self\'; form-action \'self\'; base-uri \'none\'; frame-ancestors \'none\'');
+header('Content-Security-Policy: default-src \'none\'; style-src \'self\'; script-src \'self\'; form-action \'self\'; base-uri \'none\'; frame-ancestors \'none\'');
 header('Referrer-Policy: no-referrer');
 
 if (!in_array(($_SERVER['REQUEST_METHOD'] ?? 'GET'), ['GET', 'POST'], true)) {
