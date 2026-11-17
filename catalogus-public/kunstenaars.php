@@ -5,8 +5,10 @@ require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 $settings = settings();
 $artistsOverviewEnabled = (int)($settings['show_artists_overview'] ?? 1) === 1;
+// Authenticated admin previews may inspect the published directory before public launch.
+// This never enables the overview for regular visitors or includes unpublished artists.
+$artistsOverviewEnabled = $artistsOverviewEnabled || admin_preview_active();
 // Only public artist metadata and a single portrait path are selected.
-// A disabled overview must not query or disclose artists, even in preview.
 $artists = [];
 if ($artistsOverviewEnabled) {
 $stmt = db()->query("
