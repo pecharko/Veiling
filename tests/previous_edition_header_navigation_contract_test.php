@@ -27,7 +27,7 @@ foreach (['>Vorige editie</a>', "url('vorige-editie.php')", 'Naar de huidige vei
 if (!str_contains($page, 'id="impressie"') || !str_contains($page, 'Alderande vzw:')) {
     throw new RuntimeException('Previous edition content must remain intact.');
 }
-$topAction = '<div class="impression-top-actions shell">';
+$topAction = '<div class="impression-top-actions shell" aria-label="Terug naar startpagina">';
 $topActionAt = strpos($page, $topAction);
 $reportageAt = strpos($page, '<section class="impression-video shell"');
 if ($topActionAt === false || $reportageAt === false || $topActionAt >= $reportageAt) {
@@ -37,11 +37,32 @@ $topSection = substr($page, $topActionAt, $reportageAt - $topActionAt);
 if (!str_contains($topSection, '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Startpagina</a>')) {
     throw new RuntimeException('Missing homepage return button at top of previous edition.');
 }
-if (!str_contains($page, "assets/vorige-editie.css'))?>?v=4")) {
+if (!str_contains($page, "assets/vorige-editie.css'))?>?v=5")) {
     throw new RuntimeException('Previous edition CSS cache must be updated.');
 }
 $css = file_get_contents($root . '/catalogus-public/assets/vorige-editie.css');
 if (!is_string($css) || !str_contains($css, '.impression-top-actions{')) {
     throw new RuntimeException('Top return action requires layout styling.');
+}
+// The page-level return button belongs in a small editorial toolbar,
+// aligned opposite its section label, without displacing the reportage.
+if (!str_contains($topSection, '<span class="impression-top-label">VORIGE EDITIE · 41 LOKEREN</span>')) {
+    throw new RuntimeException('Missing balanced heading opposite the top Startpagina button.');
+}
+foreach ([
+    'justify-content:space-between',
+    '.impression-top-label{',
+    '.impression-top-actions .front-btn{min-height:44px;',
+    'border-bottom:1px solid var(--impression-line)',
+    '@media(max-width:720px){.impression-top-actions{',
+    '@media(max-width:767px){.impression-page .front-header .front-nav{display:none!important}}',
+    '.impression-hero{display:grid;',
+] as $layoutRule) {
+    if (!str_contains($css, $layoutRule)) {
+        throw new RuntimeException('Missing previous edition layout rule: ' . $layoutRule);
+    }
+}
+if (str_contains($css, '.front-header .front-nav > a:not(.front-header-cta){display:inline-block!important}')) {
+    throw new RuntimeException('Obsolete mobile navigation override re-exposes menu items.');
 }
 echo "PASS previous edition header links to catalog, artists and charity without redundant actions.\n";
