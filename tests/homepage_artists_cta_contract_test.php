@@ -8,12 +8,20 @@ $artists = file_get_contents($root . '/catalogus-public/kunstenaars.php');
 if (!is_string($home) || !is_string($css) || !is_string($artists)) {
     throw new RuntimeException('Homepage or artists page missing.');
 }
-$heroStart = strpos($home, 'class="front-hero-actions"');
-$heroEnd = $heroStart === false ? false : strpos($home, '</div>', $heroStart);
-if ($heroStart === false || $heroEnd === false) {
-    throw new RuntimeException('Homepage hero actions missing.');
+if (!preg_match('~<div class="front-hero-actions">\\s*<div class="front-hero-action-row">(?P<top>.*?)</div>\\s*<div class="front-hero-action-row">(?P<bottom>.*?)</div>\\s*</div>~s', $home, $rows)) {
+    throw new RuntimeException('Homepage hero must contain two fixed, separate action rows.');
 }
-$actions = substr($home, $heroStart, $heroEnd - $heroStart);
+$actions = $rows[0];
+$topRow = $rows['top'];
+$bottomRow = $rows['bottom'];
+if (!str_contains($topRow, "url('goede-doel.php')") ||
+    !str_contains($topRow, "url('vorige-editie.php')") ||
+    str_contains($topRow, "url('kunstenaars.php')") ||
+    str_contains($topRow, 'href="#catalogus"') ||
+    !str_contains($bottomRow, "url('kunstenaars.php')") ||
+    !str_contains($bottomRow, 'href="#catalogus"')) {
+    throw new RuntimeException('First row must hold good cause/previous edition; second artists/catalog.');
+}
 $links = [
     "url('goede-doel.php')" => 'Meer over het goede doel',
     "url('vorige-editie.php')" => 'Vorige editie',
@@ -45,8 +53,11 @@ if ($goodCauseAt === false || $previousAt === false || $artistsAt === false || $
 if (str_contains($actions, 'if ($published): ?><a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>')) {
     throw new RuntimeException('Artists CTA must remain available before catalog publication.');
 }
-if (!str_contains($css, '.front-hero-actions { display:flex;') || !str_contains($css, 'flex-wrap:wrap;')) {
-    throw new RuntimeException('Hero actions must wrap responsively.');
+if (!str_contains($css, '.front-hero-actions { display:flex; flex-direction:column;') ||
+    !str_contains($css, '.front-hero-action-row { display:flex; flex-wrap:wrap;') ||
+    !str_contains($css, '.front-hero-action-row { gap:8px; }') ||
+    !str_contains($home, "assets/home-v18.css'))?>?v=185")) {
+    throw new RuntimeException('Homepage actions require fixed rows and responsive CSS.');
 }
 if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
     throw new RuntimeException('Artists destination must keep coming-soon behavior.');
