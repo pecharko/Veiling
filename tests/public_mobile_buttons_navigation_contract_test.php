@@ -11,6 +11,11 @@ if (!is_string($css) ||
 foreach (['#D8C9B4', '#3B3025', '.front-btn:not(.front-impact-action)'] as $rule) {
     if (!str_contains($css, $rule)) throw new RuntimeException('Missing button rule: ' . $rule);
 }
+if (!str_contains($css, 'margin-top: clamp(60px, 5vw, 80px);') ||
+    !str_contains($css, '.artists-overview-bottom-action {') ||
+    !str_contains($css, 'justify-content: center;')) {
+    throw new RuntimeException('Bottom homepage button needs generous spacing and centered alignment.');
+}
 $names = [
     'index.php', 'kunstenaars.php', 'kunstenaar.php', 'kunstenaar-interesse.php',
     'goede-doel.php', 'vorige-editie.php', 'kavel.php',
@@ -18,7 +23,7 @@ $names = [
 $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
-    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=1") ||
+    if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=2") ||
         !str_contains($page, 'class="header-nav')) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
