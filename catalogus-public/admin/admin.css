@@ -364,3 +364,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-save-progress progress{display:block;width:100%;height:9px;accent-color:#29473e}
 .seller-save-progress p{margin:10px 0 0;font-size:13px}
 #seller-save-button:disabled{opacity:.7;cursor:wait}
+
+/* Read-only mailbox notification in the existing Mail navigation link. */
+.admin-mail-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#9a1e34;color:#fff;font-size:11px;font-weight:700;line-height:1;vertical-align:middle}
+.admin-mail-badge[hidden]{display:none}
