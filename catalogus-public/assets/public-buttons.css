@@ -35,3 +35,21 @@
 .front-btn:not(.front-impact-action) {
   gap: 8px;
 }
+
+
+/* Small-screen navigation: logo remains visible, header menu items do not. */
+@media screen and (max-width: 767px) {
+  .site-header .header-nav {
+    display: none !important;
+  }
+}
+
+/* Return to the homepage after the complete artist list (also empty states). */
+.artists-overview-bottom-action {
+  display: flex;
+  justify-content: center;
+  margin-top: clamp(28px, 4vw, 52px);
+}
+.artists-overview .artists-overview-bottom-action .front-btn {
+  margin-bottom: 0;
+}
