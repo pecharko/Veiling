@@ -16,6 +16,7 @@ $checks = [
     "in_array(\$activeRole, ['administrator', 'veilingmeester'], true)",
     "\$activeRole = effective_admin_role();",
     "https://webmail.mail.ovh.ca/",
+    ">Mail ↗</a>",
     'target="_blank" rel="noopener noreferrer"',
     "aria-label=\"Outlook Web App van OVH openen (nieuw tabblad)\"",
     "\$publicPreview . \$outlookNav .",
