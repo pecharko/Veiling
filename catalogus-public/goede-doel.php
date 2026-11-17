@@ -16,7 +16,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=2">
+  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=3">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -41,8 +41,10 @@ require_public_site_online();
       <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
       <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
       <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
+      <div class="cause-announcement-actions">
       <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
       <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
+      </div>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
