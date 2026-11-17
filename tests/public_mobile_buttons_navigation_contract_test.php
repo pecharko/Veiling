@@ -19,7 +19,7 @@ if (!str_contains($css, 'padding-top: clamp(60px, 5vw, 80px);') ||
 }
 $names = [
     'index.php', 'kunstenaars.php', 'kunstenaar.php', 'kunstenaar-interesse.php',
-    'goede-doel.php', 'vorige-editie.php', 'kavel.php',
+    'goede-doel.php', 'vorige-editie.php', 'kavel.php', 'kunstwerk-interesse.php',
 ];
 $pages = [];
 foreach ($names as $name) {
