@@ -46,9 +46,9 @@
 
 /* Return to the homepage after the complete artist list (also empty states). */
 .artists-overview-bottom-action {
-  display: flex;
-  justify-content: center;
-  margin-top: clamp(60px, 5vw, 80px);
+  display: block;
+  margin-top: 0;
+  padding-top: clamp(60px, 5vw, 80px);
 }
 .artists-overview .artists-overview-bottom-action .front-btn {
   margin-bottom: 0;
