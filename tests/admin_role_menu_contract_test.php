@@ -15,4 +15,5 @@ if (!str_contains($bootstrap, "'rollen.php', 'mail-ongelezen.php', 'logout.php'"
 // Run the dedicated OVH Outlook menu guard on existing role-menu CI paths.
 require __DIR__ . '/admin_outlook_owa_menu_contract_test.php';
 require __DIR__ . '/admin_mail_unread_contract_test.php';
+require __DIR__ . '/admin_mail_tls_probe_contract_test.php';
 echo "PASS role menu and read-only documentation contract\n";
