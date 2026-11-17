@@ -36,7 +36,7 @@ De al bestaande `private/config.php` bevindt zich buiten de publieke webroot, be
 - Omdat het mailboxwachtwoord volledige mailboxrechten kan geven, is het risico groter dan de vereiste read-only teller. Beoordeel eerst of een afzonderlijke, bevoegdheidsbeperkte credential door OVH wordt ondersteund; ga daar niet zonder OVH-bewijs van uit.
 
 ## Acceptatie vooraf met fictieve gegevens
-Op een geïsoleerde previewomgeving, zonder OVH-verbinding:
+Op een geïsoleerde previewomgeving, zonder OVH-verbinding (o.a. `node tests/admin_mail_unread_client_test.cjs` en `php tests/admin_mail_unread_contract_test.php`; voer deze tests pas uit na schone lokale sync):
 1. Ontbrekende/uitgeschakelde configuratie: het afgeschermde JSON-endpoint retourneert `200 {"available":false,"reason":"not_configured"}`; de Mail-knop blijft werken en het menu toont een neutrale `Niet gekoppeld`-badge zonder periodieke netwerkherpogingen tijdens dezelfde pagina.
 2. Verkeerde/ontbrekende host of lege secret: zelfde veilige niet-gekoppelde toestand; geen socketverbinding.
 3. Actieve maar onbereikbare IMAP-host: `503 {"available":false}` en neutrale `?`; geen fictief cijfer en geen wachtwoord of serverfout in het antwoord.
