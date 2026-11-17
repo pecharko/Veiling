@@ -53,7 +53,7 @@ require_public_site_online();
         <a class="front-btn front-btn-primary artist-invite-contact" href="mailto:veiling@41lokeren.be">Mail ons jouw kunstwerk</a>
       </section>
       <aside class="artist-invite-example lot-invite-example" aria-label="Fictief voorbeeld van een kavelpresentatie">
-        <p class="lot-invite-eyebrow">ZO KAN JOUW KAVEL OP ONZE WEBSITE VERSCHIJNEN</p>
+        <p class="lot-invite-eyebrow">Zo kan jouw kavel op onze website verschijnen</p>
         <div class="lot-invite-demo" aria-label="Fictief voorbeeldkavel 037 met abstract schilderij en startbod">
           <div class="lot-invite-media">
             <div class="lot-invite-image">
@@ -78,7 +78,7 @@ require_public_site_online();
             </div>
           </div>
         </div>
-        <p class="lot-invite-disclaimer"><strong>Fictief voorbeeld.</strong> De presentatie van jouw eigen kavel wordt ingevuld met de juiste foto's en informatie. Er kan niet online geboden worden.</p>
+        <p class="lot-invite-disclaimer"><strong>Fictief voorbeeld.</strong> De presentatie van jouw eigen kavel wordt ingevuld met de juiste foto's en informatie. Deze website aanvaardt geen online biedingen.</p>
       </aside>
     </div>
   </div>
