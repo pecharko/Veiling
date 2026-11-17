@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "b39376d5742b2ea86d06e89e9fbdb4bf26f21da71a2d50a5f086a32b2c5ae6fc",
+      "remote_sha256": "f05d99f4f2a01657c9433f9de0768a7dc5c90926a1e0f42a39af355f41b5d7cb"
+    },
+    {
+      "path": "catalogus-public/admin/rollen.php",
+      "source_sha256": "29417742dad97c27820bea0c482a6fc0c4a4441f9305ba48b73525fdc28e5fa9",
+      "remote_sha256": "bf12b9984be91f88e5ed9901a43ec921e709e5aeaeb2cf0034bdf67654f5bbd5"
+    }
+  ]
+}
