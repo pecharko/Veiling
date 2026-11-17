@@ -13,6 +13,7 @@ require_public_site_online();
 <title>Privacy · 41 Lokeren</title>
 <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
 <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>">
+  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -30,6 +31,6 @@ require_public_site_online();
   <p>41 Lokeren moet vóór activering de rechtsgrond en de proportionaliteit van de bewaartermijn juridisch beoordelen. Technische webserverlogs van de hosting vallen buiten deze statistiekenmodule.</p>
   <p>Voor vragen over privacy en je rechten kun je contact opnemen met 41 Lokeren via <a href="mailto:41clublokeren@gmail.com">41clublokeren@gmail.com</a>.</p>
 </main>
-<footer class="footer"><div class="shell footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><a href="<?=e(url('index.php'))?>">Naar de catalogus</a><?php public_social_footer(); ?></div></footer>
+<footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
 </body>
 </html>
