@@ -88,3 +88,7 @@
 @media(max-width:640px){.impression-page .front-header .front-nav > a:not(.front-header-cta){display:inline-block!important}.impression-page .front-header .front-nav > a:last-of-type{display:none!important}}
 
 @media(max-width:640px){.impression-page .site-header.front-header .front-brand .brand-mark{width:42px!important;height:42px!important}}
+
+/* A top-level return action above the TV Oost report, visible on mobile too. */
+.impression-top-actions{display:flex;justify-content:flex-start;padding-top:28px}
+@media(max-width:650px){.impression-top-actions{padding-top:22px}}
