@@ -28,7 +28,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <title>Onze kunstenaars · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaars.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
@@ -37,7 +37,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
 </div></header>
 <main class="shell artists-overview">
-  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina</a>
   <div class="artists-overview-heading">
     <p class="eyebrow">DE MENSEN ACHTER DE KUNST</p>
     <h1>Ontmoet onze kunstenaars</h1>
@@ -73,7 +73,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <span class="artists-overview-card-body">
           <strong><?=e($name)?></strong>
           <?php if ($slogan !== ''): ?><span class="artists-overview-slogan"><?=e($slogan)?></span><?php endif; ?>
-          <span class="artists-overview-more">Ontdek de kunstenaar <span aria-hidden="true">↗</span></span>
+          <span class="artists-overview-more">Ontdek de kunstenaar</span>
         </span>
       </a>
       <?php endforeach; ?>
