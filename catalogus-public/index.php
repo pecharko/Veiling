@@ -167,7 +167,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
         <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
           <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstenaar-interesse.php'))?>">Ik ben kunstenaar en heb interesse</a>
-          <a class="front-btn front-btn-outline front-impact-action" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk voor de veiling</a>
+          <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk voor de veiling</a>
         </div>
       </div>
       <div class="front-impact-media"><img src="<?=e(url('assets/samen-kunst-verbindt-foto-1.webp'))?>" alt="Jonge kunstliefhebbers ontdekken samen een hedendaags keramisch kunstwerk in een galerie" width="1672" height="941" loading="lazy"></div>
