@@ -32,6 +32,17 @@ foreach ([
         throw new RuntimeException('Public artists switch missing: ' . $expected);
     }
 }
+// A live authenticated admin preview bypasses only the directory visibility switch.
+// The public flag remains the default for unauthenticated visitors, while
+// the query still filters for explicitly published artists only.
+if (!str_contains($page, '$artistsOverviewEnabled = $artistsOverviewEnabled || admin_preview_active();')) {
+    throw new RuntimeException('Authenticated admin preview must bypass the public directory toggle');
+}
+if (!str_contains($page, 'if ($artistsOverviewEnabled) {')
+    || !str_contains($page, 's.artist_published=1')
+    || !str_contains($page, 'if (!$artistsOverviewEnabled):')) {
+    throw new RuntimeException('Public toggle, artist publication, or coming-soon guard regressed');
+}
 if (str_contains($page, "exit('Kunstenaars niet beschikbaar.')")) {
     throw new RuntimeException('Artists coming-soon page must remain reachable when catalog is unpublished');
 }
