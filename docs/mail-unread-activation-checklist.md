@@ -60,3 +60,11 @@ Op een geïsoleerde previewomgeving, zonder OVH-verbinding (o.a. `node tests/adm
 - Houd `mail-unread-20261117` op `functional_acceptance=FAIL`, `independent_ovh_readback=PENDING`, `release_administration=OPEN` totdat per controle nieuw bewijs bestaat.
 
 Geen productionele wijziging is door dit checklist-document geautoriseerd.
+
+## Tijdelijke beheerdersdiagnose via HTTPS (uitsluitend preview)
+Na de mislukte interactieve SSH-aanmelding is een alternatieve PHP-test voorbereid:
+- `catalogus-public/admin/mail-tls-check.php` — **alleen Administrator**, bestaande actieve sessie + effectieve rol, geen link in het gewone menu, no-store/noindex, expliciete CSRF-beveiligde POST, en maximaal eenmaal per 60 seconden per adminsessie.
+- `private/mail_tls_probe.php` — vaste doelhost `imap.mail.ovh.ca:993`, geldige TLS-certificaatketen en IMAP-begroeting, maximaal enkele seconden; resultaat uitsluitend `reachable` of `unavailable`.
+- `tests/admin_mail_tls_probe_contract_test.php` — offline contractcontroles van rollen, CSRF, vaste host en afwezigheid van mailboxaanmelding of vrije input.
+
+**Geen productieactie toegestaan door deze voorbereiding:** niet uploaden als losse SFTP-actie, niet publiek openzetten, geen productionele URL testen zolang deze route niet via de normale releasegates afzonderlijk is goedgekeurd. Na een eventueel later geautoriseerde test de route via een apart beveiligd en geverifieerd verwijdertraject weer verwijderen. De ontbrekende echte mailboxauthenticatie en onafhankelijke OVH-readback blijven open.
