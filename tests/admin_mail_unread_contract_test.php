@@ -63,4 +63,23 @@ if (auction_mail_unread_count(null) !== null
     || auction_mail_unread_count(['enabled' => true, 'user' => 'invalid', 'password' => 'dummy']) !== null) {
     throw new RuntimeException('Unconfigured mailbox must fail closed');
 }
+// Purely offline IMAP protocol parsing, with fictional responses only.
+$stream = fopen('php://temp', 'w+');
+if ($stream === false) throw new RuntimeException('Cannot create offline IMAP stream');
+fwrite($stream, "* STATUS INBOX (MESSAGES 17 UNSEEN 3 UIDNEXT 91)\r\nA002 OK done\r\n");
+rewind($stream);
+$reply = auction_mail_imap_reply($stream, 'A002');
+fclose($stream);
+if ($reply === null || $reply[0] !== true
+    || !preg_match('/\bUNSEEN\s+3\b/', implode('', $reply[1]))) {
+    throw new RuntimeException('IMAP status parser must receive tagged success and unseen count');
+}
+$stream = fopen('php://temp', 'w+');
+fwrite($stream, "A001 NO rejected\r\n");
+rewind($stream);
+$denied = auction_mail_imap_reply($stream, 'A001');
+fclose($stream);
+if ($denied === null || $denied[0] !== false) {
+    throw new RuntimeException('IMAP authentication rejection must fail closed');
+}
 echo "PASS read-only role-gated mail counter, no credentials in browser and fail closed\n";
