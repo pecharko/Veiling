@@ -98,7 +98,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     <div class="shell header-inner front-header-inner">
       <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
         <span class="brand-mark" aria-hidden="true">41</span>
-        <span class="brand-name">41 LOKEREN<small>KUNST · LIFESTYLE · VINTAGE</small></span>
+        <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
@@ -119,7 +119,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         </div>
         <div class="front-hero-copy">
           <p class="front-eyebrow">41 LOKEREN ORGANISEERT</p>
-          <h1 id="front-title">Kunst, lifestyle &amp; vintage<br><em>Veiling voor het goede doel</em></h1>
+          <h1 id="front-title">Kunstveiling<br><em>voor het goede doel</em></h1>
           <div class="front-subtitle-rule" aria-hidden="true"></div>
           <p class="front-hero-subline"><?=e($title)?></p>
           <p class="front-hero-intro">Kunst, lifestyle &amp; vintage — bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
