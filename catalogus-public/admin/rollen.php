@@ -27,6 +27,6 @@ admin_top('Rollen & rechten');
       </tbody>
     </table>
   </div>
-  <p>De Outlook-link opent OVH-webmail in een nieuw tabblad. Toegang tot de mailbox wordt afzonderlijk door OVH gecontroleerd; er worden geen mailboxwachtwoorden in de beheermodule bewaard.</p>
+  <p>De Outlook-link opent OVH-webmail voor veiling@41lokeren.be in een nieuw tabblad. Toegang tot de mailbox wordt afzonderlijk door OVH gecontroleerd; er worden geen mailboxwachtwoorden in de beheermodule bewaard.</p>
 </section>
 <?php admin_bottom(); ?>
