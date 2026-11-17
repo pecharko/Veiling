@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "e021023541ab43cff6831c2820d1fbdcf98855312b98366fa7ecd0f24eb3153f",
+      "remote_sha256": "110f1761379c3fb796e276602dc4dbe36823d12a2e4098d4cd0feff4f57a17ca"
+    }
+  ]
+}
