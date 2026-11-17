@@ -16,7 +16,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=4">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
