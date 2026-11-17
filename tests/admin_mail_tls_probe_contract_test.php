@@ -18,7 +18,7 @@ foreach ([
     "'imap.mail.ovh.ca'", "':993'", "'verify_peer' => true",
     "'verify_peer_name' => true", "'allow_self_signed' => false",
     'stream_socket_client', 'stream_set_timeout',
-    "return 'unavailable'", "return 'reachable'",
+    "return 'unavailable'", "? 'reachable' : 'unavailable'",
 ] as $part) {
     if (!str_contains($helper, $part)) throw new RuntimeException('Missing TLS probe guard: ' . $part);
 }
