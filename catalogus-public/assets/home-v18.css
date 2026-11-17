@@ -180,3 +180,20 @@ html { scroll-padding-top: 100px; }
   .front-impact-media { display: none !important; }
 }
 /* lokale correctie impactsectie 2026-11-16: einde */
+
+
+/* Warm beige buttons: keep both participation CTAs exactly as designed. */
+.front-btn:not(.front-impact-action),
+.front-header .front-header-cta {
+  background:#D8C9B4;
+  color:#3B3025 !important;
+  border-color:#C5B299;
+  box-shadow:0 6px 18px rgba(59,48,37,.08);
+}
+.front-btn:not(.front-impact-action):hover,
+.front-header .front-header-cta:hover {
+  background:#CBB79B;
+  color:#3B3025 !important;
+  border-color:#BBA589;
+}
+.front-btn:not(.front-impact-action) { gap:8px; }
