@@ -22,6 +22,14 @@ $stmt = db()->prepare("
 $stmt->execute([$artistId]);
 $artist = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$artist) { http_response_code(404); exit('Kunstenaar niet gevonden.'); }
+// Only allow a return link to a real, public lot belonging to this artist.
+// Reject arbitrary URLs and unrelated, unpublished or nonexistent lots.
+$returnLotNum = filter_input(INPUT_GET, 'kavel', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+if ($returnLotNum) {
+  $returnStmt = db()->prepare("SELECT 1 FROM lots WHERE lot_number=? AND seller_id=? AND status IN ('published','sold') LIMIT 1");
+  $returnStmt->execute([$returnLotNum, $artistId]);
+  if (!$returnStmt->fetchColumn()) $returnLotNum = false;
+}
 $photosStmt = db()->prepare("
   SELECT image_kind, slot, path
   FROM seller_images
@@ -68,9 +76,10 @@ try {
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
-  <nav class="header-nav"><a href="<?=e(url('kunstenaars.php'))?>">← Alle kunstenaars</a><a href="<?=e(url('index.php'))?>#catalogus">Alle kavels</a></nav>
+  <nav class="header-nav" aria-label="Navigatie"></nav>
 </div></header>
 <main class="artist-profile shell artist-brochure">
+  <?php if ($returnLotNum): ?><a class="back-link" href="<?=e(url('kavel.php', ['nr'=>(int)$returnLotNum]))?>">← Terug naar kavel</a><?php endif; ?>
   <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">
