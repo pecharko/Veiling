@@ -47,4 +47,12 @@ foreach ([
         throw new RuntimeException('Missing requested top button on good-cause page: ' . $button);
     }
 }
+if (!str_contains($topSection, '<div class="cause-announcement-actions">') ||
+    !str_contains($source, "assets/goede-doel.css'))?>?v=3")) {
+    throw new RuntimeException('Top actions need a responsive group and refreshed stylesheet.');
+}
+$causeCss = file_get_contents(dirname(__DIR__) . '/catalogus-public/assets/goede-doel.css');
+if (!is_string($causeCss) || !str_contains($causeCss, '.cause-announcement-actions{')) {
+    throw new RuntimeException('Missing layout for top good-cause buttons.');
+}
 echo "PASS good cause header includes catalog and artists after Home without redundant links.\n";
