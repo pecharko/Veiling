@@ -41,7 +41,17 @@ if ($navStart === false || $navEnd === false) {
     throw new RuntimeException('Artist return navigation missing.');
 }
 $nav = substr($profile, $navStart, $navEnd - $navStart);
-if (!preg_match('~<\\?php if \\(\\$returnLotNum\\): \\?>\\s*<a[^>]+>← Terug naar kavel</a>\\s*<\\?php else: \\?>\\s*<a[^>]+>← Terug naar alle kunstenaars</a>\\s*<\\?php endif; \\?>~', $nav)) {
+$ifAt = strpos($nav, '<?php if ($returnLotNum): ?>');
+$lotLinkAt = strpos($nav, '← Terug naar kavel</a>');
+$elseAt = strpos($nav, '<?php else: ?>');
+$directoryLinkAt = strpos($nav, '← Terug naar alle kunstenaars</a>');
+$endAt = strpos($nav, '<?php endif; ?>');
+if ($ifAt === false || $lotLinkAt === false || $elseAt === false ||
+    $directoryLinkAt === false || $endAt === false ||
+    !($ifAt < $lotLinkAt && $lotLinkAt < $elseAt &&
+      $elseAt < $directoryLinkAt && $directoryLinkAt < $endAt) ||
+    substr_count($nav, '← Terug naar kavel</a>') !== 1 ||
+    substr_count($nav, '← Terug naar alle kunstenaars</a>') !== 1) {
     throw new RuntimeException('Artist profile must show exactly one contextual return link.');
 }
 echo "PASS published artist directory-to-profile access independent of catalog publication\n";
