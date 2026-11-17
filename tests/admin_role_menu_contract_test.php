@@ -11,5 +11,8 @@ foreach (['require_auth();', 'Administrator', 'Assistent', 'Veilingmeester', 'Ve
   if (!str_contains($help, $needle)) throw new RuntimeException('Missing roles guidance: ' . $needle);
 }
 if (!str_contains($css, '.admin-active-role')) throw new RuntimeException('Missing role indicator styling');
-if (!str_contains($bootstrap, "'rollen.php', 'logout.php'")) throw new RuntimeException('Help must be accessible to assistants and veilingmeesters');
+if (!str_contains($bootstrap, "'rollen.php', 'mail-ongelezen.php', 'logout.php'")) throw new RuntimeException('Help must be accessible to assistants and veilingmeesters');
 echo "PASS role menu and read-only documentation contract\n";
+
+require __DIR__ . '/admin_outlook_owa_menu_contract_test.php';
+require __DIR__ . '/admin_mail_unread_contract_test.php';
