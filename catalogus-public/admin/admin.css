@@ -447,3 +447,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-seller-empty{margin:12px 0;color:#607369}
 .lot-seller-dialog-footer{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:13px;border-top:1px solid #e3e8e2}
 @media(max-width:650px){.lot-seller-selection{flex-wrap:wrap}.lot-seller-selection strong{flex-basis:calc(100% - 55px)}.lot-seller-selection button{width:100%}.lot-seller-dialog-body{padding:16px}}
+
+/* Optional OVH mailbox unread count (Administrator and Veilingmeester only). */
+.admin-mail-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;margin-left:5px;border-radius:99px;background:#9a1e34;color:#fff;font-size:11px;font-weight:700;line-height:1;vertical-align:middle}
+.admin-mail-badge[hidden]{display:none}
