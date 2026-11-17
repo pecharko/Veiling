@@ -31,16 +31,20 @@ $mustContain($endpoint, [
     "in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true)",
     'http_response_code(403)',
     'http_response_code(503)',
+    "auction_mail_unread_configured(\$config)",
+    '"available":false,"reason":"not_configured"',
     "cfg('mail_unread')",
     "['available' => true, 'unread' => \$count]",
     'Cache-Control: no-store',
 ]);
 $mustContain($helper, [
-    'tls://imap.mail.ovh.ca:993',
+    "'tls://' . \$host . ':993'",
+    "'imap.mail.ovh.ca', 'imap.mail.ovh.net', 'ssl0.ovh.net'",
     'verify_peer',
     'verify_peer_name',
     'A002 STATUS INBOX (UNSEEN)',
     'A003 LOGOUT',
+    'function auction_mail_unread_configured',
     'veiling@41lokeren.be',
     "'enabled'",
     'stream_socket_client',
@@ -51,8 +55,11 @@ $mustContain($client, [
     '120000',
     'badge.hidden = true',
     'Number.isSafeInteger(data.unread)',
+    "'Niet gekoppeld'",
+    "'not_configured'",
+    "'unavailable'",
 ]);
-$mustContain($css, ['.admin-mail-badge[hidden]{display:none}']);
+$mustContain($css, ['.admin-mail-badge[hidden]{display:none}', 'data-state="disconnected"', 'data-state="unavailable"']);
 if (str_contains($endpoint, 'imap_open(') || str_contains($client, 'password=')
     || str_contains($client, 'veiling@41lokeren.be')) {
     throw new RuntimeException('Mail client must not use mailbox credentials');
@@ -60,7 +67,10 @@ if (str_contains($endpoint, 'imap_open(') || str_contains($client, 'password=')
 require_once $root . '/private/mail_unread.php';
 if (auction_mail_unread_count(null) !== null
     || auction_mail_unread_count(['enabled' => false]) !== null
-    || auction_mail_unread_count(['enabled' => true, 'user' => 'invalid', 'password' => 'dummy']) !== null) {
+    || auction_mail_unread_count(['enabled' => true, 'user' => 'invalid', 'password' => 'dummy']) !== null
+    || auction_mail_unread_configured(['enabled' => true, 'user' => 'veiling@41lokeren.be', 'host' => 'evil.example', 'password' => 'dummy'])
+    || auction_mail_unread_configured(['enabled' => true, 'user' => 'veiling@41lokeren.be', 'host' => 'imap.mail.ovh.ca', 'password' => ''])
+    || !auction_mail_unread_configured(['enabled' => true, 'user' => 'veiling@41lokeren.be', 'host' => 'imap.mail.ovh.ca', 'password' => 'test-only-secret'])) {
     throw new RuntimeException('Unconfigured mailbox must fail closed');
 }
 // Purely offline IMAP protocol parsing, with fictional responses only.
