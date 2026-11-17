@@ -38,7 +38,7 @@ require_public_site_online();
 </header>
 <main id="inhoud" class="artist-invite">
   <div class="shell">
-    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Terug naar de startpagina</a>
+    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Startpagina</a>
     <header class="artist-invite-heading">
       <p class="front-eyebrow">SAMEN GEVEN WE KUNST EEN PODIUM</p>
       <h1>Ik ben kunstenaar en heb interesse</h1>
