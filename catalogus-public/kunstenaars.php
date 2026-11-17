@@ -79,7 +79,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
       <?php endforeach; ?>
     </div>
   <?php endif; ?>
-  <div class="artists-overview-bottom-action">
+  <div class="artists-overview-bottom-action" style="display:block;padding-top:clamp(60px,5vw,80px)">
     <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
   </div>
 </main>
