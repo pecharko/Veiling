@@ -42,4 +42,5 @@ foreach ($pages as $pageName) {
     }
 }
 require __DIR__ . '/artist_compact_previous_edition_contract_test.php';
+require __DIR__ . '/lot_mobile_navigation_contract_test.php';
 echo "PASS: non-sticky public header at <=800px, sticky desktop header, eight cache-busted public pages\n";
