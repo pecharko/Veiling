@@ -67,8 +67,16 @@ if (str_contains($impact, 'Het goede doel wordt binnenkort bekendgemaakt.')
     || str_contains($impact, 'Ontdek bijzondere objecten en unieke stukken.')) {
     throw new RuntimeException('Old good cause homepage text remains.');
 }
+foreach ([
+    'kunstenaar-interesse.php',
+    'kunstwerk-interesse.php',
+] as $target) {
+    if (!str_contains($impact, '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'' . $target . '\'))?>">')) {
+        throw new RuntimeException('Participation button must use identical green styling: ' . $target);
+    }
+}
 if (str_contains($impact, 'type="button" disabled') ||
     substr_count($impact, 'front-impact-action"') !== 2) {
-    throw new RuntimeException('Both participation actions must be enabled, without changing their CSS classes.');
+    throw new RuntimeException('Both participation actions must remain enabled.');
 }
 echo "PASS: dedicated good cause page, links, guards and mobile stylesheet.\n";
