@@ -46,7 +46,7 @@
 .impression-gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:33px 24px}
 .impression-gallery-grid .impression-photo-image{aspect-ratio:4/3}
 /* Media feature links to TV Oost's own player; no unapproved video or images are hosted. */
-.impression-video{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,4vw,45px);align-items:center;padding-top:48px;padding-bottom:72px}
+.impression-video{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:clamp(24px,4vw,45px);align-items:center;padding-top:0;padding-bottom:72px}
 .impression-video-intro>p:not(.impression-eyebrow){max-width:450px;font-size:14px;line-height:1.85;color:var(--impression-muted);margin:22px 0 0}
 .impression-video-card{position:relative;display:flex;flex-direction:column;justify-content:space-between;align-items:flex-start;min-height:290px;aspect-ratio:16/9;overflow:hidden;border-radius:8px;padding:30px;background:linear-gradient(180deg,rgba(14,18,20,.12) 0%,rgba(14,18,20,.18) 40%,rgba(14,18,20,.78) 100%),url('vorige-editie-soepkar-tegel.webp') center 46%/cover no-repeat;background-color:#244d40;color:#fffaf3;text-decoration:none;box-shadow:0 18px 40px rgba(31,45,37,.16);transition:transform .18s ease,box-shadow .18s ease}
 .impression-video-card:hover{transform:translateY(-3px);box-shadow:0 22px 45px rgba(31,45,37,.22);color:#fffaf3;text-decoration:none}
@@ -55,7 +55,7 @@
 .impression-video-kicker{color:#e5d5b2;font-size:10px;font-weight:800;letter-spacing:.15em}
 .impression-video-card-copy strong{font:normal clamp(24px,2.5vw,35px)/1.16 Georgia,serif}
 .impression-video-card-copy>span:last-child{font-size:12px;letter-spacing:.02em;color:#eee2d4}
-@media(max-width:900px){.impression-video{grid-template-columns:1fr;gap:25px;padding-top:38px;padding-bottom:60px}.impression-video-card{min-height:0;padding:24px}.impression-video-play{width:62px;height:62px;font-size:23px}}
+@media(max-width:900px){.impression-video{grid-template-columns:1fr;gap:25px;padding-top:0;padding-bottom:60px}.impression-video-card{min-height:0;padding:24px}.impression-video-play{width:62px;height:62px;font-size:23px}}
 @media(prefers-reduced-motion:reduce){.impression-video-card{transition:none}.impression-video-card:hover{transform:none}}
 .impression-next{padding:58px 28px 62px;margin-bottom:80px;border:1px solid #d8d6c8;position:relative;text-align:center;background:#f1f0e5}
 .impression-next>.impression-eyebrow{justify-content:center;margin-bottom:19px}
@@ -89,8 +89,7 @@
 
 @media(max-width:640px){.impression-page .site-header.front-header .front-brand .brand-mark{width:42px!important;height:42px!important}}
 
-/* A top-level return action above the TV Oost report, visible on mobile too. */
-.impression-top-actions{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px 24px;padding-top:28px;padding-bottom:22px;border-bottom:1px solid var(--impression-line)}
-.impression-top-label{color:var(--impression-green);font:800 10px/1.5 Inter,Arial,sans-serif;letter-spacing:.18em}
-.impression-top-actions .front-btn{min-height:44px;padding:11px 22px;flex-shrink:0}
-@media(max-width:720px){.impression-top-actions{padding-top:19px;padding-bottom:18px;gap:12px}.impression-top-label{font-size:9px;letter-spacing:.12em}.impression-top-actions .front-btn{min-height:42px;padding:10px 17px}}
+/* Back-to-home action follows the same left-aligned pattern as the artist overview. */
+.impression-top-actions{display:block;padding-top:clamp(24px,3vw,36px);margin-bottom:32px}
+.impression-top-actions .front-btn{min-height:50px;padding:14px 21px}
+@media(max-width:720px){.impression-top-actions{padding-top:22px;margin-bottom:26px}.impression-top-actions .front-btn{min-height:45px;padding:11px 17px}}
