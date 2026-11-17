@@ -127,7 +127,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <div class="front-hero-actions">
             <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
             <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-            <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Maak kennis met de deelnemende kunstenaars</a>
+            <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Deelnemende kunstenaars</a>
             <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
           </div>
         </div>
