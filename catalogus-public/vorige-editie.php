@@ -38,7 +38,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <title>De vorige editie in beeld · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/vorige-editie.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=1">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
   <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=3">
 </head>
