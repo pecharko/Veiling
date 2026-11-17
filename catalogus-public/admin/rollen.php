@@ -24,10 +24,12 @@ admin_top('Rollen & rechten');
         <tr><td>Type kunstenaar/particulier wijzigen na aanmaak</td><td>Nee</td><td>Nee</td><td>Nee</td></tr>
         <tr><td>Veilingorganisatie bekijken</td><td>Ja</td><td>Ja</td><td>Ja</td></tr>
         <tr><td>Veilingvolgorde wijzigen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
+        <tr><td>Outlook Web App (OVH) openen</td><td>Ja</td><td>Nee</td><td>Ja</td></tr>
         <tr><td>Gebruikersbeheer, instellingen, statistieken, back-ups en systeemcheck</td><td>Ja</td><td>Nee</td><td>Nee</td></tr>
         <tr><td>Tijdelijk van rol wisselen</td><td>Ja, alle rollen</td><td>Nee</td><td>Assistent en terug naar Veilingmeester</td></tr>
       </tbody>
     </table>
   </div>
+  <p>De Outlook-link opent OVH-webmail voor veiling@41lokeren.be in een nieuw tabblad. Toegang tot de mailbox wordt afzonderlijk door OVH gecontroleerd; er worden geen mailboxwachtwoorden in de beheermodule bewaard.</p>
 </section>
 <?php admin_bottom(); ?>
