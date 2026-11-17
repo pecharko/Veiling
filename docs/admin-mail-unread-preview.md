@@ -8,7 +8,7 @@
 
 ## Beveiliging
 - `admin/mail-ongelezen.php`: alleen GET, bestaande sessie- en accountcontrole, effectieve-roltoets (ook na rolwissel), JSON zonder mailinhoud, no-store en noindex.
-- `private/mail_unread.php`: vaste OVH-server `imap.mail.ovh.ca:993`, geverifieerde TLS-certificaten, beperkte time-outs, uitsluitend IMAP LOGIN/STATUS INBOX (UNSEEN)/LOGOUT. Er wordt geen bericht geopend of gemarkeerd als gelezen.
+- `private/mail_unread.php`: uitsluitend expliciet geselecteerde OVH-server (`imap.mail.ovh.net`, `ssl0.ovh.net` of `imap.mail.ovh.ca`) op poort 993, geverifieerde TLS-certificaten, beperkte time-outs, uitsluitend IMAP LOGIN/STATUS INBOX (UNSEEN)/LOGOUT. Er wordt geen bericht geopend of gemarkeerd als gelezen.
 - Mailboxwachtwoord komt **nooit** in GitHub, JavaScript, HTML, een URL, logbestand of de respons. Geen automatische OVH-webmailaanmelding.
 - Een MX Plan-wachtwoord heeft meer rechten dan deze teller nodig heeft. Diefstal ervan kan toegang tot de volledige mailbox geven. Beveiliging van de serverconfiguratie en individuele beheerdersaccounts is daarom essentieel.
 
@@ -19,6 +19,7 @@ De private `config.php` wordt buiten de repository beheerd. Een bevoegde beheerd
 'mail_unread' => [
   'enabled' => true,
   'user' => 'veiling@41lokeren.be',
+  'host' => '<GEVERIFIEERDE_OVH_IMAP_HOST>',
   'password' => '<UITSLUITEND OP DE SERVER INVOEREN>',
 ],
 ```
@@ -33,3 +34,5 @@ Bovenstaand voorbeeld bevat **geen echt wachtwoord**. Zonder geldige sleutel is 
 5. Afzonderlijke beveiligde configuratieprocedure en concrete rollback vastleggen; aparte exacte merge- en productieautorisatie.
 
 Geen live mailboxverbinding, secretswijziging, workflowdispatch of productieactie is onderdeel van deze previewontwikkeling.
+
+**Regiogate:** OVH MX Plan gebruikt normaal `imap.mail.ovh.net` (EU) of `imap.mail.ovh.ca` (CA). De webmail-URL op zichzelf bewijst de regio niet. Leg de IMAP-host pas vast na verificatie van de mailboxconfiguratie; een onjuiste of ontbrekende host schakelt de teller veilig uit.
