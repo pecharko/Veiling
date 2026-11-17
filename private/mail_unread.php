@@ -6,6 +6,7 @@ declare(strict_types=1);
  *
  * Requires private (never committed) config:
  * 'mail_unread' => ['enabled' => true, 'user' => 'veiling@41lokeren.be',
+ *                   'host' => '<OVH regional IMAP server>',
  *                   'password' => '<mailbox secret>']
  *
  * Uses only LOGIN, STATUS INBOX (UNSEEN) and LOGOUT over verified TLS.
@@ -29,21 +30,30 @@ function auction_mail_imap_reply($socket, string $tag): ?array {
 function auction_mail_imap_quote(string $value): string {
   return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
 }
-function auction_mail_unread_count(mixed $config): ?int {
-  if (!is_array($config) || ($config['enabled'] ?? false) !== true) return null;
-  if (($config['user'] ?? null) !== 'veiling@41lokeren.be') return null;
+function auction_mail_unread_configured(mixed $config): bool {
+  if (!is_array($config) || ($config['enabled'] ?? false) !== true) return false;
+  if (($config['user'] ?? null) !== 'veiling@41lokeren.be') return false;
+  $host = $config['host'] ?? null;
+  if (!is_string($host) || !in_array($host, [
+      'imap.mail.ovh.ca', 'imap.mail.ovh.net', 'ssl0.ovh.net',
+    ], true)) return false;
   $password = $config['password'] ?? null;
-  if (!is_string($password) || $password === '' || strlen($password) > 1024
-      || strpbrk($password, "\r\n\0") !== false) return null;
+  return is_string($password) && $password !== '' && strlen($password) <= 1024
+    && strpbrk($password, "\r\n\0") === false;
+}
+function auction_mail_unread_count(mixed $config): ?int {
+  if (!auction_mail_unread_configured($config)) return null;
+  $host = $config['host'];
+  $password = $config['password'];
 
   $ssl = stream_context_create(['ssl' => [
     'verify_peer' => true,
     'verify_peer_name' => true,
-    'peer_name' => 'imap.mail.ovh.ca',
+    'peer_name' => $host,
     'SNI_enabled' => true,
     'allow_self_signed' => false,
   ]]);
-  $socket = @stream_socket_client('tls://imap.mail.ovh.ca:993', $errorNumber, $errorText,
+  $socket = @stream_socket_client('tls://' . $host . ':993', $errorNumber, $errorText,
     5.0, STREAM_CLIENT_CONNECT, $ssl);
   if (!is_resource($socket)) return null;
   @stream_set_timeout($socket, 5);
