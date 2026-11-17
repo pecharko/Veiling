@@ -14,7 +14,7 @@ require_public_site_online();
   <title>Het goede doel · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/goede-doel.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=1">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
   <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=2">
 </head>
@@ -41,7 +41,7 @@ require_public_site_online();
       <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
       <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
       <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
-      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina <span aria-hidden="true">→</span></a>
+      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Terug naar de startpagina</a>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
@@ -58,8 +58,8 @@ require_public_site_online();
     <h2 id="cause-last-title">Ook jouw aanwezigheid maakt het verschil.</h2>
     <p>Kom de bijzondere stukken bekijken, ontdek de verhalen achter de kavels en beleef de veiling mee.</p>
     <div class="cause-actions">
-      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Bekijk de veiling <span aria-hidden="true">→</span></a>
-      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie <span aria-hidden="true">→</span></a>
+      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Bekijk de veiling</a>
+      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Bekijk de vorige editie</a>
     </div>
   </section>
 </main>
