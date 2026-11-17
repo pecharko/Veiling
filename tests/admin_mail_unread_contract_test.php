@@ -36,12 +36,14 @@ $mustContain($endpoint, [
     'Cache-Control: no-store',
 ]);
 $mustContain($helper, [
-    'imap.mail.ovh.ca:993/imap/ssl/readonly',
-    'OP_READONLY',
-    'SA_UNSEEN',
+    'tls://imap.mail.ovh.ca:993',
+    'verify_peer',
+    'verify_peer_name',
+    'A002 STATUS INBOX (UNSEEN)',
+    'A003 LOGOUT',
     'veiling@41lokeren.be',
     "'enabled'",
-    "function_exists('imap_open')",
+    'stream_socket_client',
 ]);
 $mustContain($client, [
     'credentials: \'same-origin\'',
