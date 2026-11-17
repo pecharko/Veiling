@@ -40,7 +40,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=2">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=4">
 </head>
 <body class="impression-page">
 <?php admin_preview_banner(); ?>
@@ -60,6 +60,9 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </div>
 </header>
 <main id="impressie">
+  <div class="impression-top-actions shell">
+    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+  </div>
   <section class="impression-video shell" aria-labelledby="impression-video-title">
     <div class="impression-video-intro">
       <p class="impression-eyebrow">IN DE KIJKER · TV OOST</p>
