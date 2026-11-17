@@ -17,14 +17,14 @@ $actions = substr($home, $heroStart, $heroEnd - $heroStart);
 $links = [
     "url('goede-doel.php')" => 'Meer over het goede doel',
     "url('vorige-editie.php')" => 'Vorige editie',
-    "url('kunstenaars.php')" => 'Maak kennis met de deelnemende kunstenaars',
+    "url('kunstenaars.php')" => 'Deelnemende kunstenaars',
 ];
 foreach ($links as $href => $label) {
     if (!str_contains($actions, $href) || !str_contains($actions, $label)) {
         throw new RuntimeException('Missing homepage CTA: ' . $label);
     }
 }
-if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>">Maak kennis met de deelnemende kunstenaars')) {
+if (!str_contains($actions, '<a class="front-btn front-btn-outline" href="<?=e(url(\'kunstenaars.php\'))?>">Deelnemende kunstenaars')) {
     throw new RuntimeException('Artists CTA must reuse established outline button and safe URL.');
 }
 if (strpos($actions, "url('kunstenaars.php')") < strpos($actions, "url('vorige-editie.php')")) {
