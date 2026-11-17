@@ -18,6 +18,15 @@ openssl s_client -connect imap.mail.ovh.ca:993 -servername imap.mail.ovh.ca -ver
 
 Interpretatie: een geslaagde TLS-handshake bevestigt alleen de externe bereikbaarheid *vanaf die Mac*, **niet** vanaf de OVH PHP-hosting, en **niet** dat de mailbox aanmelding toestaat. Bij foutmelding geen TLS-verificatie uitschakelen. Niet testen met echte gebruikersgegevens in logs of gedeelde terminalopdrachten.
 
+## Voorbereide hostingtest (niet uitgevoerd op OVH)
+Het nieuwe CLI-only script `scripts/mail_imap_tls_probe.php` kan uitsluitend na afzonderlijke autorisatie en via een beveiligde serverterminal op de hosting worden uitgevoerd met:
+
+```sh
+php scripts/mail_imap_tls_probe.php
+```
+
+Het script gebruikt een vaste hostnaam, verifieert het TLS-certificaat en controleert alleen de openbare IMAP-begroeting. Geen wachtwoorden of mailgegevens. Het script wordt niet naar de publieke webroot gedeployed. Een lokale kopie is op PHP-syntax gecontroleerd; bereikbaarheid vanaf OVH zelf is nog onbewezen.
+
 ## Private config — uitsluitend na afzonderlijke exacte configuratieautorisatie
 De al bestaande `private/config.php` bevindt zich buiten de publieke webroot, bevat mogelijk andere geheimen en mag nooit integraal worden gedeeld, vervangen of in Git opgenomen. Een geautoriseerde beheerder voegt uitsluitend het onderstaande optionele configuratie-element toe aan het bestaande array, zonder andere sleutels te wijzigen:
 
