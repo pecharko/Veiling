@@ -68,7 +68,7 @@ if (str_contains($impact, 'Het goede doel wordt binnenkort bekendgemaakt.')
     throw new RuntimeException('Old good cause homepage text remains.');
 }
 if (str_contains($impact, 'type="button" disabled') ||
-    substr_count($impact, 'front-impact-action') !== 2) {
+    substr_count($impact, 'front-impact-action"') !== 2) {
     throw new RuntimeException('Both participation actions must be enabled, without changing their CSS classes.');
 }
 echo "PASS: dedicated good cause page, links, guards and mobile stylesheet.\n";
