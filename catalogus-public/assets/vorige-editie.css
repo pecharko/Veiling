@@ -90,6 +90,6 @@
 @media(max-width:640px){.impression-page .site-header.front-header .front-brand .brand-mark{width:42px!important;height:42px!important}}
 
 /* Back-to-home action follows the same left-aligned pattern as the artist overview. */
-.impression-top-actions{display:block;padding-top:clamp(24px,3vw,36px);margin-bottom:32px}
+.impression-top-actions{display:block;padding-top:clamp(32px,4vw,56px);margin-bottom:32px}
 .impression-top-actions .front-btn{min-height:50px;padding:14px 21px}
-@media(max-width:720px){.impression-top-actions{padding-top:22px;margin-bottom:26px}.impression-top-actions .front-btn{min-height:45px;padding:11px 17px}}
+@media(max-width:720px){.impression-top-actions{margin-bottom:26px}.impression-top-actions .front-btn{min-height:45px;padding:11px 17px}}
