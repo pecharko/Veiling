@@ -15,7 +15,7 @@ $cta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\
 if (!str_contains($home, $cta) || str_contains($home, 'type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse')) {
     throw new RuntimeException('Homepage artist action must link to an enabled local page.');
 }
-if (!str_contains($home, '<a class="front-btn front-btn-outline front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>')) {
+if (!str_contains($home, '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>')) {
     throw new RuntimeException('Separate artwork-interest CTA must link to the approved static information page.');
 }
 foreach ([
