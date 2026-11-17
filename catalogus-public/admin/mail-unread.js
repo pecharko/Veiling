@@ -1,4 +1,4 @@
-/* Read-only badge; nothing about the OVH session or mailbox contents enters the browser. */
+/* Read-only badge. No OVH credentials or message metadata are ever sent to the browser. */
 (() => {
   'use strict';
   const link = document.querySelector('a[data-mail-unread-url]');
@@ -6,10 +6,27 @@
   if (!link || !badge) return;
   const endpoint = link.getAttribute('data-mail-unread-url');
   if (!endpoint) return;
-  let inFlight = false;
+
   const baseLabel = 'Mail openen via OVH (nieuw tabblad)';
+  let inFlight = false;
+  let notConfigured = false;
+  function show(text, state, description) {
+    badge.textContent = text;
+    badge.dataset.state = state;
+    badge.hidden = false;
+    badge.title = description;
+    link.setAttribute('aria-label', baseLabel + ', ' + description);
+  }
+  function clear() {
+    badge.hidden = true;
+    badge.textContent = '';
+    badge.removeAttribute('data-state');
+    badge.removeAttribute('title');
+    link.setAttribute('aria-label', baseLabel);
+  }
+
   async function update() {
-    if (inFlight || document.visibilityState === 'hidden') return;
+    if (inFlight || notConfigured || document.visibilityState === 'hidden') return;
     inFlight = true;
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 6000);
@@ -18,27 +35,33 @@
         method: 'GET', credentials: 'same-origin', cache: 'no-store',
         headers: { 'Accept': 'application/json' }, signal: controller.signal
       });
-      if (!response.ok) throw new Error('Mail counter unavailable');
-      const data = await response.json();
-      if (data?.available !== true || !Number.isSafeInteger(data.unread) || data.unread < 0) {
-        throw new Error('Mail counter unavailable');
+      // Only the authenticated endpoint can return this non-sensitive state.
+      if (response.ok) {
+        const data = await response.json();
+        if (data?.available === false && data.reason === 'not_configured') {
+          notConfigured = true; // A new page load can retry after separate setup.
+          show('Niet gekoppeld', 'disconnected', 'ongelezen teller nog niet gekoppeld');
+          return;
+        }
+        if (data?.available === true && Number.isSafeInteger(data.unread) && data.unread >= 0) {
+          clear();
+          if (data.unread > 0) {
+            show(data.unread > 99 ? '99+' : String(data.unread), 'count',
+              data.unread + ' ongelezen berichten');
+          }
+          return;
+        }
       }
-      const count = data.unread;
-      badge.hidden = count === 0;
-      badge.textContent = count > 99 ? '99+' : String(count);
-      link.setAttribute('aria-label', count
-        ? baseLabel + ', ' + count + ' ongelezen berichten'
-        : baseLabel);
+      throw new Error('Unread status not available');
     } catch (_) {
-      // Unknown is not zero: never display a stale count after an IMAP failure.
-      badge.hidden = true;
-      badge.textContent = '';
-      link.setAttribute('aria-label', baseLabel);
+      // Unknown never means zero; do not show a stale count.
+      show('?', 'unavailable', 'ongelezen teller tijdelijk niet beschikbaar');
     } finally {
       window.clearTimeout(timeout);
       inFlight = false;
     }
   }
+
   void update();
   window.setInterval(() => { void update(); }, 120000);
   document.addEventListener('visibilitychange', () => {
