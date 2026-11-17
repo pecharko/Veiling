@@ -30,7 +30,7 @@ $previousPos = strpos($nav, '>Vorige editie</a>');
 if (!($homePos < $catalogPos && $catalogPos < $artistsPos && $artistsPos < $previousPos)) {
     throw new RuntimeException('Good cause header order is incorrect.');
 }
-if (!str_contains($source, 'Terug naar de startpagina')) {
+if (!str_contains($source, '>Startpagina</a>') || !str_contains($source, '>Vorige editie</a>')) {
     throw new RuntimeException('Homepage return button must remain.');
 }
 echo "PASS good cause header includes catalog and artists after Home without redundant links.\n";
