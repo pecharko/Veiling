@@ -764,13 +764,13 @@ try {
   claim((int)$photoCountStmt->fetchColumn()>0, 'Gereedheidstest gebruikt een opgeslagen kavelfoto');
   $readinessUpdate=db()->prepare('UPDATE lots SET description=?,subtitle=?,details=? WHERE id=?');
   $readinessUpdate->execute(['Fictieve beschrijving','','',$photoLotId]);
-  [$basicStatus, $basicPage] = request_page('/admin/index.php');
+  [$basicStatus, $basicPage] = request_page('/admin/index.php?q=20');
   claim($basicStatus===200
       && str_contains($rowById($basicPage, $photoLotId), 'lot-readiness is-basic')
       && str_contains($rowById($basicPage, $photoLotId), 'Basis compleet'),
     'Foto plus beschrijving toont lichtgroen, zonder verplichte aanvullende velden');
   $readinessUpdate->execute(['Fictieve beschrijving','Fictieve ondertitel','Fictieve details',$photoLotId]);
-  [$completeStatus, $completePage] = request_page('/admin/index.php');
+  [$completeStatus, $completePage] = request_page('/admin/index.php?q=20');
   claim($completeStatus===200
       && str_contains($rowById($completePage, $photoLotId), 'lot-readiness is-complete')
       && str_contains($rowById($completePage, $photoLotId), 'Kavel compleet'),
