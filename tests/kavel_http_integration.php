@@ -467,6 +467,18 @@ try {
   claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
     && str_contains($lotsWithSeller,'class="dashboard-seller">Kavelverkoper Demo</td>'),
     'Admin lots overview displays linked seller name');
+  [$mineStatus, $minePage] = request_page('/admin/index.php?mine=1');
+  claim($mineStatus===200
+      && str_contains($minePage, '<h2 id="dashboard-lots-title">Mijn kavels</h2>')
+      && str_contains($minePage, 'Geldig fotokavel')
+      && !str_contains($minePage, 'Originele titel')
+      && str_contains($minePage, 'name="mine" value="1"')
+      && str_contains($minePage, 'Alle kavels</a>'),
+    'Mijn kavels filters by authenticated creator and offers return to all lots');
+  [$mineSearchStatus, $mineSearchPage] = request_page('/admin/index.php?mine=1&q=Geldig');
+  claim($mineSearchStatus===200 && str_contains($mineSearchPage, 'Geldig fotokavel')
+      && str_contains($mineSearchPage, 'name="mine" value="1"'),
+    'Mijn kavels remains active while searching');
   [$sellerStatus, $sellerBlocked] = request_page('/admin/verkopers.php', [
     'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerLinkId
   ]);
