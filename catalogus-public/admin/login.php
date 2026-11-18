@@ -8,7 +8,13 @@ admin_session();
 if (isset($_SESSION['admin_id'])) redirect('admin/index.php');
 $error = '';
 $pdo = db();
-if ((int)$pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn() === 0) redirect('admin/setup.php');
+// An empty administrator table is a provisioning incident, never an invitation
+// to expose a public bootstrap or setup form. Recovery is an operator-only task.
+if ((int)$pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn() === 0) {
+  http_response_code(503);
+  header('Cache-Control: no-store');
+  exit('Beheer tijdelijk niet beschikbaar. Contacteer de websitebeheerder.');
+}
 $ip = hash('sha256', (string)($_SERVER['REMOTE_ADDR'] ?? 'onbekend'));
 if (is_post()) {
   check_csrf();
