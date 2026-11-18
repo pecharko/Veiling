@@ -56,7 +56,7 @@ admin_top('Kaveloverzicht');
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Veilingsnummer</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr>
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
@@ -64,11 +64,10 @@ admin_top('Kaveloverzicht');
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
       <td class="dashboard-seller"><?=($row['seller_name'] ?? '') !== '' ? e((string)$row['seller_name']) : '—'?></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
-      <td><?=($row['sale_location'] === 'veiling' && $row['auction_number'] !== null) ? e((string)$row['auction_number']) : ''?></td>
       <td><span class="dashboard-badge <?=e(['draft'=>'is-new','published'=>'is-published','sold'=>'is-sold','canceled'=>'is-canceled'][$row['status']] ?? 'is-new')?>"><?=e(['draft'=>'Nieuw','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$row['status']] ?? 'Onbekend')?></span></td>
       <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row) ? '✎ Bewerken' : 'Bekijken'?></a></td>
     </tr><?php endforeach; ?>
-    <?php if(!$rows): ?><tr><td colspan="9">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+    <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
     <nav class="dashboard-pagination" aria-label="Paginering kavels"><span><?=($filtered ? (($page-1)*$perPage+1) : 0)?>–<?=min($filtered,$page*$perPage)?> van <?=$filtered?> kavels</span><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav>
   </section>
