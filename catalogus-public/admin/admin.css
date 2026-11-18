@@ -174,10 +174,19 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .dashboard-stat:nth-child(2) .dashboard-icon{background:#e7f5e8;color:#207240}.dashboard-stat:nth-child(3) .dashboard-icon{background:#e5f3ff;color:#277ac0}.dashboard-stat:nth-child(4) .dashboard-icon{background:#eee7ff;color:#7052bd}
 .dashboard-panel{background:#fff;border:1px solid #ecdfd6;border-radius:14px;padding:25px;box-shadow:0 8px 25px rgba(78,32,35,.035)}
 .dashboard-panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap}.dashboard-panel-heading>a.primary{white-space:nowrap;margin-bottom:16px}
+.dashboard-lot-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}.dashboard-lot-actions>a{white-space:nowrap;text-decoration:none}
+.dashboard-scope{margin:0 0 24px;padding:18px 20px;border:1px solid #d8e2dd;border-left:5px solid #29473e;border-radius:14px;background:#f4f8f5}
+.dashboard-scope-heading strong{display:block;color:#29473e;font-size:15px}.dashboard-scope-heading p{margin:4px 0 14px;color:#586c63;font-size:13px}
+.dashboard-scope-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.dashboard-scope-option{display:flex;align-items:center;gap:12px;min-height:82px;text-decoration:none;background:#fff;border:2px solid #e3e8e3}
+.dashboard-scope-option>span:nth-child(2){display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}.dashboard-scope-option>span:nth-child(2)>strong{font-size:16px;color:#29473e}.dashboard-scope-option>span:nth-child(2)>small{font-size:12px;color:#63776c;letter-spacing:normal}
+.dashboard-scope-option.is-selected{border-color:#29473e;background:#e7f2e9}.dashboard-scope-check{display:flex;align-items:center;justify-content:center;width:24px;height:24px;border:1px solid #a3b9ab;border-radius:50%;font-size:15px;color:#fff;background:#fff}.dashboard-scope-option.is-selected .dashboard-scope-check{border-color:#29473e;background:#29473e}
+.dashboard-scope-option:focus-visible{outline:3px solid #1952a0;outline-offset:3px}
+@media(max-width:650px){.dashboard-scope{padding:14px}.dashboard-scope-options{grid-template-columns:1fr}.dashboard-scope-option{min-height:74px}}
 .dashboard-panel-heading h2{margin:0 0 3px;font-size:24px}.dashboard-panel-heading p{margin:0 0 20px;color:#657183;font-size:14px}
 .dashboard-filters{display:grid;grid-template-columns:minmax(220px,1.25fr) repeat(2,minmax(150px,1fr)) 150px;gap:12px;margin-bottom:17px}
 .dashboard-filters label{min-width:0}.dashboard-filters input,.dashboard-filters select{width:100%;height:48px;max-width:none;border:1px solid #d9dde4;border-radius:8px;color:#263f46}.dashboard-filters button{width:100%;height:48px}
-.dashboard-table-scroll{overflow-x:auto}.dashboard-table{min-width:750px}.dashboard-table th{background:#f8efe9;color:#4d5666;font-size:11px}.dashboard-table td{padding:13px 12px}.dashboard-title a{font-weight:750}.dashboard-category{display:inline-block;background:#f8eee8;color:#7b2b31;border-radius:999px;padding:5px 11px;font-size:12px}.dashboard-badge{display:inline-block;border-radius:999px;padding:5px 12px;font-size:12px;white-space:nowrap}.dashboard-badge.is-live{background:#e9f8e9;color:#21643c}.dashboard-badge.is-draft{background:#fff3de;color:#845a16}.dashboard-edit{display:inline-block;border:1px solid #eadbd0;border-radius:8px;padding:8px 13px;color:#293b45;font-weight:650;white-space:nowrap}.dashboard-edit:hover{background:#fff5ef;text-decoration:none}
+.dashboard-table-scroll{overflow-x:auto}.dashboard-table{min-width:750px}.dashboard-table th{background:#f8efe9;color:#4d5666;font-size:11px}.dashboard-table td{padding:13px 12px}.dashboard-title a{font-weight:750}.dashboard-category{display:inline-block;background:#f8eee8;color:#7b2b31;border-radius:999px;padding:5px 11px;font-size:12px}.dashboard-badge{display:inline-block;border-radius:999px;padding:5px 11px;font-size:12px;font-weight:700;white-space:nowrap}.dashboard-badge.is-published{background:#e4f6e9;color:#195b32}.dashboard-badge.is-sold{background:#17683a;color:#fff}.dashboard-badge.is-canceled{background:#fde9e8;color:#a12424}.dashboard-badge.is-new{background:#e7f0ff;color:#1952a0}.dashboard-edit{display:inline-block;border:1px solid #eadbd0;border-radius:8px;padding:8px 13px;color:#293b45;font-weight:650;white-space:nowrap}.dashboard-edit:hover{background:#fff5ef;text-decoration:none}
 .dashboard-pagination{display:flex;align-items:center;justify-content:center;gap:22px;margin-top:20px}.dashboard-pagination a{color:#850015}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:1100px){.dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -298,6 +307,9 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-form-actions{border-top:1px solid var(--ed-line);padding-top:18px}
 
 .seller-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.seller-dashboard-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:1100px){.seller-dashboard-stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.seller-dashboard-stats{grid-template-columns:1fr}}
 .seller-filters{grid-template-columns:minmax(220px,2fr) minmax(160px,1fr) 140px}
 .seller-table{min-width:700px}
 .seller-portrait-cell{width:72px}
@@ -413,8 +425,14 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-readiness.is-missing_text{background:#fff0d6;color:#8a4d00}
 .seller-readiness.is-texts_ready{background:#e3f6dc;color:#316525}
 .seller-readiness.is-complete{background:#17683a;color:#fff}
+/* Kavelgereedheid gebruikt dezelfde kleurtaal als kunstenaarsgereedheid. */
+.lot-readiness.is-empty{background:#fde7e7;color:#9b1c1c}
+.lot-readiness.is-partial{background:#fff0d6;color:#8a4d00}
+.lot-readiness.is-basic{background:#e3f6dc;color:#316525}
+.lot-readiness.is-complete{background:#17683a;color:#fff}
 .seller-status-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .seller-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}
+.dashboard-lot-status-form{display:flex;align-items:center;gap:6px}.dashboard-lot-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}.dashboard-lot-status-form select:disabled{opacity:.65;cursor:wait}
 
 
 /* Lot editor: scalable seller selector and keyboard-friendly search dialog. */

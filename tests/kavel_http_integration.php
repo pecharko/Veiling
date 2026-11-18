@@ -150,6 +150,10 @@ try {
     && !in_array($sellerId,array_map(static fn(array $row):int=>(int)$row['id'],$privateSearchData['items']??[]),true),
     'Seller picker type filter excludes artists from private seller results');
 
+  [$artistNameStatus, $artistNamePage] = request_page('/admin/kunstenaars.php');
+  claim($artistNameStatus===200
+      && str_contains($artistNamePage, '<a href="/admin/kunstenaar-bewerken.php?id='.$sellerId.'">Demo Art</a>'),
+    'Editable artist name links to existing artist editor');
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
   claim($sellerRecord['bank_account_iban']==='BE68539007547034'
     && $sellerRecord['artist_url']==='https://www.example.org',
@@ -243,6 +247,10 @@ try {
   ]);
   $sellerLinkId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Kavelverkoper Demo'")->fetchColumn();
   claim($sellerStatus===303 && $sellerLinkId>0, 'Private seller available for lot association');
+  [$privateNameStatus, $privateNamePage] = request_page('/admin/verkopers.php');
+  claim($privateNameStatus===200
+      && str_contains($privateNamePage, '<a href="/admin/verkoper.php?id='.$sellerLinkId.'">Kavelverkoper Demo</a>'),
+    'Editable private seller name links to existing seller editor');
   [$status, $lotsNav] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsNav,'>Verkopers</a>'),
     'Administrator navigation exposes seller management');
@@ -460,13 +468,39 @@ try {
   $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
   [$status, , $newLotRedirect] = request_page('/admin/kavel.php', $small, true);
-  claim($status === 303 && $newLotRedirect === '/admin/kavel.php?id='.(int)by_number(20)['id']
-    && (bool)by_number(20), 'New lot save preserves existing editor redirect and photo persistence');
+  claim($status === 303 && $newLotRedirect === '/admin/index.php'
+    && (bool)by_number(20), 'Successful new lot save returns to overview and persists photo');
   claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
   [$status, $lotsWithSeller] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
     && str_contains($lotsWithSeller,'class="dashboard-seller">Kavelverkoper Demo</td>'),
     'Admin lots overview displays linked seller name');
+  [$mineStatus, $minePage] = request_page('/admin/index.php?mine=1');
+  claim($mineStatus===200
+      && str_contains($minePage, '<h2 id="dashboard-lots-title">Mijn kavels</h2>')
+      && str_contains($minePage, 'Geldig fotokavel')
+      && !str_contains($minePage, 'Originele titel')
+      && str_contains($minePage, 'name="mine" value="1"')
+      && str_contains($minePage, 'Filter het volledige overzicht')
+      && strpos($minePage, 'class="dashboard-scope"') < strpos($minePage, 'class="dashboard-stats"')
+      && str_contains($minePage, 'dashboard-scope-option is-selected')
+      && str_contains($minePage, '>Alle kavels</strong>'),
+    'Global Mijn kavels filter is above all dashboard tiles and filters table by creator');
+  claim(str_contains($minePage, '<strong>1</strong> kavels')
+      && str_contains($minePage, '<strong>0</strong> kavels'),
+    'All dashboard statistic counts use the authenticated creator scope');
+  claim(str_contains($minePage, '/admin/index.php?photos=none&amp;mine=1')
+      && str_contains($minePage, '/admin/index.php?status=published&amp;mine=1'),
+    'Dashboard tile links preserve global creator filter');
+  [$mineNoPhotoStatus, $mineNoPhotoPage] = request_page('/admin/index.php?mine=1&photos=none');
+  claim($mineNoPhotoStatus===200
+      && str_contains($mineNoPhotoPage, '0 resultaten.')
+      && !str_contains($mineNoPhotoPage, 'Geldig fotokavel'),
+    'No-photo tile shows only own unphotographed lots when global filter is on');
+  [$mineSearchStatus, $mineSearchPage] = request_page('/admin/index.php?mine=1&q=Geldig');
+  claim($mineSearchStatus===200 && str_contains($mineSearchPage, 'Geldig fotokavel')
+      && str_contains($mineSearchPage, 'name="mine" value="1"'),
+    'Mijn kavels remains active while searching');
   [$sellerStatus, $sellerBlocked] = request_page('/admin/verkopers.php', [
     'csrf'=>$sellerCsrf,'action'=>'delete','seller_id'=>(string)$sellerLinkId
   ]);
@@ -538,8 +572,11 @@ try {
   $bad['lot_number'] = '30'; $bad['title'] = 'Inhoud geen foto';
   file_put_contents($fixtures . '/bad.txt','invalid image bytes');
   $bad['photos[0]'] = new CURLFile($fixtures . '/bad.txt', 'image/png', 'bad.png');
-  [$status] = request_page('/admin/kavel.php', $bad, true);
-  claim($status === 303 && (bool)by_number(30), 'Bad image content preserves existing partial-save behavior');
+  [$status, , $partialRedirect] = request_page('/admin/kavel.php', $bad, true);
+  claim($status === 303
+      && $partialRedirect === '/admin/kavel.php?id='.(int)by_number(30)['id']
+      && (bool)by_number(30),
+    'Partial photo failure stays on saved lot editor to show warning');
   [$status, $html] = request_page('/admin/kavel.php?id=' . by_number(30)['id']);
   claim($status === 200 && str_contains($html,'sommige foto'), 'Partial save warning displayed');
 
@@ -697,7 +734,80 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (401,'Own draft','','','draft',?)")->execute([$actor]);
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
+  // Publication readiness is independent of the actual publication state.
+  // Use existing disposable CI lots; restore edited description fields afterwards.
+  $rowById = static function (string $html, int $id): string {
+    $needle = '<tr id="dashboard-lot-'.$id.'">';
+    $start = strpos($html, $needle);
+    if ($start === false) throw new RuntimeException('Kavelrij ontbreekt: '.$id);
+    $end = strpos($html, '</tr>', $start);
+    return substr($html, $start, $end - $start);
+  };
+  $emptyLotId = (int)by_number(401)['id'];
+  [$readyPageStatus, $readyPage] = request_page('/admin/index.php');
+  claim($readyPageStatus===200
+      && str_contains($readyPage, '<th scope="col">Klaar om te publiceren</th>')
+      && str_contains($rowById($readyPage, $emptyLotId), 'lot-readiness is-empty')
+      && str_contains($rowById($readyPage, $emptyLotId), 'Foto en beschrijving ontbreken'),
+    'Kavel zonder foto en beschrijving toont rode gereedheidsbadge');
+  db()->prepare("UPDATE lots SET description='Fictieve beschrijving' WHERE id=?")->execute([$emptyLotId]);
+  [$partialPageStatus, $partialPage] = request_page('/admin/index.php');
+  claim($partialPageStatus===200
+      && str_contains($rowById($partialPage, $emptyLotId), 'lot-readiness is-partial'),
+    'Alleen een beschrijving toont oranje gereedheidsbadge');
+  db()->prepare("UPDATE lots SET description='' WHERE id=?")->execute([$emptyLotId]);
+  $photoLot = by_number(20);
+  claim((bool)$photoLot, 'Bestaand fictief kavel met foto voor gereedheidstest');
+  $photoLotId = (int)$photoLot['id'];
+  $photoCountStmt=db()->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+  $photoCountStmt->execute([$photoLotId]);
+  claim((int)$photoCountStmt->fetchColumn()>0, 'Gereedheidstest gebruikt een opgeslagen kavelfoto');
+  $readinessUpdate=db()->prepare('UPDATE lots SET description=?,subtitle=?,details=? WHERE id=?');
+  $readinessUpdate->execute(['Fictieve beschrijving','','',$photoLotId]);
+  [$basicStatus, $basicPage] = request_page('/admin/index.php?q=20');
+  claim($basicStatus===200
+      && str_contains($rowById($basicPage, $photoLotId), 'lot-readiness is-basic')
+      && str_contains($rowById($basicPage, $photoLotId), 'Basis compleet'),
+    'Foto plus beschrijving toont lichtgroen, zonder verplichte aanvullende velden');
+  $readinessUpdate->execute(['Fictieve beschrijving','Fictieve ondertitel','Fictieve details',$photoLotId]);
+  [$completeStatus, $completePage] = request_page('/admin/index.php?q=20');
+  claim($completeStatus===200
+      && str_contains($rowById($completePage, $photoLotId), 'lot-readiness is-complete')
+      && str_contains($rowById($completePage, $photoLotId), 'Kavel compleet'),
+    'Foto beschrijving details en ondertitel tonen donkergroene gereedheidsbadge');
+  $readinessUpdate->execute([(string)$photoLot['description'],(string)$photoLot['subtitle'],(string)$photoLot['details'],$photoLotId]);
+
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$assistantOverviewStatus, $assistantOverviewPage] = request_page('/admin/index.php');
+  claim($assistantOverviewStatus===200, 'Assistant opens lot overview');
+  $rowForLot = static function (string $html, string $title): string {
+    foreach (explode('</tr>', $html) as $candidate) {
+      if (str_contains($candidate, '>'.$title.'</a>')) return $candidate;
+    }
+    throw new RuntimeException('Kavelrij niet gevonden voor: '.$title);
+  };
+  $ownDraftRow = $rowForLot($assistantOverviewPage, 'Own draft');
+  $otherDraftRow = $rowForLot($assistantOverviewPage, 'Other draft');
+  $publishedRow = $rowForLot($assistantOverviewPage, 'Own published');
+  claim(str_contains($ownDraftRow, '✎ Bewerken')
+      && !str_contains($otherDraftRow, 'dashboard-edit')
+      && !str_contains($publishedRow, 'dashboard-edit')
+      && !str_contains($assistantOverviewPage, '>Bekijken</a>'),
+    'Assistant sees Bewerk only on editable lots; view-only action is absent');
+  claim(str_contains($ownDraftRow, 'dashboard-lot-publication')
+      && str_contains($otherDraftRow, 'dashboard-lot-publication')
+      && str_contains($publishedRow, 'dashboard-lot-publication')
+      && !str_contains($ownDraftRow, '<form class="dashboard-lot-status-form"')
+      && !str_contains($otherDraftRow, '<form class="dashboard-lot-status-form"')
+      && !str_contains($publishedRow, '<form class="dashboard-lot-status-form"'),
+    'Assistant sees read-only lot status badges, never inline status selects');
+  [$assistantStatusChange, $assistantStatusBody] = request_page('/admin/index.php', [
+    'csrf'=>token($assistantOverviewPage),'action'=>'lot-status',
+    'lot_id'=>(string)by_number(401)['id'],'status'=>'published'
+  ], false, ['X-Requested-With: XMLHttpRequest', 'Accept: application/json']);
+  claim($assistantStatusChange===403
+      && (string)by_number(401)['status']==='draft',
+    'Assistant cannot change status even on own draft through forged AJAX request');
   [$sellerOverviewStatus, $sellerAssistantOverview] = request_page('/admin/verkopers.php');
   claim($sellerOverviewStatus===200 && str_contains($sellerAssistantOverview,'Verkopers beheren'),
     'Assistant may open seller management');
@@ -716,6 +826,32 @@ try {
     && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
+  [$myPrivateStatus, $myPrivatePage] = request_page('/admin/verkopers.php?mine=1');
+  // Kavelverkoper Demo was created earlier by the SAME administrator and has a lot.
+  // Both records belong in 'Mijn verkopers'; the with-lots tile keeps only the linked one.
+  claim($myPrivateStatus===200
+      && str_contains($myPrivatePage,'Mijn verkopers')
+      && str_contains($myPrivatePage,'Fictieve assistentverkoper')
+      && str_contains($myPrivatePage,'Kavelverkoper Demo')
+      && str_contains($myPrivatePage,'Filter het volledige overzicht')
+      && strpos($myPrivatePage,'class="dashboard-scope"') < strpos($myPrivatePage,'seller-dashboard-stats')
+      && str_contains($myPrivatePage,'MET KAVELS')
+      && str_contains($myPrivatePage,'ZONDER KAVELS'),
+    'Global Mijn verkopers scope includes both sellers created by this administrator');
+  // The earlier editor-save fixture omitted seller_id and therefore cleared that link.
+  // Restore a linked test lot explicitly before asserting the positive with-lots filter.
+  db()->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerLinkId, $existingLotId]);
+  claim((int)by_number(20)['seller_id']===$sellerLinkId,
+    'With-lots fixture explicitly has an own seller linked to an existing lot');
+  [$withLotsPrivateStatus, $withLotsPrivatePage] = request_page('/admin/verkopers.php?mine=1&tile=with_lots');
+  claim($withLotsPrivateStatus===200
+      && str_contains($withLotsPrivatePage,'Kavelverkoper Demo')
+      && !str_contains($withLotsPrivatePage,'Fictieve assistentverkoper'),
+    'With-lots tile returns only the own seller linked to a lot');
+  [$allPrivateStatus, $allPrivatePage] = request_page('/admin/verkopers.php');
+  claim($allPrivateStatus===200 && str_contains($allPrivatePage,'Kavelverkoper Demo')
+      && str_contains($allPrivatePage,'Fictieve assistentverkoper'),
+    'Alle verkopers restores complete seller scope');
   // Artist publication is role-protected, and publication locks even an assistant's own artist.
   [$assistantArtistStatus] = request_page('/admin/kunstenaar-bewerken.php', [
     'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'kunstenaar',
@@ -728,6 +864,18 @@ try {
   claim($assistantArtistStatus===303 && $ownArtistId>0
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
     'Assistant creates artist with new status by default');
+  [$myArtistStatus, $myArtistPage] = request_page('/admin/kunstenaars.php?mine=1');
+  claim($myArtistStatus===200 && str_contains($myArtistPage,'Mijn kunstenaars')
+      && str_contains($myArtistPage,'Eigen Atelier')
+      && str_contains($myArtistPage,'ZONDER PORTRET')
+      && str_contains($myArtistPage,'PROFIEL ONVOLLEDIG')
+      && str_contains($myArtistPage,'GEPUBLICEERD'),
+    'Global Mijn kunstenaars selector includes status and readiness statistic tiles');
+  [$incompleteArtistStatus, $incompleteArtistPage] = request_page('/admin/kunstenaars.php?mine=1&tile=incomplete');
+  claim($incompleteArtistStatus===200 && str_contains($incompleteArtistPage,'Eigen Atelier')
+      && str_contains($incompleteArtistPage,'name="mine" value="1"')
+      && str_contains($incompleteArtistPage,'name="tile" value="incomplete"'),
+    'Incomplete-profile tile preserves artist ownership filter in search form');
   [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId);
   claim($ownArtistStatus===200, 'Assistant can edit own unpublished artist');
   [$blockedPublish,$blockedPublishPage]=request_page('/admin/kunstenaars.php', [
@@ -786,6 +934,38 @@ try {
   // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
   db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
   $foreignSellerId=(int)db()->lastInsertId();
+  [$readOnlyPrivateListStatus, $readOnlyPrivateList] = request_page('/admin/verkopers.php');
+  claim($readOnlyPrivateListStatus===200
+      && str_contains($readOnlyPrivateList,'/admin/verkopers.php?view=1&amp;id='.$foreignSellerId.'&amp;type=particulier')
+      && !str_contains($readOnlyPrivateList,'Alleen bekijken'),
+    'Assistant sees a clickable seller name without an Alleen bekijken action');
+  [$readOnlySellerStatus, $readOnlySellerPage] = request_page('/admin/verkopers.php?view=1&id='.$foreignSellerId.'&type=particulier');
+  claim($readOnlySellerStatus===200 && str_contains($readOnlySellerPage,'Andere maker')
+      && !str_contains($readOnlySellerPage,'ander@example.invalid')
+      && !str_contains($readOnlySellerPage,'seller-manager-form')
+      && !str_contains($readOnlySellerPage,'seller-save-trigger'),
+    'Read-only seller detail hides contact data and has no editing form');
+  [$readOnlyPostStatus] = request_page('/admin/verkopers.php?view=1&id='.$foreignSellerId.'&type=particulier', [
+    'action'=>'save','name'=>'FORGED'
+  ]);
+  claim($readOnlyPostStatus===405
+      && db()->query('SELECT name FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==='Andere maker',
+    'Read-only seller detail cannot be used to save');
+  db()->exec("INSERT INTO lot_sellers(seller_type,name,artist_name,email,street,house_number,postal_code,municipality,created_by_admin_id,artist_published) VALUES ('kunstenaar','Andere kunstenaar','Fictief Ander Atelier','andere-kunstenaar@example.invalid','Teststraat','8','9160','Lokeren',99999,2)");
+  $foreignArtistId=(int)db()->lastInsertId();
+  [$readOnlyArtistListStatus, $readOnlyArtistList] = request_page('/admin/kunstenaars.php');
+  claim($readOnlyArtistListStatus===200
+      && str_contains($readOnlyArtistList,'/admin/kunstenaars.php?view=1&amp;id='.$foreignArtistId.'&amp;type=kunstenaar')
+      && !str_contains($readOnlyArtistList,'Alleen bekijken'),
+    'Assistant can follow another artist name to read-only profile');
+  [$readOnlyArtistStatus, $readOnlyArtistPage] = request_page('/admin/kunstenaars.php?view=1&id='.$foreignArtistId.'&type=kunstenaar');
+  claim($readOnlyArtistStatus===200 && str_contains($readOnlyArtistPage,'Fictief Ander Atelier')
+      && !str_contains($readOnlyArtistPage,'andere-kunstenaar@example.invalid')
+      && !str_contains($readOnlyArtistPage,'seller-manager-form'),
+    'Other artist read-only profile accessible without exposing contact or editing');
+  [$foreignArtistEditorStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$foreignArtistId);
+  claim($foreignArtistEditorStatus===403,
+    'Assistant still cannot edit another artist');
   [$forbiddenView] = request_page('/admin/verkoper.php?id='.$foreignSellerId);
   claim($forbiddenView===403, 'Assistant cannot open unrelated seller editor');
   [$forbiddenSave] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
@@ -806,8 +986,9 @@ try {
   ]);
   claim($forbiddenImage===403, 'Assistant cannot perform photo actions on unrelated seller');
   [$assistantListStatus, $assistantListPage]=request_page('/admin/verkopers.php');
-  claim($assistantListStatus===200 && str_contains($assistantListPage,'Alleen bekijken'),
-    'Unowned seller is read-only in assistant seller overview');
+  claim($assistantListStatus===200 && !str_contains($assistantListPage,'Alleen bekijken')
+      && str_contains($assistantListPage,'/admin/verkopers.php?view=1&amp;id='.$foreignSellerId.'&amp;type=particulier'),
+    'Unowned seller has read-only name link and no Alleen bekijken action');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
   claim($masterListStatus===200 && str_contains($masterListPage,'Verkopers beheren')
@@ -862,6 +1043,71 @@ try {
   ]);
   claim($status===403 && (bool)by_number(403), 'Assistant cannot remove published own lot');
   db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
+  [$adminOverviewStatus, $adminOverviewPage] = request_page('/admin/index.php?mine=1&pagina=1');
+  claim($adminOverviewStatus===200
+      && str_contains($adminOverviewPage, '<th scope="col">Publicatie</th><th scope="col">Klaar om te publiceren</th><th scope="col">Acties</th>')
+      && str_contains($adminOverviewPage, 'dashboard-lot-publication')
+      && str_contains($adminOverviewPage, 'seller-row-actions dashboard-lot-row-actions')
+      && str_contains($adminOverviewPage, 'dashboard-lot-status-form')
+      && str_contains($adminOverviewPage, 'name="action" value="lot-status"')
+      && str_contains($adminOverviewPage, 'name="lot_id"'),
+    'Administrator sees artist-style Publicatie badge and status selector in Acties');
+  $statusHeaders=['X-Requested-With: XMLHttpRequest','Accept: application/json'];
+  $lotStatusToken=token($adminOverviewPage);
+  $testLotId=(int)by_number(401)['id'];
+  [$publishStatus,$publishBody]=request_page('/admin/index.php?mine=1', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  $publishReply=json_decode($publishBody,true);
+  claim($publishStatus===200 && ($publishReply['ok']??false)===true
+      && ($publishReply['status']??'')==='published'
+      && (string)by_number(401)['status']==='published',
+    'Administrator publishes from overview through authenticated JSON request');
+  [$noChangeStatus,$noChangeBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  claim($noChangeStatus===200 && (json_decode($noChangeBody,true)['ok']??false)===true,
+    'Repeated selection is safely idempotent');
+  [$restoreStatus,$restoreBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'draft'
+  ],false,$statusHeaders);
+  claim($restoreStatus===200 && (json_decode($restoreBody,true)['status']??'')==='draft'
+      && (string)by_number(401)['status']==='draft',
+    'Administrator can unpublish from overview');
+  [$badStatus,$badBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'invalid'
+  ],false,$statusHeaders);
+  claim($badStatus===422 && (json_decode($badBody,true)['ok']??true)===false
+      && (string)by_number(401)['status']==='draft',
+    'Invalid status is rejected without data mutation');
+  [$badCsrfStatus]=request_page('/admin/index.php', [
+    'csrf'=>'invalid','action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'sold'
+  ],false,$statusHeaders);
+  claim($badCsrfStatus===403 && (string)by_number(401)['status']==='draft',
+    'Missing or invalid CSRF prevents inline status mutation');
+  db()->exec('UPDATE lots SET auction_only=1 WHERE id='.$testLotId);
+  [$conflictStatus,$conflictBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  claim($conflictStatus===422 && (json_decode($conflictBody,true)['ok']??true)===false
+      && (string)by_number(401)['status']==='draft',
+    'Auction-only market lot cannot be published by inline status selector');
+  db()->exec('UPDATE lots SET auction_only=0 WHERE id='.$testLotId);
+  $auctionLotId=(int)db()->query("SELECT id FROM lots WHERE sale_location='veiling' LIMIT 1")->fetchColumn();
+  if ($auctionLotId>0) {
+    $auctionBefore=(string)db()->query('SELECT status FROM lots WHERE id='.$auctionLotId)->fetchColumn();
+    [$cancelStatus,$cancelBody]=request_page('/admin/index.php', [
+      'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$auctionLotId,'status'=>'canceled'
+    ],false,$statusHeaders);
+    claim($cancelStatus===422 && (json_decode($cancelBody,true)['ok']??true)===false
+        && (string)db()->query('SELECT status FROM lots WHERE id='.$auctionLotId)->fetchColumn()===$auctionBefore,
+      'Veiling lot cannot be canceled directly from overview');
+  }
+  [$missingStatus,$missingBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>'999999999','status'=>'sold'
+  ],false,$statusHeaders);
+  claim($missingStatus===404 && (json_decode($missingBody,true)['ok']??true)===false,
+    'Missing lot status mutation returns an explicit JSON not-found response');
   [$status, $adminForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200, 'Administrator regains editor');
   [$status, $conflict] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [

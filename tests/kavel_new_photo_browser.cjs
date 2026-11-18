@@ -118,8 +118,12 @@ const { chromium } = require('playwright');
     assert.equal(new URL(page.url()).pathname, '/admin/kavel.php',
       'Top cancel respects the unsaved-changes warning and keeps staged files');
     await Promise.all([
-      page.waitForURL(/\/admin\/kavel\.php\?id=\d+/, { timeout: 15000 }),
+      page.waitForURL('**/admin/index.php', { timeout: 15000 }),
       page.locator('.lot-editor-bottom button[form="lot-editor-form"]').click(),
+    ]);
+    await Promise.all([
+      page.waitForURL(/\/admin\/kavel\.php\?id=\d+/, { timeout: 15000 }),
+      page.locator('.dashboard-title a', { hasText: 'CI new-lot photo tiles' }).click(),
     ]);
     assert.equal(await page.locator('#lot-photo-grid .lot-editor-photo:not(.lot-editor-photo-add) img').count(), 3,
       'Three saved photos appear after creating the lot');

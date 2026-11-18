@@ -237,9 +237,10 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
             : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
             $failed?'warning':'success');
-          // Keep the new-lot editor behavior; return edited lots to the overview.
-          if ($lot) redirect('admin/index.php');
-          redirect('admin/kavel.php',['id'=>$id]);
+          // After a clean save, return both new and edited lots to the overview.
+          // Partial photo failures leave the saved lot open so the warning is visible.
+          if ($failed) redirect('admin/kavel.php', ['id' => $id]);
+          redirect('admin/index.php');
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
           if($ex->getCode()==='23000'){
@@ -349,7 +350,7 @@ if ($error === $cancelAuctionWarning) {
     <fieldset <?=!$canEditLot?'disabled':''?> style="border:0;padding:0;margin:0;min-width:0">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
         <section class="lot-editor-card lot-editor-publication"><div class="lot-editor-card-header"><div><h2>Publicatie</h2><p>Bepaal of bezoekers dit kavel mogen zien.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><?php if($canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Concept — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Concept — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><p class="lot-editor-help lot-full">Nieuwe kavels staan standaard als concept op Markt. Administrator en Veilingmeester kunnen de publicatiestatus en verkoopplaats meteen aanpassen. Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
+          <div class="lot-editor-fields lot-editor-two"><?php if($canEditLot): ?><label>Status<select name="status"><option value="draft" <?=$d['status']==='draft'?'selected':''?>>Nieuw — niet zichtbaar</option><option value="published" <?=$d['status']==='published'?'selected':''?>>Gepubliceerd</option><option value="sold" <?=$d['status']==='sold'?'selected':''?>>Verkocht</option><option value="canceled" <?=$d['status']==='canceled'?'selected':''?>>Canceled</option></select></label><?php else: ?><p class="lot-editor-help"><strong>Status:</strong> <?=(['draft'=>'Nieuw — niet zichtbaar','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$d['status']] ?? 'Onbekend')?>. Alleen Veilingmeester en Administrator mogen publicatie wijzigen.</p><?php endif; ?><label>Verkoopplaats <select name="sale_location"><option value="markt" <?=$d['sale_location']==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$d['sale_location']==='veiling'?'selected':''?>>Veiling</option></select></label><p class="lot-editor-help lot-full">Nieuwe kavels staan standaard als nieuw en niet zichtbaar op Markt. Administrator en Veilingmeester kunnen de publicatiestatus en verkoopplaats meteen aanpassen. Een gepubliceerd kavel wordt pas zichtbaar als de veilingwebsite zelf openbaar staat.</p></div>
         </section>
         <?php endif; ?>
     <div class="lot-editor-layout lot-editor-layout--single">
