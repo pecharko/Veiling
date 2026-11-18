@@ -53,4 +53,10 @@ foreach ([
         throw new RuntimeException('Kavelkleur volgt verkoperspalet niet: ' . $rule);
     }
 }
+// De lijst toont geen aparte veilingsnummerkolom, zonder het databankveld te verwijderen.
+if (str_contains($list, '<th scope="col">Veilingsnummer</th>') ||
+    str_contains($list, "\$row['auction_number']") ||
+    !str_contains($list, '<td colspan="8">Geen kavels gevonden.')) {
+    throw new RuntimeException('Veilingsnummerkolom moet ontbreken en de lege tabel moet acht kolommen omvatten.');
+}
 echo "PASS: kavelstatus Nieuw, ongewijzigde databasewaarden en verkoperskleuren.\n";
