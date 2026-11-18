@@ -991,10 +991,13 @@ try {
   db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
   [$adminOverviewStatus, $adminOverviewPage] = request_page('/admin/index.php?mine=1&pagina=1');
   claim($adminOverviewStatus===200
+      && str_contains($adminOverviewPage, '<th scope="col">Publicatie</th><th scope="col">Acties</th>')
+      && str_contains($adminOverviewPage, 'dashboard-lot-publication')
+      && str_contains($adminOverviewPage, 'seller-row-actions dashboard-lot-row-actions')
       && str_contains($adminOverviewPage, 'dashboard-lot-status-form')
       && str_contains($adminOverviewPage, 'name="action" value="lot-status"')
       && str_contains($adminOverviewPage, 'name="lot_id"'),
-    'Administrator receives inline status selectors and CSRF-backed status forms');
+    'Administrator sees artist-style Publicatie badge and status selector in Acties');
   $statusHeaders=['X-Requested-With: XMLHttpRequest','Accept: application/json'];
   $lotStatusToken=token($adminOverviewPage);
   $testLotId=(int)by_number(401)['id'];
