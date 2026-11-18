@@ -90,7 +90,7 @@ admin_top('Kaveloverzicht');
       <td class="dashboard-seller"><?=($row['seller_name'] ?? '') !== '' ? e((string)$row['seller_name']) : '—'?></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
       <td><span class="dashboard-badge <?=e(['draft'=>'is-new','published'=>'is-published','sold'=>'is-sold','canceled'=>'is-canceled'][$row['status']] ?? 'is-new')?>"><?=e(['draft'=>'Nieuw','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$row['status']] ?? 'Onbekend')?></span></td>
-      <td><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>"><?=lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row) ? '✎ Bewerken' : 'Bekijken'?></a></td>
+      <td><?php if (lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row)): ?><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a><?php endif; ?></td>
     </tr><?php endforeach; ?>
     <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
