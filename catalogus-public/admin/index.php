@@ -146,7 +146,7 @@ admin_top('Kaveloverzicht');
       <?php if ($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Publicatie</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr id="dashboard-lot-<?=(int)$row['id']?>">
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
@@ -154,14 +154,15 @@ admin_top('Kaveloverzicht');
       <td><span class="dashboard-category"><?=e($row['category'])?></span></td>
       <td class="dashboard-seller"><?=($row['seller_name'] ?? '') !== '' ? e((string)$row['seller_name']) : '—'?></td>
       <td><?=e($row['sale_location'] === 'veiling' ? 'Veiling' : 'Markt')?></td>
-      <td>
+      <td><span class="dashboard-badge dashboard-lot-publication <?=e(['draft'=>'is-new','published'=>'is-published','sold'=>'is-sold','canceled'=>'is-canceled'][$row['status']] ?? 'is-new')?>"><?=e(['draft'=>'Nieuw','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$row['status']] ?? 'Onbekend')?></span></td>
+      <td><div class="seller-row-actions dashboard-lot-row-actions">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
           <form class="dashboard-lot-status-form" method="post" action="<?=e(url('admin/index.php',array_intersect_key($_GET,array_flip(['q','category','status','sale_location','photos','mine','per_page','pagina']))))?>">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="lot-status">
             <input type="hidden" name="lot_id" value="<?=(int)$row['id']?>">
             <label class="sr-only" for="lot-status-<?=(int)$row['id']?>">Status van <?=e((string)$row['title'])?></label>
-            <select id="lot-status-<?=(int)$row['id']?>" name="status" aria-label="Status van <?=e((string)$row['title'])?>">
+            <select id="lot-status-<?=(int)$row['id']?>" name="status" aria-label="Publicatiestatus van <?=e((string)$row['title'])?>">
               <option value="draft" <?=$row['status']==='draft'?'selected':''?>>Nieuw</option>
               <option value="published" <?=$row['status']==='published'?'selected':''?>>Gepubliceerd</option>
               <option value="sold" <?=$row['status']==='sold'?'selected':''?>>Verkocht</option>
@@ -169,11 +170,9 @@ admin_top('Kaveloverzicht');
             </select>
             <noscript><button class="secondary" type="submit">Opslaan</button></noscript>
           </form>
-        <?php else: ?>
-          <span class="dashboard-badge <?=e(['draft'=>'is-new','published'=>'is-published','sold'=>'is-sold','canceled'=>'is-canceled'][$row['status']] ?? 'is-new')?>"><?=e(['draft'=>'Nieuw','published'=>'Gepubliceerd','sold'=>'Verkocht','canceled'=>'Canceled'][$row['status']] ?? 'Onbekend')?></span>
         <?php endif; ?>
-      </td>
-      <td><?php if (lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row)): ?><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a><?php endif; ?></td>
+        <?php if (lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row)): ?><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a><?php endif; ?>
+      </div></td>
     </tr><?php endforeach; ?>
     <?php if(!$rows): ?><tr><td colspan="8">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
@@ -218,6 +217,14 @@ admin_top('Kaveloverzicht');
           throw new Error(data.error || 'Kavelstatus kon niet worden opgeslagen.');
         }
         select.dataset.savedValue = requested;
+        const badge = form.closest('tr')?.querySelector('.dashboard-lot-publication');
+        if (badge) {
+          const labels = {draft:'Nieuw',published:'Gepubliceerd',sold:'Verkocht',canceled:'Canceled'};
+          const styles = {draft:'is-new',published:'is-published',sold:'is-sold',canceled:'is-canceled'};
+          badge.textContent = labels[requested];
+          badge.classList.remove('is-new','is-published','is-sold','is-canceled');
+          badge.classList.add(styles[requested]);
+        }
         notice.textContent = 'Kavelstatus opgeslagen.';
         // Update the published counter without navigating or losing scroll position.
         const published = document.querySelector('.dashboard-stats .dashboard-stat:nth-child(2) strong');
