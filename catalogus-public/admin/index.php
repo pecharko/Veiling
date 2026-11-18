@@ -5,11 +5,20 @@ require_auth();
 require_once dirname(__DIR__, 2) . '/private/lot_permissions.php';
 $pdo = db();
 $s = settings();
-$total = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
-$published = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status='published'")->fetchColumn();
-$inAuction = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE sale_location='veiling'")->fetchColumn();
-$inMarket = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE sale_location='markt'")->fetchColumn();
-$withoutPhoto = (int)$pdo->query('SELECT COUNT(*) FROM lots l WHERE NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)')->fetchColumn();
+$mine = ($_GET['mine'] ?? '') === '1';
+// The scope switch applies to every dashboard statistic and the results table.
+$scopeCount = static function (string $condition) use ($pdo, $mine): int {
+  $sql = 'SELECT COUNT(*) FROM lots l WHERE '.$condition;
+  if ($mine) $sql .= ' AND l.created_by_admin_id=?';
+  $statement = $pdo->prepare($sql);
+  $statement->execute($mine ? [(int)$_SESSION['admin_id']] : []);
+  return (int)$statement->fetchColumn();
+};
+$total = $scopeCount('1=1');
+$published = $scopeCount("l.status='published'");
+$inAuction = $scopeCount("l.sale_location='veiling'");
+$inMarket = $scopeCount("l.sale_location='markt'");
+$withoutPhoto = $scopeCount('NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)');
 $q = mb_substr(trim((string)($_GET['q'] ?? '')),0,100);
 $category = mb_substr(trim((string)($_GET['category'] ?? '')),0,100);
 $categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
@@ -17,7 +26,6 @@ if (!in_array($category,$categories,true)) $category='';
 $status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'], true) ? (string)$_GET['status'] : '';
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $photoFilter = ($_GET['photos'] ?? '') === 'none' ? 'none' : '';
-$mine = ($_GET['mine'] ?? '') === '1';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
 $perPage = in_array((int)($_GET['per_page'] ?? 20),[20,50,100],true) ? (int)($_GET['per_page'] ?? 20) : 20;
 $where = []; $p = [];
@@ -34,23 +42,31 @@ $pages=max(1,(int)ceil($filtered/$perPage));$page=min($page,$pages);
 $st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
 $i=1;foreach($p as $val)$st->bindValue($i++,$val);
 $st->bindValue($i++,$perPage,PDO::PARAM_INT);$st->bindValue($i,($page-1)*$perPage,PDO::PARAM_INT);$st->execute();$rows=$st->fetchAll();
-function dashboard_stat_url(array $filters): string { return url('admin/index.php', $filters); }
+function dashboard_stat_url(array $filters, bool $mine): string { if ($mine) $filters['mine']='1'; return url('admin/index.php', $filters); }
 function dashboard_page_url(int $page): string { $p=$_GET;$p['pagina']=$page;return url('admin/index.php',$p); }
-$mineParams = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','per_page']));
-if (!$mine) $mineParams['mine']='1';
+$allParams = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','per_page']));
+$ownParams = $allParams;
+$ownParams['mine']='1';
 admin_top('Kaveloverzicht');
 ?>
 <div class="dashboard-modern">
-  <p class="dashboard-subtitle">Beheer, zoek en bewerk alle kavels in de veilingcatalogus.</p>
+  <div class="dashboard-scope" aria-label="Hoofdfilter voor het volledige kaveloverzicht">
+    <div class="dashboard-scope-heading"><strong>Filter het volledige overzicht</strong><p>Deze keuze bepaalt welke kavels meetellen in alle tegels, zoekfilters en de tabel hieronder.</p></div>
+    <div class="dashboard-scope-options" role="group" aria-label="Welke kavels tonen?">
+      <a class="dashboard-stat dashboard-scope-option <?=$mine?'':'is-selected'?>" href="<?=e(url('admin/index.php',$allParams))?>" <?=$mine?'':'aria-current="page"'?>><span class="dashboard-icon" aria-hidden="true">◇</span><span><strong>Alle kavels</strong><small>Van alle medewerkers</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'':'✓'?></span></a>
+      <a class="dashboard-stat dashboard-scope-option <?=$mine?'is-selected':''?>" href="<?=e(url('admin/index.php',$ownParams))?>" <?=$mine?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">◉</span><span><strong>Mijn kavels</strong><small>Alleen door mij aangemaakt</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'✓':''?></span></a>
+    </div>
+  </div>
+  <p class="dashboard-subtitle">Beheer, zoek en bewerk <?=$mine?'jouw':'alle'?> kavels in de veilingcatalogus.</p>
   <div class="dashboard-stats" aria-label="Catalogusstatistieken">
-    <a class="dashboard-stat" href="<?=e(dashboard_stat_url([]))?>" aria-label="Alle kavels tonen"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
-    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['status'=>'published']))?>" aria-label="Gepubliceerde kavels tonen"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=e((string)$published)?></strong> kavels zichtbaar</div></div></a>
-    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'veiling']))?>" aria-label="Kavels in Veiling tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS IN VEILING</small><div><strong><?=e((string)$inAuction)?></strong> kavels</div></div></a>
-    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'markt']))?>" aria-label="Kavels in Markt tonen"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>KAVELS IN MARKT</small><div><strong><?=e((string)$inMarket)?></strong> kavels</div></div></a>
-    <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['photos'=>'none']))?>" aria-label="Kavels zonder foto tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS ZONDER FOTO</small><div><strong><?=e((string)$withoutPhoto)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat" href="<?=e(dashboard_stat_url([], $mine))?>" aria-label="Alle kavels tonen"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['status'=>'published'], $mine))?>" aria-label="Gepubliceerde kavels tonen"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=e((string)$published)?></strong> kavels zichtbaar</div></div></a>
+    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'veiling'], $mine))?>" aria-label="Kavels in Veiling tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS IN VEILING</small><div><strong><?=e((string)$inAuction)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'markt'], $mine))?>" aria-label="Kavels in Markt tonen"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>KAVELS IN MARKT</small><div><strong><?=e((string)$inMarket)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['photos'=>'none'], $mine))?>" aria-label="Kavels zonder foto tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS ZONDER FOTO</small><div><strong><?=e((string)$withoutPhoto)?></strong> kavels</div></div></a>
   </div>
   <section class="dashboard-panel" aria-labelledby="dashboard-lots-title">
-    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title"><?=$mine?'Mijn kavels':'Alle kavels'?></h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><div class="dashboard-lot-actions"><a class="secondary dashboard-mine-toggle <?=$mine?'is-active':''?>" href="<?=e(url('admin/index.php',$mineParams))?>" <?=$mine?'aria-current="page"':''?>><?=$mine?'Alle kavels':'Mijn kavels'?></a><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div></div>
+    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title"><?=$mine?'Mijn kavels':'Alle kavels'?></h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><div class="dashboard-lot-actions"><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div></div>
     <form class="dashboard-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek kavel of titel</span><input type="search" name="q" placeholder="Zoek kavel of titel…" value="<?=e($q)?>"></label>
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
