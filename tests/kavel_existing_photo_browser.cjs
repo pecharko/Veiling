@@ -29,8 +29,13 @@ const { chromium } = require('playwright');
     await page.locator('input[name="lot_number"]').fill('999901');
     await page.locator('input[name="title"]').fill('Browser photo persistence fixture');
     await Promise.all([
-      page.waitForURL(/\/admin\/kavel\.php\?id=\d+/),
+      page.waitForURL('**/admin/index.php'),
       page.locator('.lot-editor-toolbar-actions button[form="lot-editor-form"]').click(),
+    ]);
+    // Successful lot creation returns to the overview; reopen the lot by its title link.
+    await Promise.all([
+      page.waitForURL(/\/admin\/kavel\.php\?id=\d+/),
+      page.locator('.dashboard-title a', { hasText: 'Browser photo persistence fixture' }).click(),
     ]);
     assert.equal(await page.locator('#lot-editor-form .lot-editor-side').count(), 0,
       'Existing lot has no redundant information side panel');
