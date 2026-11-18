@@ -727,6 +727,22 @@ try {
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
+  [$assistantOverviewStatus, $assistantOverviewPage] = request_page('/admin/index.php');
+  claim($assistantOverviewStatus===200, 'Assistant opens lot overview');
+  $rowForLot = static function (string $html, string $title): string {
+    foreach (explode('</tr>', $html) as $candidate) {
+      if (str_contains($candidate, '>'.$title.'</a>')) return $candidate;
+    }
+    throw new RuntimeException('Kavelrij niet gevonden voor: '.$title);
+  };
+  $ownDraftRow = $rowForLot($assistantOverviewPage, 'Own draft');
+  $otherDraftRow = $rowForLot($assistantOverviewPage, 'Other draft');
+  $publishedRow = $rowForLot($assistantOverviewPage, 'Own published');
+  claim(str_contains($ownDraftRow, '✎ Bewerken')
+      && !str_contains($otherDraftRow, 'dashboard-edit')
+      && !str_contains($publishedRow, 'dashboard-edit')
+      && !str_contains($assistantOverviewPage, '>Bekijken</a>'),
+    'Assistant sees Bewerk only on editable lots; view-only action is absent');
   [$sellerOverviewStatus, $sellerAssistantOverview] = request_page('/admin/verkopers.php');
   claim($sellerOverviewStatus===200 && str_contains($sellerAssistantOverview,'Verkopers beheren'),
     'Assistant may open seller management');
