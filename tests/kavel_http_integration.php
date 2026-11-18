@@ -838,6 +838,11 @@ try {
       && str_contains($myPrivatePage,'MET KAVELS')
       && str_contains($myPrivatePage,'ZONDER KAVELS'),
     'Global Mijn verkopers scope includes both sellers created by this administrator');
+  // The earlier editor-save fixture omitted seller_id and therefore cleared that link.
+  // Restore a linked test lot explicitly before asserting the positive with-lots filter.
+  db()->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerLinkId, $existingLotId]);
+  claim((int)by_number(20)['seller_id']===$sellerLinkId,
+    'With-lots fixture explicitly has an own seller linked to an existing lot');
   [$withLotsPrivateStatus, $withLotsPrivatePage] = request_page('/admin/verkopers.php?mine=1&tile=with_lots');
   claim($withLotsPrivateStatus===200
       && str_contains($withLotsPrivatePage,'Kavelverkoper Demo')
