@@ -1036,6 +1036,21 @@ try {
       && (string)by_number(401)['status']==='draft',
     'Auction-only market lot cannot be published by inline status selector');
   db()->exec('UPDATE lots SET auction_only=0 WHERE id='.$testLotId);
+  $auctionLotId=(int)db()->query("SELECT id FROM lots WHERE sale_location='veiling' LIMIT 1")->fetchColumn();
+  if ($auctionLotId>0) {
+    $auctionBefore=(string)db()->query('SELECT status FROM lots WHERE id='.$auctionLotId)->fetchColumn();
+    [$cancelStatus,$cancelBody]=request_page('/admin/index.php', [
+      'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$auctionLotId,'status'=>'canceled'
+    ],false,$statusHeaders);
+    claim($cancelStatus===422 && (json_decode($cancelBody,true)['ok']??true)===false
+        && (string)db()->query('SELECT status FROM lots WHERE id='.$auctionLotId)->fetchColumn()===$auctionBefore,
+      'Veiling lot cannot be canceled directly from overview');
+  }
+  [$missingStatus,$missingBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>'999999999','status'=>'sold'
+  ],false,$statusHeaders);
+  claim($missingStatus===404 && (json_decode($missingBody,true)['ok']??true)===false,
+    'Missing lot status mutation returns an explicit JSON not-found response');
   [$status, $adminForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200, 'Administrator regains editor');
   [$status, $conflict] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
