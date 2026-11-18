@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "05e31faa028d91bc82e9691981e354db658d64db6dda9e7a12c2f50fd87bc349",
+      "remote_sha256": "e021023541ab43cff6831c2820d1fbdcf98855312b98366fa7ecd0f24eb3153f"
+    },
+    {
+      "path": "catalogus-public/admin/index.php",
+      "source_sha256": "2e8f16fda58a73467aeec3f4b81423ebc743080fb7da1f774948fbf7117efb00",
+      "remote_sha256": "191dec46f6f7b460e610ec1d4408e3990d6954813b9b2b35aa77840dccb2ca3e"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "356e872435da204b76098a8e6d14a052d7780b1f33f274de51becc39f3fd4d24",
+      "remote_sha256": "92dd9f6de27a2608a4f50ec4aa5919884582d0b17c2e29f8e7554b9102d7298e"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper-bekijken.php",
+      "source_sha256": "0c13b1f42a0661d7fdab12fb25b8a00c257f656fa0b5175a85e5fd5a5bb589e8",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/verkopers.php",
+      "source_sha256": "36c25a7cafb22a6a547b978c5a664b75b76a73a477655f6262df1e936342ef4f",
+      "remote_sha256": "7a300ead68ef2cdb17c7d1eccd12c7f6a08d394e644e01a208a98171a408fd98"
+    }
+  ]
+}
