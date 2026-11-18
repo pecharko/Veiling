@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__, 2) . '/private/bootstrap.php';
+require_once dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/private/lot_sellers.php';
 require_auth();
 
