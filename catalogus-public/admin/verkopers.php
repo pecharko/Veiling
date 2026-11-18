@@ -4,6 +4,12 @@ require dirname(__DIR__,2).'/private/bootstrap.php';
 require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_once dirname(__DIR__,2).'/private/catalog_mutex.php';
 require_auth();
+// Read-only detail shares the already authorized seller/artist overview entry
+// point. Keep the dedicated editor and all mutation routes unchanged.
+if (($_GET['view'] ?? '') === '1') {
+  require __DIR__ . '/verkoper-bekijken.php';
+  exit;
+}
 $sellerScreen=($sellerScreen??'particulier')==='kunstenaar'?'kunstenaar':'particulier';
 $screenUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php';
 $editorUrl=$sellerScreen==='kunstenaar'?'admin/kunstenaar-bewerken.php':'admin/verkoper.php';
@@ -218,7 +224,7 @@ $filteredRows=array_values(array_filter($screenRows,static function($row) use ($
                     <span class="seller-portrait-placeholder" role="img" aria-label="Geen portret beschikbaar">👤</span>
                   <?php endif; ?>
                 </td>
-                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:'admin/verkoper-bekijken.php',$canEditSeller?['id'=>(int)$r['id']]:['id'=>(int)$r['id'],'type'=>'kunstenaar']))?>"><?=e((string)$r['artist_name'])?></a></td>
+                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:$screenUrl,$canEditSeller?['id'=>(int)$r['id']]:['view'=>1,'id'=>(int)$r['id'],'type'=>'kunstenaar']))?>"><?=e((string)$r['artist_name'])?></a></td>
                 <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
                 <?php
                   $readiness=(string)$r['publication_readiness'];
@@ -227,7 +233,7 @@ $filteredRows=array_values(array_filter($screenRows,static function($row) use ($
                 ?>
                 <td><span class="seller-readiness is-<?=e($readiness)?>" title="<?=e($readinessHelp[$readiness])?>"><?=e($readinessLabels[$readiness])?></span></td>
               <?php else: ?>
-                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:'admin/verkoper-bekijken.php',$canEditSeller?['id'=>(int)$r['id']]:['id'=>(int)$r['id'],'type'=>'particulier']))?>"><?=e((string)$r['name'])?></a></td>
+                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:$screenUrl,$canEditSeller?['id'=>(int)$r['id']]:['view'=>1,'id'=>(int)$r['id'],'type'=>'particulier']))?>"><?=e((string)$r['name'])?></a></td>
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
