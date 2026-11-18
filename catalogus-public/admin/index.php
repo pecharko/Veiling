@@ -17,6 +17,7 @@ if (!in_array($category,$categories,true)) $category='';
 $status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'], true) ? (string)$_GET['status'] : '';
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $photoFilter = ($_GET['photos'] ?? '') === 'none' ? 'none' : '';
+$mine = ($_GET['mine'] ?? '') === '1';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
 $perPage = in_array((int)($_GET['per_page'] ?? 20),[20,50,100],true) ? (int)($_GET['per_page'] ?? 20) : 20;
 $where = []; $p = [];
@@ -25,6 +26,7 @@ if ($category!=='') { $where[]='category=?'; $p[]=$category; }
 if ($status!=='') { $where[]='status=?'; $p[]=$status; }
 if ($saleLocation!=='') { $where[]='sale_location=?'; $p[]=$saleLocation; }
 if ($photoFilter==='none') { $where[]='NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)'; }
+if ($mine) { $where[]='l.created_by_admin_id=?'; $p[]=(int)$_SESSION['admin_id']; }
 $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
 $count=$pdo->prepare('SELECT COUNT(*) FROM lots l '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
@@ -34,6 +36,8 @@ $i=1;foreach($p as $val)$st->bindValue($i++,$val);
 $st->bindValue($i++,$perPage,PDO::PARAM_INT);$st->bindValue($i,($page-1)*$perPage,PDO::PARAM_INT);$st->execute();$rows=$st->fetchAll();
 function dashboard_stat_url(array $filters): string { return url('admin/index.php', $filters); }
 function dashboard_page_url(int $page): string { $p=$_GET;$p['pagina']=$page;return url('admin/index.php',$p); }
+$mineParams = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','per_page']));
+if (!$mine) $mineParams['mine']='1';
 admin_top('Kaveloverzicht');
 ?>
 <div class="dashboard-modern">
@@ -46,7 +50,7 @@ admin_top('Kaveloverzicht');
     <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['photos'=>'none']))?>" aria-label="Kavels zonder foto tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS ZONDER FOTO</small><div><strong><?=e((string)$withoutPhoto)?></strong> kavels</div></div></a>
   </div>
   <section class="dashboard-panel" aria-labelledby="dashboard-lots-title">
-    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title">Alle kavels</h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div>
+    <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title"><?=$mine?'Mijn kavels':'Alle kavels'?></h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><div class="dashboard-lot-actions"><a class="secondary dashboard-mine-toggle <?=$mine?'is-active':''?>" href="<?=e(url('admin/index.php',$mineParams))?>" <?=$mine?'aria-current="page"':''?>><?=$mine?'Alle kavels':'Mijn kavels'?></a><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div></div>
     <form class="dashboard-filters" method="get" role="search">
       <label class="dashboard-search"><span class="sr-only">Zoek kavel of titel</span><input type="search" name="q" placeholder="Zoek kavel of titel…" value="<?=e($q)?>"></label>
       <label><span class="sr-only">Categorie</span><select name="category"><option value="">Alle categorieën</option><?php foreach($categories as $cat): ?><option value="<?=e($cat)?>" <?=$category===$cat?'selected':''?>><?=e($cat)?></option><?php endforeach; ?></select></label>
@@ -54,6 +58,7 @@ admin_top('Kaveloverzicht');
       <label><span class="sr-only">Verkoopplaats</span><select name="sale_location"><option value="">Alle verkoopplaatsen</option><option value="markt" <?=$saleLocation==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$saleLocation==='veiling'?'selected':''?>>Veiling</option></select></label>
       <label><span class="sr-only">Aantal kavels per pagina</span><select name="per_page" aria-label="Kavels per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
+      <?php if ($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
     <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Status</th><th scope="col">Acties</th></tr></thead><tbody>
