@@ -41,6 +41,8 @@ if (is_post()) {
       $returnSearch=mb_substr(trim((string)($_GET['q']??'')),0,100);
       $returnReadiness=in_array(($_GET['readiness']??''),['no_portrait','missing_text','texts_ready','complete'],true)?(string)$_GET['readiness']:'';
       $returnParams=['status'=>$returnStatus,'readiness'=>$returnReadiness,'q'=>$returnSearch,'per_page'=>in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)$_GET['per_page']:20];
+       if (($_GET['mine']??'')==='1') $returnParams['mine']='1';
+       if (in_array(($_GET['tile']??''),['without_lots','with_lots','incomplete'],true)) $returnParams['tile']=(string)$_GET['tile'];
       foreach (['kunstenaar','particulier'] as $returnGroup) {
         $key='pagina_'.$returnGroup;
         $returnParams[$key]=max(1,(int)($_GET[$key]??1));
@@ -86,8 +88,11 @@ $filterStatus=in_array(($_GET['status']??''),['new','published','unpublished'],t
 $filterReadiness=in_array(($_GET['readiness']??''),['no_portrait','missing_text','texts_ready','complete'],true)?(string)$_GET['readiness']:'';
 $search=mb_substr(trim((string)($_GET['q']??'')),0,100);
 $perPage=in_array((int)($_GET['per_page']??20),[20,50,100],true)?(int)($_GET['per_page']??20):20;
+$mine=($_GET['mine']??'')==='1';
+$tileFilter=in_array(($_GET['tile']??''),['without_lots','with_lots','incomplete'],true)?(string)$_GET['tile']:'';
+$ownSellerId=(int)$_SESSION['admin_id'];
 function seller_page_url(string $groupType,int $page): string {
-  $params=array_intersect_key($_GET,array_flip(['q','status','readiness','per_page','pagina_kunstenaar','pagina_particulier']));
+  $params=array_intersect_key($_GET,array_flip(['q','status','readiness','per_page','pagina_kunstenaar','pagina_particulier','mine','tile']));
   $params['pagina_'.$groupType]=$page;
   return url($GLOBALS['sellerScreen']==='kunstenaar'?'admin/kunstenaars.php':'admin/verkopers.php',$params).'#seller-list-'.$groupType.'-heading';
 }
@@ -107,16 +112,58 @@ foreach ($rows as &$row) {
   );
 }
 unset($row);
-$filteredRows=array_values(array_filter($rows,static function($row) use ($sellerScreen,$filterStatus,$filterReadiness,$search):bool {
+$screenRows=array_values(array_filter($rows,static fn($row):bool => $row['seller_type']===$sellerScreen && (!$mine || (int)$row['created_by_admin_id']===$ownSellerId)));
+$stats=[
+  'total'=>count($screenRows),
+  'without_lots'=>count(array_filter($screenRows,static fn($row)=>(int)$row['lot_count']===0)),
+  'with_lots'=>count(array_filter($screenRows,static fn($row)=>(int)$row['lot_count']>0)),
+  'published'=>count(array_filter($screenRows,static fn($row)=>(int)$row['artist_published']===1)),
+  'new'=>count(array_filter($screenRows,static fn($row)=>(int)$row['artist_published']===2)),
+  'unpublished'=>count(array_filter($screenRows,static fn($row)=>(int)$row['artist_published']===0)),
+  'no_portrait'=>count(array_filter($screenRows,static fn($row)=>($row['publication_readiness']??'')==='no_portrait')),
+  'incomplete'=>count(array_filter($screenRows,static fn($row)=>($row['publication_readiness']??'')!=='complete')),
+];
+function seller_dashboard_url(array $params=[]): string {
+  $base=[];
+  if (($GLOBALS['mine']??false)===true) $base['mine']='1';
+  return url($GLOBALS['screenUrl'],array_merge($base,$params));
+}
+$scopeParams=array_intersect_key($_GET,array_flip(['q','status','readiness','per_page','tile']));
+$myParams=$scopeParams;
+$myParams['mine']='1';
+$filteredRows=array_values(array_filter($screenRows,static function($row) use ($sellerScreen,$filterStatus,$filterReadiness,$tileFilter,$search):bool {
   if ($row['seller_type']!==$sellerScreen) return false;
   if ($filterStatus!=='' && $row['seller_type']==='kunstenaar'
       && (int)$row['artist_published']!==['unpublished'=>0,'published'=>1,'new'=>2][$filterStatus]) return false;
   if ($sellerScreen==='kunstenaar' && $filterReadiness!=='' && ($row['publication_readiness']??'')!==$filterReadiness) return false;
+  if ($tileFilter==='without_lots' && (int)$row['lot_count']!==0) return false;
+  if ($tileFilter==='with_lots' && (int)$row['lot_count']===0) return false;
+  if ($tileFilter==='incomplete' && ($row['publication_readiness']??'')==='complete') return false;
   return $search==='' || mb_stripos((string)$row['name'],$search)!==false
     || mb_stripos((string)$row['artist_name'],$search)!==false;
 }));
 ?>
 <div class="dashboard-modern seller-manager">
+  <div class="dashboard-scope" aria-label="Hoofdfilter voor het volledige <?=e($sellerScreen==='kunstenaar'?'kunstenaarsoverzicht':'verkopersoverzicht')?>">
+    <div class="dashboard-scope-heading"><strong>Filter het volledige overzicht</strong></div>
+    <div class="dashboard-scope-options" role="group" aria-label="Welke <?=e($sellerScreen==='kunstenaar'?'kunstenaars':'verkopers')?> tonen?">
+      <a class="dashboard-stat dashboard-scope-option <?=$mine?'':'is-selected'?>" href="<?=e(url($screenUrl,$scopeParams))?>" <?=$mine?'':'aria-current="page"'?>><span class="dashboard-icon" aria-hidden="true">◇</span><span><strong>Alle <?=$sellerScreen==='kunstenaar'?'kunstenaars':'verkopers'?></strong><small>Van alle medewerkers</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'':'✓'?></span></a>
+      <a class="dashboard-stat dashboard-scope-option <?=$mine?'is-selected':''?>" href="<?=e(url($screenUrl,$myParams))?>" <?=$mine?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">◉</span><span><strong>Mijn <?=$sellerScreen==='kunstenaar'?'kunstenaars':'verkopers'?></strong><small>Alleen door mij aangemaakt</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'✓':''?></span></a>
+    </div>
+  </div>
+  <div class="dashboard-stats seller-dashboard-stats" aria-label="Statistieken <?=$sellerScreen==='kunstenaar'?'kunstenaars':'verkopers'?>">
+    <a class="dashboard-stat" href="<?=e(seller_dashboard_url())?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL</small><div><strong><?=$stats['total']?></strong> <?=$sellerScreen==='kunstenaar'?'kunstenaars':'verkopers'?></div></div></a>
+    <?php if ($sellerScreen==='kunstenaar'): ?>
+      <a class="dashboard-stat" href="<?=e(seller_dashboard_url(['status'=>'new']))?>"><span class="dashboard-icon" aria-hidden="true">✦</span><div><small>NIEUW</small><div><strong><?=$stats['new']?></strong> kunstenaars</div></div></a>
+      <a class="dashboard-stat" href="<?=e(seller_dashboard_url(['status'=>'published']))?>"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=$stats['published']?></strong> kunstenaars</div></div></a>
+      <a class="dashboard-stat" href="<?=e(seller_dashboard_url(['status'=>'unpublished']))?>"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>NIET GEPUBLICEERD</small><div><strong><?=$stats['unpublished']?></strong> kunstenaars</div></div></a>
+      <a class="dashboard-stat" href="<?=e(seller_dashboard_url(['readiness'=>'no_portrait']))?>"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>ZONDER PORTRET</small><div><strong><?=$stats['no_portrait']?></strong> kunstenaars</div></div></a>
+      <a class="dashboard-stat dashboard-stat-extra" href="<?=e(seller_dashboard_url(['tile'=>'incomplete']))?>"><span class="dashboard-icon" aria-hidden="true">!</span><div><small>PROFIEL ONVOLLEDIG</small><div><strong><?=$stats['incomplete']?></strong> kunstenaars</div></div></a>
+    <?php else: ?>
+      <a class="dashboard-stat" href="<?=e(seller_dashboard_url(['tile'=>'with_lots']))?>"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>MET KAVELS</small><div><strong><?=$stats['with_lots']?></strong> verkopers</div></div></a>
+      <a class="dashboard-stat dashboard-stat-extra" href="<?=e(seller_dashboard_url(['tile'=>'without_lots']))?>"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>ZONDER KAVELS</small><div><strong><?=$stats['without_lots']?></strong> verkopers</div></div></a>
+    <?php endif; ?>
+  </div>
   <p class="dashboard-subtitle"><?=$sellerScreen==='kunstenaar'?'Beheer kunstenaars, portretten en publicatiestatus. Contact- en bankgegevens blijven privé.':'Beheer particuliere verkopers en hun contact- en bankgegevens op één afgeschermde plaats.'?></p>
   <?php if ($error): ?><div class="alert error" role="alert"><?=e($error)?></div><?php endif; ?>
   <section class="dashboard-panel" aria-labelledby="seller-filter-heading">
@@ -128,6 +175,8 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
       <label class="dashboard-search"><span class="sr-only">Zoek verkoper of kunstenaarsnaam</span><input type="search" name="q" placeholder="Zoek naam of kunstenaarsnaam…" value="<?=e($search)?>"></label>
       <?php if($sellerScreen==='kunstenaar'): ?><label><span class="sr-only">Publicatiestatus kunstenaars</span><select name="status" aria-label="Publicatiestatus kunstenaars"><option value="">Alle kunstenaarsstatussen</option><option value="new" <?=$filterStatus==='new'?'selected':''?>>Nieuw</option><option value="published" <?=$filterStatus==='published'?'selected':''?>>Gepubliceerd</option><option value="unpublished" <?=$filterStatus==='unpublished'?'selected':''?>>Niet gepubliceerd</option></select></label>
       <label><span class="sr-only">Klaar om te publiceren</span><select name="readiness" aria-label="Klaar om te publiceren"><option value="">Alle gereedheidsniveaus</option><option value="no_portrait" <?=$filterReadiness==='no_portrait'?'selected':''?>>Rood – geen portret</option><option value="missing_text" <?=$filterReadiness==='missing_text'?'selected':''?>>Oranje – tekst ontbreekt</option><option value="texts_ready" <?=$filterReadiness==='texts_ready'?'selected':''?>>Lichtgroen – teksten compleet</option><option value="complete" <?=$filterReadiness==='complete'?'selected':''?>>Donkergroen – profiel compleet</option></select></label><?php endif; ?>
+      <?php if ($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
+      <?php if ($tileFilter!==''): ?><input type="hidden" name="tile" value="<?=e($tileFilter)?>"><?php endif; ?>
       <label><span class="sr-only">Aantal verkopers per pagina</span><select name="per_page" aria-label="Verkopers per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <button class="primary" type="submit">Zoeken</button>
     </form>
@@ -183,7 +232,7 @@ $filteredRows=array_values(array_filter($rows,static function($row) use ($seller
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
                 <?php if($r['seller_type']==='kunstenaar' && seller_can_publish_artist(effective_admin_role())): ?>
-                  <form method="post" class="seller-status-form" action="<?=e(url($screenUrl,array_merge(['status'=>$filterStatus,'readiness'=>$filterReadiness,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier'])))))?>">
+                  <form method="post" class="seller-status-form" action="<?=e(url($screenUrl,array_merge(['status'=>$filterStatus,'readiness'=>$filterReadiness,'q'=>$search,'per_page'=>$perPage],array_intersect_key($_GET,array_flip(['pagina_kunstenaar','pagina_particulier','mine','tile'])))))?>">
                     <?=csrf_field()?>
                     <input type="hidden" name="action" value="artist-publication">
                     <input type="hidden" name="seller_id" value="<?=(int)$r['id']?>">
