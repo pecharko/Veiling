@@ -237,9 +237,10 @@ if(is_post()){
           flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
             : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
             $failed?'warning':'success');
-          // Keep the new-lot editor behavior; return edited lots to the overview.
-          if ($lot) redirect('admin/index.php');
-          redirect('admin/kavel.php',['id'=>$id]);
+          // After a clean save, return both new and edited lots to the overview.
+          // Partial photo failures leave the saved lot open so the warning is visible.
+          if ($failed) redirect('admin/kavel.php', ['id' => $id]);
+          redirect('admin/index.php');
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
           if($ex->getCode()==='23000'){
