@@ -56,7 +56,7 @@ admin_top('Kaveloverzicht');
 ?>
 <div class="dashboard-modern">
   <div class="dashboard-scope" aria-label="Hoofdfilter voor het volledige kaveloverzicht">
-    <div class="dashboard-scope-heading"><strong>Filter het volledige overzicht</strong><p>Deze keuze bepaalt welke kavels meetellen in alle tegels, zoekfilters en de tabel hieronder.</p></div>
+    <div class="dashboard-scope-heading"><strong>Filter het volledige overzicht</strong></div>
     <div class="dashboard-scope-options" role="group" aria-label="Welke kavels tonen?">
       <a class="dashboard-stat dashboard-scope-option <?=$mine?'':'is-selected'?>" href="<?=e(url('admin/index.php',$allParams))?>" <?=$mine?'':'aria-current="page"'?>><span class="dashboard-icon" aria-hidden="true">◇</span><span><strong>Alle kavels</strong><small>Van alle medewerkers</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'':'✓'?></span></a>
       <a class="dashboard-stat dashboard-scope-option <?=$mine?'is-selected':''?>" href="<?=e(url('admin/index.php',$ownParams))?>" <?=$mine?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">◉</span><span><strong>Mijn kavels</strong><small>Alleen door mij aangemaakt</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'✓':''?></span></a>
