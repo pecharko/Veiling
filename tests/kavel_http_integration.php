@@ -745,6 +745,25 @@ try {
     && $assistantSeller['created_at']!==null && $assistantSeller['updated_at']!==null
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
+  [$myPrivateStatus, $myPrivatePage] = request_page('/admin/verkopers.php?mine=1');
+  claim($myPrivateStatus===200
+      && str_contains($myPrivatePage,'Mijn verkopers')
+      && str_contains($myPrivatePage,'Fictieve assistentverkoper')
+      && !str_contains($myPrivatePage,'Kavelverkoper Demo')
+      && str_contains($myPrivatePage,'Filter het volledige overzicht')
+      && strpos($myPrivatePage,'class="dashboard-scope"') < strpos($myPrivatePage,'seller-dashboard-stats')
+      && str_contains($myPrivatePage,'MET KAVELS')
+      && str_contains($myPrivatePage,'ZONDER KAVELS'),
+    'Global Mijn verkopers scope and relevant seller tiles filter by creator');
+  [$emptyPrivateStatus, $emptyPrivatePage] = request_page('/admin/verkopers.php?mine=1&tile=with_lots');
+  claim($emptyPrivateStatus===200
+      && str_contains($emptyPrivatePage,'0 resultaten')
+      && !str_contains($emptyPrivatePage,'Fictieve assistentverkoper'),
+    'With-lots tile respects global creator filter');
+  [$allPrivateStatus, $allPrivatePage] = request_page('/admin/verkopers.php');
+  claim($allPrivateStatus===200 && str_contains($allPrivatePage,'Kavelverkoper Demo')
+      && str_contains($allPrivatePage,'Fictieve assistentverkoper'),
+    'Alle verkopers restores complete seller scope');
   // Artist publication is role-protected, and publication locks even an assistant's own artist.
   [$assistantArtistStatus] = request_page('/admin/kunstenaar-bewerken.php', [
     'csrf'=>token($sellerAssistantForm),'action'=>'save','seller_type'=>'kunstenaar',
@@ -757,6 +776,18 @@ try {
   claim($assistantArtistStatus===303 && $ownArtistId>0
     && (int)db()->query('SELECT artist_published FROM lot_sellers WHERE id='.$ownArtistId)->fetchColumn()===2,
     'Assistant creates artist with new status by default');
+  [$myArtistStatus, $myArtistPage] = request_page('/admin/kunstenaars.php?mine=1');
+  claim($myArtistStatus===200 && str_contains($myArtistPage,'Mijn kunstenaars')
+      && str_contains($myArtistPage,'Eigen Atelier')
+      && str_contains($myArtistPage,'ZONDER PORTRET')
+      && str_contains($myArtistPage,'PROFIEL ONVOLLEDIG')
+      && str_contains($myArtistPage,'GEPUBLICEERD'),
+    'Global Mijn kunstenaars selector includes status and readiness statistic tiles');
+  [$incompleteArtistStatus, $incompleteArtistPage] = request_page('/admin/kunstenaars.php?mine=1&tile=incomplete');
+  claim($incompleteArtistStatus===200 && str_contains($incompleteArtistPage,'Eigen Atelier')
+      && str_contains($incompleteArtistPage,'name="mine" value="1"')
+      && str_contains($incompleteArtistPage,'name="tile" value="incomplete"'),
+    'Incomplete-profile tile preserves artist ownership filter in search form');
   [$ownArtistStatus,$ownArtistEditor]=request_page('/admin/kunstenaar-bewerken.php?id='.$ownArtistId);
   claim($ownArtistStatus===200, 'Assistant can edit own unpublished artist');
   [$blockedPublish,$blockedPublishPage]=request_page('/admin/kunstenaars.php', [
