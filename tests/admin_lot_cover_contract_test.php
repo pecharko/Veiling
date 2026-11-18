@@ -7,7 +7,7 @@ foreach ([
   "url(\$row['cover'])",
   'loading="lazy"',
   'dashboard-cover-empty',
-  'colspan="8"'
+  'colspan="9"'
 ] as $expected) {
   if (!str_contains($source, $expected)) {
     throw new RuntimeException('Missing admin cover photo contract: ' . $expected);

@@ -118,9 +118,9 @@ jobs:
           CI_DB_PASSWORD: ci-password-only
         run: php tests/admin_invitation_concurrency_test.php
 
-      # Both browser suites use chromium.launch() without a headed channel.
-      # The pinned headless shell is sufficient; cache only browser binaries,
-      # not system libraries, so --with-deps still verifies OS dependencies.
+      # Browser suites launch the pinned headless Chromium shell. Cache the
+      # browser binaries; validate Linux libraries by actually launching it.
+      # Only install OS packages if the smoke test cannot launch Chromium.
       - name: Cache pinned Playwright headless browser
         if: needs.impact.outputs.run == 'true'
         uses: actions/cache@v4
@@ -128,13 +128,34 @@ jobs:
           path: ~/.cache/ms-playwright
           key: ${{ runner.os }}-${{ runner.arch }}-playwright-headless-shell-1.57.0-v1
 
-      - name: Install pinned headless browser test dependency
+      - name: Install pinned browser and verify Linux dependencies
         if: needs.impact.outputs.run == 'true'
         shell: bash
         run: |
           set -euo pipefail
           npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/preview-browser" playwright@1.57.0
-          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps --only-shell chromium
+          playwright="$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright"
+          "$playwright" install --only-shell chromium
+          # A real launch checks Playwright's runtime library requirements.
+          # Never skip browser tests; if the runner lacks libraries, install
+          # the pinned browser's OS dependencies and require a second launch.
+          if ! NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node -e '
+            const { chromium } = require("playwright");
+            chromium.launch({headless:true})
+              .then(async browser => {await browser.close();})
+              .catch(error => {console.error(error.message); process.exitCode=1;});
+          '; then
+            echo "Runner needs Chromium system packages; installing verified dependencies"
+            "$playwright" install --with-deps --only-shell chromium
+            NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node -e '
+              const { chromium } = require("playwright");
+              chromium.launch({headless:true})
+                .then(async browser => {await browser.close();})
+                .catch(error => {console.error(error.message); process.exitCode=1;});
+            '
+          else
+            echo "Existing runner dependencies are sufficient; no apt install needed"
+          fi
 
       # Historical release attestations are checked against the immutable base,
       # not against new source files in the PR. Never substitute PR source
