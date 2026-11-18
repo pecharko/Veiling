@@ -794,8 +794,12 @@ try {
       && !str_contains($publishedRow, 'dashboard-edit')
       && !str_contains($assistantOverviewPage, '>Bekijken</a>'),
     'Assistant sees Bewerk only on editable lots; view-only action is absent');
-  claim(str_contains($assistantOverviewPage, 'dashboard-badge')
-      && !str_contains($assistantOverviewPage, 'dashboard-lot-status-form'),
+  claim(str_contains($ownDraftRow, 'dashboard-lot-publication')
+      && str_contains($otherDraftRow, 'dashboard-lot-publication')
+      && str_contains($publishedRow, 'dashboard-lot-publication')
+      && !str_contains($ownDraftRow, '<form class="dashboard-lot-status-form"')
+      && !str_contains($otherDraftRow, '<form class="dashboard-lot-status-form"')
+      && !str_contains($publishedRow, '<form class="dashboard-lot-status-form"'),
     'Assistant sees read-only lot status badges, never inline status selects');
   [$assistantStatusChange, $assistantStatusBody] = request_page('/admin/index.php', [
     'csrf'=>token($assistantOverviewPage),'action'=>'lot-status',
