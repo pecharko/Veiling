@@ -473,8 +473,22 @@ try {
       && str_contains($minePage, 'Geldig fotokavel')
       && !str_contains($minePage, 'Originele titel')
       && str_contains($minePage, 'name="mine" value="1"')
-      && str_contains($minePage, 'Alle kavels</a>'),
-    'Mijn kavels filters by authenticated creator and offers return to all lots');
+      && str_contains($minePage, 'Filter het volledige overzicht')
+      && strpos($minePage, 'class="dashboard-scope"') < strpos($minePage, 'class="dashboard-stats"')
+      && str_contains($minePage, 'dashboard-scope-option is-selected')
+      && str_contains($minePage, '>Alle kavels</strong>'),
+    'Global Mijn kavels filter is above all dashboard tiles and filters table by creator');
+  claim(str_contains($minePage, '<strong>1</strong> kavels')
+      && str_contains($minePage, '<strong>0</strong> kavels'),
+    'All dashboard statistic counts use the authenticated creator scope');
+  claim(str_contains($minePage, '/admin/index.php?photos=none&amp;mine=1')
+      && str_contains($minePage, '/admin/index.php?status=published&amp;mine=1'),
+    'Dashboard tile links preserve global creator filter');
+  [$mineNoPhotoStatus, $mineNoPhotoPage] = request_page('/admin/index.php?mine=1&photos=none');
+  claim($mineNoPhotoStatus===200
+      && str_contains($mineNoPhotoPage, '0 resultaten.')
+      && !str_contains($mineNoPhotoPage, 'Geldig fotokavel'),
+    'No-photo tile shows only own unphotographed lots when global filter is on');
   [$mineSearchStatus, $mineSearchPage] = request_page('/admin/index.php?mine=1&q=Geldig');
   claim($mineSearchStatus===200 && str_contains($mineSearchPage, 'Geldig fotokavel')
       && str_contains($mineSearchPage, 'name="mine" value="1"'),
