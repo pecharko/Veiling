@@ -150,6 +150,10 @@ try {
     && !in_array($sellerId,array_map(static fn(array $row):int=>(int)$row['id'],$privateSearchData['items']??[]),true),
     'Seller picker type filter excludes artists from private seller results');
 
+  [$artistNameStatus, $artistNamePage] = request_page('/admin/kunstenaars.php');
+  claim($artistNameStatus===200
+      && str_contains($artistNamePage, '<a href="/admin/kunstenaar-bewerken.php?id='.$sellerId.'">Demo Art</a>'),
+    'Editable artist name links to existing artist editor');
   $sellerRecord=db()->query("SELECT * FROM lot_sellers WHERE id=$sellerId")->fetch();
   claim($sellerRecord['bank_account_iban']==='BE68539007547034'
     && $sellerRecord['artist_url']==='https://www.example.org',
@@ -243,6 +247,10 @@ try {
   ]);
   $sellerLinkId=(int)db()->query("SELECT id FROM lot_sellers WHERE name='Kavelverkoper Demo'")->fetchColumn();
   claim($sellerStatus===303 && $sellerLinkId>0, 'Private seller available for lot association');
+  [$privateNameStatus, $privateNamePage] = request_page('/admin/verkopers.php');
+  claim($privateNameStatus===200
+      && str_contains($privateNamePage, '<a href="/admin/verkoper.php?id='.$sellerLinkId.'">Kavelverkoper Demo</a>'),
+    'Editable private seller name links to existing seller editor');
   [$status, $lotsNav] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsNav,'>Verkopers</a>'),
     'Administrator navigation exposes seller management');
