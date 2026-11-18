@@ -870,6 +870,33 @@ try {
   // Assistant cannot inspect, edit, remove or change gallery of an unrelated seller.
   db()->exec("INSERT INTO lot_sellers(seller_type,name,email,street,house_number,postal_code,municipality,created_by_admin_id) VALUES ('particulier','Andere maker','ander@example.invalid','Teststraat','8','9160','Lokeren',99999)");
   $foreignSellerId=(int)db()->lastInsertId();
+  [$readOnlyPrivateListStatus, $readOnlyPrivateList] = request_page('/admin/verkopers.php');
+  claim($readOnlyPrivateListStatus===200
+      && str_contains($readOnlyPrivateList,'/admin/verkoper-bekijken.php?id='.$foreignSellerId.'&amp;type=particulier')
+      && !str_contains($readOnlyPrivateList,'Alleen bekijken'),
+    'Assistant sees a clickable seller name without an Alleen bekijken action');
+  [$readOnlySellerStatus, $readOnlySellerPage] = request_page('/admin/verkoper-bekijken.php?id='.$foreignSellerId.'&type=particulier');
+  claim($readOnlySellerStatus===200 && str_contains($readOnlySellerPage,'Andere maker')
+      && !str_contains($readOnlySellerPage,'ander@example.invalid')
+      && !str_contains($readOnlySellerPage,'seller-manager-form')
+      && !str_contains($readOnlySellerPage,'seller-save-trigger'),
+    'Read-only seller detail hides contact data and has no editing form');
+  [$readOnlyPostStatus] = request_page('/admin/verkoper-bekijken.php?id='.$foreignSellerId.'&type=particulier', [
+    'action'=>'save','name'=>'FORGED'
+  ]);
+  claim($readOnlyPostStatus===405
+      && db()->query('SELECT name FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==='Andere maker',
+    'Read-only seller detail cannot be used to save');
+  [$readOnlyArtistListStatus, $readOnlyArtistList] = request_page('/admin/kunstenaars.php');
+  claim($readOnlyArtistListStatus===200
+      && str_contains($readOnlyArtistList,'/admin/verkoper-bekijken.php?id='.$ownArtistId.'&amp;type=kunstenaar')
+      && !str_contains($readOnlyArtistList,'Alleen bekijken'),
+    'Assistant can follow published artist name to read-only profile');
+  [$readOnlyArtistStatus, $readOnlyArtistPage] = request_page('/admin/verkoper-bekijken.php?id='.$ownArtistId.'&type=kunstenaar');
+  claim($readOnlyArtistStatus===200 && str_contains($readOnlyArtistPage,'Eigen Atelier')
+      && !str_contains($readOnlyArtistPage,'eigen-kunstenaar@example.invalid')
+      && !str_contains($readOnlyArtistPage,'seller-manager-form'),
+    'Published artist read-only profile accessible without exposing contact or editing');
   [$forbiddenView] = request_page('/admin/verkoper.php?id='.$foreignSellerId);
   claim($forbiddenView===403, 'Assistant cannot open unrelated seller editor');
   [$forbiddenSave] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
