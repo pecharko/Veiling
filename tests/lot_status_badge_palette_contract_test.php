@@ -45,7 +45,8 @@ foreach ($palette as $state => [$background, $ink]) {
 }
 foreach ([
     '.dashboard-badge.is-new{background:#e7f0ff;color:#1952a0}',
-    '.dashboard-badge.is-published,.dashboard-badge.is-sold{background:#e4f6e9;color:#195b32}',
+    '.dashboard-badge.is-published{background:#e4f6e9;color:#195b32}',
+    '.dashboard-badge.is-sold{background:#17683a;color:#fff}',
     '.dashboard-badge.is-canceled{background:#fde9e8;color:#a12424}',
 ] as $rule) {
     if (!str_contains($css, $rule)) {
