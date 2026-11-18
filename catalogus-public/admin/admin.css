@@ -427,6 +427,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-readiness.is-complete{background:#17683a;color:#fff}
 .seller-status-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .seller-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}
+.dashboard-lot-status-form{display:flex;align-items:center;gap:6px}.dashboard-lot-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}.dashboard-lot-status-form select:disabled{opacity:.65;cursor:wait}
 
 
 /* Lot editor: scalable seller selector and keyboard-friendly search dialog. */
