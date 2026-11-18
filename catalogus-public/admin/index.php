@@ -21,7 +21,12 @@ $inMarket = $scopeCount("l.sale_location='markt'");
 $withoutPhoto = $scopeCount('NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)');
 $q = mb_substr(trim((string)($_GET['q'] ?? '')),0,100);
 $category = mb_substr(trim((string)($_GET['category'] ?? '')),0,100);
-$categories = $pdo->query("SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> '' ORDER BY category")->fetchAll(PDO::FETCH_COLUMN);
+$categorySql = "SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> ''";
+if ($mine) $categorySql .= ' AND created_by_admin_id=?';
+$categorySql .= ' ORDER BY category';
+$categoryStatement = $pdo->prepare($categorySql);
+$categoryStatement->execute($mine ? [(int)$_SESSION['admin_id']] : []);
+$categories = $categoryStatement->fetchAll(PDO::FETCH_COLUMN);
 if (!in_array($category,$categories,true)) $category='';
 $status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'], true) ? (string)$_GET['status'] : '';
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
@@ -59,7 +64,7 @@ admin_top('Kaveloverzicht');
   </div>
   <p class="dashboard-subtitle">Beheer, zoek en bewerk <?=$mine?'jouw':'alle'?> kavels in de veilingcatalogus.</p>
   <div class="dashboard-stats" aria-label="Catalogusstatistieken">
-    <a class="dashboard-stat" href="<?=e(dashboard_stat_url([], $mine))?>" aria-label="Alle kavels tonen"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat" href="<?=e(dashboard_stat_url([], $mine))?>" aria-label="<?=$mine?'Al mijn kavels tonen':'Alle kavels tonen'?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['status'=>'published'], $mine))?>" aria-label="Gepubliceerde kavels tonen"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=e((string)$published)?></strong> kavels zichtbaar</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'veiling'], $mine))?>" aria-label="Kavels in Veiling tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS IN VEILING</small><div><strong><?=e((string)$inAuction)?></strong> kavels</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'markt'], $mine))?>" aria-label="Kavels in Markt tonen"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>KAVELS IN MARKT</small><div><strong><?=e((string)$inMarket)?></strong> kavels</div></div></a>
