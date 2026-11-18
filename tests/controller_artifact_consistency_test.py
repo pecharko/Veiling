@@ -63,9 +63,15 @@ class ConsistencyTest(unittest.TestCase):
         self.assertEqual(self.check(inventory=inventory)["reason"],
                          "expired_or_unbound_artifact")
 
+    def test_rollback_id_unavailable_before_github_artifact_upload(self):
+        result = self.check({**DOC, "rollback_artifact": None})
+        self.assertEqual(result["status"], "INCOMPLETE")
+        self.assertEqual(result["reason"], "rollback_artifact_id_not_attested")
+
     def test_wrong_rollback_artifact_id(self):
-        self.assertEqual(self.check({**DOC, "rollback_artifact": 999})["status"],
-                         "FAILED")
+        result = self.check({**DOC, "rollback_artifact": 999})
+        self.assertEqual(result["status"], "FAILED")
+        self.assertEqual(result["reason"], "rollback_id_mismatch")
 
     def test_failed_deployment_not_verified(self):
         self.assertEqual(self.check({**DOC, "status": "FAILED"})["reason"],
