@@ -425,6 +425,11 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .seller-readiness.is-missing_text{background:#fff0d6;color:#8a4d00}
 .seller-readiness.is-texts_ready{background:#e3f6dc;color:#316525}
 .seller-readiness.is-complete{background:#17683a;color:#fff}
+/* Kavelgereedheid gebruikt dezelfde kleurtaal als kunstenaarsgereedheid. */
+.lot-readiness.is-empty{background:#fde7e7;color:#9b1c1c}
+.lot-readiness.is-partial{background:#fff0d6;color:#8a4d00}
+.lot-readiness.is-basic{background:#e3f6dc;color:#316525}
+.lot-readiness.is-complete{background:#17683a;color:#fff}
 .seller-status-form{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .seller-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}
 .dashboard-lot-status-form{display:flex;align-items:center;gap:6px}.dashboard-lot-status-form select{max-width:175px;min-height:36px;border:1px solid #d7dce5;border-radius:7px;background:#fff;padding:5px 8px}.dashboard-lot-status-form select:disabled{opacity:.65;cursor:wait}
