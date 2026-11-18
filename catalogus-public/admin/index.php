@@ -62,7 +62,6 @@ admin_top('Kaveloverzicht');
       <a class="dashboard-stat dashboard-scope-option <?=$mine?'is-selected':''?>" href="<?=e(url('admin/index.php',$ownParams))?>" <?=$mine?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">◉</span><span><strong>Mijn kavels</strong><small>Alleen door mij aangemaakt</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'✓':''?></span></a>
     </div>
   </div>
-  <p class="dashboard-subtitle">Beheer, zoek en bewerk <?=$mine?'jouw':'alle'?> kavels in de veilingcatalogus.</p>
   <div class="dashboard-stats" aria-label="Catalogusstatistieken">
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url([], $mine))?>" aria-label="<?=$mine?'Al mijn kavels tonen':'Alle kavels tonen'?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['status'=>'published'], $mine))?>" aria-label="Gepubliceerde kavels tonen"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=e((string)$published)?></strong> kavels zichtbaar</div></div></a>
