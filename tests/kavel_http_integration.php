@@ -734,6 +734,49 @@ try {
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (401,'Own draft','','','draft',?)")->execute([$actor]);
   db()->exec("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (402,'Other draft','','','draft',99999)");
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status,created_by_admin_id) VALUES (403,'Own published','','','published',?)")->execute([$actor]);
+  // Publication readiness is independent of the actual publication state.
+  // Use existing disposable CI lots; restore edited description fields afterwards.
+  $rowById = static function (string $html, int $id): string {
+    $needle = '<tr id="dashboard-lot-'.$id.'">';
+    $start = strpos($html, $needle);
+    if ($start === false) throw new RuntimeException('Kavelrij ontbreekt: '.$id);
+    $end = strpos($html, '</tr>', $start);
+    return substr($html, $start, $end - $start);
+  };
+  $emptyLotId = (int)by_number(401)['id'];
+  [$readyPageStatus, $readyPage] = request_page('/admin/index.php');
+  claim($readyPageStatus===200
+      && str_contains($readyPage, '<th scope="col">Klaar om te publiceren</th>')
+      && str_contains($rowById($readyPage, $emptyLotId), 'lot-readiness is-empty')
+      && str_contains($rowById($readyPage, $emptyLotId), 'Foto en beschrijving ontbreken'),
+    'Kavel zonder foto en beschrijving toont rode gereedheidsbadge');
+  db()->prepare("UPDATE lots SET description='Fictieve beschrijving' WHERE id=?")->execute([$emptyLotId]);
+  [$partialPageStatus, $partialPage] = request_page('/admin/index.php');
+  claim($partialPageStatus===200
+      && str_contains($rowById($partialPage, $emptyLotId), 'lot-readiness is-partial'),
+    'Alleen een beschrijving toont oranje gereedheidsbadge');
+  db()->prepare("UPDATE lots SET description='' WHERE id=?")->execute([$emptyLotId]);
+  $photoLot = by_number(20);
+  claim((bool)$photoLot, 'Bestaand fictief kavel met foto voor gereedheidstest');
+  $photoLotId = (int)$photoLot['id'];
+  $photoCountStmt=db()->prepare('SELECT COUNT(*) FROM lot_images WHERE lot_id=?');
+  $photoCountStmt->execute([$photoLotId]);
+  claim((int)$photoCountStmt->fetchColumn()>0, 'Gereedheidstest gebruikt een opgeslagen kavelfoto');
+  $readinessUpdate=db()->prepare('UPDATE lots SET description=?,subtitle=?,details=? WHERE id=?');
+  $readinessUpdate->execute(['Fictieve beschrijving','','',$photoLotId]);
+  [$basicStatus, $basicPage] = request_page('/admin/index.php');
+  claim($basicStatus===200
+      && str_contains($rowById($basicPage, $photoLotId), 'lot-readiness is-basic')
+      && str_contains($rowById($basicPage, $photoLotId), 'Basis compleet'),
+    'Foto plus beschrijving toont lichtgroen, zonder verplichte aanvullende velden');
+  $readinessUpdate->execute(['Fictieve beschrijving','Fictieve ondertitel','Fictieve details',$photoLotId]);
+  [$completeStatus, $completePage] = request_page('/admin/index.php');
+  claim($completeStatus===200
+      && str_contains($rowById($completePage, $photoLotId), 'lot-readiness is-complete')
+      && str_contains($rowById($completePage, $photoLotId), 'Kavel compleet'),
+    'Foto beschrijving details en ondertitel tonen donkergroene gereedheidsbadge');
+  $readinessUpdate->execute([(string)$photoLot['description'],(string)$photoLot['subtitle'],(string)$photoLot['details'],$photoLotId]);
+
   db()->prepare("UPDATE admins SET role='assistant' WHERE id=?")->execute([$actor]);
   [$assistantOverviewStatus, $assistantOverviewPage] = request_page('/admin/index.php');
   claim($assistantOverviewStatus===200, 'Assistant opens lot overview');
