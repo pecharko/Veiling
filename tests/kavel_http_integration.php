@@ -887,16 +887,21 @@ try {
   claim($readOnlyPostStatus===405
       && db()->query('SELECT name FROM lot_sellers WHERE id='.$foreignSellerId)->fetchColumn()==='Andere maker',
     'Read-only seller detail cannot be used to save');
+  db()->exec("INSERT INTO lot_sellers(seller_type,name,artist_name,email,street,house_number,postal_code,municipality,created_by_admin_id,artist_published) VALUES ('kunstenaar','Andere kunstenaar','Fictief Ander Atelier','andere-kunstenaar@example.invalid','Teststraat','8','9160','Lokeren',99999,2)");
+  $foreignArtistId=(int)db()->lastInsertId();
   [$readOnlyArtistListStatus, $readOnlyArtistList] = request_page('/admin/kunstenaars.php');
   claim($readOnlyArtistListStatus===200
-      && str_contains($readOnlyArtistList,'/admin/verkoper-bekijken.php?id='.$ownArtistId.'&amp;type=kunstenaar')
+      && str_contains($readOnlyArtistList,'/admin/verkoper-bekijken.php?id='.$foreignArtistId.'&amp;type=kunstenaar')
       && !str_contains($readOnlyArtistList,'Alleen bekijken'),
-    'Assistant can follow published artist name to read-only profile');
-  [$readOnlyArtistStatus, $readOnlyArtistPage] = request_page('/admin/verkoper-bekijken.php?id='.$ownArtistId.'&type=kunstenaar');
-  claim($readOnlyArtistStatus===200 && str_contains($readOnlyArtistPage,'Eigen Atelier')
-      && !str_contains($readOnlyArtistPage,'eigen-kunstenaar@example.invalid')
+    'Assistant can follow another artist name to read-only profile');
+  [$readOnlyArtistStatus, $readOnlyArtistPage] = request_page('/admin/verkoper-bekijken.php?id='.$foreignArtistId.'&type=kunstenaar');
+  claim($readOnlyArtistStatus===200 && str_contains($readOnlyArtistPage,'Fictief Ander Atelier')
+      && !str_contains($readOnlyArtistPage,'andere-kunstenaar@example.invalid')
       && !str_contains($readOnlyArtistPage,'seller-manager-form'),
-    'Published artist read-only profile accessible without exposing contact or editing');
+    'Other artist read-only profile accessible without exposing contact or editing');
+  [$foreignArtistEditorStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$foreignArtistId);
+  claim($foreignArtistEditorStatus===403,
+    'Assistant still cannot edit another artist');
   [$forbiddenView] = request_page('/admin/verkoper.php?id='.$foreignSellerId);
   claim($forbiddenView===403, 'Assistant cannot open unrelated seller editor');
   [$forbiddenSave] = request_page('/admin/verkoper.php?id='.$foreignSellerId, [
@@ -917,8 +922,9 @@ try {
   ]);
   claim($forbiddenImage===403, 'Assistant cannot perform photo actions on unrelated seller');
   [$assistantListStatus, $assistantListPage]=request_page('/admin/verkopers.php');
-  claim($assistantListStatus===200 && str_contains($assistantListPage,'Alleen bekijken'),
-    'Unowned seller is read-only in assistant seller overview');
+  claim($assistantListStatus===200 && !str_contains($assistantListPage,'Alleen bekijken')
+      && str_contains($assistantListPage,'/admin/verkoper-bekijken.php?id='.$foreignSellerId.'&amp;type=particulier'),
+    'Unowned seller has read-only name link and no Alleen bekijken action');
   db()->prepare("UPDATE admins SET role='veilingmeester' WHERE id=?")->execute([$actor]);
   [$masterListStatus, $masterListPage] = request_page('/admin/verkopers.php');
   claim($masterListStatus===200 && str_contains($masterListPage,'Verkopers beheren')
