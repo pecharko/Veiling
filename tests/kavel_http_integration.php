@@ -827,20 +827,22 @@ try {
     && $assistantSeller['created_by_name']!=='' && $assistantSeller['updated_by_name']!=='',
     'Assistant creates seller with authenticated creator and edit timestamps');
   [$myPrivateStatus, $myPrivatePage] = request_page('/admin/verkopers.php?mine=1');
+  // Kavelverkoper Demo was created earlier by the SAME administrator and has a lot.
+  // Both records belong in 'Mijn verkopers'; the with-lots tile keeps only the linked one.
   claim($myPrivateStatus===200
       && str_contains($myPrivatePage,'Mijn verkopers')
       && str_contains($myPrivatePage,'Fictieve assistentverkoper')
-      && !str_contains($myPrivatePage,'Kavelverkoper Demo')
+      && str_contains($myPrivatePage,'Kavelverkoper Demo')
       && str_contains($myPrivatePage,'Filter het volledige overzicht')
       && strpos($myPrivatePage,'class="dashboard-scope"') < strpos($myPrivatePage,'seller-dashboard-stats')
       && str_contains($myPrivatePage,'MET KAVELS')
       && str_contains($myPrivatePage,'ZONDER KAVELS'),
-    'Global Mijn verkopers scope and relevant seller tiles filter by creator');
-  [$emptyPrivateStatus, $emptyPrivatePage] = request_page('/admin/verkopers.php?mine=1&tile=with_lots');
-  claim($emptyPrivateStatus===200
-      && str_contains($emptyPrivatePage,'0 resultaten')
-      && !str_contains($emptyPrivatePage,'Fictieve assistentverkoper'),
-    'With-lots tile respects global creator filter');
+    'Global Mijn verkopers scope includes both sellers created by this administrator');
+  [$withLotsPrivateStatus, $withLotsPrivatePage] = request_page('/admin/verkopers.php?mine=1&tile=with_lots');
+  claim($withLotsPrivateStatus===200
+      && str_contains($withLotsPrivatePage,'Kavelverkoper Demo')
+      && !str_contains($withLotsPrivatePage,'Fictieve assistentverkoper'),
+    'With-lots tile returns only the own seller linked to a lot');
   [$allPrivateStatus, $allPrivatePage] = request_page('/admin/verkopers.php');
   claim($allPrivateStatus===200 && str_contains($allPrivatePage,'Kavelverkoper Demo')
       && str_contains($allPrivatePage,'Fictieve assistentverkoper'),
