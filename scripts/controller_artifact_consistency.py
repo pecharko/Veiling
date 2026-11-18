@@ -50,6 +50,11 @@ def inspect_release_evidence(document, artifacts, *, run_id, release_sha,
             return unknown("expired_or_unbound_artifact")
     rollback_matches = [a for a in artifacts if isinstance(a, dict)
                         and a.get("name") == names[1]]
+    # The release runner writes deployment-evidence.json before upload-artifact
+    # assigns an artifact ID. A null field cannot attest the rollback binding,
+    # but it is not evidence that an existing artifact ID mismatches.
+    if validated["rollback_artifact"] is None:
+        return unknown("rollback_artifact_id_not_attested")
     if validated["rollback_artifact"] != rollback_matches[0]["id"]:
         return {"status": "FAILED", "reason": "rollback_id_mismatch",
                 "source": source}
