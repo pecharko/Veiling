@@ -460,8 +460,8 @@ try {
   $small['seller_id']=(string)$sellerLinkId;
   $small['photos[0]'] = new CURLFile($fixtures . '/valid.png', 'image/png', 'valid.png');
   [$status, , $newLotRedirect] = request_page('/admin/kavel.php', $small, true);
-  claim($status === 303 && $newLotRedirect === '/admin/kavel.php?id='.(int)by_number(20)['id']
-    && (bool)by_number(20), 'New lot save preserves existing editor redirect and photo persistence');
+  claim($status === 303 && $newLotRedirect === '/admin/index.php'
+    && (bool)by_number(20), 'Successful new lot save returns to overview and persists photo');
   claim((int)by_number(20)['seller_id']===$sellerLinkId, 'New lot is linked to its private seller');
   [$status, $lotsWithSeller] = request_page('/admin/index.php');
   claim($status===200 && str_contains($lotsWithSeller,'<th scope="col">Verkoper</th>')
@@ -538,8 +538,11 @@ try {
   $bad['lot_number'] = '30'; $bad['title'] = 'Inhoud geen foto';
   file_put_contents($fixtures . '/bad.txt','invalid image bytes');
   $bad['photos[0]'] = new CURLFile($fixtures . '/bad.txt', 'image/png', 'bad.png');
-  [$status] = request_page('/admin/kavel.php', $bad, true);
-  claim($status === 303 && (bool)by_number(30), 'Bad image content preserves existing partial-save behavior');
+  [$status, , $partialRedirect] = request_page('/admin/kavel.php', $bad, true);
+  claim($status === 303
+      && $partialRedirect === '/admin/kavel.php?id='.(int)by_number(30)['id']
+      && (bool)by_number(30),
+    'Partial photo failure stays on saved lot editor to show warning');
   [$status, $html] = request_page('/admin/kavel.php?id=' . by_number(30)['id']);
   claim($status === 200 && str_contains($html,'sommige foto'), 'Partial save warning displayed');
 
