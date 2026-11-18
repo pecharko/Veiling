@@ -218,7 +218,7 @@ $filteredRows=array_values(array_filter($screenRows,static function($row) use ($
                     <span class="seller-portrait-placeholder" role="img" aria-label="Geen portret beschikbaar">👤</span>
                   <?php endif; ?>
                 </td>
-                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['artist_name'])?></a><?php else: ?><?=e((string)$r['artist_name'])?><?php endif; ?></td>
+                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:'admin/verkoper-bekijken.php',$canEditSeller?['id'=>(int)$r['id']]:['id'=>(int)$r['id'],'type'=>'kunstenaar']))?>"><?=e((string)$r['artist_name'])?></a></td>
                 <td><?php $artistStatus=(int)$r['artist_published']; ?><span class="seller-publication-status <?=($artistStatus===1?'is-published':($artistStatus===2?'is-new':'is-unpublished'))?>"><?=($artistStatus===1?'Gepubliceerd':($artistStatus===2?'Nieuw':'Niet gepubliceerd'))?></span></td>
                 <?php
                   $readiness=(string)$r['publication_readiness'];
@@ -227,7 +227,7 @@ $filteredRows=array_values(array_filter($screenRows,static function($row) use ($
                 ?>
                 <td><span class="seller-readiness is-<?=e($readiness)?>" title="<?=e($readinessHelp[$readiness])?>"><?=e($readinessLabels[$readiness])?></span></td>
               <?php else: ?>
-                <td class="dashboard-title"><?php if($canEditSeller): ?><a href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>"><?=e((string)$r['name'])?></a><?php else: ?><?=e((string)$r['name'])?><?php endif; ?></td>
+                <td class="dashboard-title"><a href="<?=e(url($canEditSeller?$editorUrl:'admin/verkoper-bekijken.php',$canEditSeller?['id'=>(int)$r['id']]:['id'=>(int)$r['id'],'type'=>'particulier']))?>"><?=e((string)$r['name'])?></a></td>
               <?php endif; ?>
               <td><span class="seller-lot-count"><?=(int)$r['lot_count']?></span></td>
               <td><div class="seller-row-actions">
@@ -249,7 +249,7 @@ $filteredRows=array_values(array_filter($screenRows,static function($row) use ($
                     </select>
                   </form>
                 <?php endif; ?>
-                <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php else: ?><span class="seller-readonly" title="Enkel de maker, veilingmeester of administrator mag dit beheren">Alleen bekijken</span><?php endif; ?>
+                <?php if($canEditSeller): ?><a class="dashboard-edit" href="<?=e(url($editorUrl,['id'=>(int)$r['id']]))?>">✎ Bewerken</a><?php endif; ?>
                 <?php if($canEditSeller): ?><form method="post" class="seller-delete-form" onsubmit="return window.confirm('<?=e($sellerScreen==='kunstenaar'?'Wil je werkelijk de kunstenaar verwijderen? Dit kan niet ongedaan gemaakt worden.':'Wil je werkelijk de particulier verwijderen? Dit kan niet ongedaan gemaakt worden.')?>');"><?=csrf_field()?><input type="hidden" name="action" value="delete"><input type="hidden" name="seller_id" value="<?=(int)$r['id']?>"><button class="secondary seller-delete" type="submit" <?=(int)$r['lot_count']>0?'disabled title="Verkoper is gekoppeld aan een kavel"':''?>>Verwijderen</button></form><?php endif; ?>
               </div></td>
             </tr>
