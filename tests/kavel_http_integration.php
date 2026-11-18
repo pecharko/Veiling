@@ -751,6 +751,16 @@ try {
       && !str_contains($publishedRow, 'dashboard-edit')
       && !str_contains($assistantOverviewPage, '>Bekijken</a>'),
     'Assistant sees Bewerk only on editable lots; view-only action is absent');
+  claim(str_contains($assistantOverviewPage, 'dashboard-badge')
+      && !str_contains($assistantOverviewPage, 'dashboard-lot-status-form'),
+    'Assistant sees read-only lot status badges, never inline status selects');
+  [$assistantStatusChange, $assistantStatusBody] = request_page('/admin/index.php', [
+    'csrf'=>token($assistantOverviewPage),'action'=>'lot-status',
+    'lot_id'=>(string)by_number(401)['id'],'status'=>'published'
+  ], false, ['X-Requested-With: XMLHttpRequest', 'Accept: application/json']);
+  claim($assistantStatusChange===403
+      && (string)by_number(401)['status']==='draft',
+    'Assistant cannot change status even on own draft through forged AJAX request');
   [$sellerOverviewStatus, $sellerAssistantOverview] = request_page('/admin/verkopers.php');
   claim($sellerOverviewStatus===200 && str_contains($sellerAssistantOverview,'Verkopers beheren'),
     'Assistant may open seller management');
@@ -979,6 +989,53 @@ try {
   ]);
   claim($status===403 && (bool)by_number(403), 'Assistant cannot remove published own lot');
   db()->prepare("UPDATE admins SET role='administrator' WHERE id=?")->execute([$actor]);
+  [$adminOverviewStatus, $adminOverviewPage] = request_page('/admin/index.php?mine=1&pagina=1');
+  claim($adminOverviewStatus===200
+      && str_contains($adminOverviewPage, 'dashboard-lot-status-form')
+      && str_contains($adminOverviewPage, 'name="action" value="lot-status"')
+      && str_contains($adminOverviewPage, 'name="lot_id"'),
+    'Administrator receives inline status selectors and CSRF-backed status forms');
+  $statusHeaders=['X-Requested-With: XMLHttpRequest','Accept: application/json'];
+  $lotStatusToken=token($adminOverviewPage);
+  $testLotId=(int)by_number(401)['id'];
+  [$publishStatus,$publishBody]=request_page('/admin/index.php?mine=1', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  $publishReply=json_decode($publishBody,true);
+  claim($publishStatus===200 && ($publishReply['ok']??false)===true
+      && ($publishReply['status']??'')==='published'
+      && (string)by_number(401)['status']==='published',
+    'Administrator publishes from overview through authenticated JSON request');
+  [$noChangeStatus,$noChangeBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  claim($noChangeStatus===200 && (json_decode($noChangeBody,true)['ok']??false)===true,
+    'Repeated selection is safely idempotent');
+  [$restoreStatus,$restoreBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'draft'
+  ],false,$statusHeaders);
+  claim($restoreStatus===200 && (json_decode($restoreBody,true)['status']??'')==='draft'
+      && (string)by_number(401)['status']==='draft',
+    'Administrator can unpublish from overview');
+  [$badStatus,$badBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'invalid'
+  ],false,$statusHeaders);
+  claim($badStatus===422 && (json_decode($badBody,true)['ok']??true)===false
+      && (string)by_number(401)['status']==='draft',
+    'Invalid status is rejected without data mutation');
+  [$badCsrfStatus]=request_page('/admin/index.php', [
+    'csrf'=>'invalid','action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'sold'
+  ],false,$statusHeaders);
+  claim($badCsrfStatus===403 && (string)by_number(401)['status']==='draft',
+    'Missing or invalid CSRF prevents inline status mutation');
+  db()->exec('UPDATE lots SET auction_only=1 WHERE id='.$testLotId);
+  [$conflictStatus,$conflictBody]=request_page('/admin/index.php', [
+    'csrf'=>$lotStatusToken,'action'=>'lot-status','lot_id'=>(string)$testLotId,'status'=>'published'
+  ],false,$statusHeaders);
+  claim($conflictStatus===422 && (json_decode($conflictBody,true)['ok']??true)===false
+      && (string)by_number(401)['status']==='draft',
+    'Auction-only market lot cannot be published by inline status selector');
+  db()->exec('UPDATE lots SET auction_only=0 WHERE id='.$testLotId);
   [$status, $adminForm] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id']);
   claim($status===200, 'Administrator regains editor');
   [$status, $conflict] = request_page('/admin/kavel.php?id='.(int)by_number(401)['id'], [
