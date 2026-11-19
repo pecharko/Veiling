@@ -34,6 +34,7 @@ if (is_post()) {
       session_regenerate_id(true);
       unset($_SESSION['admin_view_role']);
       $_SESSION['admin_id'] = (int)$admin['id'];
+      $_SESSION['admin_last_activity_at'] = time();
       $_SESSION['admin_credential_hash'] = hash('sha256', (string)$admin['password_hash']);
       $pdo->prepare('DELETE FROM login_attempts WHERE ip_hash=?')->execute([$ip]);
       $pdo->prepare('UPDATE admins SET last_login_at=UTC_TIMESTAMP() WHERE id=? AND is_active=1')->execute([(int)$admin['id']]);
