@@ -45,7 +45,7 @@ async function runCase(responseURL, expectedRedirect) {
   }
   window.XMLHttpRequest=XMLHttpRequest;
   const document={
-    querySelectorAll:()=>[button],
+    querySelectorAll:selector=>selector==='.seller-save-trigger'?[button]:[],
     getElementById:id=>els[id]??null
   };
   const sandbox={
