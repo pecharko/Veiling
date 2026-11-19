@@ -8,7 +8,9 @@ if (!is_post()) {
   http_response_code(405);
   exit('POST vereist.');
 }
+// A CSRF token is not authentication; verify both before updating activity.
 check_csrf();
+require_auth();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 echo json_encode(['ok' => true, 'expires_at' => admin_idle_expires_at()], JSON_UNESCAPED_SLASHES);
