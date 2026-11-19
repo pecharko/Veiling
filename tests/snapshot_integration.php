@@ -186,6 +186,27 @@ try {
     if ($pdo->inTransaction()) $pdo->rollBack();
 }
 
+// Tamper with only ZIP photo bytes; manifest and database remain untouched.
+$photoBadName = 'snapshot-20990102-000000-deadbeefdead.zip';
+$photoBadPath = snap_path($photoBadName);
+if (!copy(snap_path($name), $photoBadPath)) throw new RuntimeException('Cannot copy photo integrity fixture');
+$photoBadZip = new ZipArchive();
+if ($photoBadZip->open($photoBadPath) !== true) throw new RuntimeException('Cannot open photo integrity fixture');
+$photoEntry = 'uploads/' . $relative;
+if (!$photoBadZip->addFromString($photoEntry, 'altered photo bytes'))
+    throw new RuntimeException('Cannot tamper ZIP photo fixture');
+$photoBadZip->close();
+try {
+    assert_throws(fn() => snap_verified($photoBadName), 'Foto checksum ongeldig',
+        'Modified photo bytes in ZIP are refused before restore');
+    assert_throws(fn() => snap_restore($pdo, $photoBadName), 'Foto checksum ongeldig',
+        'Tampered photo ZIP cannot begin a restore');
+    verify(!restore_journal_pending() && is_file($original) && is_file($sellerPhoto),
+        'Rejected photo ZIP preserves live photos and does not enter maintenance');
+} finally {
+    if (is_file($photoBadPath)) unlink($photoBadPath);
+}
+
 $badName = 'snapshot-20990101-000000-deadbeefdead.zip';
 $corrupted = snap_path($badName);
 if (!copy(snap_path($name), $corrupted)) throw new RuntimeException('Could not copy ZIP for corruption test');
