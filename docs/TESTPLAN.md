@@ -140,3 +140,10 @@ Actiehouder en eventuele follow-up:
 - Nog vereist op geïsoleerde fictieve omgeving: admin/assistent/veilingmeester HTTP-cases, ongeldig CSRF/GET-405, sessieverlenging vóór en na expiry, login na expiry, en achtergrond-polls.
 - Browseracceptatie desktop/mobiel: schermlezer/toetsenbord, meerdere tabs, tab na slaapstand, tijdsverschil, verlies van netwerk en kavel-/verkoperformulier met niet-opgeslagen wijzigingen.
 - **Status:** lokaal alleen zuivere PHP-policytest uitgevoerd; geen volledige CI-/Docker-/Playwright-/productieacceptatie.
+
+### T-023B aanvullende regressie, 19 november 2026
+- `node tests/admin_session_idle_error_test.cjs`: vier geslaagde gesimuleerde responsefouten — HTML in plaats van JSON, HTTP-fout (o.a. verlopen sessie), netwerkfout en misvormd JSON-contract. Bij alle vier blijft de waarschuwing zichtbaar en wordt verlenging niet als succes gemeld.
+- `node tests/admin_session_idle_client_test.cjs`: eerder geslaagde gesimuleerde waarschuwing, expliciete POST-verlenging en verloop.
+- `php tests/admin_idle_policy_test.php`: geslaagde 60-minutengrens en uitsluiting van passieve mailpolls.
+- Uitgevoerd in een geïsoleerde Linux-container, **niet** op de Mac-preview. De volledige HTTP-/MySQL-/Docker-/Playwright-acceptatie is niet uitgevoerd; de contracttest is nog niet tegen een volledige lokaal uitgecheckte repository uitgevoerd. Geen productie-PASS.
+- Definitieve eigenaarbeslissing: niet-opgeslagen gegevens mogen bij timeout verloren gaan; **geen draft-herstel of autosave implementeren**.
