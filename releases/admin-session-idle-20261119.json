@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/admin_idle_policy.php",
+      "source_sha256": "a31d8b5457258cad8a23b0904f3cb5988dbd33c95338d93561dfd0a788e91b3f",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "private/bootstrap.php",
+      "source_sha256": "77ce7a38c19a6a85b9f4101400c9eb412e980bbe1b3fb88190a8cc1ac3590ccb",
+      "remote_sha256": "b754b2c181af8f7665db9c80484899da21439e68c8a3ac5d3a7a367dfd40ff41"
+    },
+    {
+      "path": "catalogus-public/admin/login.php",
+      "source_sha256": "ad9a7a659f169dc22bb99fc8f95d89f4c0571d2e6438b9b31b802b54a69a5769",
+      "remote_sha256": "f25df02037d91ac0cdac56826d2bff2f07038c5a02e9a59dd5f5beedcdbc6581"
+    },
+    {
+      "path": "catalogus-public/admin/sessie-verlengen.php",
+      "source_sha256": "c362a1484e282d432a20269d5118612b5c55ae43ad335dbe52e48726b0890590",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/session-idle.js",
+      "source_sha256": "a3a4ed52e4a58d6b77d63f36f12a0d81eacac003fe6c34eabbc6f61b9388d5e8",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "04b44e7f403daf05245ed40064244bdaa38f268ccffd8c0640216ed310345327",
+      "remote_sha256": "05e31faa028d91bc82e9691981e354db658d64db6dda9e7a12c2f50fd87bc349"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "a25a349aa8932d2a6fea5deb97e75fc7a80e90d2ad85fe4410da583ab13a1196",
+      "remote_sha256": "2bf415ced4620a416c5cfcc5aef441fba7afd3bbba65ce632c852c540b4d116c"
+    }
+  ]
+}
