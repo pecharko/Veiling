@@ -8,12 +8,14 @@ De PHP-website en de administratie tonen **HTTP 503 / De catalogus is tijdelijk 
 
 Een proces kan na het verplaatsen van foto's zijn gestopt **vóór** of **ná** een MySQL-commit. Een opgeslagen fase `photos_active` bewijst niet welke van beide is gebeurd. Daarom wordt het systeem niet vanzelf opnieuw vrijgegeven. Directe statische foto-URLs en caches worden door de PHP-gate niet volledig afgesloten.
 
+**Fase 3F — voorgestelde veilige post-commitopruiming (nog niet uitgerold):** na een bevestigde DB-commit wordt de **volledige** oude fotomap eerst atomair naar `private/backups/.restore-preserved-old-<run-id>` verplaatst, terwijl het hersteljournal de PHP-website nog blokkeert. Pas **nadat** het journal succesvol is gewist, mag de private kopie worden opgeruimd. Bij een crash tussen die stappen blijft de volledige vorige fotomap aanwezig voor de reeds bestaande read-only herstelanalyse en afzonderlijk goedgekeurde afhandeling. Een achtergebleven, eventueel gedeeltelijke private kopie **na** het wissen van het journal vereist handmatige opruimcontrole, maar verandert de actieve doel-database of foto's niet. De atomische overdracht vereist hetzelfde bestandssysteem; anders wordt een restore geweigerd **voordat** de live fotomap wordt verplaatst. Dit vervangt nooit een extern veiliggestelde ZIP of menselijke herstelautorisatie.
+
 ## Eerste handelingen — geen herstelmutaties
 
 1. **Geen nieuw herstel, geen snapshot verwijderen, geen kavel- of fotowijzigingen.** Neem de publiek zichtbare onderhoudsmelding niet weg en klik niet opnieuw op `HERSTEL`.
 2. Noteer datum, tijd, betrokken snapshotnaam, waargenomen fout en eventuele serverlogs. Gebruik alleen het beheerders- of hostingaccount waarvoor je gemachtigd bent.
-3. Maak via beveiligde SFTP of hostingtools **alleen kopieën** van het journal, de volledige actieve map `uploads/` (indien aanwezig), eventuele `.uploads-before-restore-*` en `.restore-*` mappen, en de betrokken ZIP's onder `private/backups/`. Bewaar hun oorspronkelijke bestandsnamen en hashes. Verwijder of hernoem niets op de hosting.
-4. Maak een afzonderlijke, read-only database-export via phpMyAdmin of een goedgekeurde hostingback-upfunctie en bewaar die buiten de hosting. Snapshots bevatten ook accounts en wachtwoordhashes: behandel downloads als vertrouwelijke persoonsgegevens.
+3. Maak via beveiligde SFTP of hostingtools **alleen kopieën** van het journal, de volledige actieve map `uploads/` (indien aanwezig), eventuele `.uploads-before-restore-*` en `.restore-*` mappen, de private `.restore-preserved-old-*` bewijsmappen en de betrokken ZIP's onder `private/backups/`. Bewaar hun oorspronkelijke bestandsnamen en hashes. Verwijder of hernoem niets op de hosting.
+4. Maak een afzonderlijke, read-only database-export via phpMyAdmin of een goedgekeurde hostingback-upfunctie en bewaar die buiten de hosting. Catalogussnapshots v8 bevatten verkopersgegevens (waaronder contact- en bankgegevens), maar geen adminaccounts of wachtwoordhashes; behandel downloads daarom nog steeds als vertrouwelijke persoonsgegevens.
 5. Laat een deskundige de MySQL-toestand en fotoverwijzingen onafhankelijk vergelijken met (a) het doelarchief én (b) de veiligheidskopie van vlak vóór de restore. Controleer bestandspaden, SHA-256 van foto's en de benodigde adminaccounts. De journal-`snapshot_sha256` helpt de juiste ZIP te identificeren.
 
 ## Veilige technische diagnose (fase 3B, nog niet live)
@@ -98,5 +100,6 @@ De onderhoudsindicator mag pas worden verwijderd nadat de gegevens en foto's een
 - **T-050B / T-052:** SIGKILL **na fotoswap, vóór commit**; PHP 503 blijft actief; alleen fictieve CI-gegevens zijn manueel teruggezet.
 - **T-053:** afgehandelde SQL-fout vóór commit; DB en foto's automatisch teruggezet, journal opgeruimd.
 - **T-054:** SIGKILL **ná commit, vóór fase-update**; journalfase is ambigu. De test controleert de doel-DB en alle fotohashes onafhankelijk vóór opruimen, uitsluitend in de wegwerptestomgeving.
+- **T-059 (nieuwe CI-regressie):** SIGKILL **ná atomische verplaatsing van de oude fotomap naar privéopslag, vóór journal-clear**. Controleert volledige bytebehoud van de oude foto's, behoud van HTTP-onderhoud, juiste doel-DB en de bestaande aparte herstelgoedkeuringsgate; wordt alleen in een wegwerp-MySQL/CI-omgeving uitgevoerd.
 
 **Niet bewezen:** recovery na willekeurige host-, storage- of netwerkcrashes, directory-`fsync` op OVHcloud, racevoorwaarden bij externe MySQL/SFTP-writes en automatische/gebruikersvriendelijke beheerder-recovery. Zie [onderzoeksdocument](SNAPSHOT_CONSISTENCY_CRASH_STUDY_2026-10-19.md) en het openstaande [issue #2](https://github.com/pecharko/Veiling/issues/2).
