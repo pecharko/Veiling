@@ -72,6 +72,18 @@ See `docs/single-review-shared-ovh-deploy.md` and `docs/single-pr-verified-readb
 - This AGENTS.md is advisory guidance. It cannot enforce authorization:
   actual GitHub permissions, sandbox controls and human approvals do that.
 
+## Mandatory execution-continuity stop check (issue #23 retrospective)
+
+Before ending **every** development/release-preparation response, evaluate the *next* safe action. If it is permitted and executable in the current active turn (source inspection, isolated coding/testing, in-scope CI repair, PR review/ready status, read-only GitHub inspection, manifest preparation, post-merge main/push-CI or release-evidence review), **perform it instead of asking for `go`**. A newly created PR, green test, success message, or completed phase is not a stop condition. Give concise progress updates while continuing; do not promise background work.
+
+- **Plan through the first real gate:** inventory runtime paths, related tests, special auth/private/DB/cron requirements, trusted OVH baselines and the manifest **before** requesting merge. Prefer a single code+tests+manifest PR when the specialized route permits. A later manifest-only PR is an expressly explained exception, not the normal next step.
+- **Finish in-scope review autonomously:** poll running CI a bounded number of times during the active turn; diagnose logs, correct in-scope failures and verify all applicable CI on the final PR head. Change a completed draft to ready-for-review without another `go`; never merge merely because it is ready.
+- **Use one precise mechanical handoff for unavailable tools:** if the connector cannot start a required read-only preflight or a previously authorized deploy, give exactly one Actions link with its exact inputs; after the user reports `gestart`, locate the run, check input-to-job binding, logs and artifacts, and continue in that same active turn. No new approval or ritual `go` follows `gestart`.
+- **Stop only for a real boundary:** separately scoped exact merge approval, separately scoped exact production approval, required specialist security/schema decision, a user-only mechanical start, functional acceptance, demonstrable safety failure, permission/tool blocker, or unresolved external processing that cannot reasonably complete in the active turn. Name the *single concrete* action or constraint; do not replace it with a `go` request.
+- **Keep security fail-closed:** generic `go` never authorizes merge, workflow dispatch, OVH upload, DB/cron, permissions or secrets. Keep pinned hostkey, immutable SHAs, drift check, backup, rollback, independent evidence boundaries and STOP/NO RETRY on ambiguous writes. No simulated test, green CI or runner readback may be described as live independent OVH attestation.
+
+For the concrete anti-regression matrix see `docs/single-review-shared-ovh-deploy.md`; the `veilingdeploy2-codex` skill bundles a *purely offline fictional* handoff simulation. Do not treat that simulation as an executor or an authorization mechanism.
+
 ## Zero-ritual-go execution contract (release UX)
 
 The user's `deploy` instruction starts **one continuous active-turn preparation**, not a sequence of status-only conversations. Before first PR review, assemble ordinary allowlisted runtime code, focused tests and `releases/<id>.json` **in the same branch and same PR**. The release manifest must contain independently authenticated per-file remote baselines and candidate source digests; if these cannot be obtained, finish independent non-mutating work and report the exact blocker once. Do not fall back to a separate manifest PR simply because the earlier feature PR has already merged; that is an exceptional recovery path, not the standard.
