@@ -29,6 +29,7 @@ $endpoint = $src['catalogus-public/admin/sessie-verlengen.php'];
 $client = $src['catalogus-public/admin/session-idle.js'];
 idle_contract(str_contains($bootstrap, "require_once __DIR__ . '/admin_idle_policy.php'"), 'policy loaded');
 idle_contract(str_contains($bootstrap, 'admin_idle_expired('), 'expiry enforced server side');
+idle_contract(str_contains($bootstrap, "ini_set('session.gc_maxlifetime', (string)ADMIN_IDLE_SECONDS)"), 'PHP admin session retention matches 60-minute idle policy');
 idle_contract(str_contains($bootstrap, 'admin_idle_should_touch('), 'passive poll excluded');
 idle_contract(strpos($bootstrap, 'admin_idle_should_touch($script)') > strpos($bootstrap, "exit('Geen toegang tot dit beheeronderdeel.');"), 'unauthorized role request cannot refresh idle timer');
 idle_contract(str_contains($bootstrap, "'sessie-verlengen.php'"), 'all roles permitted renewal');
