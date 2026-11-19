@@ -76,9 +76,9 @@ def remote_read(sftp, path, allow_absent=False):
 # Accept the original guard and the current typed optional-session parameter,
 # but never a comment, call site, or unrelated function with that name.
 _AUTH_DEFINITION = re.compile(
-    rb"(?m)^[ \\t]*function[ \\t]+require_auth[ \\t]*\\("[
-    rb" \\t]*(?:bool[ \\t]+\\$touchActivity[ \\t]*=[ \\t]*true[ \\t]*)?"
-    rb"\\)[ \\t]*(?::[ \\t]*void[ \\t]*)?\\s*\\{"
+    rb"(?m)^[ \t]*function[ \t]+require_auth[ \t]*\([ \t]*"
+    rb"(?:bool[ \t]+\$touchActivity[ \t]*=[ \t]*true[ \t]*)?"
+    rb"\)[ \t]*(?::[ \t]*void[ \t]*)?\{"
 )
 
 
