@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_no_index();
-require_auth();
+admin_session();
 if (!is_post()) {
   header('Allow: POST');
   http_response_code(405);
