@@ -296,6 +296,9 @@ function snap_restore(PDO $pdo,string $name): void {
 }
 
 function snap_remove_tree(string $dir): void {
+ // A symlink at the root would make RecursiveDirectoryIterator traverse an
+ // unrelated directory. Refuse before examining or deleting its children.
+ if(is_link($dir))throw new RuntimeException('Symlink als fotomap is niet toegestaan.');
  if(!is_dir($dir))return;
  $it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
  foreach($it as $f){if($f->isDir()&&!$f->isLink())rmdir($f->getPathname());else unlink($f->getPathname());}rmdir($dir);
