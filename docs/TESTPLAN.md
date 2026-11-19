@@ -132,3 +132,11 @@ Actiehouder en eventuele follow-up:
 - Alle vier handmatige functionele controles door beheerder geslaagd: Administrator opent Gebruikersbeheer; gebruikerslijst en accountselectie; Assistent ziet alleen kavelfuncties; Assistent krijgt geen toegang tot Gebruikersbeheer.
 - GitHub Actions deploy-run: https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004 — upload en HTTPS-smoketests geslaagd.
 - **Status:** functioneel geaccepteerd; release formeel afgesloten op 2026-10-24.
+
+
+## T-023B — Admin-inactiviteit (securitybranch, nog niet productiegereed)
+- Offline beleidsregressie: `php tests/admin_idle_policy_test.php` (grens 60 minuten, corrupt klokveld, passieve mail-poll).
+- Offline contractcontrole: `php tests/admin_session_idle_contract_test.php` (CSRF, POST, beschermde rollen, geen opslag van formulierdata).
+- Nog vereist op geïsoleerde fictieve omgeving: admin/assistent/veilingmeester HTTP-cases, ongeldig CSRF/GET-405, sessieverlenging vóór en na expiry, login na expiry, en achtergrond-polls.
+- Browseracceptatie desktop/mobiel: schermlezer/toetsenbord, meerdere tabs, tab na slaapstand, tijdsverschil, verlies van netwerk en kavel-/verkoperformulier met niet-opgeslagen wijzigingen.
+- **Status:** lokaal alleen zuivere PHP-policytest uitgevoerd; geen volledige CI-/Docker-/Playwright-/productieacceptatie.
