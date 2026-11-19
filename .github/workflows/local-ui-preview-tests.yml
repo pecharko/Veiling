@@ -12,7 +12,8 @@ permissions:
   contents: read
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    # Playwright 1.57.0 does not support Ubuntu 26.04 (ubuntu-latest since Nov 2026).
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +33,7 @@ jobs:
       - name: Install pinned headless browser
         run: |
           npm install --no-audit --no-fund --prefix "$RUNNER_TEMP/preview-browser" playwright@1.57.0
-          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --with-deps chromium
+          "$RUNNER_TEMP/preview-browser/node_modules/.bin/playwright" install --only-shell chromium
       - name: Public and admin screenshots at desktop and mobile sizes
         run: NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node dev/preview/visual_test.cjs
       - name: Diagnose isolated preview startup failure
