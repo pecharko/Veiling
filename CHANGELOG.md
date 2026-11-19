@@ -1,5 +1,13 @@
 # Wijzigingslogboek
 
+## 2026-11-20 — Issue #2: reguliere snapshot-/herstelacceptatie herbeoordeeld (documentatie)
+
+Op besluit van de eigenaar zijn uitzonderlijke host-/storagecrashes, lopende HTTP-verzoeken en niet-coöpererende externe SQL/SFTP-writes **geen nieuw te ontwikkelen automatische herstelgaranties**. De bestaande fail-closed beveiliging, integriteitscontroles, hersteljournalen en operatorautorisaties blijven behouden.
+
+Nieuwe [acceptatiematrix](docs/ISSUE_2_NORMAL_ACCEPTANCE_2026-11-20.md) onderscheidt de actuele v8-catalogusrestore (zes catalogustabellen, foto's; behoud van admins en bezoekstatistieken) van historische v7/vijf-tabellen-teksten. Het testplan actualiseert T-027 als **deels gedekt** door T-050A/T-051, en requirements FR-015/017/019/020 verwijzen naar concrete CI- en productiebewijzen, met duidelijke grenzen voor T-015-opslagschatting, actuele externe v8-back-up en end-to-end concurrerende foto/kavel-restore.
+
+**Alleen documentatie.** Geen wijziging aan code, CI-gates, snapshotformaten, rechten, OVH, data of productieherstel. Issue #2 blijft open zolang de resterende expliciete acceptatiebesluiten/bewijzen ontbreken.
+
 ## 2026-11-19 — Veilige v8-snapshotfoto-integriteit (PR in ontwikkeling)
 
 Snapshot-ZIP's worden pas gepubliceerd nadat alle gecomprimeerde fotobytes
