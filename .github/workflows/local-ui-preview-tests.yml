@@ -12,7 +12,8 @@ permissions:
   contents: read
 jobs:
   preview:
-    runs-on: ubuntu-latest
+    # Playwright 1.57.0 does not support Ubuntu 26.04 (ubuntu-latest since Nov 2026).
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
