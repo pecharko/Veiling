@@ -259,6 +259,8 @@ verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() ==
     'Catalog restore preserves login attempts created after the snapshot');
 
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
+verify((glob(snap_dir().'/.restore-preserved-old-*') ?: []) === [],
+       'Successful restore cleans prior private photos after the journal has cleared');
 
 verify((fileperms($uploads) & 0005) === 0005,
        'Restored uploads root is traversable by webserver');
@@ -357,6 +359,26 @@ foreach([$artistOverviewSnapshot,$artistOverviewOnSnapshot] as $testArchive) {
 // Keep the original one-snapshot fixture expected by the following HTTP integration test.
 if (!unlink(snap_path($newSchemaSnapshot))) throw new RuntimeException('Could not clean schema regression snapshot');
 // Old snapshots are intentionally unsupported; no existing ZIP is modified.
+// A symlink supplied as the root of a recursive cleanup must never make
+// RecursiveDirectoryIterator walk or erase its target, even within the CI fixture.
+$protectedDir=snap_dir().'/.ci-protected-photos-'.bin2hex(random_bytes(6));
+$symlinkRoot=snap_dir().'/.ci-photo-root-link-'.bin2hex(random_bytes(6));
+if(!mkdir($protectedDir,0700))throw new RuntimeException('Cannot set up protected-photo CI directory');
+$protectedMarker=$protectedDir.'/keep.txt';
+try{
+ if(file_put_contents($protectedMarker,'unaltered')===false
+    || !symlink($protectedDir,$symlinkRoot))
+  throw new RuntimeException('Cannot set up symlink-root CI fixture');
+ assert_throws(fn()=>snap_remove_tree($symlinkRoot),'Symlink als fotomap',
+               'Recursive cleanup rejects symlinked root instead of traversing target');
+ verify(is_link($symlinkRoot) && is_file($protectedMarker)
+    && file_get_contents($protectedMarker)==='unaltered',
+    'Symlink cleanup rejection preserves all target bytes');
+}finally{
+ if(is_link($symlinkRoot))unlink($symlinkRoot);
+ if(is_file($protectedMarker))unlink($protectedMarker);
+ if(is_dir($protectedDir))rmdir($protectedDir);
+}
 // Exercise the security regression in the existing isolated snapshot CI suite.
 require __DIR__.'/snapshot_delete_security_test.php';
 // Test cleanup, only in the isolated auction_test database. The catalog

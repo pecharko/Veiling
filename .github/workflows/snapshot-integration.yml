@@ -182,6 +182,14 @@ jobs:
           CI_DB_NAME: auction_test
         run: php tests/restore_journal_postcommit_test.php
 
+      - name: T-059 SIGKILL after atomic private preservation but before journal clearance
+        if: needs.impact.outputs.run == 'true'
+        env:
+          CI_SNAPSHOT_TEST: 'yes'
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+        run: php tests/snapshot_postcommit_preserve_sigkill_test.php
+
       - name: T-055 readonly recovery diagnosis compares entire DB and all archive photos
         if: needs.impact.outputs.run == 'true'
         env:

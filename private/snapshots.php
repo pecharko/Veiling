@@ -138,9 +138,35 @@ function snap_verified(string $name): array {
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }
+/**
+ * Move the complete prior photo tree atomically to the existing private
+ * recovery-evidence location while the restore journal still blocks PHP.
+ * Never recursively delete old photos before the journal has been cleared.
+ */
+function snap_preserve_previous_photos(string $old, array $journal): string {
+ $runId=$journal['run_id']??null;
+ $oldName=$journal['old_uploads']??null;
+ if(!is_string($runId)||!preg_match('/^[a-f0-9]{32}$/D',$runId)
+    ||!is_string($oldName)||!preg_match('/^\.uploads-before-restore-[a-f0-9]{16}$/D',$oldName)
+    ||basename($old)!==$oldName||dirname($old)!==dirname(snap_uploads()))
+   throw new RuntimeException('Ongeldige fotomap voor herstelbewijs.');
+ $active=restore_journal_read();
+ if($active['run_id']!==$runId||$active['phase']!=='database_committed')
+   throw new RuntimeException('Databasecommit niet bevestigd in hersteljournal.');
+ $private=restore_journal_dir();
+ $preserved=$private.'/.restore-preserved-old-'.$runId;
+ if(is_link($private)||!is_dir($private)||is_link($old)||!is_dir($old)
+    ||file_exists($preserved)||is_link($preserved))
+   throw new RuntimeException('Oude foto-evidence is onveilig of reeds aanwezig.');
+ $oldStat=stat($old);$privateStat=stat($private);
+ if($oldStat===false||$privateStat===false||$oldStat['dev']!==$privateStat['dev'])
+   throw new RuntimeException('Oude foto-evidence kan niet atomair worden verplaatst.');
+ if(!rename($old,$preserved))throw new RuntimeException('Kon vorige fotomap niet veilig bewaren.');
+ return $preserved;
+}
 function snap_restore(PDO $pdo,string $name): void {
  snap_init();$lock=snap_lock();$stage=null;$old=null;$catalogLocked=false;
- $journal=null;$oldSaved=false;$newActive=false;$hadUploads=false;
+ $journal=null;$oldSaved=false;$newActive=false;$hadUploads=false;$preservedOld=null;
  $dbCommitted=false;$commitAttempted=false;
  try{
   restore_journal_require_clear();
@@ -166,6 +192,13 @@ function snap_restore(PDO $pdo,string $name): void {
   }
   $uploads=snap_uploads();$hadUploads=is_dir($uploads);
   if(is_link($uploads))throw new RuntimeException('De actieve fotomap mag geen symlink zijn.');
+  // Validate same-filesystem atomic preservation before modifying live photos.
+  if($hadUploads){
+   $uploadsStat=stat($uploads);$privateStat=stat(restore_journal_dir());
+   if(is_link(restore_journal_dir())||$uploadsStat===false||$privateStat===false
+      ||$uploadsStat['dev']!==$privateStat['dev'])
+    throw new RuntimeException('Vereiste private foto-evidence ligt niet op hetzelfde bestandssysteem.');
+  }
   $old=dirname($uploads).'/.uploads-before-restore-'.bin2hex(random_bytes(8));
   if($hadUploads){
     // The restored tree must retain existing webserver protections.
@@ -221,9 +254,18 @@ function snap_restore(PDO $pdo,string $name): void {
     throw $e;
   }
   restore_journal_phase($journal,'database_committed');
-  if($oldSaved){snap_remove_tree($old);$oldSaved=false;}
-  // The site may resume only after DB commit and final photo cleanup.
+  if($oldSaved){$preservedOld=snap_preserve_previous_photos($old,$journal);$oldSaved=false;}
+  // This clears maintenance only after the complete old tree was atomically
+  // preserved in private; no recursive deletion is allowed before this point.
   restore_journal_finish();$journal=null;
+  if($preservedOld!==null){
+   try{snap_remove_tree($preservedOld);}
+   catch(Throwable $cleanupError){
+    // The restored live DB/photos are already consistent and maintenance
+    // cleared; leave remaining private evidence for operator review.
+    error_log('[41Lokeren restore] Private old-photo cleanup incomplete; review required.');
+   }
+  }
  }catch(Throwable $e){
   // Roll back only when SQL commit was definitely NOT attempted. If commit
   // outcome is unknown, do not guess between old and new data; fail closed.
@@ -254,6 +296,9 @@ function snap_restore(PDO $pdo,string $name): void {
 }
 
 function snap_remove_tree(string $dir): void {
+ // A symlink at the root would make RecursiveDirectoryIterator traverse an
+ // unrelated directory. Refuse before examining or deleting its children.
+ if(is_link($dir))throw new RuntimeException('Symlink als fotomap is niet toegestaan.');
  if(!is_dir($dir))return;
  $it=new RecursiveIteratorIterator(new RecursiveDirectoryIterator($dir,FilesystemIterator::SKIP_DOTS),RecursiveIteratorIterator::CHILD_FIRST);
  foreach($it as $f){if($f->isDir()&&!$f->isLink())rmdir($f->getPathname());else unlink($f->getPathname());}rmdir($dir);
