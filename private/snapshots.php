@@ -99,11 +99,26 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $hashes=[];
   try{
    $zip->addFromString('database.json',$data);$hashes['database.json']=hash('sha256',$data);
-   foreach($assets as $relative=>$file){$entry='uploads/'.$relative;if(!$zip->addFile($file,$entry))throw new RuntimeException('Kon foto niet toevoegen: '.$relative);$hashes[$entry]=hash_file('sha256',$file);}
+   foreach($assets as $relative=>$file){
+    // ZipArchive::addFile reads lazily at close(). A separately calculated
+    // hash could therefore describe different bytes after an external SFTP
+    // writer changed the source in between. Archive exactly the bytes hashed.
+    $entry='uploads/'.$relative;
+    $expectedBytes=@filesize($file);
+    if($expectedBytes===false || $expectedBytes>12*1024*1024)
+      throw new RuntimeException('Foto ontbreekt of is te groot voor snapshot.');
+    $photo=file_get_contents($file);
+    if($photo===false || strlen($photo)!==$expectedBytes)
+      throw new RuntimeException('Foto veranderde of kon niet volledig worden gelezen.');
+    if(!$zip->addFromString($entry,$photo))
+      throw new RuntimeException('Kon foto niet toevoegen: '.$relative);
+    $hashes[$entry]=hash('sha256',$photo);
+    unset($photo);
+   }
    snap_require_referenced_photos($rows,$hashes);
    $manifest=json_encode(['format'=>$format,'sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
    $zip->addFromString('manifest.json',$manifest);
-  }finally{$zip->close();}
+  }finally{if(!$zip->close())throw new RuntimeException('Kon ZIP niet volledig schrijven.');}
   if(!rename($tmp,snap_path($name)))throw new RuntimeException('Kon snapshot niet afronden.');$tmp=null;
   return $name;
  }finally{
@@ -131,6 +146,23 @@ function snap_verified(string $name): array {
    if(!is_string($entry)||!preg_match('~^uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}\.(webp|jpg|png)$~D',$entry)||!preg_match('/^[a-f0-9]{64}$/D',(string)$hash))throw new RuntimeException('Ongeldige fotoverwijzing.');
    $st=$zip->statName($entry);if(!$st||$st['size']>12*1024*1024)throw new RuntimeException('Ontbrekende of te grote foto.');$size+=(int)$st['size'];
    if($size>350*1024*1024)throw new RuntimeException('Snapshot te groot.');
+   // A valid ZIP CRC is not enough: verify every archived photo against the
+   // SHA-256 in the manifest before declaring a snapshot restorable.
+   $stream=$zip->getStream($entry);
+   if(!is_resource($stream))throw new RuntimeException('Snapshotfoto is niet leesbaar.');
+   $ctx=hash_init('sha256');$read=0;
+   try{
+    while(!feof($stream)){
+     $chunk=fread($stream,1024*1024);
+     if($chunk===false || ($chunk==='' && !feof($stream)))
+       throw new RuntimeException('Snapshotfoto kon niet volledig worden gelezen.');
+     $read+=strlen($chunk);
+     if($read>(int)$st['size'])throw new RuntimeException('Snapshotfoto heeft onjuiste lengte.');
+     hash_update($ctx,$chunk);
+    }
+   }finally{fclose($stream);}
+   if($read!==(int)$st['size'] || !hash_equals($hash,hash_final($ctx)))
+    throw new RuntimeException('Foto checksum ongeldig.');
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
