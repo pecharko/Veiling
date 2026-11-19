@@ -1,5 +1,13 @@
 # Testplan — veilingcatalogus 41 Lokeren
 
+## Issue #2 — T-061 volledige v8-foto-SHA-256-controle (ontwikkeling, november 2026)
+
+De snapshotbouwer kan `ZipArchive::addFile()` pas bij `close()` uitlezen. Als een externe SFTP-writer een foto intussen wijzigt, kan een apart berekende bronhash afwijken van de uiteindelijk opgenomen ZIP-bytes, ondanks een **geldige ZIP-CRC**. Daarom wordt elke afgewerkte private ZIP na `close()` **streamend, met begrensd geheugengebruik**, gecontroleerd op alle daadwerkelijk gecomprimeerde fotobytes en de SHA-256 in het manifest **vóór publicatie**. `snap_verified()` doet dezelfde controle bij lezen/herstellen. Bij fout: geen gepubliceerde ZIP, geen foto- of DB-herstel en geen vrijgave van beschadigde snapshots.
+
+De geïsoleerde MySQL-test `tests/snapshot_integration.php` maakt een *fictieve* ZIP waarin de foto-inhoud en ZIP-CRC zijn vervangen, maar het SHA-256-manifest ongewijzigd blijft. T-061 eist afwijzing bij `snap_verified()` en `snap_restore()`, behoud van de actieve testfoto's en geen hersteljournal. De bestaande geautoriseerde snapshot-integratieworkflow test dit op wegwerpdata; een groen resultaat is **geen** productie- of hostcrashbewijs.
+
+Resterende grens: geen applicatielock kan externe phpMyAdmin/SFTP-writes exclusief uitsluiten; het ZIP-bewijs garandeert alleen dat het **gepubliceerde archief** intern overeenkomt met het manifest. Een externe writer kan nog steeds semantisch inconsistente databasefoto-relaties veroorzaken, en zware/snel veranderende mappen of OVH-geheugen-/tijdlimieten moeten afzonderlijk worden beoordeeld.
+
 ## Geografische basis — 31 oktober 2026, alleen geïsoleerde tests
 
 Vervolg: negen gerichte geo-fixtures, 28 basis-MySQL-controles, 32 geïntegreerde tracker/startdatum/archief/verwijdercontroles, 15 snapshot/restore/recovery-controles en 11 echte admin-HTTP-controles. De HTTP-tests bewijzen sessietoegang, standaard-UIT, percentages, onvolledige dekking, CSRF en twee-stapsverwijdering. De officiële reader wordt via composer.lock geïnstalleerd en op corrupte MMDB-fallback getest. Een echte actuele gelicentieerde productie-MMDB en OVH-acceptatie blijven afzonderlijk te verifiëren. De oorspronkelijke basisnotities hieronder beschrijven de eerdere fase.

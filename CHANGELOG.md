@@ -1,5 +1,16 @@
 # Wijzigingslogboek
 
+## 2026-11-19 — Veilige v8-snapshotfoto-integriteit (PR in ontwikkeling)
+
+Snapshot-ZIP's worden pas gepubliceerd nadat alle gecomprimeerde fotobytes
+streamend tegen de SHA-256 uit het manifest zijn gecontroleerd. Ook bij openen
+van een bestaand snapshot worden alle foto-inhouden voortaan geverifieerd; een
+ZIP met geldige interne CRC maar afwijkende foto-SHA wordt vóór enige restore
+geweigerd. De verificatie gebruikt begrensd werkgeheugen en geeft geen enkele
+nieuwe productie- of restorebevoegdheid. Nieuwe geïsoleerde T-061-regressie.
+Geen schema-/formaatwijziging, geen live herstel of OVH-upload.
+
+
 ## 2026-11-02 — Vaste adminvoorbeeldbanner en IP-uitsluiting bij login
 
 De voorbeeldbanner blijft tijdens scrollen zichtbaar met de navigatie eronder.
