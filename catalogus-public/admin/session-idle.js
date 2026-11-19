@@ -32,7 +32,7 @@
       banner.hidden = true;
     }
     // Check again at the warning threshold or at expiry, even after sleep.
-    task = window.setTimeout(schedule, Math.min(60000, Math.max(1000, remaining - 10 * 60 * 1000)));
+    task = window.setTimeout(schedule, Math.min(60000, Math.max(1000, remaining <= 10 * 60 * 1000 ? remaining : remaining - 10 * 60 * 1000)));
   }
   renew.addEventListener('click', async () => {
     renew.disabled = true;
