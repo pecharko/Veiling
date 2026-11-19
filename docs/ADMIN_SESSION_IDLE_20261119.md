@@ -13,6 +13,12 @@ een geldige POST vernietigt server-side sessie en cookie. Dit blijft ongewijzigd
   Ook een laat POST-verzoek op een kavel wordt dan **niet** verwerkt.
 - De ongelezene-mailteller (`admin/mail-ongelezen.php`) mag deze termijn
   **niet** automatisch verlengen.
+- De PHP-sessieconfiguratie voor de beheeromgeving stelt `session.gc_maxlifetime`
+  vóór `session_start()` in op minstens het toepassingsbeleid van 3600 seconden.
+  Dit voorkomt dat de gebruikelijke PHP-standaard (1440 seconden) de sessie
+  voortijdig opruimt wanneer deze instelling effectief wordt toegepast.
+  Op gedeelde hosting blijft verificatie van de werkelijke configuratie en
+  eventuele gezamenlijke sessieopslag noodzakelijk.
 - Bij nieuwe login wordt de timer gestart. Bestaande sessies zonder timer
   krijgen bij de eerstvolgende authentieke actie een starttijd.
 - In beheerpagina's verschijnt tien minuten vóór de verwachte vervaldatum
