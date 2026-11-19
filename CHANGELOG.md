@@ -303,3 +303,9 @@ Bewaar daadwerkelijke deploymentdata en commit-SHA's vanaf de eerste geïmportee
 - Databasekolom `admins.role` manueel gemigreerd en door beheerder bevestigd.
 - Vier PHP-bestanden uitgerold vanaf `e74b3ef3ce3fb7408aa00f4054ffbcabe82c49ce`; SHA-256-verificatie en HTTPS-smoketests geslaagd in [deploy-run 40086089816](https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004).
 - Vier handmatige acceptatiecontroles geslaagd volgens beheerder; formeel afgesloten. Code-only release zonder rollback, expliciet aanvaard.
+
+
+## In ontwikkeling — issue #23 (niet uitgerold)
+- Beheerder-inactiviteit: geplande 60-minutenlimiet, waarschuwing vóór sessieverval en expliciete CSRF-beveiligde verlengknop.
+- Passieve ongelezen-mailpolls verlengen sessies niet. Geen opslag van onbewaarde formulierdata in browserstorage.
+- Alleen branch `security/issue23-idle-timeout-20261119`; CI, browseracceptatie, merge en productieautorisatie blijven open.

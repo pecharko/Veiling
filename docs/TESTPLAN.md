@@ -132,3 +132,33 @@ Actiehouder en eventuele follow-up:
 - Alle vier handmatige functionele controles door beheerder geslaagd: Administrator opent Gebruikersbeheer; gebruikerslijst en accountselectie; Assistent ziet alleen kavelfuncties; Assistent krijgt geen toegang tot Gebruikersbeheer.
 - GitHub Actions deploy-run: https://github.com/pecharko/Veiling/actions/runs/40086089816/job/120849223004 — upload en HTTPS-smoketests geslaagd.
 - **Status:** functioneel geaccepteerd; release formeel afgesloten op 2026-10-24.
+
+
+## T-023B — Admin-inactiviteit (securitybranch, nog niet productiegereed)
+- Offline beleidsregressie: `php tests/admin_idle_policy_test.php` (grens 60 minuten, corrupt klokveld, passieve mail-poll).
+- Offline contractcontrole: `php tests/admin_session_idle_contract_test.php` (CSRF, POST, beschermde rollen, geen opslag van formulierdata).
+- Nog vereist op geïsoleerde fictieve omgeving: admin/assistent/veilingmeester HTTP-cases, ongeldig CSRF/GET-405, sessieverlenging vóór en na expiry, login na expiry, en achtergrond-polls.
+- Browseracceptatie desktop/mobiel: schermlezer/toetsenbord, meerdere tabs, tab na slaapstand, tijdsverschil, verlies van netwerk en kavel-/verkoperformulier met niet-opgeslagen wijzigingen.
+- **Status:** lokaal alleen zuivere PHP-policytest uitgevoerd; geen volledige CI-/Docker-/Playwright-/productieacceptatie.
+
+### T-023B aanvullende regressie, 19 november 2026
+- `node tests/admin_session_idle_error_test.cjs`: vier geslaagde gesimuleerde responsefouten — HTML in plaats van JSON, HTTP-fout (o.a. verlopen sessie), netwerkfout en misvormd JSON-contract. Bij alle vier blijft de waarschuwing zichtbaar en wordt verlenging niet als succes gemeld.
+- `node tests/admin_session_idle_client_test.cjs`: eerder geslaagde gesimuleerde waarschuwing, expliciete POST-verlenging en verloop.
+- `php tests/admin_idle_policy_test.php`: geslaagde 60-minutengrens en uitsluiting van passieve mailpolls.
+- Uitgevoerd in een geïsoleerde Linux-container, **niet** op de Mac-preview. De volledige HTTP-/MySQL-/Docker-/Playwright-acceptatie is niet uitgevoerd; de contracttest is nog niet tegen een volledige lokaal uitgecheckte repository uitgevoerd. Geen productie-PASS.
+- Definitieve eigenaarbeslissing: niet-opgeslagen gegevens mogen bij timeout verloren gaan; **geen draft-herstel of autosave implementeren**.
+
+### T-023B — Geïsoleerde HTTP-renewal-verificatie (19 november 2026)
+- Het bestaande endpoint `catalogus-public/admin/sessie-verlengen.php` werd in een tijdelijke PHP localhost-server met een expliciet fictieve auth/bootstrap-stub beproefd: GET → 405 + Allow: POST; onjuist CSRF → 403; correct CSRF maar niet aangemeld → 303 naar login; correct CSRF en fictief aangemeld → 200 JSON + Cache-Control: no-store. Vier controles OK.
+- Herhaalbaar testschema toegevoegd als `tests/admin_session_idle_endpoint_http_test.py`; geen productieverbinding, credentials of database.
+- **Beperking:** vervangende bootstrap authenticeert niet via de echte `admins`-tabel; dit bewijst niet dat werkelijke sessies, rollen, vervallen POST-opslag of browserformulieren volledig werken. Geen Docker-/Playwright-acceptatie geclaimd.
+
+### T-023B — Verkoper-/kunstenaarformulier na sessieverval
+- Reproductie in geïsoleerde localhost Docker-preview: na 3601 seconden geforceerde inactiviteit toont een AJAX-opslag vanuit `admin/verkoper.php` een algemene melding **'Opslaan kon niet worden bevestigd'** en volgt de inlog-redirect niet zichtbaar. De AJAX-XMLHttpRequest volgt een server-303 zelf en krijgt de HTML-loginpagina terug; dit is **geen bewijs dat de gegevens werden opgeslagen**.
+- Correctie `catalogus-public/admin/verkoper.php`: uitsluitend wanneer `xhr.responseURL` daadwerkelijk de same-origin `/admin/login.php` is, navigeer het hele tabblad naar login. Andere host/HTML/fout mag niet als geslaagde opslag of vertrouwde redirect doorgaan. Geldt voor de gedeelde verkoper-/kunstenaar-editor; geen draft/herstel.
+- Gerichte simulatie `node tests/seller_session_expiry_ajax_test.cjs`: login-URL, login-URL met query, vreemde origin en niet-login-URL. **Nog uit te voeren op de Mac-issue23-worktree**, samen met echte Browser/Network-acceptatie voor verkoper en kunstenaar. Na expiry moet de POST server-side geweigerd worden en moet de oorspronkelijk opgeslagen databasewaarde intact blijven.
+
+### T-023B — exact tienminutengrens en rolacceptatie
+- `node tests/admin_idle_warning_boundary_test.cjs`: vier gesimuleerde grensgevallen op de werkelijke `session-idle.js`: 601 s (geen waarschuwing), 600 s (waarschuwing + verlengknop), 1 s (waarschuwing) en 0 s (vervallen + loginlink). Geen ongevraagde fetch/automatische sessieverlenging. Geïsoleerd offline uitgevoerd: OK (4 scenario's); op Mac en met daadwerkelijke browserklok nog niet onafhankelijk aangetoond.
+- Browseracceptatie met fictieve testaccount: na inloggen één actieve adminsessie op `veiling-issue23`, `admin_last_activity_at` tijdelijk tot `time()-3000` zetten, nieuwe adminpagina openen; waarschuwing moet vanaf maximaal 10 minuten resterend zichtbaar zijn, een expliciete verlenging moet 200 JSON geven, de waarschuwing moet verdwijnen; eerder invoerwaarden niet automatisch bewaren/herstellen.
+- De drie rollen (Administrator, Veilingmeester, Assistent) elk met werkelijke sessierol en hun toegestane kavel-/verkoper-/kunstenaarsroutes doorlopen, plus weigering van niet-toegestane beheerdersroutes en late POST na verlopen sessie. Voorlopig **OPEN**; de ene fictieve Administrator-browserproef bewijst geen drie rollen.

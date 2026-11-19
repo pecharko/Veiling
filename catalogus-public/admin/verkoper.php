@@ -359,6 +359,19 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
         pct.hidden=true;
       });
       xhr.addEventListener('load', () => {
+        // PHP may redirect an expired admin session to login. XHR follows that
+        // redirect internally; the page itself would otherwise show a generic
+        // 'save not confirmed' error instead of opening the login screen.
+        // Recognize only the exact same-origin login route, never arbitrary
+        // response URLs. A late POST is already rejected by require_auth().
+        if (xhr.responseURL) {
+          const responseUrl=new URL(xhr.responseURL,window.location.href);
+          if (responseUrl.origin===window.location.origin && responseUrl.pathname.endsWith('/admin/login.php')) {
+            saving=false;
+            window.location.assign(responseUrl.href);
+            return;
+          }
+        }
         const body=xhr.response;
         if (xhr.status===200 && body && typeof body.redirect==='string') {
           const target=new URL(body.redirect,window.location.href);

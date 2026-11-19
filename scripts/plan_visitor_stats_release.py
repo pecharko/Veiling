@@ -21,7 +21,7 @@ FILES = (
 MARKERS = {
     "private/visitor_stats.php": ("function track_catalog_view(", "analytics_secret", "visitor_stats_daily"),
     "catalogus-public/admin/statistieken.php": ("require_auth();", "visitor_stats_daily", "admin_top("),
-    "private/bootstrap.php": ("admin/statistieken.php", "function require_auth()"),
+    "private/bootstrap.php": ("admin/statistieken.php", "function require_auth("),
     "catalogus-public/index.php": ("private/visitor_stats.php", "track_catalog_view();"),
     "catalogus-public/kavel.php": ("private/visitor_stats.php", "track_catalog_view((int)$lot['id']);"),
 }

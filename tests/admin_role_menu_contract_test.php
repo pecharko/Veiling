@@ -11,7 +11,11 @@ foreach (['require_auth();', 'Administrator', 'Assistent', 'Veilingmeester', 'Ve
   if (!str_contains($help, $needle)) throw new RuntimeException('Missing roles guidance: ' . $needle);
 }
 if (!str_contains($css, '.admin-active-role')) throw new RuntimeException('Missing role indicator styling');
-if (!str_contains($bootstrap, "'rollen.php', 'mail-ongelezen.php', 'logout.php'")) throw new RuntimeException('Help must be accessible to assistants and veilingmeesters');
+// The allowed-route list can gain further permitted endpoints (e.g. explicit
+// session renewal) without changing access to help or logout.
+foreach (["'rollen.php'", "'mail-ongelezen.php'", "'logout.php'", "'sessie-verlengen.php'"] as $route) {
+  if (!str_contains($bootstrap, $route)) throw new RuntimeException('Missing allowed admin route: ' . $route);
+}
 // Run the dedicated OVH Outlook menu guard on existing role-menu CI paths.
 require __DIR__ . '/admin_outlook_owa_menu_contract_test.php';
 require __DIR__ . '/admin_mail_unread_contract_test.php';

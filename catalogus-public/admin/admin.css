@@ -476,3 +476,17 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 /* Distinguish valid unread counts from unconfigured and unavailable mailbox status. */
 .admin-mail-badge[data-state="disconnected"]{background:#e9ece9;color:#44544a;font-size:10px;font-weight:600;padding:0 7px}
 .admin-mail-badge[data-state="unavailable"]{background:#e9ece9;color:#44544a}
+
+/* Issue #23: persistent, accessible warning without altering unsaved forms. */
+.admin-session-warning{
+  position:fixed;bottom:1rem;left:1rem;right:1rem;z-index:1000;
+  max-width:740px;margin:0 auto;padding:.85rem 1rem;
+  color:#29473e;background:#fff7e6;border:2px solid #850015;
+  border-radius:.65rem;box-shadow:0 5px 24px #0002;
+  display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;
+}
+.admin-session-warning[hidden],.admin-session-warning [hidden]{display:none!important}
+.admin-session-warning-text{flex:1 1 260px}
+.admin-session-warning button{font:inherit;padding:.45rem .8rem;background:#850015;color:white;border:0;border-radius:.35rem;cursor:pointer}
+.admin-session-warning button:focus-visible,.admin-session-warning a:focus-visible{outline:3px solid #29473e;outline-offset:3px}
+.admin-session-warning button:disabled{opacity:.6}

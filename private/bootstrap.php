@@ -6,6 +6,7 @@ date_default_timezone_set('Europe/Brussels');
 
 // Fail closed on every PHP entry point after an interrupted restore.
 // This checks only private filesystem markers; no DB/hosting credentials needed.
+require_once __DIR__ . '/admin_idle_policy.php';
 require_once __DIR__ . '/restore_journal.php';
 restore_journal_gate_web();
 
@@ -109,7 +110,12 @@ function effective_admin_role(): string {
 function can_edit_auction(): bool {
   return in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true);
 }
-function require_auth(): void {
+/** Interactive admin inactivity limit (60 minutes); mail polling must not renew it. */
+function admin_idle_expires_at(): int {
+  $last = $_SESSION['admin_last_activity_at'] ?? null;
+  return admin_idle_expiry(is_int($last) ? $last : null, time());
+}
+function require_auth(bool $touchActivity = true): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
   $st = db()->prepare('SELECT password_hash, is_active FROM admins WHERE id=?');
@@ -122,6 +128,14 @@ function require_auth(): void {
     session_regenerate_id(true);
     redirect('admin/login.php');
   }
+  $now = time();
+  $lastActivity = $_SESSION['admin_last_activity_at'] ?? null;
+  if (admin_idle_expired(is_int($lastActivity) ? $lastActivity : null, $now)) {
+    // Expired admin sessions cannot be restored by a background poll or a late POST.
+    $_SESSION = [];
+    session_regenerate_id(true);
+    redirect('admin/login.php');
+  }
   $role = effective_admin_role();
   if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) {
     http_response_code(403);
@@ -130,7 +144,7 @@ function require_auth(): void {
   $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
   if (str_contains($script, '/admin/') && $role !== 'administrator') {
     $page = basename($script);
-    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'seller-search.php', 'veiling-organisatie.php', 'rollen.php', 'mail-ongelezen.php', 'logout.php'];
+    $allowed = ['index.php', 'kavel.php', 'verkopers.php', 'verkoper.php', 'kunstenaars.php', 'kunstenaar-bewerken.php', 'seller-search.php', 'veiling-organisatie.php', 'rollen.php', 'mail-ongelezen.php', 'sessie-verlengen.php', 'logout.php'];
     // The original administrator or veilingmeester can always restore their role.
     if (admin_role_switch_targets(stored_admin_role()) !== []) $allowed[] = 'rol-wissel.php';
     if ($role === 'veilingmeester') $allowed[] = 'categorieen.php';
@@ -139,17 +153,28 @@ function require_auth(): void {
       exit('Geen toegang tot dit beheeronderdeel.');
     }
   }
+  // Only authorized admin activity renews the idle timer. Background mail
+  // polling and rejected role routes must not keep a forgotten session alive.
+  if ($touchActivity && admin_idle_should_touch($script)) {
+    $_SESSION['admin_last_activity_at'] = $now;
+  }
 }
 function require_administrator(): void {
-  require_auth();
+  // Do not count a forbidden administrator-only page as user activity.
+  require_auth(false);
   if (effective_admin_role() !== 'administrator') {
     http_response_code(403);
     exit('Geen toegang tot dit beheeronderdeel.');
   }
+  $_SESSION['admin_last_activity_at'] = time();
 }
 function admin_session(): void {
   if (session_status() !== PHP_SESSION_NONE) return;
   ini_set('session.use_strict_mode', '1');
+  // The PHP default garbage-collection lifetime is commonly 24 minutes.
+  // Keep the admin session storage eligible for at least the 60-minute
+  // application idle policy; the application still rejects expired requests.
+  ini_set('session.gc_maxlifetime', (string)ADMIN_IDLE_SECONDS);
   session_name('catalog_admin');
   session_set_cookie_params([
     'httponly' => true,
@@ -269,5 +294,14 @@ function admin_top(string $title): void {
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
-  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer><script src="' . e(url('admin/mail-unread.js')) . '" defer></script></body></html>';
+  $sessionExpiry = admin_idle_expires_at();
+  $renewUrl = e(url('admin/sessie-verlengen.php'));
+  $csrf = e(csrf_token());
+  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer>'
+    . '<aside id="admin-session-warning" class="admin-session-warning" role="alert" hidden data-expires="' . $sessionExpiry . '" data-renew-url="' . $renewUrl . '" data-csrf="' . $csrf . '">'
+    . '<span class="admin-session-warning-text">Je beheerderssessie verloopt binnenkort. Sla eventuele wijzigingen op of verleng je sessie.</span> '
+    . '<button type="button" id="admin-session-renew">Sessie verlengen</button> '
+    . '<a href="' . e(url('admin/login.php')) . '" id="admin-session-login" hidden>Opnieuw inloggen</a></aside>'
+    . '<script src="' . e(url('admin/mail-unread.js')) . '" defer></script>'
+    . '<script src="' . e(url('admin/session-idle.js')) . '" defer></script></body></html>';
 }

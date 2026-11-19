@@ -251,3 +251,11 @@ Het beheer toont vier statistiekkaarten, een responsieve kaveltabel met statusba
 - Rol `assistant`: kavelfuncties; andere beheerroutes afgeschermd.
 - Minstens één Administrator behouden; beheerder bevestigde geslaagde productieacceptatie van alle vier de rolcontroles.
 - Release SHA: `e74b3ef3ce3fb7408aa00f4054ffbcabe82c49ce`.
+
+
+## NFR-023B — Inactiviteitsbeveiliging adminsessies (in ontwikkeling)
+- Een geauthenticeerde beheerderssessie verloopt na 60 minuten zonder serveractiviteit door de gebruiker. Passieve mail-statuspolls mogen de termijn niet verlengen.
+- Een zichtbare waarschuwing begint tien minuten voor expiry; expliciete verlenging vereist ingelogde sessie plus POST en CSRF, geldt voor alle drie rollen.
+- Sessieverval mag late POST-formulierschrijfacties niet aanvaarden; er mag geen stille autosave of browseropslag van niet-opgeslagen kavel-/verkopergegevens gebeuren.
+- Bestaande POST+CSRF-uitlog, HTTPS-cookieinstellingen, rolrechten en credentialvalidatie blijven gelden.
+- **Status:** in geïsoleerde branch voorbereid, niet gemerged of live geaccepteerd. Zie `docs/ADMIN_SESSION_IDLE_20261119.md` en T-023B.

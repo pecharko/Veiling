@@ -20,7 +20,7 @@ $mustContain = static function (string $source, array $fragments): void {
     }
 };
 $mustContain($bootstrap, [
-    "'rollen.php', 'mail-ongelezen.php', 'logout.php'",
+    "'rollen.php', 'mail-ongelezen.php', 'sessie-verlengen.php', 'logout.php'",
     'data-mail-unread-url=',
     'admin-mail-badge',
     'admin/mail-unread.js',
