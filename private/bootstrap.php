@@ -109,6 +109,10 @@ function effective_admin_role(): string {
 function can_edit_auction(): bool {
   return in_array(effective_admin_role(), ['administrator', 'veilingmeester'], true);
 }
+/** Interactive admin inactivity limit (60 minutes); mail polling must not renew it. */
+function admin_idle_expires_at(): int {
+  return (int)($_SESSION['admin_last_activity_at'] ?? time()) + 3600;
+}
 function require_auth(): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
@@ -121,6 +125,19 @@ function require_auth(): void {
     $_SESSION = [];
     session_regenerate_id(true);
     redirect('admin/login.php');
+  }
+  $now = time();
+  $lastActivity = $_SESSION['admin_last_activity_at'] ?? null;
+  if (is_int($lastActivity) && ($lastActivity > $now + 60 || $now - $lastActivity >= 3600)) {
+    // Expired admin sessions cannot be restored by a background poll or a late POST.
+    $_SESSION = [];
+    session_regenerate_id(true);
+    redirect('admin/login.php');
+  }
+  // The optional mail unread badge polls every two minutes; never treat it as
+  // interactive activity, otherwise a forgotten tab can remain logged in.
+  if (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) !== 'mail-ongelezen.php') {
+    $_SESSION['admin_last_activity_at'] = $now;
   }
   $role = effective_admin_role();
   if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) {
@@ -269,5 +286,14 @@ function admin_top(string $title): void {
   if ($flash) echo '<div class="alert ' . e($flash['type']) . '" role="status">' . e($flash['message']) . '</div>';
 }
 function admin_bottom(): void {
-  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer><script src="' . e(url('admin/mail-unread.js')) . '" defer></script></body></html>';
+  $sessionExpiry = admin_idle_expires_at();
+  $renewUrl = e(url('admin/sessie-verlengen.php'));
+  $csrf = e(csrf_token());
+  echo '</main><footer class="admin-footer">Alleen bevoegde organisatoren hebben toegang. Maak regelmatig een back-up van de database en foto’s.</footer>'
+    . '<aside id="admin-session-warning" class="admin-session-warning" role="alert" hidden data-expires="' . $sessionExpiry . '" data-renew-url="' . $renewUrl . '" data-csrf="' . $csrf . '">'
+    . '<span class="admin-session-warning-text">Je beheerderssessie verloopt binnenkort. Sla eventuele wijzigingen op of verleng je sessie.</span> '
+    . '<button type="button" id="admin-session-renew">Sessie verlengen</button> '
+    . '<a href="' . e(url('admin/login.php')) . '" id="admin-session-login" hidden>Opnieuw inloggen</a></aside>'
+    . '<script src="' . e(url('admin/mail-unread.js')) . '" defer></script>'
+    . '<script src="' . e(url('admin/session-idle.js')) . '" defer></script></body></html>';
 }
