@@ -169,6 +169,10 @@ function require_administrator(): void {
 function admin_session(): void {
   if (session_status() !== PHP_SESSION_NONE) return;
   ini_set('session.use_strict_mode', '1');
+  // The PHP default garbage-collection lifetime is commonly 24 minutes.
+  // Keep the admin session storage eligible for at least the 60-minute
+  // application idle policy; the application still rejects expired requests.
+  ini_set('session.gc_maxlifetime', (string)ADMIN_IDLE_SECONDS);
   session_name('catalog_admin');
   session_set_cookie_params([
     'httponly' => true,
