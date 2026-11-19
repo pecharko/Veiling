@@ -99,26 +99,24 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   $hashes=[];
   try{
    $zip->addFromString('database.json',$data);$hashes['database.json']=hash('sha256',$data);
+   // addFile may read lazily at close(). Do not trust pre-close hashes:
+   // validate the real ZIP bytes below before publishing any new snapshot.
    foreach($assets as $relative=>$file){
-    // ZipArchive::addFile reads lazily at close(). A separately calculated
-    // hash could therefore describe different bytes after an external SFTP
-    // writer changed the source in between. Archive exactly the bytes hashed.
     $entry='uploads/'.$relative;
-    $expectedBytes=@filesize($file);
-    if($expectedBytes===false || $expectedBytes>12*1024*1024)
-      throw new RuntimeException('Foto ontbreekt of is te groot voor snapshot.');
-    $photo=file_get_contents($file);
-    if($photo===false || strlen($photo)!==$expectedBytes)
-      throw new RuntimeException('Foto veranderde of kon niet volledig worden gelezen.');
-    if(!$zip->addFromString($entry,$photo))
+    if(!$zip->addFile($file,$entry))
       throw new RuntimeException('Kon foto niet toevoegen: '.$relative);
-    $hashes[$entry]=hash('sha256',$photo);
-    unset($photo);
+    $hash=hash_file('sha256',$file);
+    if(!is_string($hash))throw new RuntimeException('Kan foto checksum niet bepalen.');
+    $hashes[$entry]=$hash;
    }
    snap_require_referenced_photos($rows,$hashes);
    $manifest=json_encode(['format'=>$format,'sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
    $zip->addFromString('manifest.json',$manifest);
   }finally{if(!$zip->close())throw new RuntimeException('Kon ZIP niet volledig schrijven.');}
+  // Fail closed if source bytes changed before libzip finished reading files,
+  // or if the completed ZIP/manifest contains any invalid/corrupt bytes.
+  // Bounded streaming verification happens before publicizing the ZIP.
+  snap_verified_file($tmp);
   if(!rename($tmp,snap_path($name)))throw new RuntimeException('Kon snapshot niet afronden.');$tmp=null;
   return $name;
  }finally{
@@ -127,8 +125,9 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   finally{flock($lock,LOCK_UN);fclose($lock);}
  }
 }
-function snap_verified(string $name): array {
- $path=snap_path($name);if(!is_file($path))throw new RuntimeException('Snapshot bestaat niet.');
+/** Internal verification for a finished private ZIP, including a not-yet-published one. */
+function snap_verified_file(string $path): array {
+ if(is_link($path)||!is_file($path))throw new RuntimeException('Snapshot bestaat niet.');
  $zip=new ZipArchive();if($zip->open($path)!==true)throw new RuntimeException('ZIP onleesbaar.');
  try{
   $m=$zip->getFromName('manifest.json');$d=$zip->getFromName('database.json');
@@ -169,6 +168,9 @@ function snap_verified(string $name): array {
   foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
+}
+function snap_verified(string $name): array {
+ return snap_verified_file(snap_path($name));
 }
 /**
  * Move the complete prior photo tree atomically to the existing private
