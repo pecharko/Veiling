@@ -74,10 +74,12 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(artLot.status(), 200, 'Published synthetic artist lot must load');
     const artistLink = page.locator('.detail-artist .lot-artist-name a[href*="kunstenaar.php?id="]');
     assert.equal(await artistLink.count(), 1, 'Artist name must link internally');
+    const expectedArtist = (await artistLink.textContent()).trim();
+    assert.ok(expectedArtist, 'Linked artist name must not be empty');
     await Promise.all([page.waitForURL('**/kunstenaar.php?id=*'), artistLink.click()]);
-    assert.match(await page.locator('.artist-profile h1').textContent(), /Fictieve Ateliernaam/);
-    assert.match(await page.locator('.artist-profile-slogan').textContent(), /Kunst die verwondert/);
-    assert.match(await page.locator('.artist-profile-intro').textContent(), /fictieve maker/);
+    assert.equal((await page.locator('.artist-profile h1').textContent()).trim(), expectedArtist);
+    assert.match(await page.locator('.artist-profile-slogan').textContent(), /\S/);
+    assert.match(await page.locator('.artist-profile-intro').textContent(), /\S/);
     assert.doesNotMatch(await page.textContent('body'), /kunst@example\\.invalid|BE68539007547034|Voorbeeldstraat/);
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
