@@ -115,7 +115,7 @@ function admin_idle_expires_at(): int {
   $last = $_SESSION['admin_last_activity_at'] ?? null;
   return admin_idle_expiry(is_int($last) ? $last : null, time());
 }
-function require_auth(): void {
+function require_auth(bool $touchActivity = true): void {
   admin_session();
   if (!isset($_SESSION['admin_id']) || !is_int($_SESSION['admin_id'])) redirect('admin/login.php');
   $st = db()->prepare('SELECT password_hash, is_active FROM admins WHERE id=?');
@@ -155,16 +155,18 @@ function require_auth(): void {
   }
   // Only authorized admin activity renews the idle timer. Background mail
   // polling and rejected role routes must not keep a forgotten session alive.
-  if (admin_idle_should_touch($script)) {
+  if ($touchActivity && admin_idle_should_touch($script)) {
     $_SESSION['admin_last_activity_at'] = $now;
   }
 }
 function require_administrator(): void {
-  require_auth();
+  // Do not count a forbidden administrator-only page as user activity.
+  require_auth(false);
   if (effective_admin_role() !== 'administrator') {
     http_response_code(403);
     exit('Geen toegang tot dit beheeronderdeel.');
   }
+  $_SESSION['admin_last_activity_at'] = time();
 }
 function admin_session(): void {
   if (session_status() !== PHP_SESSION_NONE) return;
