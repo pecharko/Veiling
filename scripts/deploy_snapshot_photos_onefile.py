@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import posixpath
+import re
 import stat
 import sys
 import tempfile
@@ -72,6 +73,19 @@ def remote_read(sftp, path, allow_absent=False):
         raise RuntimeError("Unexpected remote size: " + path)
     return data
 
+# Accept the original guard and the current typed optional-session parameter,
+# but never a comment, call site, or unrelated function with that name.
+_AUTH_DEFINITION = re.compile(
+    rb"(?m)^[ \\t]*function[ \\t]+require_auth[ \\t]*\\("[
+    rb" \\t]*(?:bool[ \\t]+\\$touchActivity[ \\t]*=[ \\t]*true[ \\t]*)?"
+    rb"\\)[ \\t]*(?::[ \\t]*void[ \\t]*)?\\s*\\{"
+)
+
+
+def has_expected_auth_guard(bootstrap):
+    return bool(_AUTH_DEFINITION.search(bootstrap))
+
+
 def inspect(sftp, base):
     sentinel = remote_read(sftp, posixpath.join(base, "catalogus-public/admin/index.php"))
     if b"dashboard-table" not in sentinel:
@@ -79,7 +93,7 @@ def inspect(sftp, base):
     result = {}
     for name in FILES:
         result[name] = remote_read(sftp, posixpath.join(base, name), name in NEW_FILES)
-    if b"function require_auth()" not in remote_read(sftp, posixpath.join(base, "private/bootstrap.php")):
+    if not has_expected_auth_guard(remote_read(sftp, posixpath.join(base, "private/bootstrap.php"))):
         raise RuntimeError("Wrong remote bootstrap")
     return result
 
