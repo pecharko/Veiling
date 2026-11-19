@@ -6,6 +6,7 @@ date_default_timezone_set('Europe/Brussels');
 
 // Fail closed on every PHP entry point after an interrupted restore.
 // This checks only private filesystem markers; no DB/hosting credentials needed.
+require_once __DIR__ . '/admin_idle_policy.php';
 require_once __DIR__ . '/restore_journal.php';
 restore_journal_gate_web();
 
@@ -111,7 +112,8 @@ function can_edit_auction(): bool {
 }
 /** Interactive admin inactivity limit (60 minutes); mail polling must not renew it. */
 function admin_idle_expires_at(): int {
-  return (int)($_SESSION['admin_last_activity_at'] ?? time()) + 3600;
+  $last = $_SESSION['admin_last_activity_at'] ?? null;
+  return admin_idle_expiry(is_int($last) ? $last : null, time());
 }
 function require_auth(): void {
   admin_session();
@@ -128,7 +130,7 @@ function require_auth(): void {
   }
   $now = time();
   $lastActivity = $_SESSION['admin_last_activity_at'] ?? null;
-  if (is_int($lastActivity) && ($lastActivity > $now + 60 || $now - $lastActivity >= 3600)) {
+  if (admin_idle_expired(is_int($lastActivity) ? $lastActivity : null, $now)) {
     // Expired admin sessions cannot be restored by a background poll or a late POST.
     $_SESSION = [];
     session_regenerate_id(true);
@@ -136,7 +138,7 @@ function require_auth(): void {
   }
   // The optional mail unread badge polls every two minutes; never treat it as
   // interactive activity, otherwise a forgotten tab can remain logged in.
-  if (basename((string)($_SERVER['SCRIPT_NAME'] ?? '')) !== 'mail-ongelezen.php') {
+  if (admin_idle_should_touch((string)($_SERVER['SCRIPT_NAME'] ?? ''))) {
     $_SESSION['admin_last_activity_at'] = $now;
   }
   $role = effective_admin_role();
