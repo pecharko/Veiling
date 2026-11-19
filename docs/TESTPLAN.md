@@ -147,3 +147,8 @@ Actiehouder en eventuele follow-up:
 - `php tests/admin_idle_policy_test.php`: geslaagde 60-minutengrens en uitsluiting van passieve mailpolls.
 - Uitgevoerd in een geïsoleerde Linux-container, **niet** op de Mac-preview. De volledige HTTP-/MySQL-/Docker-/Playwright-acceptatie is niet uitgevoerd; de contracttest is nog niet tegen een volledige lokaal uitgecheckte repository uitgevoerd. Geen productie-PASS.
 - Definitieve eigenaarbeslissing: niet-opgeslagen gegevens mogen bij timeout verloren gaan; **geen draft-herstel of autosave implementeren**.
+
+### T-023B — Geïsoleerde HTTP-renewal-verificatie (19 november 2026)
+- Het bestaande endpoint `catalogus-public/admin/sessie-verlengen.php` werd in een tijdelijke PHP localhost-server met een expliciet fictieve auth/bootstrap-stub beproefd: GET → 405 + Allow: POST; onjuist CSRF → 403; correct CSRF maar niet aangemeld → 303 naar login; correct CSRF en fictief aangemeld → 200 JSON + Cache-Control: no-store. Vier controles OK.
+- Herhaalbaar testschema toegevoegd als `tests/admin_session_idle_endpoint_http_test.py`; geen productieverbinding, credentials of database.
+- **Beperking:** vervangende bootstrap authenticeert niet via de echte `admins`-tabel; dit bewijst niet dat werkelijke sessies, rollen, vervallen POST-opslag of browserformulieren volledig werken. Geen Docker-/Playwright-acceptatie geclaimd.
