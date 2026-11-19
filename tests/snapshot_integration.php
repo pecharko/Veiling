@@ -164,6 +164,34 @@ verify($zip->locateName('database.json') !== false && $zip->locateName('manifest
        'Snapshot ZIP contains database JSON and checksum manifest');
 $zip->close();
 
+// A ZIP with an internally valid CRC can still contain photo bytes that do
+// not match the SHA-256 manifest. All destructive restore activity must refuse
+// the archive before renaming the active uploads tree.
+$badPhotoName='snapshot-20990102-000000-deadbeefdead.zip';
+$badPhotoPath=snap_path($badPhotoName);
+if(!copy(snap_path($name),$badPhotoPath))
+    throw new RuntimeException('Cannot create disposable photo-corruption fixture');
+$badPhotoZip=new ZipArchive();
+if($badPhotoZip->open($badPhotoPath)!==true)
+    throw new RuntimeException('Cannot modify disposable photo fixture');
+$photoEntry='uploads/'.$relative;
+$photoBytes=$badPhotoZip->getFromName($photoEntry);
+if($photoBytes===false)throw new RuntimeException('Missing fixture photo in ZIP');
+if(!$badPhotoZip->addFromString($photoEntry,$photoBytes.'CI modified photo bytes'))
+    throw new RuntimeException('Cannot add edited photo ZIP fixture');
+if(!$badPhotoZip->close())throw new RuntimeException('Cannot close edited photo ZIP fixture');
+try{
+    assert_throws(fn()=>snap_verified($badPhotoName),'Foto checksum',
+        'T-061 rejects CRC-valid ZIP with photo SHA-256 different from manifest');
+    assert_throws(fn()=>snap_restore($pdo,$badPhotoName),'Foto checksum',
+        'T-061 refuses tampered photo ZIP before any DB or upload directory swap');
+    verify(!restore_journal_pending() && is_file($original)
+        && is_file($sellerPhoto) && hash_file('sha256',$original)===$checksum,
+        'T-061 corrupt archive cannot enter maintenance or alter live fixture photos');
+}finally{
+    if(is_file($badPhotoPath))unlink($badPhotoPath);
+}
+
 $after = snap_storage_stats();
 verify($after['snapshots'] === filesize(snap_path($name)) && $after['total'] > $initialStorage['total'],
        'Hosting total and snapshot subtotal increase after creation');
