@@ -259,6 +259,8 @@ verify((int)$pdo->query('SELECT COUNT(*) FROM login_attempts')->fetchColumn() ==
     'Catalog restore preserves login attempts created after the snapshot');
 
 verify(!restore_journal_pending(), 'Successful restore removes maintenance journal and has no lingering temporary journal');
+verify((glob(snap_dir().'/.restore-preserved-old-*') ?: []) === [],
+       'Successful restore cleans prior private photos after the journal has cleared');
 
 verify((fileperms($uploads) & 0005) === 0005,
        'Restored uploads root is traversable by webserver');
