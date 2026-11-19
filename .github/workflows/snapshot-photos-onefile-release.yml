@@ -9,6 +9,7 @@ on:
     paths:
       - '.github/workflows/snapshot-photos-onefile-release.yml'
       - 'scripts/deploy_snapshot_photos_onefile.py'
+      - 'tests/snapshot_photo_preflight_bootstrap_test.py'
   workflow_dispatch:
     inputs:
       mode:
@@ -51,6 +52,7 @@ jobs:
       - name: 'Validate exact source and offline plan'
         run: |
           python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 -B -m unittest discover -s tests -p snapshot_photo_preflight_bootstrap_test.py -v
           python3 scripts/deploy_snapshot_photos_onefile.py plan
   automatic-readonly:
     concurrency:
@@ -88,6 +90,7 @@ jobs:
       - name: 'Offline one-file checks'
         run: |
           python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 -B -m unittest discover -s tests -p snapshot_photo_preflight_bootstrap_test.py -v
           python3 scripts/deploy_snapshot_photos_onefile.py plan
       - name: 'Pinned SFTP client'
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
@@ -141,6 +144,7 @@ jobs:
           set -euo pipefail
           php -l private/snapshots.php
           python3 -m py_compile scripts/deploy_snapshot_photos_onefile.py
+          python3 -B -m unittest discover -s tests -p snapshot_photo_preflight_bootstrap_test.py -v
           python3 scripts/deploy_snapshot_photos_onefile.py plan
       - name: 'Explicit deployment-only authorization gate'
         if: inputs.mode == 'deploy'
