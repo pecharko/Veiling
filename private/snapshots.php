@@ -104,6 +104,9 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
    $manifest=json_encode(['format'=>$format,'sha256'=>$hashes,'total_files'=>count($assets)],JSON_THROW_ON_ERROR);
    $zip->addFromString('manifest.json',$manifest);
   }finally{$zip->close();}
+  // A queued addFile() can capture bytes different from a separate hash_file().
+  // Only publish when the finalized archive itself matches every manifest hash.
+  snap_verify_build_photos($tmp,$hashes);
   if(!rename($tmp,snap_path($name)))throw new RuntimeException('Kon snapshot niet afronden.');$tmp=null;
   return $name;
  }finally{
@@ -111,6 +114,34 @@ function snap_create(PDO $pdo,int $quotaBytes=1073741824): string {
   try{if($catalogLocked)catalog_data_unlock($pdo);}
   finally{flock($lock,LOCK_UN);fclose($lock);}
  }
+}
+/** Hash decompressed ZIP entry bytes, not the mutable source file on disk. */
+function snap_verify_zip_photo(ZipArchive $zip, string $entry, string $expected): void {
+ if(!preg_match('/^[a-f0-9]{64}$/D',$expected))throw new RuntimeException('Ongeldige foto checksum.');
+ $stream=$zip->getStream($entry);
+ if($stream===false)throw new RuntimeException('Ontbrekende foto in ZIP.');
+ $ctx=hash_init('sha256');$length=0;
+ try{
+  while(!feof($stream)){
+   $bytes=fread($stream,1024*1024);
+   if($bytes===false || ($bytes==='' && !feof($stream)))throw new RuntimeException('Leesfout in ZIP-foto.');
+   $length+=strlen($bytes);
+   if($length>12*1024*1024)throw new RuntimeException('Foto in ZIP te groot.');
+   hash_update($ctx,$bytes);
+  }
+ }finally{fclose($stream);}
+ if(!hash_equals($expected,hash_final($ctx)))throw new RuntimeException('Foto checksum ongeldig.');
+}
+/** Verify the newly finalized ZIP before publishing it as a named snapshot. */
+function snap_verify_build_photos(string $path, array $hashes): void {
+ $zip=new ZipArchive();
+ if($zip->open($path)!==true)throw new RuntimeException('Opgebouwde snapshot-ZIP is onleesbaar.');
+ try{
+  foreach($hashes as $entry=>$hash){
+   if($entry==='database.json')continue;
+   snap_verify_zip_photo($zip,$entry,$hash);
+  }
+ }finally{$zip->close();}
 }
 function snap_verified(string $name): array {
  $path=snap_path($name);if(!is_file($path))throw new RuntimeException('Snapshot bestaat niet.');
@@ -134,6 +165,9 @@ function snap_verified(string $name): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
+  foreach($hashes as $entry=>$hash){
+   if($entry!=='database.json')snap_verify_zip_photo($zip,$entry,$hash);
+  }
   foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
   return [$database,$hashes,$size];
  }finally{$zip->close();}
