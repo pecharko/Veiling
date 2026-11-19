@@ -32,6 +32,8 @@ idle_contract(str_contains($bootstrap, 'admin_idle_expired('), 'expiry enforced 
 idle_contract(str_contains($bootstrap, "ini_set('session.gc_maxlifetime', (string)ADMIN_IDLE_SECONDS)"), 'PHP admin session retention matches 60-minute idle policy');
 idle_contract(str_contains($bootstrap, 'admin_idle_should_touch('), 'passive poll excluded');
 idle_contract(strpos($bootstrap, 'admin_idle_should_touch($script)') > strpos($bootstrap, "exit('Geen toegang tot dit beheeronderdeel.');"), 'unauthorized role request cannot refresh idle timer');
+idle_contract(str_contains($bootstrap, 'function require_auth(bool $touchActivity = true)') && str_contains($bootstrap, 'if ($touchActivity && admin_idle_should_touch($script))'), 'idle touch is optional for administrator-only role checks');
+idle_contract(preg_match('/function require_administrator\(\): void \{\s*\/\/[^\n]*\n\s*require_auth\(false\);\s*if \(effective_admin_role\(\) !== \'administrator\'\)/', $bootstrap) === 1, 'administrator-only routes check role before touching session');
 idle_contract(str_contains($bootstrap, "'sessie-verlengen.php'"), 'all roles permitted renewal');
 idle_contract(str_contains($src['catalogus-public/admin/login.php'], '$' . "_SESSION['admin_last_activity_at'] = time();"), 'login starts inactivity clock');
 idle_contract(str_contains($endpoint, 'if (!is_post())') && str_contains($endpoint, 'http_response_code(405)'), 'renewal GET rejected');
