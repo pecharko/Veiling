@@ -136,11 +136,6 @@ function require_auth(): void {
     session_regenerate_id(true);
     redirect('admin/login.php');
   }
-  // The optional mail unread badge polls every two minutes; never treat it as
-  // interactive activity, otherwise a forgotten tab can remain logged in.
-  if (admin_idle_should_touch((string)($_SERVER['SCRIPT_NAME'] ?? ''))) {
-    $_SESSION['admin_last_activity_at'] = $now;
-  }
   $role = effective_admin_role();
   if (!in_array($role, ['administrator', 'assistant', 'veilingmeester'], true)) {
     http_response_code(403);
@@ -157,6 +152,11 @@ function require_auth(): void {
       http_response_code(403);
       exit('Geen toegang tot dit beheeronderdeel.');
     }
+  }
+  // Only authorized admin activity renews the idle timer. Background mail
+  // polling and rejected role routes must not keep a forgotten session alive.
+  if (admin_idle_should_touch($script)) {
+    $_SESSION['admin_last_activity_at'] = $now;
   }
 }
 function require_administrator(): void {
