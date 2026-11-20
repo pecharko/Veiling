@@ -198,6 +198,11 @@ jobs:
       - name: Test 48 MP JPEG PNG WebP conversion at 512 MB
         run: php -d memory_limit=512M tests/photo_48mp_boundary.php
 
+      - name: Verify missing-admin recovery contract and stubbed HTTP
+        run: |
+          php tests/admin_zero_users_fail_closed_contract_test.php
+          python3 -m unittest discover -s tests -p admin_zero_users_http_test.py -v
+
       - name: Verify CSV import is disabled in source
         run: php tests/csv_import_disabled_test.php
 
