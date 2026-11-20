@@ -242,6 +242,15 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
+      - name: Test concurrent lot-number reservation in disposable MySQL
+        if: needs.impact.outputs.run == 'true'
+        env:
+          CI_DB_HOST: 127.0.0.1
+          CI_DB_NAME: auction_test
+          CI_DB_USER: root
+          CI_DB_PASSWORD: ci-password-only
+        run: php tests/issue3_lot_number_concurrency_mysql_test.php
+
       - name: Test full catalog reset in disposable MySQL database
         if: needs.impact.outputs.run == 'true'
         env:
