@@ -4,7 +4,7 @@
 
 Bij nieuwe kavels rapporteert de editor nu precies welke foto's uit een batch geslaagd zijn en welke uploads niet bevestigd zijn. Al opgeslagen foto's blijven bewaard; de bewerkpagina toont de actuele fotolijst en vraagt uitsluitend ontbrekende foto's opnieuw toe te voegen, nooit blind automatisch te herhalen. Een mislukte audit-update na een geslaagde foto-insert wordt afzonderlijk gemeld en niet meer ten onrechte als mislukte foto geregistreerd.
 
-Nieuwe T-039B gebruikt in wegwerp-MySQL en localhost voor elk van de drie fotoposities zowel ongeldige foto-inhoud als een geforceerde SQL-INSERT-fout; controles op DB-/bestandsconsistentie, verweesde foto’s en handmatige retry volgen. Dit is uitsluitend een ontwikkelwijziging: geen merge, geen OVH-/productie- of databaseactie.
+Nieuwe T-039B gebruikt in wegwerp-MySQL en localhost voor elk van de drie fotoposities zowel ongeldige foto-inhoud als een geforceerde SQL-INSERT-fout; ook een falende audit-UPDATE ná een geslaagde foto-insert wordt getest. Er zijn controles op DB-/bestandsconsistentie, verweesde foto’s en handmatige retry. Dit is uitsluitend een ontwikkelwijziging: geen merge, geen OVH-/productie- of databaseactie.
 
 ## 2026-11-20 — Issue #2: reguliere snapshot-/herstelacceptatie herbeoordeeld (documentatie)
 
