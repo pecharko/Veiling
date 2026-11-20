@@ -5,6 +5,14 @@ require_once __DIR__ . '/restore_journal.php';
 require_once __DIR__ . '/visitor_geo_state.php';
 require_once __DIR__ . '/visitor_geo_archive.php';
 
+/** UTC calendar cutoff: retain three completed UTC days and the current day. */
+function visitor_stats_utc_cutoff(?DateTimeImmutable $now = null): string
+{
+    $utc = new DateTimeZone('UTC');
+    return ($now ?? new DateTimeImmutable('now', $utc))
+        ->setTimezone($utc)->modify('-3 days')->format('Y-m-d');
+}
+
 /** Both manual and issue224 cron use this same guarded transaction path. */
 function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
 {
@@ -24,7 +32,7 @@ function archive_visitor_stats_one_day(PDO $pdo, string $cutoff, ?Closure $after
  */
 function visitor_stats_archive_one_day_locked(PDO $pdo, string $cutoff, ?Closure $afterDiscoveryForTest = null): array
 {
-    $limit = gmdate('Y-m-d', strtotime('-3 days'));
+    $limit = visitor_stats_utc_cutoff();
     $date = DateTimeImmutable::createFromFormat('!Y-m-d', $cutoff, new DateTimeZone('UTC'));
     if (!$date || $date->format('Y-m-d') !== $cutoff || $cutoff > $limit) {
         throw new InvalidArgumentException('Invalid historical UTC cutoff');
