@@ -12,9 +12,9 @@ code = cron.read_text()
 archive = helper.read_text()
 checks = {
  "CLI guard precedes bootstrap": code.find("PHP_SAPI !== 'cli'") > 0 and code.find("PHP_SAPI !== 'cli'") < code.find("require_once"),
- "7 UTC days retention": "strtotime('-7 days')" in code,
+ "3 UTC days retention": ("strtotime('-3 days')" in code and "strtotime('-3 days')" in archive and "WHERE visit_date < ?" in archive),
  "14 day catch-up limit": "$maxDays = 14;" in code,
- "explicit warning exit status": "exit(2);" in code.split("archive_catchup_limit_reached", 1)[-1][:180] if "archive_catchup_limit_reached" in code else False,
+ "explicit warning exit status": ("archive_catchup_limit_reached" in code and "$exitCode = 2;" in code and "exit($exitCode);" in code),
  "20k row ceiling in helper": "20000" in archive,
  "transactional archive": "$pdo->beginTransaction()" in archive and "$pdo->commit()" in archive and "$pdo->rollBack()" in archive,
 }
