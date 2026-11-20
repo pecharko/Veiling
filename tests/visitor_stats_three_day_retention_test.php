@@ -25,6 +25,8 @@ $cases = [
     ['2026-10-25T00:30:00Z', '2026-10-22'],
     ['2026-10-25T23:30:00Z', '2026-10-22'],
     ['2026-11-20T00:00:00Z', '2026-11-17'],
+    ['2024-03-01T00:00:00Z', '2024-02-27'], // leap year
+    ['2027-01-01T00:00:00Z', '2026-12-29'], // year boundary
 ];
 foreach (['Europe/Brussels', 'UTC', 'America/Toronto'] as $defaultTimezone) {
     date_default_timezone_set($defaultTimezone);
