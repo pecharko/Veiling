@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 2026-11-20 — Issue #4: veilige herstelprocedure, geen fictieve installatieroute (ontwikkeling)
+
+De eerder ontbrekende `assets/placeholder.svg` was al in productie geverifieerd (19 oktober, T-028). CSV-import en de voorbeeld-CSV blijven op verzoek uitgeschakeld (T-042). De verweesde publieke `admin/setup.php`-redirect is sinds PR #624 verwijderd; dezelfde beveiligde loginfunctie (503/no-store bij nul administrators) is als onderdeel van `admin-session-idle-20261119` op 19 november door de uploader per bestand geverifieerd.
+
+Nieuw: `admin/systeemcheck.php` verwijst bij een databasefout niet meer naar het niet-bestaande `sql/install.sql`. `docs/ADMIN_RECOVERY.md` beschrijft uitsluitend read-only diagnose en afzonderlijk te autoriseren privaat herstel, met behoud van bestaande data en zonder openbare noodsetup. De bestaande PHP-/stub-HTTP-contracttests zijn gekoppeld aan CI; T-059 verifieert met echte geïsoleerde MySQL-/HTTP-tests 11/11 geslaagde controles voor nul fictieve admins, ongewijzigd herstel en een normale login ([CI 44727243338](https://github.com/pecharko/Veiling/actions/runs/44727243338)); de PHP-/documentatie- en manifestchecks zijn eveneens geslaagd ([CI 44727243432](https://github.com/pecharko/Veiling/actions/runs/44727243432)). **Deze PR is ontwikkelwerk, geen uitgevoerde productierelease of database-/schemawijziging.** Een eventuele systeemcheckdeploy blijft apart en exact te autoriseren.
+
 ## 2026-11-20 — Issue #6: HTTPS- en sessiebeveiliging geaccepteerd voor de geteste routes
 
 Na de oorspronkelijke onveilige HTTP-loginrespons is de canonieke 301-redirect in Chrome bevestigd voor `www` HTTP-homepage, kavelpagina, adminindex en login (de HTTP-apex-login en homepage waren eerder met curl bevestigd). De eigenaar controleerde een geldig HTTPS-certificaat, de `catalog_admin`-flags `Secure`, `HttpOnly`, `SameSite=Lax`, anonieme admintoegang en uitloggen gevolgd door een nieuwe dashboardaanvraag. **Onafhankelijke read-only OVH-SFTP-herlezing** [run 44716673201](https://github.com/pecharko/Veiling/actions/runs/44716673201) geeft voor `catalogus-public/.htaccess` dezelfde SHA-256 als de na uitrol `VERIFIED`-hash van [canonical-domain-release 42354214922](https://github.com/pecharko/Veiling/actions/runs/42354214922): `68cca0138e263c5b63ec86c17f7210493b57aea9cf716c9d5c97cf698a0c5722`.
