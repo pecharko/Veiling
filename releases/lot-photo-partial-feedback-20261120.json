@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "5b24c3044945e5e256376c3835b2ba3a9733a0f78a7247437db5d16abfca92f4",
+      "remote_sha256": "356e872435da204b76098a8e6d14a052d7780b1f33f274de51becc39f3fd4d24"
+    }
+  ]
+}
