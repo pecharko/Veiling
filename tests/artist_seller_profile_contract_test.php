@@ -55,3 +55,12 @@ if ($noSlogan['artist_slogan']!=='') throw new RuntimeException('Optional slogan
 $private=seller_clean(array_merge($base,['seller_type'=>'particulier','artist_intro'=>'should clear','artist_slogan'=>'should clear']));
 if ($private['artist_intro']!=='' || $private['artist_slogan']!=='') throw new RuntimeException('Private seller retained artist fields');
 echo "PASS artist introduction, 3 work slots, portrait, upload safety and snapshot scope.\n";
+
+$validInstagram=seller_clean($base+['artist_instagram_url'=>'@testmaker']);
+if ($validInstagram['artist_instagram_url']!=='https://www.instagram.com/testmaker/') throw new RuntimeException('Instagram normalization failed');
+foreach (['javascript:alert(1)','https://instagram.com.evil.test/abc/','https://instagram.com/abc/?foo=1','https://instagram.com/@bad/','@bad..name','https://example.org/abc'] as $unsafe) {
+  try { seller_clean($base+['artist_instagram_url'=>$unsafe]); throw new RuntimeException('Invalid Instagram profile accepted'); }
+  catch (InvalidArgumentException) {}
+}
+$privateInstagram=seller_clean(array_merge($base,['seller_type'=>'particulier','artist_instagram_url'=>'@testmaker']));
+if ($privateInstagram['artist_instagram_url']!=='') throw new RuntimeException('Instagram persisted on private seller');

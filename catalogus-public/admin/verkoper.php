@@ -17,7 +17,7 @@ $fromLot=($_GET['from_lot']??'')==='1';
 $returnLotId=filter_var($_GET['lot_id']??0,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
 $returnLotId=$returnLotId===false?0:(int)$returnLotId;
 $returnLotUrl=url('admin/kavel.php',$returnLotId>0?['id'=>$returnLotId]:[]);
-$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','mobile_number'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_intro'=>'','artist_slogan'=>''];
+$defaults=['seller_type'=>'particulier','name'=>'','email'=>'','mobile_number'=>'','street'=>'','house_number'=>'','postal_code'=>'','municipality'=>'','bank_account_name'=>'','bank_account_iban'=>'','artist_name'=>'','artist_url'=>'','artist_instagram_url'=>'','artist_intro'=>'','artist_slogan'=>''];
 $editId=null;
 if (isset($_GET['id'])) {
   $editId=filter_var($_GET['id'],FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);
@@ -253,6 +253,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
         <div class="seller-fields-grid">
           <label><span>Kunstenaarsnaam <span class="lot-required">*</span></span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
           <label>Website kunstenaar (optioneel)<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
+          <label>Instagram-profiel (optioneel)<input name="artist_instagram_url" type="text" maxlength="2048" pattern="(?:@[A-Za-z0-9._]{1,30}|https://(?:www\\.)?instagram\\.com/[A-Za-z0-9._]{1,30}/?)" title="Gebruik @gebruikersnaam of https://instagram.com/gebruikersnaam/" value="<?=e((string)$values['artist_instagram_url'])?>" placeholder="@gebruikersnaam"></label>
         </div>
         <div class="seller-introduction">
           <label for="artist-slogan">Slogan van de kunstenaar (optioneel)</label>

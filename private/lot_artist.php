@@ -45,3 +45,20 @@ function lot_artist_markup(array $lot): string {
   $href = htmlspecialchars(url('kunstenaar.php', ['id'=>$publishedId]), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
   return '<a href="' . $href . '">' . $safeName . '</a>';
 }
+
+/** Optional Instagram handle or strict HTTPS profile URL; rejects impersonating domains. */
+function artist_instagram_validate(string $raw): string {
+  $raw = trim($raw);
+  if ($raw === '') return '';
+  if (strlen($raw) > 2048 || preg_match('/[\\x00-\\x20\\x7f]/', $raw)) {
+    throw new InvalidArgumentException('Ongeldig Instagram-profiel. Gebruik @gebruikersnaam of een volledige Instagram-profiel-URL.');
+  }
+  if (str_starts_with($raw, '@')) $username = substr($raw, 1);
+  elseif (preg_match('~\\Ahttps://(?:www\\.)?instagram\\.com/([A-Za-z0-9._]{1,30})/?\\z~iD', $raw, $match)) $username = $match[1];
+  else throw new InvalidArgumentException('Gebruik een veilig https://instagram.com/gebruikersnaam/ profieladres.');
+  if (!preg_match('/\\A[A-Za-z0-9._]{1,30}\\z/D', $username)
+      || str_contains($username, '..') || str_starts_with($username, '.') || str_ends_with($username, '.')) {
+    throw new InvalidArgumentException('Ongeldige Instagram-gebruikersnaam.');
+  }
+  return 'https://www.instagram.com/' . $username . '/';
+}

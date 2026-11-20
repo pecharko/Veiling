@@ -109,7 +109,7 @@ $checksum = hash_file('sha256', $original);
 $sellerRelative='2026/10/'.str_repeat('c',32).'.jpg';
 $sellerPhoto=$uploads.'/'.$sellerRelative;
 if (!copy($original,$sellerPhoto)) throw new RuntimeException('Cannot create synthetic artist photo');
-$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_published=1, updated_by_admin_id=1, updated_by_name='CI Beheerder', updated_at='2026-11-11 07:45:00' WHERE id=?")->execute([$sellerId]);
+$pdo->prepare("UPDATE lot_sellers SET artist_intro='Fictieve maker uit Lokeren', artist_slogan='Kunst met karakter', artist_instagram_url='https://www.instagram.com/testmaker/', artist_published=1, updated_by_admin_id=1, updated_by_name='CI Beheerder', updated_at='2026-11-11 07:45:00' WHERE id=?")->execute([$sellerId]);
 $pdo->prepare("INSERT INTO seller_images (seller_id,image_kind,slot,path) VALUES (?,'work',1,?)")
   ->execute([$sellerId,'uploads/'.$sellerRelative]);
 $pdo->prepare('INSERT INTO lot_images(lot_id,path,sort_order,source_name) VALUES (?,?,?,?)')
@@ -146,7 +146,7 @@ verify(count($snapshot['tables']['lots'])===1 && !isset($snapshot['tables']['adm
       static fn($cat)=>(int)$cat['id']===$categoryId && $cat['name']==='CI Eenmalige categorie'))===1
     && !str_contains(json_encode($snapshot),'ci-admin@example.invalid'),
     'V8 snapshot exports catalog categories and excludes administrator and login records');
-verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && (int)$s['artist_published']===1))===1
+verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && $s['artist_instagram_url']==='https://www.instagram.com/testmaker/' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
@@ -298,6 +298,7 @@ verify((fileperms($uploads . '/2026/10') & 0005) === 0005,
 verify(is_file($sellerPhoto)
   && $pdo->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve maker uit Lokeren'
   && $pdo->query('SELECT artist_slogan FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Kunst met karakter'
+  && $pdo->query('SELECT artist_instagram_url FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='https://www.instagram.com/testmaker/'
   && (int)$pdo->query('SELECT artist_published FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()===1
   && (int)$pdo->query('SELECT COUNT(*) FROM seller_images WHERE seller_id='.$sellerId)->fetchColumn()===1,
   'Snapshot restores published artist status, introduction and work photo');

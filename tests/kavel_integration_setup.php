@@ -146,6 +146,17 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
   throw new RuntimeException('Artist slogan missing in isolated CI database.');
 }
 
+// Issue #638 fixture: additive Instagram column on disposable CI MySQL only.
+$instagramSql=file_get_contents($dir.'/database/migrations/20261120_seller_artist_instagram.sql');
+if (!is_string($instagramSql) || !str_contains($instagramSql, 'ADD COLUMN artist_instagram_url VARCHAR(2048)')) {
+  throw new RuntimeException('Instagram migration fixture missing.');
+}
+$instagramSql=preg_replace('/^\\s*--[^\\n]*$/m','',$instagramSql);
+$pdo->exec(trim((string)$instagramSql));
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_instagram_url'")->fetch()) {
+  throw new RuntimeException('Instagram column missing in disposable CI database.');
+}
+
 // Publication status exists only in the disposable CI database, never production.
 $publicationSql=file_get_contents($dir.'/database/migrations/20261114_artist_publication.sql');
 if (!is_string($publicationSql) || !str_contains($publicationSql, 'artist_published TINYINT(1) NOT NULL DEFAULT 0')) {
