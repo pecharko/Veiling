@@ -12,7 +12,7 @@ code = cron.read_text()
 archive = helper.read_text()
 checks = {
  "CLI guard precedes bootstrap": code.find("PHP_SAPI !== 'cli'") > 0 and code.find("PHP_SAPI !== 'cli'") < code.find("require_once"),
- "3 UTC days retention": ("strtotime('-3 days')" in code and "strtotime('-3 days')" in archive and "WHERE visit_date < ?" in archive),
+ "3 UTC days retention": ("visitor_stats_utc_cutoff()" in code and "visitor_stats_utc_cutoff()" in archive and "WHERE visit_date < ?" in archive and "new DateTimeZone('UTC')" in archive and "->setTimezone($utc)->modify('-3 days')" in archive),
  "14 day catch-up limit": "$maxDays = 14;" in code,
  "explicit warning exit status": ("archive_catchup_limit_reached" in code and "$exitCode = 2;" in code and "exit($exitCode);" in code),
  "20k row ceiling in helper": "20000" in archive,
