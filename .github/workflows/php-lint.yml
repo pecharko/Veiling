@@ -202,6 +202,7 @@ jobs:
         run: |
           php tests/admin_zero_users_fail_closed_contract_test.php
           python3 -m unittest discover -s tests -p admin_zero_users_http_test.py -v
+          python3 scripts/shared_ovh_release.py plan issue4-admin-recovery-systeemcheck-20261120
 
       - name: Verify CSV import is disabled in source
         run: php tests/csv_import_disabled_test.php
