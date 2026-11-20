@@ -29,8 +29,8 @@ class ManualArchiveTests(unittest.TestCase):
         self.assertLess(ARCH.index("INSERT INTO visitor_stats_day_totals"), ARCH.index("DELETE FROM visitor_stats_daily"))
         self.assertIn("INSERT INTO visitor_stats_lot_totals", ARCH)
         self.assertNotIn("ON DUPLICATE KEY UPDATE", ARCH)
-        self.assertIn("DELETE FROM visitor_stats_daily WHERE visit_date < ?", ARCH)
-        self.assertIn("SELECT visit_date, visitor_id, page_kind", ARCH)
+        self.assertIn("DELETE FROM visitor_stats_daily WHERE visit_date=?", ARCH)
+        self.assertIn("SELECT page_kind, views FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date=? FOR UPDATE", ARCH)
 
     def test_admin_deletes_both_aggregate_tables(self):
         for table in ("visitor_stats_day_totals", "visitor_stats_lot_totals", "visitor_stats_daily"):
