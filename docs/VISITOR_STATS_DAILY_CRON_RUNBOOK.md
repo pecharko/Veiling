@@ -1,10 +1,17 @@
-# Issue #224 - OVH nachtelijke bezoekersarchivering (voorstel, NIET actief)
+# Issue #224 - OVH nachtelijke bezoekersarchivering (controle en vrijgave)
 
 ## Scope en bewaartermijn
-- Bewaar zeven volledige UTC-dagen met detailrecords in `visitor_stats_daily`.
-- Archiveer uitsluitend eerdere UTC-dagen naar `visitor_stats_day_totals` en `visitor_stats_lot_totals`.
+- Bewaar drie volledige afgesloten UTC-dagen met detailrecords in `visitor_stats_daily`, plus de lopende UTC-dag.
+- De cron bepaalt `$cutoff = gmdate('Y-m-d', strtotime('-3 days'))` en archiveert uitsluitend dagen met `visit_date < cutoff` naar `visitor_stats_day_totals` en `visitor_stats_lot_totals`; pas na een geslaagde transactie worden de bijbehorende detailrecords verwijderd. Voorbeeld: op 20 november (UTC) blijven 17, 18, 19 en de lopende 20 november detaildagen; 16 november en ouder komen voor archivering in aanmerking.
 - Eén dag per database-transactie; max. 20.000 bronrijen per dag en 14 dagen per cron-uitvoering.
-- Geen scheduler geactiveerd door de PR. Een OVH-geplande taak rond 03:30 Belgische tijd is pas na afzonderlijke autorisatie mogelijk. Controleer OVH-tijdzone en zomertijd.
+- De code, dit runbook en een PR activeren geen OVH-taak. De daadwerkelijke status van de bestaande OVH-scheduler is nog niet onafhankelijk vastgesteld. Een dagelijkse uitvoering rond 03:30 Belgische tijd was voorgesteld; controleer de bestaande planning en de OVH-tijdzone/zomertijd zonder instellingen te wijzigen. De bewaartermijn van drie dagen betekent niet dat de cron om de drie dagen draait.
+
+## Read-only vaststelling van de actuele OVH-cron
+
+1. Controleer in **OVHcloud Manager → Web Cloud → Hosting → Geplande taken (Cron)** of er een actieve dagelijkse taak bestaat. Noteer uitsluitend de instellingstekst: scriptpad `private/visitor_stats_daily_cron.php`, ingestelde PHP-versie, frequentie, tijdzone en eventuele foutstatus. Deze stap activeert of wijzigt niets.
+2. Open als beheerder op `admin/statistieken.php` de sectie **Automatische archivering — cronlog**. Controleer het tijdstip van de recentste succesvolle uitvoering, eventuele `error` of `limit`-waarschuwingen en de verwerkte dag-/rijaantallen. Dit is het private JSON-log van maximaal 30 uitvoeringen; een ontbrekend log alleen bewijst noch activiteit noch inactiviteit.
+3. Vergelijk het uitgevoerde script en de relevante PHP-configuratie met de actuele repo-code en de gegevensbankstructuur. Een groene CI of bestaande croncode bewijst geen geslaagde geplande uitvoeringen. Leg meettijd en herkomst van het bewijs vast.
+4. Bestaande productieplanning of -retentie **niet aanpassen**; wijziging van cron, archiveringscode, gegevensbank of back-ups vereist afzonderlijke expliciete toestemming. De geaggregeerde campagneresultaten blijven tot en met 31 oktober 2027 bewaard, zonder automatische volledige verwijdering.
 
 ## Bediening en monitoring vóór activatie
 1. Verifieer read-only MySQL-schema, rechten, huidige historische detailrecords en DB-quota; controleer dat de totalentabellen dezelfde structuur hebben als `database/visitor_stats_aggregates.sql`.
