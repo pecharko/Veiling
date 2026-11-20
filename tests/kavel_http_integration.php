@@ -664,6 +664,41 @@ try {
     }
   }
 
+  // If the image INSERT succeeds but its subsequent audit UPDATE fails,
+  // the user must not be told to retry that already persisted photo.
+  $auditNumber=920130;
+  db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_photo_audit');
+  db()->exec("CREATE TRIGGER ci_reject_lot_photo_audit BEFORE UPDATE ON lots
+    FOR EACH ROW BEGIN
+      IF OLD.lot_number = {$auditNumber} THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CI forced lot audit error';
+      END IF;
+    END");
+  try {
+    [$auditStatus,, $auditRedirect]=request_page('/admin/kavel.php',[
+      'csrf'=>$csrf,'action'=>'save','id'=>'0','lot_number'=>(string)$auditNumber,
+      'title'=>'Audit failure after photo insert','seller_id'=>(string)$sellerLinkId,
+      'photos[0]'=>new CURLFile($fixtures.'/valid.png','image/png','audit-saved.png')
+    ],true);
+  } finally {
+    db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_photo_audit');
+  }
+  $auditLot=by_number($auditNumber);
+  claim($auditStatus===303 && (bool)$auditLot
+    && $auditRedirect==='/admin/kavel.php?id='.(int)$auditLot['id'],
+    'T-039B audit failure keeps saved lot on editor');
+  $auditPhotoSt=db()->prepare('SELECT path FROM lot_images WHERE lot_id=?');
+  $auditPhotoSt->execute([(int)$auditLot['id']]);
+  $auditPhotoPath=(string)$auditPhotoSt->fetchColumn();
+  [$auditEditorStatus,$auditEditor]=request_page('/admin/kavel.php?id='.(int)$auditLot['id']);
+  claim($auditEditorStatus===200 && str_contains($auditEditor,'Foto’s opgeslagen (1/1): audit-saved.png')
+    && str_contains($auditEditor,'De bewerkingsgeschiedenis kon niet worden bijgewerkt')
+    && !str_contains($auditEditor,'Upload niet bevestigd voor:')
+    && $auditPhotoPath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$auditPhotoPath),
+    'T-039B audit write failure does not report stored image as failed');
+  db()->prepare('DELETE FROM lots WHERE id=?')->execute([(int)$auditLot['id']]);
+  @unlink(dirname(__DIR__).'/catalogus-public/'.$auditPhotoPath);
+
   [$status] = request_page('/admin/import.php', ['action'=>'save']);
   claim($status === 404, 'CSV import stays disabled');
   [$status] = request_page('/admin/kavel.php', [
