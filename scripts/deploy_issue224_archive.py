@@ -16,6 +16,13 @@ FILES = (
     "private/visitor_stats_archive_one_day_experimental.php",
     "private/visitor_stats_daily_cron.php",
 )
+# Keep FILES in the registered hash-input order; publish dependencies first.
+DEPLOY_ORDER = (
+    "private/visitor_stats_archive_one_day_experimental.php",
+    "catalogus-public/admin/statistieken.php",
+    "catalogus-public/privacy.php",
+    "private/visitor_stats_daily_cron.php",
+)
 NEW_FILES = {"private/visitor_stats_daily_cron.php"}
 BACKUP = ROOT / "deployment-backups"
 LIMIT = 2 * 1024 * 1024
@@ -141,8 +148,9 @@ def deploy():
             }, indent=2) + "\n")
             changed = []
             try:
-                # Admin and privacy first, private archive helper and dormant CLI cron last.
-                for name in FILES:
+                # The admin and cron may call a function added by the helper.
+                # Reverse rollback therefore restores callers before that helper.
+                for name in DEPLOY_ORDER:
                     if prior[name] == payload[name]:
                         print("UNCHANGED", name)
                         continue

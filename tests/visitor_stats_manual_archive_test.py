@@ -18,18 +18,23 @@ class ManualArchiveTests(unittest.TestCase):
         self.assertIn("check_csrf();", ADMIN)
         self.assertIn("hash_equals(", ADMIN)
         self.assertIn("analytics_archive_pending", ADMIN)
-        self.assertIn("strtotime('-7 days')", ADMIN)
+        self.assertIn("visitor_stats_utc_cutoff()", ADMIN)
+        self.assertNotIn("strtotime('-7 days')", ADMIN)
         self.assertIn("strtotime('-30 days')", ARCH)
         self.assertIn("FOR UPDATE", ARCH)
 
     def test_transaction_and_row_verification(self):
-        for marker in ("beginTransaction()", "rollBack()", "commit()", "rowCount()", "Archive checksum mismatch"):
+        for marker in (
+            "beginTransaction()", "rollBack()", "commit()",
+            "$insertDay->rowCount() !== 1", "Archive daily aggregate missing",
+            "$delete->rowCount() !== $n", "Archive source row count changed",
+        ):
             self.assertIn(marker, ARCH)
         self.assertLess(ARCH.index("INSERT INTO visitor_stats_day_totals"), ARCH.index("DELETE FROM visitor_stats_daily"))
         self.assertIn("INSERT INTO visitor_stats_lot_totals", ARCH)
         self.assertNotIn("ON DUPLICATE KEY UPDATE", ARCH)
-        self.assertIn("DELETE FROM visitor_stats_daily WHERE visit_date < ?", ARCH)
-        self.assertIn("SELECT visit_date, visitor_id, page_kind", ARCH)
+        self.assertIn("DELETE FROM visitor_stats_daily WHERE visit_date=?", ARCH)
+        self.assertIn("SELECT page_kind, views FROM visitor_stats_daily FORCE INDEX(PRIMARY) WHERE visit_date=? FOR UPDATE", ARCH)
 
     def test_admin_deletes_both_aggregate_tables(self):
         for table in ("visitor_stats_day_totals", "visitor_stats_lot_totals", "visitor_stats_daily"):

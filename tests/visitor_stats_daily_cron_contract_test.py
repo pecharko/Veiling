@@ -2,6 +2,7 @@
 """Static fail-closed contract tests for issue #224 (no production DB)."""
 from pathlib import Path
 import unittest
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCH = (ROOT / "private/visitor_stats_archive_one_day_experimental.php").read_text()
@@ -11,8 +12,31 @@ ADMIN = (ROOT / "catalogus-public/admin/statistieken.php").read_text()
 class DailyArchiveContract(unittest.TestCase):
     def test_three_full_days_are_retained(self):
         for text in (ARCH, CRON, ADMIN):
-            self.assertIn("strtotime('-3 days')", text)
+            self.assertIn("visitor_stats_utc_cutoff()", text)
+            self.assertNotIn("gmdate('Y-m-d', strtotime('-3 days'))", text)
+        self.assertIn("new DateTimeZone('UTC')", ARCH)
+        self.assertIn("->setTimezone($utc)->modify('-3 days')", ARCH)
         self.assertIn("WHERE visit_date < ?", ARCH)
+
+    def test_utc_boundary_runtime_regression(self):
+        """Execute the repository PHP test, not a transcribed UTC function."""
+        script = ROOT / "tests/visitor_stats_three_day_retention_test.php"
+        result = subprocess.run(
+            ["php", str(script)],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            timeout=20,
+            check=False,
+        )
+        self.assertEqual(
+            result.returncode, 0,
+            f"PHP UTC regression failed: {result.stdout} {result.stderr}",
+        )
+        self.assertIn(
+            "Three-day visitor archive policy and DST cutoff consistent",
+            result.stdout,
+        )
 
     def test_cli_only_and_bounded_catchup(self):
         self.assertIn("PHP_SAPI !== 'cli'", CRON)

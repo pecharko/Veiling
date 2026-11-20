@@ -80,7 +80,7 @@ if (is_post()) {
     } elseif ($action === 'preview_archive') {
         unset($_SESSION['analytics_archive_pending']);
         try {
-            $cutoff = gmdate('Y-m-d', strtotime('-3 days'));
+            $cutoff = visitor_stats_utc_cutoff();
             $stmt = db()->prepare('SELECT COUNT(*) FROM visitor_stats_daily WHERE visit_date < ?');
             $stmt->execute([$cutoff]);
             $count = (int)$stmt->fetchColumn();

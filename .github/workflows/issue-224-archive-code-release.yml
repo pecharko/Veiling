@@ -168,7 +168,7 @@ jobs:
         if: inputs.mode == 'deploy'
         run: |
           echo 'DEPLOYED; MANUAL HTTPS AND AUTH ACCEPTANCE PENDING'
-          echo 'Browser-confirm homepage, privacy page, admin stats; cron remains OFF.'
+          echo 'Browser-confirm homepage, privacy page, admin stats; existing cron schedule is unchanged.'
       - name: Retain rollback artifact
         if: inputs.mode == 'deploy' && always()
         uses: actions/upload-artifact@v4
