@@ -19,6 +19,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Reject unattended PR merge automation (offline)
+        run: |
+          python3 -m py_compile tests/no_unattended_merge_test.py
+          python3 -m unittest discover -s tests -p no_unattended_merge_test.py -v
+
       - name: Set up PHP 8.2
         uses: shivammathur/setup-php@v2
         with:
