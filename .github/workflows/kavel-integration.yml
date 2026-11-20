@@ -100,6 +100,22 @@ jobs:
           CI_DB_PASSWORD: ci-password-only
         run: php tests/kavel_integration_setup.php
 
+      - name: Verify zero-admin fails closed using real disposable MySQL and HTTP
+        if: needs.impact.outputs.run == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          php -S 127.0.0.1:8092 -t catalogus-public > /tmp/issue4-zero-admin-http.log 2>&1 &
+          test_pid=$!
+          trap 'kill "$test_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..25}; do
+            if curl -fsS -o /dev/null http://localhost:8092/admin/login.php; then
+              break
+            fi
+            sleep 1
+          done
+          php tests/admin_zero_users_mysql_http_test.php || { tail -n 70 /tmp/issue4-zero-admin-http.log; exit 1; }
+
       - name: Test invitation acceptance revoke and expiry in disposable MySQL
         if: needs.impact.outputs.run == 'true'
         env:
