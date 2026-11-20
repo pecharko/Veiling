@@ -22,6 +22,35 @@
 6. Houd de foutafhandeling fail-closed: geen hervatting door aggregaatrijen te overschrijven, geen live handmatige SQL-reparaties zonder back-up en autorisatie.
 7. Bevestig read-only de actuele dagtotalen, de nog aanwezige details ouder dan de UTC-cutoff en het databasevolume. De waargenomen 0-rij-uitvoeringen bewijzen geen verliesvrije archivering van oudere details.
 
+## Read-only MySQL-validatie (handmatig, geen productie-schrijfactie)
+
+Voer uitsluitend onderstaande `SELECT`-queries uit via een bevoegd **read-only** databaseaccount, nadat de actuele schema- en toegangsrechten zijn gecontroleerd. Geen `CALL`, `SET`, migratie, transactie met wijziging, `DELETE`, `UPDATE`, `INSERT` of herstelactie. Exporteer geen bezoekers-ID's en publiceer geen database-inloggegevens.
+
+```sql
+SELECT UTC_DATE() AS utc_today,
+       DATE_SUB(UTC_DATE(), INTERVAL 3 DAY) AS earliest_retained_utc_date;
+
+SELECT COUNT(*) AS stale_detail_rows,
+       COUNT(DISTINCT visit_date) AS stale_detail_days,
+       MIN(visit_date) AS oldest_stale_day,
+       MAX(visit_date) AS newest_stale_day
+FROM visitor_stats_daily
+WHERE visit_date < DATE_SUB(UTC_DATE(), INTERVAL 3 DAY);
+
+SELECT COUNT(*) AS archived_day_rows,
+       COALESCE(SUM(views), 0) AS archived_views,
+       COALESCE(SUM(lot_views), 0) AS archived_lot_views
+FROM visitor_stats_day_totals
+WHERE visit_date < DATE_SUB(UTC_DATE(), INTERVAL 3 DAY);
+
+SELECT COUNT(*) AS archived_lot_rows,
+       COALESCE(SUM(views), 0) AS archived_lot_views
+FROM visitor_stats_lot_totals
+WHERE visit_date < DATE_SUB(UTC_DATE(), INTERVAL 3 DAY);
+```
+
+Controleer op **hetzelfde UTC-meetmoment** ook de laatste cronlog-entry en eventuele waarschuwingen; dagwissels tussen queries kunnen de cutoff veranderen. Een waarde `stale_detail_rows > 0` vereist onderzoek naar achterstallige dagen, veiligheidslimieten of fouten, **geen automatische herstart of handmatige verwijdering**. `stale_detail_rows = 0` bewijst op zichzelf geen correcte historische aggregatie: alle dagen kunnen leeg zijn geweest. Vergelijk totalen alleen voor werkelijk gearchiveerde dagen met eerder veilig vastgelegde bronmetingen; zonder dergelijke baselines kan verliesvrijheid niet retrospectief worden bewezen. De twee `archived_lot_views`-waarden moeten voor overeenkomstige volledig gearchiveerde dagen overeenkomen, maar samengetelde totalen over verschillende dekking zijn geen sluitend bewijs.
+
 ## Bekende risico's
 - Uitzonderlijke historische imports kunnen een reeds gearchiveerde datum opnieuw vullen. Een PK-conflict blokkeert veilig verdere verwerking; een beheerder moet dit afzonderlijk onderzoeken.
 - Volledige quota-vermindering is niet gegarandeerd zonder MySQL-space accounting; InnoDB kan vrije pagina's intern hergebruiken.
