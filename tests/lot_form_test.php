@@ -66,9 +66,11 @@ check_value('draft', $badStatus['status'], 'Onbekende status nooit selecteren');
 check_value('', $badStatus['title'], 'Array als formulierveld niet accepteren');
 
 check_value('', lot_price_input_value(null), 'Lege prijs blijft leeg');
-check_value('850.00', lot_price_input_value('850.00'), 'Gehele prijs heeft twee decimalen');
-check_value('850.50', lot_price_input_value('850.5'), 'Prijs met centen blijft intact');
-check_value('12.34', lot_price_input_value('12.34'), 'Startbod met centen blijft intact');
+check_value('850', lot_price_input_value('850.00'), 'Gehele prijs heeft geen decimalen');
+check_value('850.5', lot_price_input_value('850.5'), 'Bestaande prijs met centen blijft intact');
+check_value('12.34', lot_price_input_value('12.34'), 'Legacy startbod met centen blijft intact');
 check_value('850.5', lot_price_input_value('850.5', true), 'POST na fout blijft onveranderd');
 check_value('-1', lot_price_input_value('-1', true), 'Ongeldige POST-waarde blijft corrigeerbaar');
 echo "lot_form_values en prijsvelden: controles geslaagd\n";
+foreach (['0','125','000125','9999999999'] as $value) if (!lot_whole_euro_valid($value)) throw new RuntimeException('Whole euro unexpectedly rejected: '.$value);
+foreach (['','-1','1.00','1,00','1.5','1e2','+1','0x10','99999999999','1 000'] as $value) if (lot_whole_euro_valid($value)) throw new RuntimeException('Non-integer euro accepted: '.$value);

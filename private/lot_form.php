@@ -22,15 +22,22 @@ function lot_form_values(array $defaults, ?array $lot, ?array $submitted = null)
   return $values;
 }
 
+/** Validate new prices as whole non-negative euro amounts, fitting DECIMAL(12,2). */
+function lot_whole_euro_valid(string $value): bool {
+  return preg_match('/\\A[0-9]{1,10}\\z/D', $value) === 1 && (int)$value <= 9999999999;
+}
+
 /**
- * Show saved DECIMAL euro amounts with exactly two digits after the separator.
- * type=number requires a dot in its HTML value, even in Dutch locales.
- * On validation errors preserve exactly what was submitted for correction.
+ * Show whole stored euro amounts without cents and preserve fractional legacy data exactly.
+ * Never round, truncate or silently rewrite a saved legacy price.
+ * After a validation error the submitted string remains editable.
  */
 function lot_price_input_value(mixed $value, bool $submitted = false): string {
   if ($value === null || $value === '') return '';
   if ($submitted || !is_numeric($value)) return (string)$value;
-  return number_format((float)$value, 2, '.', '');
+  $str = (string)$value;
+  if (preg_match('/\\A[0-9]+(?:\\.0{1,2})?\\z/D', $str)) return (string)(int)$str;
+  return $str;
 }
 
 /** Suggest the next lot number after the highest existing one (1..999999). */

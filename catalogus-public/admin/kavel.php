@@ -177,8 +177,8 @@ if(is_post()){
     elseif($status==='canceled' && ($saleLocation==='veiling' || (($lot['sale_location'] ?? '')==='veiling')))$error='Zet dit kavel eerst afzonderlijk over naar Markt en sla op voordat je het kunt annuleren.';
     elseif($title==='')$error='Een titel is verplicht.';
     elseif (lot_publication_conflict($status, $saleLocation, $auctionOnly)) $error='Dit kavel is uitsluitend voor de veiling en mag niet op Markt gepubliceerd worden. Publicatie afgebroken.';
-    elseif($marketPrice!=='' && (!is_numeric($marketPrice)|| (float)$marketPrice<0))$error='Ongeldige marktprijs.';
-    elseif($startingBid!=='' && (!is_numeric($startingBid)|| (float)$startingBid<0))$error='Ongeldig startbod.';
+    elseif($marketPrice!=='' && !lot_whole_euro_valid($marketPrice))$error='Marktprijs: vul een geheel aantal euro’s in (zonder decimalen, maximaal 10 cijfers).';
+    elseif($startingBid!=='' && !lot_whole_euro_valid($startingBid))$error='Startbod: vul een geheel aantal euro’s in (zonder decimalen, maximaal 10 cijfers).';
     else{
       // Valideer alle uploadstatussen voordat er een kavel wordt aangemaakt of gewijzigd.
       try{
@@ -214,7 +214,7 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:$marketPrice,$startingBid===''?null:$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:(string)(int)$marketPrice,$startingBid===''?null:(string)(int)$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
           $lotFieldsChanged=!$id || lot_effective_fields_changed($lot,$values);
           if($id){
             if($lotFieldsChanged) {
@@ -426,8 +426,8 @@ if ($error === $cancelAuctionWarning) {
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">02</span><div><h2>Beschrijving</h2><p>Beschrijf het object zo helder mogelijk voor geïnteresseerde bezoekers.</p></div></div>
           <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" maxlength="250" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" maxlength="100" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
-        <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in euro.</p></div></div>
-          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="0.01" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="0.01" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
+        <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in hele euro’s, zonder decimalen.</p></div></div>
+          <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="1" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="1" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
         </section>
       </div>
     </div>
