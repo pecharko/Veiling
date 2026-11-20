@@ -15,7 +15,7 @@ if (!$artistId) {
 // contact information, bank data, creator identity, or unrelated sellers.
 // Artist publication does not depend on whether linked lots are published.
 $stmt = db()->prepare("
-  SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url
+  SELECT s.artist_name, s.artist_slogan, s.artist_intro, s.artist_url, s.artist_instagram_url
   FROM lot_sellers s
   WHERE s.id=? AND s.seller_type='kunstenaar' AND s.artist_name<>'' AND s.artist_published=1
   LIMIT 1");
@@ -55,10 +55,16 @@ $name = (string)$artist['artist_name'];
 $slogan = trim((string)$artist['artist_slogan']);
 $intro = trim((string)$artist['artist_intro']);
 $artistWebsite = '';
+$artistInstagram = '';
 try {
   [, $artistWebsite] = lot_artist_validate($name, (string)($artist['artist_url'] ?? ''));
 } catch (InvalidArgumentException) {
   // Invalid legacy URLs must never become public hyperlinks.
+}
+try {
+  $artistInstagram = artist_instagram_validate((string)($artist['artist_instagram_url'] ?? ''));
+} catch (InvalidArgumentException) {
+  // A manipulated or invalid legacy profile is never emitted as a link.
 }
 ?><!doctype html>
 <html lang="nl">
@@ -117,6 +123,9 @@ try {
     </div>
     <?php if ($artistWebsite !== ''): ?>
       <p class="artist-brochure-website"><a href="<?=e($artistWebsite)?>" target="_blank" rel="noopener noreferrer">Website van de kunstenaar ↗</a></p>
+    <?php endif; ?>
+    <?php if ($artistInstagram !== ''): ?>
+      <p class="artist-brochure-instagram"><a href="<?=e($artistInstagram)?>" target="_blank" rel="noopener noreferrer" aria-label="Instagram-profiel van <?=e($name)?>"><svg aria-hidden="true" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a></p>
     <?php endif; ?>
   </article>
 </main>

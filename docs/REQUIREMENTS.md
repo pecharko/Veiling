@@ -273,3 +273,8 @@ Het beheer toont vier statistiekkaarten, een responsieve kaveltabel met statusba
 - Sessieverval mag late POST-formulierschrijfacties niet aanvaarden; er mag geen stille autosave of browseropslag van niet-opgeslagen kavel-/verkopergegevens gebeuren.
 - Bestaande POST+CSRF-uitlog, HTTPS-cookieinstellingen, rolrechten en credentialvalidatie blijven gelden.
 - **Status:** in geïsoleerde branch voorbereid, niet gemerged of live geaccepteerd. Zie `docs/ADMIN_SESSION_IDLE_20261119.md` en T-023B.
+
+
+### Issues #638 en #639 (voorbereid, niet automatisch geactiveerd)
+- Kunstenaars kunnen optioneel een Instagram-profiel opgeven als `@gebruikersnaam` of HTTPS-profieladres uitsluitend op `instagram.com`/`www.instagram.com`. Valideer server-side, ontsmet bij publieke weergave en toon alleen op gepubliceerde kunstenaarprofielen een toegankelijk Instagram-logo met `noopener noreferrer`. Nieuwe kolom `lot_sellers.artist_instagram_url` vereist afzonderlijke handmatige migratie en snapshotdekking.
+- Marktprijs en startbod zijn voor nieuwe of bewerkte kavels **hele, niet-negatieve eurobedragen**. Bestaande `DECIMAL(12,2)`-kolommen blijven; legacy-bedragen met niet-nul centen mogen niet stilzwijgend worden gewijzigd of afgerond. Publieke weergave laat `,00` achterwege wanneer het bedrag geheel is. Een productiecontrole op uitzonderingen vooraf is verplicht.

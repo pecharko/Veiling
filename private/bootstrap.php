@@ -66,7 +66,10 @@ function require_public_site_online(): void {
 }
 
 function money(mixed $amount): string {
-  return '€ ' . number_format((float)$amount, 2, ',', '.');
+  // Display whole euros without cents; preserve non-zero legacy cents until reviewed.
+  $str = (string)$amount;
+  $whole = preg_match('/\\A[0-9]+(?:\\.0{1,2})?\\z/D', $str) === 1;
+  return '€ ' . number_format((float)$amount, $whole ? 0 : 2, ',', '.');
 }
 function estimate(array $lot): string {
   $market = $lot['market_price'] ?? null;

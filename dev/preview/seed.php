@@ -132,6 +132,16 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
     $pdo->exec(trim((string)$sloganSql));
     echo "Optional artist slogan added to isolated preview.\n";
 }
+// Add optional Instagram column exclusively inside disposable local preview.
+if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_instagram_url'")->fetch()) {
+    $instagramSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261120_seller_artist_instagram.sql');
+    if (!is_string($instagramSql) || !str_contains($instagramSql, 'ADD COLUMN artist_instagram_url VARCHAR(2048)')) {
+        throw new RuntimeException('Reviewed Instagram profile migration missing.');
+    }
+    $instagramSql=preg_replace('/^\\s*--[^\\n]*$/m','',$instagramSql);
+    $pdo->exec(trim((string)$instagramSql));
+    echo "Optional artist Instagram profile added in isolated preview.\\n";
+}
 // Install publication flag only into the isolated, synthetic preview database.
 if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_published'")->fetch()) {
     $publicationSql=file_get_contents(dirname(__DIR__,2).'/database/migrations/20261114_artist_publication.sql');

@@ -312,3 +312,6 @@ body{background:#fffaf6;color:var(--ink)}
     max-height: 320px;
   }
 }
+
+/* #638: accessible responsive Instagram link on artist brochure. */
+.artist-brochure-instagram{margin:12px 0 0}.artist-brochure-instagram a{display:inline-flex;align-items:center;gap:10px;color:#852d43;font-weight:650;text-decoration:none;padding:9px 12px;border-radius:8px;border:1px solid currentColor}.artist-brochure-instagram a:hover,.artist-brochure-instagram a:focus-visible{text-decoration:underline;outline-offset:3px}.artist-brochure-instagram svg{flex:none}

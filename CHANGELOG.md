@@ -346,3 +346,5 @@ Bewaar daadwerkelijke deploymentdata en commit-SHA's vanaf de eerste geïmportee
 - Beheerder-inactiviteit: geplande 60-minutenlimiet, waarschuwing vóór sessieverval en expliciete CSRF-beveiligde verlengknop.
 - Passieve ongelezen-mailpolls verlengen sessies niet. Geen opslag van onbewaarde formulierdata in browserstorage.
 - Alleen branch `security/issue23-idle-timeout-20261119`; CI, browseracceptatie, merge en productieautorisatie blijven open.
+
+- 2026-11-20 (voorbereid, niet uitgerold): issues #638/#639 — optionele veilige Instagram-link op publieke kunstenaarspagina (additieve handmatige migratie en snapshotdekking), en invoer/weergave van marktprijs/startbod in hele euro's. Het bestaande DECIMAL(12,2)-schema blijft behouden; waarden met niet-nul centen worden niet automatisch gewijzigd.
