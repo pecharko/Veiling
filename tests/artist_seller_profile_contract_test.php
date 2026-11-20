@@ -10,7 +10,7 @@ $preview=file_get_contents($root.'/dev/preview/seed.php');
 if (!is_string($editor)||!is_string($validation)||!is_string($images)||!is_string($schema)||!is_string($snapshot)||!is_string($preview))
   throw new RuntimeException('Artist profile source missing');
 foreach (['name="artist_intro"','maxlength="500"','enctype="multipart/form-data"',
-  'name="photo_work_<?=$slot?>"','name="photo_portrait_1"','seller_image_upload(',
+  'data-seller-gallery="work"','data-seller-gallery="portrait"','data-seller-new-file','seller_image_upload(',
   'seller_image_delete(','id="seller-artist-fields"'] as $key)
   if (!str_contains($editor,$key)) throw new RuntimeException('Artist editor missing: '.$key);
 foreach (['artist_intro'=>500] as $field=>$maximum)
