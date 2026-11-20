@@ -24,7 +24,11 @@ class ManualArchiveTests(unittest.TestCase):
         self.assertIn("FOR UPDATE", ARCH)
 
     def test_transaction_and_row_verification(self):
-        for marker in ("beginTransaction()", "rollBack()", "commit()", "rowCount()", "Archive checksum mismatch"):
+        for marker in (
+            "beginTransaction()", "rollBack()", "commit()",
+            "$insertDay->rowCount() !== 1", "Archive daily aggregate missing",
+            "$delete->rowCount() !== $n", "Archive source row count changed",
+        ):
             self.assertIn(marker, ARCH)
         self.assertLess(ARCH.index("INSERT INTO visitor_stats_day_totals"), ARCH.index("DELETE FROM visitor_stats_daily"))
         self.assertIn("INSERT INTO visitor_stats_lot_totals", ARCH)

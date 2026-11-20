@@ -5,6 +5,8 @@ This is a contract audit, NOT an authorization, preflight or deployment.
 """
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,5 +45,8 @@ for name, config in registry["releases"].items():
     for path in config["paths"]:
         assert (ROOT / path).is_file(), (name, path)
     print("PASS registered real release compatibility:", name)
+
+subprocess.run([sys.executable, "-B", str(ROOT / "tests/deploy_issue224_archive_test.py")],
+               check=True)
 
 print("PASS all registered release contracts: no deployment performed")

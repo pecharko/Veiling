@@ -57,5 +57,15 @@ Controleer op **hetzelfde UTC-meetmoment** ook de laatste cronlog-entry en event
 - De reeds actieve CLI-runner logt samengevatte aantallen, geen bezoekerscodes; automatische externe notificatie is niet aangetoond. Onderzoek read-only de feitelijke exitcode-/logbewaking vóór eventuele wijzigingen.
 - Geen automatische verwijdering van de geaggregeerde statistieken op 31 oktober 2027.
 
+## Codevrijgave van de gedeelde UTC-berekening
+
+Gebruik de bestaande gespecialiseerde workflow `issue-224-archive-code-release.yml` met `scripts/deploy_issue224_archive.py`. De vaste scope bevat `catalogus-public/admin/statistieken.php`, `catalogus-public/privacy.php`, `private/visitor_stats_archive_one_day_experimental.php` en `private/visitor_stats_daily_cron.php`. Voor deze wijziging veranderen drie runtimebestanden; de privacypagina blijft inhoudelijk gelijk en wordt bij gelijke bron- en remote-inhoud overgeslagen.
+
+De nieuwe helper moet vóór de adminpagina en cron worden gepubliceerd: die kunnen de nieuwe functie `visitor_stats_utc_cutoff()` aanroepen. De uploader gebruikt daarom de volgorde helper → adminpagina → privacypagina → cron. Bij een fout herstelt de bestaande rollback de gewijzigde bestanden in omgekeerde volgorde, zodat de aanroepers vóór de helper worden teruggezet. De volgorde van de vier goed te keuren remotehashes blijft adminpagina, privacypagina, helper, cron; verwissel die workflowinputs niet met de uploadvolgorde.
+
+Code, regressietests en de aanpassing van de uploadvolgorde worden in dezelfde PR beoordeeld. Deze gespecialiseerde route gebruikt haar bestaande vaste bestandslijst en preflightartifact; een algemeen shared-OVH-manifest is daarvoor geen vervanging. Na een geautoriseerde merge moeten de CI en de automatische read-only preflight voor de nieuwe exacte `main`-SHA worden gecontroleerd. Gebruik de daar geverifieerde bron- en remotehashes voor de afzonderlijke productieautorisatie en hercontroleer drift vlak vóór upload.
+
+De codevrijgave wijzigt of start geen geplande taak. Omdat de eigenaar een reeds actieve OVH-cron heeft getoond, kan de eerstvolgende geplande uitvoering na een codevrijgave wel de nieuwe code gebruiken. Controleer vervolgens het cronlog en de UTC-cutoff zonder een extra archivering handmatig te starten.
+
 ## Vrijgavegrenzen
 De code-PR vereist menselijke review vanwege archivering en verwijdering van historische gegevens. Merge ≠ deployment ≠ wijziging van de bestaande OVH-cron. Productiecode, DB-writes en OVH-cronwijzigingen vereisen afzonderlijke expliciete autorisatie.
