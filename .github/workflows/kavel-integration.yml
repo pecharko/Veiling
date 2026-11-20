@@ -210,6 +210,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node tests/kavel_new_photo_browser.cjs || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/visitor_geo_admin_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/admin_website_preview_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
+          php tests/issue6_session_db_http_test.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/admin_ip_exclusions_http_integration.php || { tail -n 70 /tmp/ip-test-http.log; exit 1; }
           NODE_PATH="$RUNNER_TEMP/preview-browser/node_modules" node tests/admin_preview_banner_browser.cjs || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
           php tests/previous_edition_http_integration.php || { tail -n 70 /tmp/kavel-test-http.log; exit 1; }
