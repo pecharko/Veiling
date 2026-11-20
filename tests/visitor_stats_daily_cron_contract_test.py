@@ -11,7 +11,10 @@ ADMIN = (ROOT / "catalogus-public/admin/statistieken.php").read_text()
 class DailyArchiveContract(unittest.TestCase):
     def test_three_full_days_are_retained(self):
         for text in (ARCH, CRON, ADMIN):
-            self.assertIn("strtotime('-3 days')", text)
+            self.assertIn("visitor_stats_utc_cutoff()", text)
+            self.assertNotIn("gmdate('Y-m-d', strtotime('-3 days'))", text)
+        self.assertIn("new DateTimeZone('UTC')", ARCH)
+        self.assertIn("->setTimezone($utc)->modify('-3 days')", ARCH)
         self.assertIn("WHERE visit_date < ?", ARCH)
 
     def test_cli_only_and_bounded_catchup(self):
