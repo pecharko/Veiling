@@ -5,6 +5,11 @@
       "path": "catalogus-public/admin/kavel.php",
       "source_sha256": "5b24c3044945e5e256376c3835b2ba3a9733a0f78a7247437db5d16abfca92f4",
       "remote_sha256": "356e872435da204b76098a8e6d14a052d7780b1f33f274de51becc39f3fd4d24"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "9f008d1fbcb59f5d13cd5cc503996a7a5a3e0b6b831bef5695a58cc23ec4c886",
+      "remote_sha256": "a25a349aa8932d2a6fea5deb97e75fc7a80e90d2ad85fe4410da583ab13a1196"
     }
   ]
 }
