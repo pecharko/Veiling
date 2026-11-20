@@ -1,5 +1,9 @@
 # Functionele requirements — veilingcatalogus 41 Lokeren
 
+## Issue #24 — fotobatches gedeeltelijk opslaan (ontwerp 20 november 2026)
+
+Bij het eerste opslaan van een kavel worden kavelgegevens en eerder verwerkte foto's behouden wanneer een latere fotoupload faalt; er wordt **geen alles-of-niets-rollback** van reeds opgeslagen foto's uitgevoerd. Een gedeeltelijke fout brengt de gebruiker terug naar de bewerkpagina met een waarschuwing: aantallen en namen van bevestigde foto-opslagen, de niet-bevestigde bestanden en het advies de werkelijke fotolijst te controleren voordat **uitsluitend ontbrekende** foto's opnieuw worden toegevoegd. De foutafhandeling doet geen automatische retry, omdat de status na een transportfout onzeker kan zijn. Een auditfout ná succesvolle foto-opslag mag de foto niet als mislukt voorstellen. De serverlimiet blijft drie foto's per kavel; vooraf geweigerde PHP-uploads veroorzaken geen kavelwijziging. T-039 en T-039B testen dit met fictieve data in geïsoleerde MySQL/HTTP, niet op productie.
+
 ## Actueel acceptatiebesluit issue #2 — 20 november 2026
 
 De eigenaar verlangt geen nieuwe ondersteuning voor uitzonderlijke host-/storagecrashes, stroomuitval tijdens herstel of niet-coöpererende externe SQL/SFTP-writes. Bestaande herstelbeveiligingen worden **niet** verwijderd of versoepeld. De actuele v8-catalogussnapshot bevat zes catalogustabellen en de gekoppelde foto's; adminaccounts/inloggegevens en bezoekersstatistieken blijven bij herstel onveranderd en oude snapshotformaten worden niet ondersteund. De hieronder vermelde oudere fasen en uitspraken zoals “niet uitgerold” zijn historische verslagen; de actuele bewijsstatus per FR-015/017/019/020 en de nog open T-027/offsite-/quota-beperkingen staan in [ISSUE_2_NORMAL_ACCEPTANCE_2026-11-20.md](ISSUE_2_NORMAL_ACCEPTANCE_2026-11-20.md). Er worden geen destructieve restoretests op productie uitgevoerd.
