@@ -1,5 +1,11 @@
 # Wijzigingslogboek
 
+## 2026-11-20 — Issue #6: HTTPS- en sessiebeveiliging geaccepteerd voor de geteste routes
+
+Na de oorspronkelijke onveilige HTTP-loginrespons is de canonieke 301-redirect in Chrome bevestigd voor `www` HTTP-homepage, kavelpagina, adminindex en login (de HTTP-apex-login en homepage waren eerder met curl bevestigd). De eigenaar controleerde een geldig HTTPS-certificaat, de `catalog_admin`-flags `Secure`, `HttpOnly`, `SameSite=Lax`, anonieme admintoegang en uitloggen gevolgd door een nieuwe dashboardaanvraag. **Onafhankelijke read-only OVH-SFTP-herlezing** [run 44716673201](https://github.com/pecharko/Veiling/actions/runs/44716673201) geeft voor `catalogus-public/.htaccess` dezelfde SHA-256 als de na uitrol `VERIFIED`-hash van [canonical-domain-release 42354214922](https://github.com/pecharko/Veiling/actions/runs/42354214922): `68cca0138e263c5b63ec86c17f7210493b57aea9cf716c9d5c97cf698a0c5722`.
+
+**Aanvullende test-only PR [#640](https://github.com/pecharko/Veiling/pull/640)** (squash-merge `ee9d0a16ad3e36750e19007776952c35d66048ee`) bevat één nieuwe integratietest en één aanroep in de bestaande CI. De echte lokale PHP-/HTTP-sessies met fictieve rollen en wegwerp-MySQL leverden **31/31 geslaagde controles** voor autorisatie, sessieverval, verlenging, uitschakeling en het weigeren van oude sessie-ID's na uitloggen ([PR-CI 44718004029](https://github.com/pecharko/Veiling/actions/runs/44718004029)); alle drie toepasselijke PR- en afzonderlijke `main`-push-workflows waren groen. De 60 minuten inactiviteit werden in de CI-sessieopslag gesimuleerd; dit is geen test met echte OVH-accounts of een volledige live TLS-/rollenaudit. **Geen productiecode, OVH-configuratie, database, snapshot of secrets gewijzigd door PR #640.**
+
 ## 2026-11-20 — Issue #24: zichtbare gedeeltelijke fotobatch en veilige retry (ontwikkeling)
 
 Bij nieuwe kavels rapporteert de editor nu precies welke foto's uit een batch geslaagd zijn en welke uploads niet bevestigd zijn. Al opgeslagen foto's blijven bewaard; de bewerkpagina toont de actuele fotolijst en vraagt uitsluitend ontbrekende foto's opnieuw toe te voegen, nooit blind automatisch te herhalen. Een mislukte audit-update na een geslaagde foto-insert wordt afzonderlijk gemeld en niet meer ten onrechte als mislukte foto geregistreerd.
