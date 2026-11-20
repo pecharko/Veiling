@@ -6,7 +6,6 @@ on:
       - '.github/workflows/issues638639-snapshot-protected-release.yml'
       - 'scripts/deploy_issues638639_snapshot.py'
       - 'tests/deploy_issues638639_snapshot_test.py'
-      - 'tests/deploy_issues638639_snapshot_test.py'
       - 'releases/issues638639-snapshot-20261120.json'
   workflow_dispatch:
     inputs:
@@ -39,9 +38,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B -m unittest discover -s tests -p deploy_issues638639_snapshot_test.py -v
-          python3 -B -m unittest discover -s tests -p deploy_issues638639_snapshot_test.py -v
           python3 -B -m py_compile scripts/deploy_issues638639_snapshot.py
-          python3 -B -m scripts.deploy_artist_overview_snapshot plan
+          python3 -B -m scripts.deploy_issues638639_snapshot plan
           php -l private/snapshots.php
           python3 - <<'PY'
           from scripts.shared_ovh_release import PROTECTED
@@ -83,13 +81,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 -B -m unittest discover -s tests -p deploy_issues638639_snapshot_test.py -v
-          python3 -B -m unittest discover -s tests -p deploy_issues638639_snapshot_test.py -v
-          python3 -B -m scripts.deploy_artist_overview_snapshot plan
+          python3 -B -m scripts.deploy_issues638639_snapshot plan
           php -l private/snapshots.php
       - name: Install pinned SFTP client
         run: python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
       - name: Fresh pinned-hostkey drift check, source backup, exact upload, readback and rollback
-        run: python3 -B -m scripts.deploy_artist_overview_snapshot deploy
+        run: python3 -B -m scripts.deploy_issues638639_snapshot deploy
       - name: Retain verified upload and rollback evidence
         if: always()
         uses: actions/upload-artifact@v4
