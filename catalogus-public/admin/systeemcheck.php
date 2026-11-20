@@ -61,7 +61,7 @@ try {
   $dbMessage = 'Databaseverbinding en de vijf benodigde tabellen zijn bereikbaar.';
 } catch (Throwable $err) {
   error_log('Catalogus systeemcheck database: ' . $err->getMessage());
-  $dbMessage = 'Databaseverbinding of install.sql-tabellen ontbreken. Kijk in OVHcloud > Databases en importeer sql/install.sql in de juiste database.';
+  $dbMessage = 'Databaseverbinding of vereiste tabellen niet beschikbaar. Contacteer de websitebeheerder voor gecontroleerd herstel volgens de interne procedure; importeer geen ongeverifieerde SQL of publieke setup-route.';
 }
 report_item($rows, 'MySQL en database-tabellen', $dbOkay, $dbMessage);
 $errors = count(array_filter($rows, static fn(array $r) => $r['state'] === 'FOUT'));
