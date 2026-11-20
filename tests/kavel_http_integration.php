@@ -578,7 +578,91 @@ try {
       && (bool)by_number(30),
     'Partial photo failure stays on saved lot editor to show warning');
   [$status, $html] = request_page('/admin/kavel.php?id=' . by_number(30)['id']);
-  claim($status === 200 && str_contains($html,'sommige foto'), 'Partial save warning displayed');
+  claim($status === 200 && str_contains($html,'Foto’s opgeslagen (0/1)')
+    && str_contains($html,'Upload niet bevestigd voor: bad.png')
+    && str_contains($html,'voeg alleen ontbrekende foto’s opnieuw toe'),
+    'Partial save shows confirmed photo count, failed file and safe retry guidance');
+
+  // T-039B: partial batch saves must keep every confirmed photo, name the failed
+  // file, and permit a deliberate retry. Real storage errors and SQL failures
+  // are injected only into this disposable localhost/MySQL fixture.
+  $batchUploadRoot = dirname(__DIR__) . '/catalogus-public/uploads/' . date('Y/m');
+  for ($failureMode=0; $failureMode<2; ++$failureMode) {
+    for ($failedAt=0; $failedAt<3; ++$failedAt) {
+      $batchNumber=920100 + 10*$failureMode + $failedAt;
+      $photoNames=[];
+      $batch=[
+        'csrf'=>$csrf, 'action'=>'save','id'=>'0',
+        'lot_number'=>(string)$batchNumber, 'title'=>'Batch photo failure '.$batchNumber,
+        'category'=>'Moderne Kunst','seller_id'=>(string)$sellerLinkId,'status'=>'draft'
+      ];
+      for ($photoIndex=0; $photoIndex<3; ++$photoIndex) {
+        $photoNames[]='batch-'.$batchNumber.'-'.($photoIndex+1).'.png';
+        $fixture=($failureMode===0 && $photoIndex===$failedAt) ? '/bad.txt' : '/valid.png';
+        $batch['photos['.$photoIndex.']']=new CURLFile(
+          $fixtures.$fixture,'image/png',$photoNames[$photoIndex]);
+      }
+      $beforeFiles=glob($batchUploadRoot.'/*.webp') ?: [];
+      if ($failureMode===1) {
+        $rejectOrder=100+$failedAt;
+        db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_batch_photo');
+        db()->exec("CREATE TRIGGER ci_reject_lot_batch_photo BEFORE INSERT ON lot_images
+          FOR EACH ROW BEGIN
+            IF NEW.sort_order = {$rejectOrder} THEN
+              SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CI forced image INSERT error';
+            END IF;
+          END");
+      }
+      try {
+        [$batchStatus,, $batchRedirect]=request_page('/admin/kavel.php',$batch,true);
+      } finally {
+        if ($failureMode===1) db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_batch_photo');
+      }
+      $savedLot=by_number($batchNumber);
+      claim($batchStatus===303 && (bool)$savedLot
+        && $batchRedirect==='/admin/kavel.php?id='.(int)$savedLot['id'],
+        'T-039B partial batch persists lot and opens editor (mode '.$failureMode.', failed photo '.($failedAt+1).')');
+      $savedId=(int)$savedLot['id'];
+      $rows=db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+      $rows->execute([$savedId]);
+      $savedPaths=$rows->fetchAll(PDO::FETCH_COLUMN);
+      $savedFiles=array_map(static fn($path) => dirname(__DIR__).'/catalogus-public/'.$path, $savedPaths);
+      $newFiles=array_values(array_diff(glob($batchUploadRoot.'/*.webp') ?: [], $beforeFiles));
+      claim(count($savedPaths)===2 && count($newFiles)===2
+        && count(array_intersect($savedFiles,$newFiles))===2
+        && count(array_unique($savedPaths))===2,
+        'T-039B only two DB rows/files remain, no SQL-failure orphan (mode '.$failureMode.', photo '.($failedAt+1).')');
+
+      [$pageStatus,$batchEditor]=request_page('/admin/kavel.php?id='.$savedId);
+      $correctNames=true;
+      foreach ($photoNames as $photoIndex=>$photoName) {
+        if ($photoIndex!==$failedAt && !str_contains($batchEditor,$photoName)) $correctNames=false;
+      }
+      claim($pageStatus===200 && str_contains($batchEditor,'Foto’s opgeslagen (2/3)')
+        && str_contains($batchEditor,'Upload niet bevestigd voor: '.$photoNames[$failedAt])
+        && str_contains($batchEditor,'voeg alleen ontbrekende foto’s opnieuw toe')
+        && $correctNames && substr_count($batchEditor,'alt="Kavelfoto"')===2,
+        'T-039B success/failure names and two real saved images visible (mode '.$failureMode.', photo '.($failedAt+1).')');
+
+      // Explicit retry of the missing third slot, never an automatic blind retry.
+      [$retryStatus,$retryBody]=request_page('/admin/kavel.php?id='.$savedId,[
+        'csrf'=>token($batchEditor),'action'=>'add-photo','id'=>(string)$savedId,
+        'photos[0]'=>new CURLFile($fixtures.'/valid.png','image/png','retry-'.$batchNumber.'.png')
+      ],true,['Accept: application/json']);
+      $retry=json_decode($retryBody,true);
+      $rows->execute([$savedId]);
+      $finalPaths=$rows->fetchAll(PDO::FETCH_COLUMN);
+      claim($retryStatus===200 && ($retry['ok']??null)===true
+        && (int)($retry['count']??0)===3 && count($finalPaths)===3
+        && count(array_unique($finalPaths))===3
+        && count(array_filter($finalPaths,static fn($path)=>
+          is_file(dirname(__DIR__).'/catalogus-public/'.$path)))===3,
+        'T-039B manual retry fills only missing photo slot (mode '.$failureMode.', photo '.($failedAt+1).')');
+      // The fixture is disposable; clean DB rows before unlinking only its own files.
+      db()->prepare('DELETE FROM lots WHERE id=?')->execute([$savedId]);
+      foreach ($finalPaths as $path) @unlink(dirname(__DIR__).'/catalogus-public/'.$path);
+    }
+  }
 
   [$status] = request_page('/admin/import.php', ['action'=>'save']);
   claim($status === 404, 'CSV import stays disabled');
