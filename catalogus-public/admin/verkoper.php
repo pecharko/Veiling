@@ -80,21 +80,37 @@ if (is_post()) {
     }
     $savedId=seller_save($pdo,$editId,$_POST,$actorId,$actorRole);
     if ($values['seller_type']!=='kunstenaar') seller_image_clear($pdo,$savedId);
-    // Accept photo uploads together with the seller form, including creation.
-    $failed=[];
+    // New artists submit portrait/work images in one save request; each image
+    // is committed separately. Do not imply that an already saved image failed.
+    $savedPhotos=[];
+    $failedPhotos=[];
     if ($values['seller_type']==='kunstenaar') {
       foreach (['work'=>3,'portrait'=>1] as $kind=>$maxSlot) {
         for ($slot=1;$slot<=$maxSlot;$slot++) {
           $key='photo_'.$kind.'_'.$slot;
           $file=$_FILES[$key]??null;
           if (!is_array($file) || (int)($file['error']??UPLOAD_ERR_NO_FILE)===UPLOAD_ERR_NO_FILE) continue;
-          try { seller_image_upload($pdo,$savedId,$kind,$slot,$file,(int)$_SESSION['admin_id']); }
-          catch (Throwable $photoError) { $failed[]=$kind.' '.$slot.': '.$photoError->getMessage(); }
+          $filename=mb_substr(basename(str_replace('\\','/',(string)($file['name']??'foto'))),0,100);
+          $filename=preg_replace('/[\\x00-\\x1f\\x7f]/u',' ', $filename) ?: 'foto';
+          $label=($kind==='portrait'?'Portretfoto':'Werkfoto '.$slot).' ('.$filename.')';
+          try {
+            seller_image_upload($pdo,$savedId,$kind,$slot,$file,(int)$_SESSION['admin_id']);
+            $savedPhotos[]=$label;
+          } catch (Throwable $photoError) {
+            // An upload's error may include SQL/filenames; keep server logs generic.
+            error_log('[Kunstenaar fotobatch] '.$kind.' '.$slot.' '.get_class($photoError));
+            $failedPhotos[]=$label;
+          }
         }
       }
     }
-    if ($failed) {
-      flash('Verkoper bewaard, maar niet alle foto’s lukten: '.implode('; ',$failed),'warning');
+    if ($failedPhotos) {
+      $notice='Kunstenaar bewaard. Foto’s opgeslagen ('.count($savedPhotos).'/'
+        .(count($savedPhotos)+count($failedPhotos)).'): '
+        .($savedPhotos ? implode('; ',$savedPhotos) : 'geen').'.'
+        .' Upload niet bevestigd voor: '.implode('; ',$failedPhotos)
+        .'. Controleer de foto’s hieronder en voeg alleen ontbrekende foto’s opnieuw toe.';
+      flash($notice,'warning');
       if ($ajaxSave) $ajaxReply(200,['redirect'=>url($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]))]);
       redirect($editorUrl,['id'=>$savedId]+($fromLot?['from_lot'=>1,'lot_id'=>$returnLotId]:[]));
     }
