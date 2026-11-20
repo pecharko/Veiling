@@ -18,7 +18,8 @@ class ManualArchiveTests(unittest.TestCase):
         self.assertIn("check_csrf();", ADMIN)
         self.assertIn("hash_equals(", ADMIN)
         self.assertIn("analytics_archive_pending", ADMIN)
-        self.assertIn("strtotime('-7 days')", ADMIN)
+        self.assertIn("visitor_stats_utc_cutoff()", ADMIN)
+        self.assertNotIn("strtotime('-7 days')", ADMIN)
         self.assertIn("strtotime('-30 days')", ARCH)
         self.assertIn("FOR UPDATE", ARCH)
 
