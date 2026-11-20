@@ -24,3 +24,8 @@ foreach (['https://example.org/artist' => 'https://example.org/artist', 'http://
   if ($valid !== $expected) throw new RuntimeException('Unexpected URL normalization');
 }
 echo "Artist hyperlink validation contract OK\n";
+
+// Issues #638: exercise URL normalization, seller restrictions and public rendering contract in existing CI.
+require __DIR__.'/artist_instagram_unit_test.php';
+require __DIR__.'/artist_seller_profile_contract_test.php';
+require __DIR__.'/public_artist_profile_contract_test.php';

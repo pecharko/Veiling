@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-require dirname(__DIR__).'/private/lot_artist.php';
+require_once dirname(__DIR__).'/private/lot_artist.php';
 function igcheck(string $expected,string $input): void {
   $actual=artist_instagram_validate($input);
   if ($actual!==$expected) throw new RuntimeException('Instagram normalization failed: '.$input);
