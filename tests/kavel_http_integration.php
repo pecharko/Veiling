@@ -449,13 +449,24 @@ try {
     'csrf' => $csrf, 'action' => 'save', 'id' => '0',
     'lot_number' => '99', 'title' => 'Nieuwe titel <&>',
     'category' => 'Moderne Kunst', 'description' => 'Niet opgeslagen',
-    'market_price' => '-1', 'starting_bid' => '100', 'status' => 'published',
+    'market_price' => '-1', 'starting_bid' => '100', 'donation_confirmed'=>'1', 'status' => 'published',
   ];
   [$status, $html] = request_page('/admin/kavel.php', $invalid);
   claim($status === 200 && str_contains($html,'Marktprijs: vul een geheel aantal euro’s in (zonder decimalen, maximaal 10 cijfers).'), 'Invalid market price rejected');
   claim(str_contains($html, 'value="Nieuwe titel &lt;&amp;&gt;"'), 'Submitted title restored and HTML escaped');
   claim(str_contains($html, 'name="market_price" value="-1"') && str_contains($html,'name="starting_bid" value="100"'), 'Submitted market price and starting bid restored');
   claim(lot_count() === 0, 'No new lot after invalid valuation');
+  foreach (['12.50','12,50','1e2','+1'] as $wrongPrice) {
+    $invalid['market_price']=$wrongPrice;
+    [$status, $page] = request_page('/admin/kavel.php', $invalid);
+    claim($status===200 && str_contains($page,'Marktprijs: vul een geheel aantal euro'), 'Decimal/exponent market price rejected: '.$wrongPrice);
+    claim(lot_count()===0, 'Invalid price never writes a lot');
+  }
+  $invalid['market_price']='125';
+  $invalid['starting_bid']='10.50';
+  [$status, $page] = request_page('/admin/kavel.php', $invalid);
+  claim($status===200 && str_contains($page,'Startbod: vul een geheel aantal euro'), 'Fractional starting bid rejected');
+  claim(lot_count()===0, 'Fractional starting bid never writes a lot');
 
   db()->prepare("INSERT INTO lots (lot_number,title,description,details,status) VALUES (10,'Originele titel','','','draft')")->execute();
   $id = (int)by_number(10)['id'];

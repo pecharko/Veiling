@@ -253,7 +253,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
         <div class="seller-fields-grid">
           <label><span>Kunstenaarsnaam <span class="lot-required">*</span></span><input required name="artist_name" maxlength="50" value="<?=e((string)$values['artist_name'])?>"></label>
           <label>Website kunstenaar (optioneel)<input name="artist_url" maxlength="2048" inputmode="url" value="<?=e((string)$values['artist_url'])?>" placeholder="https://..."></label>
-          <label>Instagram-profiel (optioneel)<input name="artist_instagram_url" type="text" maxlength="2048" pattern="(?:@[A-Za-z0-9._]{1,30}|https://(?:www\\.)?instagram\\.com/[A-Za-z0-9._]{1,30}/?)" title="Gebruik @gebruikersnaam of https://instagram.com/gebruikersnaam/" value="<?=e((string)$values['artist_instagram_url'])?>" placeholder="@gebruikersnaam"></label>
+          <label>Instagram-profiel (optioneel)<input name="artist_instagram_url" type="text" maxlength="2048" pattern="(?:@[A-Za-z0-9._]{1,30}|https://(?:www[.])?instagram[.]com/[A-Za-z0-9._]{1,30}/?)" title="Gebruik @gebruikersnaam of https://instagram.com/gebruikersnaam/" value="<?=e((string)$values['artist_instagram_url'])?>" placeholder="@gebruikersnaam"></label>
         </div>
         <div class="seller-introduction">
           <label for="artist-slogan">Slogan van de kunstenaar (optioneel)</label>

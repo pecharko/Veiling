@@ -66,6 +66,8 @@ check_value('draft', $badStatus['status'], 'Onbekende status nooit selecteren');
 check_value('', $badStatus['title'], 'Array als formulierveld niet accepteren');
 
 check_value('', lot_price_input_value(null), 'Lege prijs blijft leeg');
+check_value('0', lot_price_input_value('0.00'), 'Nul zonder centen');
+check_value('1234', lot_price_input_value('1234.00'), 'Bestaand geheel bedrag zonder centen');
 check_value('850', lot_price_input_value('850.00'), 'Gehele prijs heeft geen decimalen');
 check_value('850.5', lot_price_input_value('850.5'), 'Bestaande prijs met centen blijft intact');
 check_value('12.34', lot_price_input_value('12.34'), 'Legacy startbod met centen blijft intact');
