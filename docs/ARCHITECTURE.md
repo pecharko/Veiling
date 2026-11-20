@@ -66,13 +66,17 @@ Werk dit document bij zodra de echte productiebroncode is veilig ingelezen.
 - `catalogus-public/index.php`: zoeken, categorie-/prijsfilter, sorteren, pagineren, globale publicatievlag, kavelstatus.
 - `catalogus-public/kavel.php`: detail, galerij en vorig/volgend kavel.
 - `catalogus-public/assets/catalogus.js`: favorieten via browser-`localStorage` en delen van kavel.
-- `catalogus-public/admin/import.php`: CSV-upsert op lotnummer, voorwaardelijk publiceren.
+- `catalogus-public/admin/import.php`: historische CSV-import, momenteel uitsluitend HTTP 404 voor GET/POST; geen actieve upsert.
 - `private/snapshots.php`: ZIP-back-ups, hashes en restore; **consistentie bij gelijktijdige schrijfacties is nog niet bewezen**.
 
 ## Bestanden die in GitHub ontbreken
 
-- `catalogus-public/assets/placeholder.svg` en `catalogus-public/assets/voorbeeld-kavels.csv` (wel door PHP gebruikt).
-- `sql/install.sql` en `catalogus-public/admin/setup.php` (wel vanuit systeemcheck/login genoemd; setup kan bewust na installatie verwijderd zijn).
-- `catalogus-public/uploads/.htaccess` en gebruikersfoto's (uitgesloten van Git; uploads-beveiliging op productie apart controleren).
+**Actuele stand issue #4 (20 november 2026; bovenstaande audit van 17 oktober is historisch):**
+
+- `catalogus-public/assets/placeholder.svg` is aanwezig in Git en werd op 19 oktober als statisch asset op OVH technisch geverifieerd; de eigenaar bevestigde daarna de fotoloze-kavelweergave (T-028).
+- `catalogus-public/assets/voorbeeld-kavels.csv` ontbreekt **bewust**: CSV-import is uitgeschakeld; `admin/import.php` retourneert 404 voor GET én POST (T-042). Niet opnieuw toevoegen zonder nieuwe productbeslissing.
+- `sql/install.sql` bestaat niet. De geauthenticeerde `admin/systeemcheck.php` verwijst bij een databasefout naar een interne operatorprocedure in plaats van een fictief installatiebestand. Zie [ADMIN_RECOVERY.md](ADMIN_RECOVERY.md).
+- `catalogus-public/admin/setup.php` bestaat terecht niet. De login weigert een lege administratorlijst met 503/no-store; nooit een publieke setup- of noodlogin toevoegen.
+- `catalogus-public/uploads/.htaccess` en gebruikersfoto's zijn uitgesloten van Git; uploads-beveiliging op productie blijft afzonderlijk te controleren.
 
 Zie het [auditrapport](CODE_AUDIT_2026-10-17.md) voor impact en opvolging.
