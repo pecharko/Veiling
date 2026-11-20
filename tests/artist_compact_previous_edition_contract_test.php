@@ -17,7 +17,7 @@ if (!str_contains($previous, 'id="in-beeld"') ||
     !str_contains($previous, 'impression-hero-visual')) {
     throw new RuntimeException('Previous-edition gallery or photo was unexpectedly removed');
 }
-if (!str_contains($artist, 'assets/catalogus.css') || !str_contains($artist, '?v=197')) {
+if (!str_contains($artist, 'assets/catalogus.css') || !str_contains($artist, '?v=198')) {
     throw new RuntimeException('Artist CSS cache version not refreshed');
 }
 $marker = '/* Compactere kunstenaarsbrochure - lokale preview */';
