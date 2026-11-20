@@ -229,17 +229,41 @@ if(is_post()){
           }
           if ($saleLocation === 'markt' && $wasAuction) compact_auction_numbers($pdo,(int)$_SESSION['admin_id']);
           $pdo->commit();
-          $failed=[];
-          foreach($photos as $i=>$photo){
-            try{add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);}
-            catch(Throwable $ex){error_log('[Kavel foto] '.$ex->getMessage());$failed[]=$photo['name'].': verwerking mislukt';}
+          // A photo may have persisted even if its following audit write fails.
+          // Report photo success separately, so no one retries an already saved image.
+          $savedPhotos=[];
+          $failedPhotos=[];
+          $auditWarning=false;
+          foreach ($photos as $i=>$photo) {
+            try {
+              add_lot_image($id,$photo['tmp'],$photo['name'],100+$i);
+              $savedPhotos[]=$photo['name'];
+            } catch (Throwable $ex) {
+              error_log('[Kavel foto] '.$ex->getMessage());
+              $failedPhotos[]=$photo['name'];
+              continue;
+            }
+            try {
+              lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
+            } catch (Throwable $ex) {
+              error_log('[Kavel foto audit] '.$ex->getMessage());
+              $auditWarning=true;
+            }
           }
-          flash($failed?'Kavel bewaard, maar sommige foto’s mislukten: '.implode('; ',$failed)
-            : (!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard."),
-            $failed?'warning':'success');
-          // After a clean save, return both new and edited lots to the overview.
-          // Partial photo failures leave the saved lot open so the warning is visible.
-          if ($failed) redirect('admin/kavel.php', ['id' => $id]);
+          if ($failedPhotos || $auditWarning) {
+            $notice='Kavel bewaard. Foto’s opgeslagen ('.count($savedPhotos).'/'.count($photos).'): '
+              .($savedPhotos ? implode(', ',$savedPhotos) : 'geen').'.';
+            if ($failedPhotos) {
+              $notice.=' Upload niet bevestigd voor: '.implode(', ',$failedPhotos)
+                .'. Controleer de foto’s hieronder en voeg alleen ontbrekende foto’s opnieuw toe.';
+            }
+            if ($auditWarning) {
+              $notice.=' De bewerkingsgeschiedenis kon niet worden bijgewerkt; meld dit aan de beheerder.';
+            }
+            flash($notice,'warning');
+            redirect('admin/kavel.php',['id'=>$id]);
+          }
+          flash(!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard.",'success');
           redirect('admin/index.php');
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();

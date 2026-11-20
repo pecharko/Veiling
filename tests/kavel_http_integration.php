@@ -209,6 +209,124 @@ try {
   claim($sellerStatus===303 && $imagePath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$imagePath)
     && db()->query('SELECT artist_intro FROM lot_sellers WHERE id='.$sellerId)->fetchColumn()==='Fictieve korte voorstelling',
     'Artist introduction and first work photo saved with seller');
+
+  // T-039C: new artist creation stages three works and one portrait in a single
+  // multipart request. A failed photo must never erase the other three, and
+  // the redirected artist editor must name confirmed and unconfirmed files.
+  $artistBadPhoto=$fixtures.'/invalid-artist-photo.txt';
+  file_put_contents($artistBadPhoto, 'Not an image');
+  $artistPhotoSlots=[
+    ['work',1],['work',2],['work',3],['portrait',1]
+  ];
+  $artistUploadRoot=dirname(__DIR__).'/catalogus-public/uploads/'.date('Y/m');
+  for ($artistFailureMode=0; $artistFailureMode<2; ++$artistFailureMode) {
+    for ($artistFailedAt=0; $artistFailedAt<count($artistPhotoSlots); ++$artistFailedAt) {
+      $artistBatchNumber=930100 + 10*$artistFailureMode + $artistFailedAt;
+      $artistBatchEmail='batch-artist-'.$artistBatchNumber.'@example.invalid';
+      $artistBatch=[
+        'csrf'=>$sellerCsrf,'action'=>'save','seller_id'=>'','seller_type'=>'kunstenaar',
+        'name'=>'Fictieve fototest '.$artistBatchNumber,'email'=>$artistBatchEmail,
+        'street'=>'Teststraat','house_number'=>'7','postal_code'=>'9160',
+        'municipality'=>'Lokeren','artist_name'=>'Fictief Atelier '.$artistBatchNumber
+      ];
+      $artistNames=[];
+      foreach ($artistPhotoSlots as $position=>$pair) {
+        [$kind,$slot]=$pair;
+        $key=$kind.'_'.$slot;
+        $artistNames[$key]='batch-artist-'.$artistBatchNumber.'-'.$key.'.png';
+        $source=($artistFailureMode===0 && $position===$artistFailedAt)
+          ? $artistBadPhoto : $artistFixture;
+        $artistBatch['photo_'.$key]=new CURLFile($source,'image/png',$artistNames[$key]);
+      }
+      $artistFilesBefore=glob($artistUploadRoot.'/*.webp') ?: [];
+      [$failedKind,$failedSlot]=$artistPhotoSlots[$artistFailedAt];
+      if ($artistFailureMode===1) {
+        db()->exec('DROP TRIGGER IF EXISTS ci_reject_artist_image_insert');
+        db()->exec("CREATE TRIGGER ci_reject_artist_image_insert BEFORE INSERT ON seller_images
+          FOR EACH ROW BEGIN
+            IF NEW.image_kind = '{$failedKind}' AND NEW.slot = {$failedSlot} THEN
+              SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CI forced artist image INSERT error';
+            END IF;
+          END");
+      }
+      try {
+        [$artistBatchStatus,$artistBatchBody]=request_page('/admin/kunstenaar-bewerken.php',
+          $artistBatch,true,['X-Requested-With: XMLHttpRequest','Accept: application/json']);
+      } finally {
+        if ($artistFailureMode===1) db()->exec('DROP TRIGGER IF EXISTS ci_reject_artist_image_insert');
+      }
+      $artistIdSt=db()->prepare('SELECT id FROM lot_sellers WHERE email=?');
+      $artistIdSt->execute([$artistBatchEmail]);
+      $newArtistId=(int)$artistIdSt->fetchColumn();
+      $artistRedirect=json_decode($artistBatchBody,true);
+      claim($artistBatchStatus===200 && $newArtistId>0
+        && is_array($artistRedirect)
+        && ($artistRedirect['redirect']??'')==='/admin/kunstenaar-bewerken.php?id='.$newArtistId,
+        'T-039C partial artist batch redirects to saved editor (mode '.$artistFailureMode.', photo '.($artistFailedAt+1).')');
+      $artistRowsSt=db()->prepare('SELECT image_kind,slot,path FROM seller_images WHERE seller_id=? ORDER BY image_kind,slot');
+      $artistRowsSt->execute([$newArtistId]);
+      $artistRows=$artistRowsSt->fetchAll(PDO::FETCH_ASSOC);
+      $artistSavedKeys=[];
+      $artistSavedFiles=[];
+      foreach ($artistRows as $row) {
+        $artistSavedKeys[$row['image_kind'].'_'.$row['slot']]=true;
+        $artistSavedFiles[]=dirname(__DIR__).'/catalogus-public/'.$row['path'];
+      }
+      $expectedFailedKey=$failedKind.'_'.$failedSlot;
+      $artistFilesAfter=array_values(array_diff(glob($artistUploadRoot.'/*.webp') ?: [],$artistFilesBefore));
+      claim(count($artistRows)===3 && !isset($artistSavedKeys[$expectedFailedKey])
+        && count($artistSavedKeys)===3 && count($artistFilesAfter)===3
+        && count(array_intersect($artistSavedFiles,$artistFilesAfter))===3
+        && count(array_filter($artistSavedFiles,'is_file'))===3,
+        'T-039C only 3 saved artist photos, no failed-write orphan (mode '.$artistFailureMode.', photo '.($artistFailedAt+1).')');
+      [$artistPageStatus,$artistEditor]=request_page('/admin/kunstenaar-bewerken.php?id='.$newArtistId);
+      $namesMatch=true;
+      foreach ($artistNames as $key=>$name) {
+        if (!str_contains($artistEditor,$name)) $namesMatch=false;
+      }
+      claim($artistPageStatus===200 && str_contains($artistEditor,'Foto’s opgeslagen (3/4)')
+        && str_contains($artistEditor,'Upload niet bevestigd voor:')
+        && str_contains($artistEditor,$artistNames[$expectedFailedKey])
+        && str_contains($artistEditor,'voeg alleen ontbrekende foto’s opnieuw toe')
+        && $namesMatch && substr_count($artistEditor,'class="lot-editor-photo seller-saved-photo"')===3,
+        'T-039C artist editor shows named successes, missing work or portrait and saved previews (mode '.$artistFailureMode.', photo '.($artistFailedAt+1).')');
+      // Existing artists upload one image by AJAX. A rejected image remains
+      // absent and can be deliberately retried without duplicating saved slots.
+      $artistAjaxBase=[
+        'csrf'=>token($artistEditor),'action'=>'upload-photo',
+        'seller_id'=>(string)$newArtistId,'image_kind'=>$failedKind,'slot'=>(string)$failedSlot
+      ];
+      [$artistRejectStatus,$artistRejectBody]=request_page(
+        '/admin/kunstenaar-bewerken.php?id='.$newArtistId,
+        $artistAjaxBase+['image'=>new CURLFile($artistBadPhoto,'image/png','invalid.png')],
+        true,['X-Requested-With: XMLHttpRequest','Accept: application/json']);
+      $artistRejected=json_decode($artistRejectBody,true);
+      $artistRowsSt->execute([$newArtistId]);
+      $stillThree=$artistRowsSt->fetchAll(PDO::FETCH_ASSOC);
+      claim($artistRejectStatus===422 && ($artistRejected['ok']??null)===false
+        && count($stillThree)===3,
+        'T-039C failed immediate AJAX upload does not create a photo (mode '.$artistFailureMode.', photo '.($artistFailedAt+1).')');
+      [$artistRetryStatus,$artistRetryBody]=request_page(
+        '/admin/kunstenaar-bewerken.php?id='.$newArtistId,
+        $artistAjaxBase+['image'=>new CURLFile($artistFixture,'image/png','retry-'.$artistBatchNumber.'.png')],
+        true,['X-Requested-With: XMLHttpRequest','Accept: application/json']);
+      $artistRetried=json_decode($artistRetryBody,true);
+      $artistRowsSt->execute([$newArtistId]);
+      $artistFinalRows=$artistRowsSt->fetchAll(PDO::FETCH_ASSOC);
+      $finalArtistKeys=[];
+      foreach ($artistFinalRows as $row) $finalArtistKeys[$row['image_kind'].'_'.$row['slot']]=true;
+      claim($artistRetryStatus===200 && ($artistRetried['ok']??null)===true
+        && ($artistRetried['kind']??null)===$failedKind
+        && ($artistRetried['slot']??null)===$failedSlot
+        && count($artistFinalRows)===4 && count($finalArtistKeys)===4,
+        'T-039C confirmed AJAX retry fills only missing work/portrait (mode '.$artistFailureMode.', photo '.($artistFailedAt+1).')');
+      db()->prepare('DELETE FROM lot_sellers WHERE id=?')->execute([$newArtistId]);
+      foreach ($artistFinalRows as $row) {
+        @unlink(dirname(__DIR__).'/catalogus-public/'.$row['path']);
+      }
+    }
+  }
+
   [$sellerStatus] = request_page('/admin/kunstenaar-bewerken.php?id='.$sellerId, [
     'csrf'=>token($sellerEditPage),'action'=>'save','seller_id'=>(string)$sellerId,
     'seller_type'=>'particulier','name'=>'Demo particulier','email'=>'nieuw@example.invalid',
@@ -578,7 +696,126 @@ try {
       && (bool)by_number(30),
     'Partial photo failure stays on saved lot editor to show warning');
   [$status, $html] = request_page('/admin/kavel.php?id=' . by_number(30)['id']);
-  claim($status === 200 && str_contains($html,'sommige foto'), 'Partial save warning displayed');
+  claim($status === 200 && str_contains($html,'Foto’s opgeslagen (0/1)')
+    && str_contains($html,'Upload niet bevestigd voor: bad.png')
+    && str_contains($html,'voeg alleen ontbrekende foto’s opnieuw toe'),
+    'Partial save shows confirmed photo count, failed file and safe retry guidance');
+
+  // T-039B: partial batch saves must keep every confirmed photo, name the failed
+  // file, and permit a deliberate retry. Real storage errors and SQL failures
+  // are injected only into this disposable localhost/MySQL fixture.
+  $batchUploadRoot = dirname(__DIR__) . '/catalogus-public/uploads/' . date('Y/m');
+  for ($failureMode=0; $failureMode<2; ++$failureMode) {
+    for ($failedAt=0; $failedAt<3; ++$failedAt) {
+      $batchNumber=920100 + 10*$failureMode + $failedAt;
+      $photoNames=[];
+      $batch=[
+        'csrf'=>$csrf, 'action'=>'save','id'=>'0',
+        'lot_number'=>(string)$batchNumber, 'title'=>'Batch photo failure '.$batchNumber,
+        'category'=>'Moderne Kunst','seller_id'=>(string)$sellerLinkId,'status'=>'draft'
+      ];
+      for ($photoIndex=0; $photoIndex<3; ++$photoIndex) {
+        $photoNames[]='batch-'.$batchNumber.'-'.($photoIndex+1).'.png';
+        $fixture=($failureMode===0 && $photoIndex===$failedAt) ? '/bad.txt' : '/valid.png';
+        $batch['photos['.$photoIndex.']']=new CURLFile(
+          $fixtures.$fixture,'image/png',$photoNames[$photoIndex]);
+      }
+      $beforeFiles=glob($batchUploadRoot.'/*.webp') ?: [];
+      if ($failureMode===1) {
+        $rejectOrder=100+$failedAt;
+        db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_batch_photo');
+        db()->exec("CREATE TRIGGER ci_reject_lot_batch_photo BEFORE INSERT ON lot_images
+          FOR EACH ROW BEGIN
+            IF NEW.sort_order = {$rejectOrder} THEN
+              SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CI forced image INSERT error';
+            END IF;
+          END");
+      }
+      try {
+        [$batchStatus,, $batchRedirect]=request_page('/admin/kavel.php',$batch,true);
+      } finally {
+        if ($failureMode===1) db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_batch_photo');
+      }
+      $savedLot=by_number($batchNumber);
+      claim($batchStatus===303 && (bool)$savedLot
+        && $batchRedirect==='/admin/kavel.php?id='.(int)$savedLot['id'],
+        'T-039B partial batch persists lot and opens editor (mode '.$failureMode.', failed photo '.($failedAt+1).')');
+      $savedId=(int)$savedLot['id'];
+      $rows=db()->prepare('SELECT path FROM lot_images WHERE lot_id=? ORDER BY id');
+      $rows->execute([$savedId]);
+      $savedPaths=$rows->fetchAll(PDO::FETCH_COLUMN);
+      $savedFiles=array_map(static fn($path) => dirname(__DIR__).'/catalogus-public/'.$path, $savedPaths);
+      $newFiles=array_values(array_diff(glob($batchUploadRoot.'/*.webp') ?: [], $beforeFiles));
+      claim(count($savedPaths)===2 && count($newFiles)===2
+        && count(array_intersect($savedFiles,$newFiles))===2
+        && count(array_unique($savedPaths))===2,
+        'T-039B only two DB rows/files remain, no SQL-failure orphan (mode '.$failureMode.', photo '.($failedAt+1).')');
+
+      [$pageStatus,$batchEditor]=request_page('/admin/kavel.php?id='.$savedId);
+      $correctNames=true;
+      foreach ($photoNames as $photoIndex=>$photoName) {
+        if ($photoIndex!==$failedAt && !str_contains($batchEditor,$photoName)) $correctNames=false;
+      }
+      claim($pageStatus===200 && str_contains($batchEditor,'Foto’s opgeslagen (2/3)')
+        && str_contains($batchEditor,'Upload niet bevestigd voor: '.$photoNames[$failedAt])
+        && str_contains($batchEditor,'voeg alleen ontbrekende foto’s opnieuw toe')
+        && $correctNames && substr_count($batchEditor,'alt="Kavelfoto"')===2,
+        'T-039B success/failure names and two real saved images visible (mode '.$failureMode.', photo '.($failedAt+1).')');
+
+      // Explicit retry of the missing third slot, never an automatic blind retry.
+      [$retryStatus,$retryBody]=request_page('/admin/kavel.php?id='.$savedId,[
+        'csrf'=>token($batchEditor),'action'=>'add-photo','id'=>(string)$savedId,
+        'photos[0]'=>new CURLFile($fixtures.'/valid.png','image/png','retry-'.$batchNumber.'.png')
+      ],true,['Accept: application/json']);
+      $retry=json_decode($retryBody,true);
+      $rows->execute([$savedId]);
+      $finalPaths=$rows->fetchAll(PDO::FETCH_COLUMN);
+      claim($retryStatus===200 && ($retry['ok']??null)===true
+        && (int)($retry['count']??0)===3 && count($finalPaths)===3
+        && count(array_unique($finalPaths))===3
+        && count(array_filter($finalPaths,static fn($path)=>
+          is_file(dirname(__DIR__).'/catalogus-public/'.$path)))===3,
+        'T-039B manual retry fills only missing photo slot (mode '.$failureMode.', photo '.($failedAt+1).')');
+      // The fixture is disposable; clean DB rows before unlinking only its own files.
+      db()->prepare('DELETE FROM lots WHERE id=?')->execute([$savedId]);
+      foreach ($finalPaths as $path) @unlink(dirname(__DIR__).'/catalogus-public/'.$path);
+    }
+  }
+
+  // If the image INSERT succeeds but its subsequent audit UPDATE fails,
+  // the user must not be told to retry that already persisted photo.
+  $auditNumber=920130;
+  db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_photo_audit');
+  db()->exec("CREATE TRIGGER ci_reject_lot_photo_audit BEFORE UPDATE ON lots
+    FOR EACH ROW BEGIN
+      IF OLD.lot_number = {$auditNumber} THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'CI forced lot audit error';
+      END IF;
+    END");
+  try {
+    [$auditStatus,, $auditRedirect]=request_page('/admin/kavel.php',[
+      'csrf'=>$csrf,'action'=>'save','id'=>'0','lot_number'=>(string)$auditNumber,
+      'title'=>'Audit failure after photo insert','seller_id'=>(string)$sellerLinkId,
+      'photos[0]'=>new CURLFile($fixtures.'/valid.png','image/png','audit-saved.png')
+    ],true);
+  } finally {
+    db()->exec('DROP TRIGGER IF EXISTS ci_reject_lot_photo_audit');
+  }
+  $auditLot=by_number($auditNumber);
+  claim($auditStatus===303 && (bool)$auditLot
+    && $auditRedirect==='/admin/kavel.php?id='.(int)$auditLot['id'],
+    'T-039B audit failure keeps saved lot on editor');
+  $auditPhotoSt=db()->prepare('SELECT path FROM lot_images WHERE lot_id=?');
+  $auditPhotoSt->execute([(int)$auditLot['id']]);
+  $auditPhotoPath=(string)$auditPhotoSt->fetchColumn();
+  [$auditEditorStatus,$auditEditor]=request_page('/admin/kavel.php?id='.(int)$auditLot['id']);
+  claim($auditEditorStatus===200 && str_contains($auditEditor,'Foto’s opgeslagen (1/1): audit-saved.png')
+    && str_contains($auditEditor,'De bewerkingsgeschiedenis kon niet worden bijgewerkt')
+    && !str_contains($auditEditor,'Upload niet bevestigd voor:')
+    && $auditPhotoPath!=='' && is_file(dirname(__DIR__).'/catalogus-public/'.$auditPhotoPath),
+    'T-039B audit write failure does not report stored image as failed');
+  db()->prepare('DELETE FROM lots WHERE id=?')->execute([(int)$auditLot['id']]);
+  @unlink(dirname(__DIR__).'/catalogus-public/'.$auditPhotoPath);
 
   [$status] = request_page('/admin/import.php', ['action'=>'save']);
   claim($status === 404, 'CSV import stays disabled');
