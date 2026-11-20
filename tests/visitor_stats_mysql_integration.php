@@ -597,9 +597,11 @@ $capTotal->execute([$capDay]);
 check((int)$capTotal->fetchColumn() === 0, 'Oversized one-day archive wrote daily aggregates');
 $pdo->prepare('DELETE FROM visitor_stats_daily WHERE visit_date=?')->execute([$capDay]);
 // Issue #224: three full UTC days remain detailed; day four is eligible.
-$threeDayCutoff = gmdate('Y-m-d', strtotime('-3 days'));
-$eligibleFour = gmdate('Y-m-d', strtotime('-4 days'));
-$protectedThree = gmdate('Y-m-d', strtotime('-3 days'));
+$utcToday = new DateTimeImmutable('today', new DateTimeZone('UTC'));
+$threeDayCutoff = $utcToday->modify('-3 days')->format('Y-m-d');
+$eligibleFour = $utcToday->modify('-4 days')->format('Y-m-d');
+$protectedThree = $threeDayCutoff;
+check($threeDayCutoff === visitor_stats_utc_cutoff(), 'UTC cutoff does not match the three-day calendar boundary');
 $add->execute([$eligibleFour, $a, 'home', 0, 3]);
 $add->execute([$protectedThree, $b, 'lot', 90, 7]);
 $boundaryArchived = archive_visitor_stats_one_day($pdo, $threeDayCutoff);
