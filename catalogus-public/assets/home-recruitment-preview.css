@@ -25,3 +25,9 @@
 @media(max-width:1050px){.front-recruit-artist-grid{grid-template-columns:185px minmax(0,1fr);gap:24px}.front-recruit-photo{grid-row:span 2;min-height:280px;height:100%}.front-recruit-benefits{grid-column:2;border-left:0;padding-left:0}.front-recruit-benefits ul{grid-template-columns:1fr;gap:6px;margin-bottom:12px}.front-recruit-lot.shell{grid-template-columns:52px 1fr;gap:17px}.front-recruit-lot>.front-recruit-button{grid-column:2;justify-self:start}.front-recruit-lot-symbol{width:52px;height:52px;font-size:32px}}
 @media(max-width:650px){.front-recruit-artist-grid{width:calc(100% - 32px);display:flex;flex-direction:column;align-items:stretch;gap:15px;padding:20px 0 24px}.front-recruit-photo{height:160px;min-height:0;max-height:160px;border-radius:10px;overflow:hidden}.front-recruit-photo img{object-position:center 40%}.front-recruit-copy h2{font-size:36px}.front-recruit-benefits{padding-top:6px}.front-recruit-benefits li{font-size:13px}.front-recruit-button{width:100%}.front-recruit-lot.shell{width:calc(100% - 32px);grid-template-columns:1fr;gap:12px;padding:23px 20px;margin-top:16px}.front-recruit-lot-symbol{display:none}.front-recruit-lot>.front-recruit-button{grid-column:1;width:100%;justify-self:stretch}.front-recruit-lot-copy h2{font-size:31px}}
 @media(prefers-reduced-motion:reduce){.front-recruit-button{transition:none}}
+
+/* Artwork invitation follows the same image/copy/benefits grid as artist recruitment. */
+.front-recruit-lot{background:#f6f4ee;border-block:1px solid #e6e3d7;margin:0}
+.front-recruit-lot .front-recruit-photo img{object-position:45% center}
+.front-recruit-lot .front-recruit-benefits ul{margin-bottom:18px}
+@media(max-width:650px){.front-recruit-lot .front-recruit-photo img{object-position:center 45%}}
