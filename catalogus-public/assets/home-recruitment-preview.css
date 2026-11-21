@@ -1,0 +1,27 @@
+/* Only the two recruitment panels; existing 41 Lokeren homepage styles stay intact. */
+.front-recruit{color:#3b3025;font-family:Inter,Arial,sans-serif}
+.front-recruit-artist{background:linear-gradient(100deg,#faf1e8 0%,#fffaf5 55%,#f9f0e9 100%);border-block:1px solid #eddfd4;margin-top:0}
+.front-recruit-artist-grid{width:min(1500px,calc(100% - 76px));display:grid;grid-template-columns:minmax(175px,.72fr) minmax(310px,1.48fr) minmax(250px,1fr);align-items:center;gap:clamp(22px,3.1vw,56px);margin-inline:auto;padding:24px 0}
+.front-recruit-photo{height:240px;align-self:stretch;overflow:hidden;display:flex;align-items:center}
+.front-recruit-photo img{height:100%;width:100%;object-fit:cover;object-position:40% center;display:block}
+.front-recruit-eyebrow{color:#7b896f;letter-spacing:.15em;font-size:10px;font-weight:800;margin:0 0 10px;line-height:1.5}
+.front-recruit-copy h2,.front-recruit-lot-copy h2{font:700 clamp(32px,3.4vw,48px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.035em;color:#850015;margin:0 0 9px}
+.front-recruit-copy h2 em,.front-recruit-lot-copy h2 em{font-style:normal}
+.front-recruit-lead{font:italic 500 clamp(17px,1.5vw,23px)/1.32 Georgia,serif;color:#345b41;margin:0 0 12px}
+.front-recruit-copy>p:last-child,.front-recruit-lot-copy>p:last-child{font-size:14px;line-height:1.7;color:#604940;margin:0;max-width:610px}
+.front-recruit-benefits{border-left:1px solid #d9c9b9;padding-left:clamp(18px,2.6vw,40px)}
+.front-recruit-benefits ul{list-style:none;padding:0;margin:0 0 18px;display:grid;gap:10px}
+.front-recruit-benefits li{position:relative;padding-left:25px;font-size:13px;line-height:1.5;color:#493c33}
+.front-recruit-benefits li:before{content:'✓';position:absolute;left:0;color:#850015;font-weight:900;font-size:16px}
+.front-recruit-button{display:inline-flex;gap:16px;align-items:center;justify-content:center;min-height:48px;background:#D8C9B4;border:1px solid #C5B299;color:#3B3025!important;border-radius:8px;padding:12px 21px;font-size:13px;font-weight:750;line-height:1.4;text-align:center;box-shadow:0 6px 18px rgba(59,48,37,.08);transition:background .15s,border-color .15s,transform .15s}
+.front-recruit-button:hover{background:#CBB79B;border-color:#BBA589;color:#3B3025!important;transform:translateY(-1px)}
+.front-recruit-button span{font-size:20px;line-height:1}
+.front-recruit-lot.shell{width:min(1500px,calc(100% - 76px));display:grid;grid-template-columns:68px minmax(0,1fr) max-content;align-items:center;gap:26px;padding:27px 38px;margin-top:24px;margin-bottom:20px;background:#f6f4ee;border:1px solid #e6e3d7;border-radius:16px}
+.front-recruit-lot-symbol{display:grid;place-items:center;font:42px/1 Georgia,serif;color:#850015;background:#e9e5d6;width:68px;height:68px;border-radius:50%}
+.front-recruit-lot-copy h2{font-size:clamp(26px,2.65vw,37px);margin-bottom:6px}
+.front-recruit-lot-copy>p:last-child{max-width:750px}
+.front-recruit-button-outline{background:#D8C9B4;border-color:#C5B299;color:#3B3025!important}
+.front-recruit-button-outline:hover{background:#CBB79B;border-color:#BBA589;color:#3B3025!important}
+@media(max-width:1050px){.front-recruit-artist-grid{grid-template-columns:185px minmax(0,1fr);gap:24px}.front-recruit-photo{grid-row:span 2;min-height:280px;height:100%}.front-recruit-benefits{grid-column:2;border-left:0;padding-left:0}.front-recruit-benefits ul{grid-template-columns:1fr;gap:6px;margin-bottom:12px}.front-recruit-lot.shell{grid-template-columns:52px 1fr;gap:17px}.front-recruit-lot>.front-recruit-button{grid-column:2;justify-self:start}.front-recruit-lot-symbol{width:52px;height:52px;font-size:32px}}
+@media(max-width:650px){.front-recruit-artist-grid{width:calc(100% - 32px);display:flex;flex-direction:column;align-items:stretch;gap:15px;padding:20px 0 24px}.front-recruit-photo{height:160px;min-height:0;max-height:160px;border-radius:10px;overflow:hidden}.front-recruit-photo img{object-position:center 40%}.front-recruit-copy h2{font-size:36px}.front-recruit-benefits{padding-top:6px}.front-recruit-benefits li{font-size:13px}.front-recruit-button{width:100%}.front-recruit-lot.shell{width:calc(100% - 32px);grid-template-columns:1fr;gap:12px;padding:23px 20px;margin-top:16px}.front-recruit-lot-symbol{display:none}.front-recruit-lot>.front-recruit-button{grid-column:1;width:100%;justify-self:stretch}.front-recruit-lot-copy h2{font-size:31px}}
+@media(prefers-reduced-motion:reduce){.front-recruit-button{transition:none}}
