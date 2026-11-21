@@ -81,3 +81,6 @@ require __DIR__ . '/homepage_artists_cta_contract_test.php';
 require __DIR__ . '/artists_overview_header_navigation_contract_test.php';
 require __DIR__ . '/good_cause_header_navigation_contract_test.php';
 require __DIR__ . '/previous_edition_header_navigation_contract_test.php';
+
+// Verify the two recruitment panels and approved assets in the existing public CI.
+require __DIR__ . '/homepage_recruitment_contract_test.php';

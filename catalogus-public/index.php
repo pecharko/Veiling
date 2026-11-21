@@ -91,7 +91,8 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=186"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=186">
+<link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=1"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <?php admin_preview_banner(); ?>
@@ -162,21 +163,38 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </div>
     </section>
 
-    <section class="front-impact shell" id="goede-doel" aria-labelledby="front-impact-title">
-      <div class="front-impact-copy">
-        <p class="front-eyebrow front-impact-eyebrow">SAMEN MAKEN WE HET VERSCHIL</p>
-        <h2 id="front-impact-title">Een bijzondere veiling<br>voor het goede doel</h2>
-        <p>Nu <a class="front-impact-text-link" href="<?=e(url('goede-doel.php'))?>">het goede doel</a> bekend is, zijn we volop bezig met het samenstellen van een bijzondere kunstveiling.</p>
-        <p>Daarbij geven we graag het podium aan kunstenaars die hun werk aan een breder publiek willen voorstellen en tegelijk willen bijdragen aan een waardevol initiatief. Ontdek alvast <a class="front-impact-text-link" href="<?=e(url('kunstenaars.php'))?>">de deelnemende kunstenaars</a> en laat je inspireren door hun werk.</p>
-        <p>Ook wie zelf een bijzonder kunstwerk bezit en dit graag ter beschikking stelt voor de veiling, nodigen we van harte uit om mee te werken.</p>
-        <p class="front-impact-note">Samen maken we van kunst een verhaal dat verder reikt dan het kunstwerk zelf.</p>
-        <div class="front-impact-actions" aria-label="Interesse om deel te nemen">
-          <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstenaar-interesse.php'))?>">Ik ben kunstenaar en heb interesse</a>
-          <a class="front-btn front-btn-sage front-impact-action" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk voor de veiling</a>
+    <section class="front-recruit front-recruit-artist" aria-labelledby="front-recruit-artist-title">
+      <div class="shell front-recruit-artist-grid">
+        <div class="front-recruit-photo">
+          <img src="<?=e(url('assets/artist-brushes-from-mockup.webp'))?>" alt="Schilderspenselen in een atelier" width="345" height="218" loading="lazy">
+        </div>
+        <div class="front-recruit-copy">
+          <p class="front-recruit-eyebrow">41 LOKEREN ZOEKT CREATIEF TALENT</p>
+          <h2 id="front-recruit-artist-title">Ben jij <em>kunstenaar?</em></h2>
+          <p class="front-recruit-lead">Stel jouw werk tentoon in de kunstveiling van 41 Lokeren.</p>
+          <p>We zijn op zoek naar kunstenaars die hun werk willen voorstellen en tegelijk een goed doel willen steunen.</p>
+        </div>
+        <div class="front-recruit-benefits">
+          <ul>
+            <li>Zichtbaarheid op onze website en sociale media</li>
+            <li>Jij bepaalt zelf welk deel van de verkoopprijs naar het goede doel gaat</li>
+            <li>Persoonlijke begeleiding door ons veilingteam</li>
+          </ul>
+          <a class="front-recruit-button" href="<?=e(url('kunstenaar-interesse.php'))?>">Ik wil graag deelnemen <span aria-hidden="true">→</span></a>
         </div>
       </div>
-      <div class="front-impact-media"><img src="<?=e(url('assets/samen-kunst-verbindt-foto-1.webp'))?>" alt="Jonge kunstliefhebbers ontdekken samen een hedendaags keramisch kunstwerk in een galerie" width="1672" height="941" loading="lazy"></div>
     </section>
+
+    <section class="front-recruit front-recruit-lot shell" aria-labelledby="front-recruit-lot-title">
+      <div class="front-recruit-lot-symbol" aria-hidden="true">✦</div>
+      <div class="front-recruit-lot-copy">
+        <p class="front-recruit-eyebrow">OOK JOUW KUNSTWERK KAN HET VERSCHIL MAKEN</p>
+        <h2 id="front-recruit-lot-title">Heb jij een <em>kunstwerk?</em></h2>
+        <p>Heb je een bijzonder kunstwerk dat je graag ter beschikking stelt? We leggen je persoonlijk uit hoe deelname aan onze veiling verloopt.</p>
+      </div>
+      <a class="front-recruit-button front-recruit-button-outline" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk <span aria-hidden="true">→</span></a>
+    </section>
+
   <?php if ($published): ?>
   <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
   <?php if ($splitPreview): ?>

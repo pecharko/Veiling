@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/home-recruitment-preview.css",
+      "source_sha256": "a4e20fbca846476e360833903176eb4d27069ee9369e3c433978bf37ec142b8d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/artist-brushes-from-mockup.webp",
+      "source_sha256": "689cf3939d55be29b299778faf6c316ef521af8905dd4d807938c61b83f3ac1d",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "90cc151db5a0464fbd835ee4306e6e24607332043e817e350aa6497777028788",
+      "remote_sha256": "149484a4ff7a41ef3956300ae4ae215d999c8bc77abd99cbe4264fb521e7cb05"
+    }
+  ]
+}

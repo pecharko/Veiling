@@ -10,12 +10,12 @@ $sharedCss = file_get_contents($root . '/catalogus-public/assets/kunstenaar-inte
 if (!is_string($home) || !is_string($page) || !is_string($css) || !is_string($sharedCss)) {
     throw new RuntimeException('Artwork-interest page, styles or homepage missing.');
 }
-$cta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>';
+$cta = '<a class="front-recruit-button front-recruit-button-outline" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk <span aria-hidden="true">→</span></a>';
 if (!str_contains($home, $cta) ||
     str_contains($home, 'type="button" disabled title="Binnenkort beschikbaar">Ik heb een kunstwerk voor de veiling')) {
-    throw new RuntimeException('Homepage artwork button must be enabled without changing its classes.');
+    throw new RuntimeException('Homepage artwork button must use the approved recruitment classes.');
 }
-$artistCta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstenaar-interesse.php\'))?>">Ik ben kunstenaar en heb interesse</a>';
+$artistCta = '<a class="front-recruit-button" href="<?=e(url(\'kunstenaar-interesse.php\'))?>">Ik wil graag deelnemen <span aria-hidden="true">→</span></a>';
 if (!str_contains($home, $artistCta)) {
     throw new RuntimeException('The established artist interest CTA must remain intact.');
 }
