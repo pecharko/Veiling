@@ -25,8 +25,8 @@ foreach ($public as $file) {
 }
 $home = file_get_contents($root . '/catalogus-public/index.php');
 if (!is_string($home) ||
-    !str_contains($home, '<h1 id="front-title">Kunstveiling<br><em>voor het goede doel</em></h1>') ||
-    str_contains($home, '<h1 id="front-title">Kunst, lifestyle')) {
+    !preg_match('~<h1 id="front-title">(.*?)</h1>~s', $home, $heading) ||
+    trim(strip_tags($heading[1])) !== 'Kunstveiling voor het goede doel') {
     throw new RuntimeException('Homepage must show the revised auction headline.');
 }
 $previous = file_get_contents($root . '/catalogus-public/vorige-editie.php');

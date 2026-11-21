@@ -18,8 +18,9 @@ if (str_contains($nav, '>Home</a>') || str_contains($nav, 'front-nav-home')) {
 foreach (['>Bekijk kavels</a>', 'id="favoriteLink"', '>Kunstenaars</a>', '>Het goede doel</a>', '>Vorige editie</a>', "url('vorige-editie.php')"] as $expected) {
     if (!str_contains($nav, $expected)) throw new RuntimeException('Expected header navigation missing: '.$expected);
 }
-if (!str_contains($home, 'Bekijk de kavels <span aria-hidden="true">↗</span>')
-    || !str_contains($home, 'Maak kennis met de deelnemende kunstenaars')) {
+if (!preg_match('~<nav class="front-hero-actions"[^>]*>(.*?)</nav>~s', $home, $hero)
+    || !str_contains($hero[1], 'href="#catalogus">Bekijk de kavels</a>')
+    || !str_contains($hero[1], '>Deelnemende kunstenaars</a>')) {
     throw new RuntimeException('Homepage hero CTAs must remain intact.');
 }
 echo "PASS homepage duplicate catalog header CTA removed while navigation and hero buttons remain.\n";
