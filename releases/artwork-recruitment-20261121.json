@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/artwork-industrial-abstract.webp",
+      "source_sha256": "0c7f24dfa2dee69d882786d67380c3d1c352660d12f862a0dedae1e6c437db09",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/home-recruitment-preview.css",
+      "source_sha256": "b5bda6fcdae0230122c3d1de7cac4a76688483aa2bdd5c48ca6aadad84e3d75b",
+      "remote_sha256": "a4e20fbca846476e360833903176eb4d27069ee9369e3c433978bf37ec142b8d"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "7a1947d50ae737099586660979dd75e9eaff86ec8bedaa98d9a29a84878f9697",
+      "remote_sha256": "90cc151db5a0464fbd835ee4306e6e24607332043e817e350aa6497777028788"
+    }
+  ]
+}

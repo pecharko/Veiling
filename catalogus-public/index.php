@@ -92,7 +92,7 @@ $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
 <html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=186">
-<link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=1"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
+<link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <?php admin_preview_banner(); ?>
@@ -185,14 +185,25 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </div>
     </section>
 
-    <section class="front-recruit front-recruit-lot shell" aria-labelledby="front-recruit-lot-title">
-      <div class="front-recruit-lot-symbol" aria-hidden="true">✦</div>
-      <div class="front-recruit-lot-copy">
-        <p class="front-recruit-eyebrow">OOK JOUW KUNSTWERK KAN HET VERSCHIL MAKEN</p>
-        <h2 id="front-recruit-lot-title">Heb jij een <em>kunstwerk?</em></h2>
-        <p>Heb je een bijzonder kunstwerk dat je graag ter beschikking stelt? We leggen je persoonlijk uit hoe deelname aan onze veiling verloopt.</p>
+    <section class="front-recruit front-recruit-lot" aria-labelledby="front-recruit-lot-title">
+      <div class="shell front-recruit-artist-grid">
+        <div class="front-recruit-photo">
+          <img src="<?=e(url('assets/artwork-industrial-abstract.webp'))?>" alt="Modern abstract schilderij zonder kader in een industrieel atelier" width="345" height="218" loading="lazy">
+        </div>
+        <div class="front-recruit-copy">
+          <p class="front-recruit-eyebrow">OOK JOUW KUNSTWERK KAN HET VERSCHIL MAKEN</p>
+          <h2 id="front-recruit-lot-title">Heb jij een <em>kunstwerk?</em></h2>
+          <p class="front-recruit-lead">Ook jouw kunstwerk verdient een bijzonder verhaal.</p>
+          <p>Heb je een bijzonder kunstwerk dat je graag ter beschikking stelt? We leggen je persoonlijk uit hoe deelname aan onze veiling verloopt.</p>
+        </div>
+        <div class="front-recruit-benefits">
+          <ul>
+            <li>Jij kiest welk deel van de verkoopprijs naar het goede doel gaat</li>
+            <li>We geven jouw werk extra zichtbaarheid via onze website en sociale media</li>
+          </ul>
+          <a class="front-recruit-button front-recruit-button-outline" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk <span aria-hidden="true">→</span></a>
+        </div>
       </div>
-      <a class="front-recruit-button front-recruit-button-outline" href="<?=e(url('kunstwerk-interesse.php'))?>">Ik heb een kunstwerk <span aria-hidden="true">→</span></a>
     </section>
 
   <?php if ($published): ?>
