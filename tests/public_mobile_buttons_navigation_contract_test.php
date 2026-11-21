@@ -53,12 +53,13 @@ if (!str_contains($artists, 'class="artists-overview-bottom-action" style="displ
 }
 $home = $pages['index.php'];
 foreach ([
-    'kunstenaar-interesse.php' => 'Ik ben kunstenaar en heb interesse',
-    'kunstwerk-interesse.php' => 'Ik heb een kunstwerk voor de veiling',
+    'kunstenaar-interesse.php' => 'Ik wil graag deelnemen',
+    'kunstwerk-interesse.php' => 'Ik heb een kunstwerk',
 ] as $target => $caption) {
-    $expected = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'' . $target . '\'))?>">' . $caption . '</a>';
+    $classes = $target === 'kunstenaar-interesse.php' ? 'front-recruit-button' : 'front-recruit-button front-recruit-button-outline';
+    $expected = '<a class="' . $classes . '" href="<?=e(url(\'' . $target . '\'))?>">' . $caption . ' <span aria-hidden="true">→</span></a>';
     if (!str_contains($home, $expected)) {
-        throw new RuntimeException('Both participation buttons must share the same green style: ' . $target);
+        throw new RuntimeException('Both participation buttons must share the approved beige style: ' . $target);
     }
 }
 echo "PASS: public mobile menu hidden, compact CTAs, artist bottom button and preserved participation buttons.\n";
