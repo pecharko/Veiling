@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "a5894c1ebe66438c44f1b4981a473b581430b46e6417d5ededc904a103c51677",
+      "remote_sha256": "3f0570ded0d1c5fbc057c353fa2074f6e5e3c36c30316876916e06f0fd4e3db3"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "a56f051b97ecfbe2a6efe5d15f5898786d464eacee246f7f6458a2b058193ea6",
+      "remote_sha256": "7593379ffeee1942d2bad58cd12ba790b6b09b5521c740cdf10385642386a77f"
+    }
+  ]
+}
