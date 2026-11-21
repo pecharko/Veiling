@@ -91,7 +91,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=186">
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
 <link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
@@ -115,30 +115,20 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
   </header>
   <main>
     <section class="front-hero" aria-labelledby="front-title">
-      <div class="shell front-hero-grid">
-        <div class="front-hero-art">
-          <img src="<?=e(url('assets/poster-41-transparent.webp'))?>" alt="Het hart en de kleurrijke veilinghamer van 41 Lokeren" width="390" height="575" fetchpriority="high">
-        </div>
-        <div class="front-hero-copy">
+      <div class="shell front-hero-inner">
+        <div class="front-hero-heading">
+          <img class="front-hero-art" src="<?=e(url('assets/poster-41-transparent.webp'))?>" alt="" width="390" height="575">
           <p class="front-eyebrow">41 LOKEREN ORGANISEERT</p>
-          <h1 id="front-title">Kunstveiling<br><em>voor het goede doel</em></h1>
-          <div class="front-subtitle-rule" aria-hidden="true"></div>
-          <p class="front-hero-subline"><?=e($title)?></p>
+          <h1 id="front-title">Kunstveiling <span>voor het goede doel</span></h1>
           <p class="front-hero-intro">Bijzondere stukken, een warm verhaal en samen iets betekenen.</p>
-          <div class="front-hero-actions">
-            <div class="front-hero-action-row">
-              <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
-              <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-            </div>
-            <div class="front-hero-action-row">
-              <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Deelnemende kunstenaars</a>
-              <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
-            </div>
-          </div>
+          <img class="front-hero-gallery" src="<?=e(url('assets/galerij-illustratie.webp'))?>" alt="" width="435" height="368">
         </div>
-        <div class="front-hero-gallery" aria-hidden="true">
-          <img src="<?=e(url('assets/galerij-illustratie.webp'))?>" alt="" width="435" height="368" loading="eager">
-        </div>
+        <nav class="front-hero-actions" aria-label="Meer over de veiling">
+          <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
+          <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
+          <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Deelnemende kunstenaars</a>
+          <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
+        </nav>
       </div>
     </section>
 
