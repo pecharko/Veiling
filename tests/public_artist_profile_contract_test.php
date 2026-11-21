@@ -41,7 +41,7 @@ if (preg_match('/SELECT\\s+s\\.\\*/i',$page)) throw new RuntimeException('Public
 if (preg_match('/\\$artist\\[(?:\\x27|\\x22)(?:email|mobile_number|bank_account_iban|street|house_number|created_by_name)/i',$page)) throw new RuntimeException('Private seller field rendered publicly');
 if (!str_contains($detail,'lot_artist_markup($lot)'))
  throw new RuntimeException('Detail must use public-status-aware artist link');
-if (!str_contains($css,'.artist-brochure-website')) throw new RuntimeException('Artist website footer styling missing');
+if (!str_contains($css,'.artist-brochure-links .artist-brochure-link')) throw new RuntimeException('Shared artist website/Instagram link styling missing');
 if (strpos($page,'class="artist-brochure-website"') <= strpos($page,'class="artist-brochure-columns"'))
  throw new RuntimeException('Artist website link must appear below the artwork columns');
 if (!str_contains($css,'.artist-brochure-columns') || !str_contains($css,'@media(max-width:700px)'))

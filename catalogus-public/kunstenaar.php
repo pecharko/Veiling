@@ -75,7 +75,7 @@ try {
   <title><?=e($name)?> · Kunstenaar · 41 Lokeren</title>
   <meta name="description" content="<?=e($slogan!=='' ? $slogan : 'Ontdek kunstenaar '.$name.' bij 41 Lokeren.')?>">
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaar.php?id=<?=(int)$artistId?>"><?php endif; ?>
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=197"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=198"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
@@ -121,11 +121,15 @@ try {
         <?php endif; ?>
       </div>
     </div>
-    <?php if ($artistWebsite !== ''): ?>
-      <p class="artist-brochure-website"><a href="<?=e($artistWebsite)?>" target="_blank" rel="noopener noreferrer">Website van de kunstenaar ↗</a></p>
-    <?php endif; ?>
-    <?php if ($artistInstagram !== ''): ?>
-      <p class="artist-brochure-instagram"><a href="<?=e($artistInstagram)?>" target="_blank" rel="noopener noreferrer" aria-label="Instagram-profiel van <?=e($name)?>"><svg aria-hidden="true" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a></p>
+    <?php if ($artistWebsite !== '' || $artistInstagram !== ''): ?>
+      <nav class="artist-brochure-links" aria-label="Externe links van de kunstenaar">
+        <?php if ($artistWebsite !== ''): ?>
+          <p class="artist-brochure-website"><a class="artist-brochure-link" href="<?=e($artistWebsite)?>" target="_blank" rel="noopener noreferrer" aria-label="Website van <?=e($name)?> (opent in een nieuw tabblad)"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></svg><span>Website</span></a></p>
+        <?php endif; ?>
+        <?php if ($artistInstagram !== ''): ?>
+          <p class="artist-brochure-instagram"><a class="artist-brochure-link" href="<?=e($artistInstagram)?>" target="_blank" rel="noopener noreferrer" aria-label="Instagram-profiel van <?=e($name)?> (opent in een nieuw tabblad)"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="2.5" width="19" height="19" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="18" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>Instagram</span></a></p>
+        <?php endif; ?>
+      </nav>
     <?php endif; ?>
   </article>
 </main>
