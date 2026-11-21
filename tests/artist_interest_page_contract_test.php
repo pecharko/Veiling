@@ -6,16 +6,16 @@ $root = dirname(__DIR__);
 $home = file_get_contents($root . '/catalogus-public/index.php');
 $page = file_get_contents($root . '/catalogus-public/kunstenaar-interesse.php');
 $css = file_get_contents($root . '/catalogus-public/assets/kunstenaar-interesse.css');
-$homeCss = file_get_contents($root . '/catalogus-public/assets/home-v18.css');
+$homeCss = file_get_contents($root . '/catalogus-public/assets/home-recruitment-preview.css');
 if (!is_string($home) || !is_string($page) || !is_string($css) || !is_string($homeCss)) {
     throw new RuntimeException('Artist interest page or styles are missing.');
 }
 
-$cta = '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstenaar-interesse.php\'))?>">Ik ben kunstenaar en heb interesse</a>';
+$cta = '<a class="front-recruit-button" href="<?=e(url(\'kunstenaar-interesse.php\'))?>">Ik wil graag deelnemen <span aria-hidden="true">→</span></a>';
 if (!str_contains($home, $cta) || str_contains($home, 'type="button" disabled title="Binnenkort beschikbaar">Ik ben kunstenaar en heb interesse')) {
     throw new RuntimeException('Homepage artist action must link to an enabled local page.');
 }
-if (!str_contains($home, '<a class="front-btn front-btn-sage front-impact-action" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk voor de veiling</a>')) {
+if (!str_contains($home, '<a class="front-recruit-button front-recruit-button-outline" href="<?=e(url(\'kunstwerk-interesse.php\'))?>">Ik heb een kunstwerk <span aria-hidden="true">→</span></a>')) {
     throw new RuntimeException('Separate artwork-interest CTA must link to the approved static information page.');
 }
 foreach ([
@@ -82,7 +82,7 @@ if (!str_contains($css, 'max-width:300px')
 }
 if (!str_contains($css, '@media(max-width:600px)')
     || !str_contains($css, '@media(max-width:900px)')
-    || !str_contains($homeCss, '.front-impact-actions .front-impact-action:not([disabled])')) {
+    || !str_contains($homeCss, '.front-recruit-button:hover')) {
     throw new RuntimeException('Missing responsive design or enabled CTA styling.');
 }
 if (substr_count($page, 'href="mailto:veiling@41lokeren.be"') !== 2) {
