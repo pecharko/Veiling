@@ -66,12 +66,20 @@ try {
 
     [$status, , $login] = send('/admin/login.php');
     ensure($status === 200, 'Login page available');
-    [$status] = send('/admin/login.php', [
-        'csrf'=>csrf_from($login),
-        'email'=>'ci-admin@example.invalid',
-        'password'=>'ci-password-not-a-real-secret',
-    ]);
-    ensure($status === 303, 'Administrator can log in to isolated test app');
+    ensure(array_intersect(['admins', 'login_attempts', 'visitor_stats_ip_exclusions'], SNAP_TABLES) === [],
+           'Login writes are outside the catalog snapshot scope');
+    $pdo = db();
+    catalog_data_lock($pdo, 0);
+    try {
+        [$status] = send('/admin/login.php', [
+            'csrf'=>csrf_from($login),
+            'email'=>'ci-admin@example.invalid',
+            'password'=>'ci-password-not-a-real-secret',
+        ]);
+        ensure($status === 303, 'Administrator can log in while the catalog lock is held');
+    } finally {
+        catalog_data_unlock($pdo);
+    }
 
     [$status, , $page] = send('/admin/backup.php');
     ensure($status === 200 && str_contains($page, 'Back-up &amp; herstel'), 'Authenticated backup UI renders');
