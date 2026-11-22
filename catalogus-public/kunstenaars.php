@@ -40,7 +40,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
 </div></header>
 <main class="shell artists-overview">
-  <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+  <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>
   <div class="artists-overview-heading">
     <p class="eyebrow">DE MENSEN ACHTER DE KUNST</p>
     <h1>Ontmoet onze kunstenaars</h1>
@@ -65,7 +65,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
           && preg_match('~^uploads/preview-fixtures/artist-[1-3]-portrait-1\\.webp$~D', $portrait) === 1;
         $portrait = ($validUpload || $validFixture) ? $portrait : '';
       ?>
-      <a class="artists-overview-card" href="<?=e(url('kunstenaar.php',['id'=>(int)$artist['id']]))?>" aria-label="Ontdek kunstenaar <?=e($name)?>">
+      <a class="artists-overview-card" href="<?=e(url('kunstenaar.php',['id'=>(int)$artist['id'], 'van'=>'kunstenaars']))?>" aria-label="Ontdek kunstenaar <?=e($name)?>">
         <span class="artists-overview-image">
           <?php if ($portrait !== ''): ?>
             <img src="<?=e(url($portrait))?>" alt="Portret van <?=e($name)?>" loading="lazy" decoding="async" width="480" height="600">
@@ -83,7 +83,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
   <?php endif; ?>
   <div class="artists-overview-bottom-action" style="display:block;margin-top:0;padding-top:clamp(60px,5vw,80px)">
-    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+    <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>
   </div>
 </main>
 <footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>

@@ -18,7 +18,8 @@ foreach ($public as $file) {
     if (!is_string($source)) {
         throw new RuntimeException('Public page unavailable: ' . $file);
     }
-    if (substr_count($source, '<small>KUNSTVEILING</small>') !== 1 ||
+    $brandCount = in_array($file, ['kavel.php', 'kunstenaar.php'], true) ? 0 : 1;
+    if (substr_count($source, '<small>KUNSTVEILING</small>') !== $brandCount ||
         str_contains($source, '<small>KUNST · LIFESTYLE · VINTAGE</small>')) {
         throw new RuntimeException('Incorrect public header subtitle: ' . $file);
     }

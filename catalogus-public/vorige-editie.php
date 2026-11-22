@@ -62,7 +62,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
 </header>
 <main id="impressie">
   <div class="impression-top-actions shell" style="padding-top:clamp(32px,4vw,56px)">
-    <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
+    <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>
   </div>
   <section class="impression-video shell" aria-labelledby="impression-video-title">
     <div class="impression-video-intro">
@@ -115,7 +115,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     <p class="impression-eyebrow">HET VERHAAL GAAT VERDER</p>
     <h2 id="next-title">De volgende herinnering<br>maken we <em>samen.</em></h2>
     <p>Laat je inspireren door de vorige editie en ontdek wat de huidige veiling in petto heeft.</p>
-    <div class="impression-next-actions"><a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a></div>
+    <div class="impression-next-actions"><a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a></div>
   </section>
 </main>
 <footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
