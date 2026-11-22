@@ -13,9 +13,9 @@ if (!preg_match('~<nav class="front-hero-actions"[^>]*>(.*?)</nav>~s', $home, $m
 }
 $actions = $match[1];
 $links = [
+    'kunstenaars.php' => 'Deelnemende kunstenaars',
     'goede-doel.php' => 'Meer over het goede doel',
     'vorige-editie.php' => 'Vorige editie',
-    'kunstenaars.php' => 'Deelnemende kunstenaars',
 ];
 $expected = '';
 foreach ($links as $path => $label) {
