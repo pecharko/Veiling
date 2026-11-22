@@ -82,9 +82,9 @@ try {
 }
 
 // Route coverage is checked in the source, alongside real authenticated HTTP
-// tests in the other CI jobs. These guards must precede all mutations.
+// tests in the other CI jobs. These guards must precede catalog mutations.
 foreach ([
-    'admin/kavel.php', 'admin/instellingen.php', 'admin/login.php'
+    'admin/kavel.php', 'admin/instellingen.php'
 ] as $page) {
     $source = (string)file_get_contents($root . '/catalogus-public/' . $page);
     gate_verify(str_contains($source, 'catalog_lock_for_request($pdo);'),

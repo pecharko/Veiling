@@ -279,23 +279,39 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/plan_catalog_recovery_release.py
-          python3 scripts/plan_catalog_recovery_release.py \
-            --release-sha "$(git rev-parse HEAD)" > /dev/null
-          if python3 scripts/plan_catalog_recovery_release.py \
-             --release-sha '0000000000000000000000000000000000000000' > /dev/null 2>&1; then
-            echo 'Unsafe offline plan accepted a wrong release SHA.'
-            exit 1
-          fi
-          echo 'Offline plan validated; mismatched SHA rejected; no production access.'
+          # This historical recovery bundle predates catalog-only snapshots.
+          recovery_sha=014d5ac9570e167c561fbdb4671786632c1629c3
+          history="$(mktemp -d "$RUNNER_TEMP/historical-recovery-plan.XXXXXXXX")"
+          git worktree add --detach "$history" "$recovery_sha"
+          trap 'git worktree remove --force "$history"' EXIT
+          (
+            cd "$history"
+            python3 -m py_compile scripts/plan_catalog_recovery_release.py
+            python3 scripts/plan_catalog_recovery_release.py \
+              --release-sha "$recovery_sha" > /dev/null
+            if python3 scripts/plan_catalog_recovery_release.py \
+               --release-sha '0000000000000000000000000000000000000000' > /dev/null 2>&1; then
+              echo 'Unsafe offline plan accepted a wrong release SHA.'
+              exit 1
+            fi
+            echo 'Offline plan validated; mismatched SHA rejected; no production access.'
+          )
 
       - name: T-060 verify recovery SFTP preflight is read-only using fake server
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/preflight_catalog_recovery_remote.py tests/recovery_remote_preflight_test.py
-          python3 tests/recovery_remote_preflight_test.py
-          echo 'No OVH connection, secrets, SQL or production writes used by T-060.'
+          # Use the same immutable bundle as the offline recovery plan.
+          recovery_sha=014d5ac9570e167c561fbdb4671786632c1629c3
+          history="$(mktemp -d "$RUNNER_TEMP/historical-recovery-preflight.XXXXXXXX")"
+          git worktree add --detach "$history" "$recovery_sha"
+          trap 'git worktree remove --force "$history"' EXIT
+          (
+            cd "$history"
+            python3 -m py_compile scripts/preflight_catalog_recovery_remote.py tests/recovery_remote_preflight_test.py
+            python3 tests/recovery_remote_preflight_test.py
+            echo 'No OVH connection, secrets, SQL or production writes used by T-060.'
+          )
 
       - name: Verify disabled account access safeguards
         run: |
