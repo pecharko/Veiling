@@ -382,6 +382,25 @@ $pdo->exec('UPDATE settings SET show_artists_overview=0');
 snap_restore($pdo,$artistOverviewOnSnapshot);
 verify((int)$pdo->query('SELECT show_artists_overview FROM settings WHERE id=1')->fetchColumn()===1,
        'Restore recovers enabled artist overview switch');
+// Both homepage switches survive snapshots. Archives from before the migration
+// restore the original behavior with both home sections visible.
+$homepageSwitchMigration = file_get_contents($root.'/database/migrations/20261122_homepage_recruitment_visibility.sql');
+if (!is_string($homepageSwitchMigration)) throw new RuntimeException('Homepage switch migration missing');
+$pdo->exec($homepageSwitchMigration);
+$homepageVisibility = static function () use ($pdo): array {
+    $row = $pdo->query('SELECT show_artist_recruitment, show_artwork_recruitment FROM settings WHERE id=1')->fetch();
+    return [(int)$row['show_artist_recruitment'], (int)$row['show_artwork_recruitment']];
+};
+verify($homepageVisibility() === [1, 1], 'Homepage section migration defaults both sections to visible');
+$pdo->exec('UPDATE settings SET show_artist_recruitment=0, show_artwork_recruitment=1 WHERE id=1');
+$homepageSnapshot = snap_create($pdo);
+$pdo->exec('UPDATE settings SET show_artist_recruitment=1, show_artwork_recruitment=0 WHERE id=1');
+snap_restore($pdo, $homepageSnapshot);
+verify($homepageVisibility() === [0, 1], 'Restore preserves both homepage section switches independently');
+snap_restore($pdo, $artistOverviewOnSnapshot);
+verify($homepageVisibility() === [1, 1], 'Legacy snapshots restore with both homepage sections visible');
+if (!unlink(snap_path($homepageSnapshot))) throw new RuntimeException('Could not clean isolated homepage test snapshot');
+
 foreach([$artistOverviewSnapshot,$artistOverviewOnSnapshot] as $testArchive) {
     if(!unlink(snap_path($testArchive)))throw new RuntimeException('Could not clean isolated artist overview test snapshot');
 }

@@ -26,8 +26,8 @@ if (!str_contains($bootstrap, "function require_public_site_online(): void")
 }
 $snap = file_get_contents($root . '/private/snapshots.php');
 if (!str_contains($snap, "'is_published','is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','updated_at'")
- || !str_contains($snap, "in_array(\$col,['is_site_online','show_artists_overview'],true) ? 1")
- || !str_contains($snap, "['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview']")) {
+ || !str_contains($snap, "in_array(\$col,['is_site_online','show_artists_overview','show_artist_recruitment','show_artwork_recruitment'],true) ? 1")
+ || !str_contains($snap, "['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','show_artist_recruitment','show_artwork_recruitment']")) {
   throw new RuntimeException('Snapshot creation and schema-aware restore must preserve website online state');
 }
 echo "PASS Website online global switch contract\n";

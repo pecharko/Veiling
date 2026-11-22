@@ -152,6 +152,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </div>
     </section>
 
+    <?php if ((int)($s['show_artist_recruitment'] ?? 1) === 1): ?>
     <section class="front-recruit front-recruit-artist" aria-labelledby="front-recruit-artist-title">
       <div class="shell front-recruit-artist-grid">
         <div class="front-recruit-photo">
@@ -174,6 +175,9 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </div>
     </section>
 
+    <?php endif; ?>
+
+    <?php if ((int)($s['show_artwork_recruitment'] ?? 1) === 1): ?>
     <section class="front-recruit front-recruit-lot" aria-labelledby="front-recruit-lot-title">
       <div class="shell front-recruit-artist-grid">
         <div class="front-recruit-photo">
@@ -194,6 +198,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         </div>
       </div>
     </section>
+    <?php endif; ?>
 
   <?php if ($published): ?>
   <section class="catalog-section<?= $splitPreview ? ' catalog-section--split' : ' shell' ?>" id="catalogus" aria-labelledby="catalogus-titel">

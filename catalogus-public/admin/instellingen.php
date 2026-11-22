@@ -7,6 +7,9 @@ require_auth();
 
 $error = '';
 $pdo = db();
+$s = settings();
+$homepageSectionsAvailable = array_key_exists('show_artist_recruitment', $s)
+  && array_key_exists('show_artwork_recruitment', $s);
 $publishedLots = (int)$pdo->query("SELECT COUNT(*) FROM lots WHERE status='published'")->fetchColumn();
 $totalLots = (int)$pdo->query('SELECT COUNT(*) FROM lots')->fetchColumn();
 
@@ -29,6 +32,15 @@ if (is_post()) {
     'is_site_online' => isset($_POST['is_site_online']) ? 1 : 0,
     'show_report_issue_link' => isset($_POST['show_report_issue_link']) ? 1 : 0,
   ];
+
+  $homepageSectionAssignments = '';
+  if ($homepageSectionsAvailable && ($_POST['homepage_sections_present'] ?? null) === '1') {
+    $fields['show_artist_recruitment'] = ($_POST['show_artist_recruitment'] ?? null) === '1' ? 1 : 0;
+    $fields['show_artwork_recruitment'] = ($_POST['show_artwork_recruitment'] ?? null) === '1' ? 1 : 0;
+    $homepageSectionAssignments = ',
+      show_artist_recruitment = :show_artist_recruitment,
+      show_artwork_recruitment = :show_artwork_recruitment';
+  }
 
   if ($fields['title'] === '') {
     $error = 'Een veilingnaam is verplicht.';
@@ -53,7 +65,7 @@ if (is_post()) {
       catalog_split_active = :catalog_split_active,
       show_artists_overview = :show_artists_overview,
       is_site_online = :is_site_online,
-      show_report_issue_link = :show_report_issue_link
+      show_report_issue_link = :show_report_issue_link' . $homepageSectionAssignments . '
       WHERE id = 1');
     $st->execute($fields);
 
@@ -66,7 +78,6 @@ if (is_post()) {
   }
 }
 
-$s = settings();
 $checkFields = [
   'title' => !empty($s['title']),
   'introduction' => !empty($s['introduction']),
@@ -79,6 +90,8 @@ $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelde
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $catalogSplitEnabled = (int)($s['catalog_split_active'] ?? 0) === 1;
 $artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 1) === 1;
+$artistRecruitmentEnabled = (int)($s['show_artist_recruitment'] ?? 1) === 1;
+$artworkRecruitmentEnabled = (int)($s['show_artwork_recruitment'] ?? 1) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
 $reportIssueEnabled = (int)($s['show_report_issue_link'] ?? 0) === 1;
 $publicStateText = !$siteOnline ? 'Website offline — bezoekers zien Binnenkort online' : ($publicationEnabled ? 'Kavels zichtbaar op website' : 'Kavels verborgen; website zichtbaar');
@@ -289,7 +302,7 @@ if ($error) {
               <div class="auction-settings-step">04</div>
               <div>
                 <h3>Publicatie & controle</h3>
-                <p>Bepaal of bezoekers de kavels kunnen zien. De overige website-informatie blijft altijd zichtbaar.</p>
+                <p>Stel in wat bezoekers op de website zien.</p>
               </div>
             </div>
 
@@ -333,6 +346,28 @@ if ($error) {
                   <strong>Kunstenaarsoverzicht tonen op website</strong>
                   <span>Uit: bezoekers zien op de kunstenaars-pagina een aankondiging dat het overzicht binnenkort beschikbaar is. Aan: toon de gepubliceerde kunstenaars. Onafhankelijk van de kavelschakelaar.</span>
                 </span>
+              </span>
+            </label>
+
+            <?php if ($homepageSectionsAvailable): ?>
+              <input type="hidden" name="homepage_sections_present" value="1">
+            <?php else: ?>
+              <p class="auction-settings-note">De schakelaars voor de twee homepagesecties worden beschikbaar na de database-update.</p>
+            <?php endif; ?>
+
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="show_artist_recruitment" value="1" <?= $artistRecruitmentEnabled ? 'checked' : '' ?> <?= $homepageSectionsAvailable ? '' : 'disabled' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy"><strong>‘Ben jij kunstenaar?’ tonen op de homepage</strong></span>
+              </span>
+            </label>
+
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="show_artwork_recruitment" value="1" <?= $artworkRecruitmentEnabled ? 'checked' : '' ?> <?= $homepageSectionsAvailable ? '' : 'disabled' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy"><strong>‘Heb jij een kunstwerk?’ tonen op de homepage</strong></span>
               </span>
             </label>
 
