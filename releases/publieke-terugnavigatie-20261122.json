@@ -2,6 +2,16 @@
   "schema": 1,
   "files": [
     {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "7294d1cbca234a1a1cffe4ec399ac8461f5913ac952ee2148ba6d3cada0ec28b",
+      "remote_sha256": "a56f051b97ecfbe2a6efe5d15f5898786d464eacee246f7f6458a2b058193ea6"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "0343b73d880859c5c2251e48098f34a2ac749f63c0de25291d9b03a3a7725c07",
+      "remote_sha256": "2bc5d66d396e7d66aed1d79a689d3b0bfe5376f756af35bb7a350aec95d533ef"
+    },
+    {
       "path": "catalogus-public/kunstenaars.php",
       "source_sha256": "dc9f7123012180347aafd769d6d268b8e201db0e4b62c4735069e80905d924de",
       "remote_sha256": "22bdd7045d1b9973398fa181d4303c20d5b96d5578eb916189a2ce23f161b0f0"

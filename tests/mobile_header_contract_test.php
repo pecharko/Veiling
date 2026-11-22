@@ -34,8 +34,11 @@ $pages = [
 ];
 foreach ($pages as $pageName) {
     $page = file_get_contents($root . '/catalogus-public/' . $pageName);
-    // The artist brochure intentionally has a newer cache version after its style update.
-    $expectedVersion = $pageName === 'kunstenaar.php' ? 198 : 196;
+    $expectedVersion = match ($pageName) {
+        'index.php' => 199,
+        'kunstenaar.php' => 198,
+        default => 196,
+    };
     $hasSiteHeader = !in_array($pageName, ['kavel.php', 'kunstenaar.php'], true);
     if (!is_string($page) || str_contains($page, 'class="site-header') !== $hasSiteHeader
         || !str_contains($page, "assets/catalogus.css'))?>?v=" . $expectedVersion)) {
