@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/login.php",
+      "source_sha256": "76c063ffc5259b9f61a2d69ad9bd0c8b78d77cd4df42053685daeec6c30251d8",
+      "remote_sha256": "ad9a7a659f169dc22bb99fc8f95d89f4c0571d2e6438b9b31b802b54a69a5769"
+    }
+  ]
+}
