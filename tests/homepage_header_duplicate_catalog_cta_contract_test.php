@@ -9,7 +9,8 @@ if (!preg_match('~<nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
     throw new RuntimeException('Homepage navigation not found.');
 }
 $nav = $matches[1];
-if (str_contains($nav, 'front-header-cta') || str_contains($nav, 'Bekijk kavels ↗')) {
+if (str_contains($nav, 'front-header-cta') || str_contains($nav, 'Bekijk kavels ↗')
+    || substr_count($nav, 'href="#catalogus"') !== 1) {
     throw new RuntimeException('Redundant far-right catalog header CTA still exists.');
 }
 if (str_contains($nav, '>Home</a>') || str_contains($nav, 'front-nav-home')) {
@@ -19,7 +20,7 @@ foreach (['>Bekijk kavels</a>', 'id="favoriteLink"', '>Kunstenaars</a>', '>Het g
     if (!str_contains($nav, $expected)) throw new RuntimeException('Expected header navigation missing: '.$expected);
 }
 if (!preg_match('~<nav class="front-hero-actions"[^>]*>(.*?)</nav>~s', $home, $hero)
-    || !str_contains($hero[1], 'href="#catalogus">Bekijk de kavels</a>')
+    || str_contains($hero[1], 'href="#catalogus"')
     || !str_contains($hero[1], '>Deelnemende kunstenaars</a>')) {
     throw new RuntimeException('Homepage hero CTAs must remain intact.');
 }

@@ -35,7 +35,7 @@ $pages = [
 foreach ($pages as $pageName) {
     $page = file_get_contents($root . '/catalogus-public/' . $pageName);
     $expectedVersion = match ($pageName) {
-        'index.php' => 199,
+        'index.php' => 200,
         'kunstenaar.php' => 198,
         default => 196,
     };
