@@ -34,8 +34,11 @@ if ($topActionAt === false || $reportageAt === false || $topActionAt >= $reporta
     throw new RuntimeException('Startpagina button must appear above the TV Oost section.');
 }
 $topSection = substr($page, $topActionAt, $reportageAt - $topActionAt);
-if (!str_contains($topSection, '<a class="front-btn front-btn-outline" href="<?=e(url(\'index.php\'))?>">Startpagina</a>')) {
-    throw new RuntimeException('Missing homepage return button at top of previous edition.');
+$homepageLink = '<a class="back-link" href="<?=e(url(\'index.php\'))?>">← Terug naar startpagina</a>';
+if (!str_contains($topSection, $homepageLink)
+    || !str_contains($page, '<div class="impression-next-actions">' . $homepageLink . '</div>')
+    || substr_count($page, $homepageLink) !== 2) {
+    throw new RuntimeException('Missing shared homepage return links above and below the previous edition.');
 }
 if (!str_contains($page, "assets/vorige-editie.css'))?>?v=7")) {
     throw new RuntimeException('Previous edition CSS cache must be updated.');
@@ -44,7 +47,6 @@ $css = file_get_contents($root . '/catalogus-public/assets/vorige-editie.css');
 if (!is_string($css) || !str_contains($css, '.impression-top-actions{')) {
     throw new RuntimeException('Top return action requires layout styling.');
 }
-// Match the unobtrusive Startpagina return button on the artists overview.
 if (str_contains($topSection, 'VORIGE EDITIE · 41 LOKEREN') ||
     str_contains($page, 'impression-top-label')) {
     throw new RuntimeException('Extra previous-edition label must be removed.');
@@ -52,7 +54,6 @@ if (str_contains($topSection, 'VORIGE EDITIE · 41 LOKEREN') ||
 foreach ([
     '.impression-top-actions{display:block;padding-top:clamp(32px,4vw,56px);',
     'margin-bottom:32px',
-    '.impression-top-actions .front-btn{min-height:50px;',
     '@media(max-width:720px){.impression-top-actions{',
     '@media(max-width:767px){.impression-page .front-header .front-nav{display:none!important}}',
     '.impression-hero{display:grid;',

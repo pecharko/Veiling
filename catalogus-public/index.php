@@ -91,7 +91,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=199"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
 <link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
@@ -197,16 +197,16 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
     </section>
 
   <?php if ($published): ?>
-  <section class="catalog-section shell" id="catalogus"><div class="section-lead"><div><p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p><h2><?= $splitPreview ? "Veiling en marktplaats" : "Ontdek de kavels" ?><span class="gold-dot">.</span></h2></div><p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p></div>
+  <section class="catalog-section shell" id="catalogus" aria-labelledby="catalogus-titel">
   <?php if ($splitPreview): ?>
     <div class="catalog-preview-explain">
       <span class="catalog-preview-icon catalog-preview-icon--gavel"><svg viewBox="0 0 48 48" fill="currentColor" aria-hidden="true" focusable="false" data-icon="auction-gavel"><g transform="rotate(35 24 24)"><rect x="13" y="10" width="22" height="14" rx="2"/><rect x="7" y="8" width="8" height="18" rx="2"/><rect x="33" y="8" width="8" height="18" rx="2"/><rect x="21" y="23" width="6" height="19" rx="2"/></g></svg></span>
       <div class="catalog-preview-explain-copy">
-        <h3>Veiling en marktplaats</h3>
-        <p>De kavels zijn verdeeld in twee categorieën:</p>
+        <h2 id="catalogus-titel">Veiling en marktplaats<span class="gold-dot">.</span></h2>
+        <p>Ontdek bijzondere stukken en kies hoe je meedoet.</p>
         <ul>
-          <li><strong>Veiling:</strong> een selectie bijzondere kavels die tijdens de benefietveiling worden toegewezen aan de hoogste bieder.</li>
-          <li><strong>Marktplaats:</strong> een breed aanbod kavels die je tijdens de kijkdagen onmiddellijk kunt aankopen. Kom zeker langs, want op = op!</li>
+          <li><strong>Veiling:</strong> heb je een favoriet? Bied mee tijdens de benefietveiling. Het hoogste bod wint.</li>
+          <li><strong>Marktplaats:</strong> iets moois gevonden? Koop het meteen tijdens de kijkdagen voor de vermelde marktprijs.</li>
         </ul>
       </div>
     </div>
@@ -219,6 +219,14 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       <div><strong><?= $splitSection === 'veiling' ? 'Veiling' : 'Marktplaats' ?></strong>
         <p><?= $splitSection === 'veiling' ? 'Deze kavels worden geveild. Je vindt hier het veilingsnummer en het startbod.' : 'Deze kavels kunnen tijdens de kijkdagen onmiddellijk worden aangekocht. Je vindt hier de marktprijs.' ?></p>
       </div>
+    </div>
+  <?php else: ?>
+    <div class="section-lead">
+      <div>
+        <p class="eyebrow dark-eyebrow">KUNST · LIFESTYLE · VINTAGE</p>
+        <h2 id="catalogus-titel">Ontdek de kavels<span class="gold-dot">.</span></h2>
+      </div>
+      <p><?=e($s['introduction'] ?: 'Bekijk de kavels in detail en bewaar je favorieten. Bieden kan uitsluitend tijdens de fysieke veiling.')?></p>
     </div>
   <?php endif; ?>
   <?php if (!$published): ?>

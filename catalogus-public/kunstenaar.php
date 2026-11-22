@@ -30,6 +30,7 @@ if ($returnLotNum) {
   $returnStmt->execute([$returnLotNum, $artistId]);
   if (!$returnStmt->fetchColumn()) $returnLotNum = false;
 }
+$fromDirectory = filter_input(INPUT_GET, 'van') === 'kunstenaars';
 $photosStmt = db()->prepare("
   SELECT image_kind, slot, path
   FROM seller_images
@@ -80,15 +81,13 @@ try {
 </head>
 <body>
 <?php admin_preview_banner(); ?>
-<header class="site-header"><div class="shell header-inner">
-  <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
-  <nav class="header-nav" aria-label="Navigatie"></nav>
-</div></header>
 <main class="artist-profile shell artist-brochure">
   <?php if ($returnLotNum): ?>
     <a class="back-link" href="<?=e(url('kavel.php', ['nr'=>(int)$returnLotNum]))?>">← Terug naar kavel</a>
-  <?php else: ?>
+  <?php elseif ($fromDirectory || filter_has_var(INPUT_GET, 'kavel')): ?>
     <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
+  <?php else: ?>
+    <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar catalogus</a>
   <?php endif; ?>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">

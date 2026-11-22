@@ -39,7 +39,11 @@ const fs = require('node:fs');
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
       });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No horizontal overflow at ${width}px`);
-      assert.equal(await page.locator('.impression-top-actions').getByRole('link', { name: 'Startpagina', exact: true }).isVisible(), true, `Startpagina return action at ${width}px`);
+      for (const section of ['.impression-top-actions', '.impression-next-actions']) {
+        const link = page.locator(section).getByRole('link', { name: '← Terug naar startpagina', exact: true });
+        assert.equal(await link.isVisible(), true, `Homepage return link at ${width}px`);
+        assert.equal(await link.getAttribute('href'), '/index.php');
+      }
       assert.equal(await page.locator('.site-header .header-nav').isVisible(), width > 767, `Header menu visibility at ${width}px`);
       if (width > 767) assert.equal(await page.getByRole('link', { name: 'Home', exact: true }).isVisible(), true, 'Desktop header retains Home');
       if ([1280,390].includes(width)) await page.screenshot({ path: `/tmp/previous-edition-preview/${width}.png`, fullPage: true, animations: 'disabled' });

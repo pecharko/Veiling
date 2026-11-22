@@ -25,18 +25,19 @@ $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
     $buttonsVersion = $name === 'kavel.php' ? 4 : 3;
+    $hasHeaderNav = !in_array($name, ['kavel.php', 'kunstenaar.php'], true);
     if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=" . $buttonsVersion) ||
-        !str_contains($page, 'class="header-nav')) {
+        str_contains($page, 'class="header-nav') !== $hasHeaderNav) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
     $pages[$name] = $page;
 }
 foreach ([
     'index.php' => ['>Vorige editie</a>'],
-    'kunstenaars.php' => ['>Startpagina</a>', 'artists-overview-bottom-action'],
+    'kunstenaars.php' => ['>← Terug naar startpagina</a>', 'artists-overview-bottom-action'],
     'goede-doel.php' => ['>Startpagina</a>', '>Vorige editie</a>'],
     'kunstenaar-interesse.php' => ['>Startpagina</a>'],
-    'vorige-editie.php' => ['>Startpagina</a>'],
+    'vorige-editie.php' => ['>← Terug naar startpagina</a>'],
 ] as $pageName => $required) {
     foreach ($required as $item) {
         if (!str_contains($pages[$pageName], $item)) {
@@ -46,10 +47,10 @@ foreach ([
 }
 $artists = $pages['kunstenaars.php'];
 if (!str_contains($artists, 'class="artists-overview-bottom-action" style="display:block;margin-top:0;padding-top:clamp(60px,5vw,80px)"') ||
-    substr_count($artists, '>Startpagina</a>') !== 2 ||
+    substr_count($artists, '>← Terug naar startpagina</a>') !== 2 ||
     strpos($artists, 'artists-overview-bottom-action') < strrpos($artists, '<?php endif; ?>') ||
     strpos($artists, 'artists-overview-bottom-action') > strpos($artists, '</main>')) {
-    throw new RuntimeException('Startpagina must appear above and below every state of the artist list.');
+    throw new RuntimeException('Homepage return links must appear above and below every state of the artist list.');
 }
 $home = $pages['index.php'];
 foreach ([

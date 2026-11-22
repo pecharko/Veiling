@@ -6,12 +6,14 @@ declare(strict_types=1);
 $root = dirname(__DIR__);
 $directory = file_get_contents($root . '/catalogus-public/kunstenaars.php');
 $profile = file_get_contents($root . '/catalogus-public/kunstenaar.php');
-if (!is_string($directory) || !is_string($profile)) {
-    throw new RuntimeException('Artist public pages missing');
+$lot = file_get_contents($root . '/catalogus-public/kavel.php');
+if (!is_string($directory) || !is_string($profile) || !is_string($lot)) {
+    throw new RuntimeException('Public detail or directory pages missing');
 }
 $checks = [
-    'directory links to artist profile by seller id'
-        => str_contains($directory, "url('kunstenaar.php',['id'=>(int)\$artist['id']])"),
+    'directory links to artist profile with the directory return context'
+        => str_contains($directory, "url('kunstenaar.php',['id'=>(int)\$artist['id'], 'van'=>'kunstenaars'])")
+            && str_contains($profile, "filter_input(INPUT_GET, 'van') === 'kunstenaars'"),
     'directory requires explicitly published artists'
         => str_contains($directory, "s.artist_published=1"),
     'profile requires public site online'
@@ -29,29 +31,35 @@ $checks = [
             && !str_contains($profile, 'settings()'),
     'no private seller fields exposed'
         => !preg_match('/SELECT\\s+s\\.\\*/i', $profile),
+    'lot has a bottom return link with the catalog target'
+        => str_contains($lot, '<nav class="detail-bottom-nav" aria-label="Terug naar overzicht"><a href="<?=e(url(\'index.php\'))?>#catalogus">Terug naar catalogus</a></nav>'),
 ];
 foreach ($checks as $name => $passed) {
     if (!$passed) throw new RuntimeException('Artist navigation regression: ' . $name);
 }
-// If there is an authenticated public origin lot, the profile must show
-// only its return link. Otherwise it must fall back to the artist directory.
+// The homepage already links to the bare profile URL. A validated lot takes
+// precedence, and an explicit directory origin or an invalid lot goes to the directory.
 $navStart = strpos($profile, '<main class="artist-profile shell artist-brochure">');
 $navEnd = strpos($profile, '<article class="artist-brochure-sheet">', $navStart ?: 0);
 if ($navStart === false || $navEnd === false) {
     throw new RuntimeException('Artist return navigation missing.');
 }
 $nav = substr($profile, $navStart, $navEnd - $navStart);
-$ifAt = strpos($nav, '<?php if ($returnLotNum): ?>');
-$lotLinkAt = strpos($nav, '← Terug naar kavel</a>');
-$elseAt = strpos($nav, '<?php else: ?>');
-$directoryLinkAt = strpos($nav, '← Terug naar alle kunstenaars</a>');
-$endAt = strpos($nav, '<?php endif; ?>');
-if ($ifAt === false || $lotLinkAt === false || $elseAt === false ||
-    $directoryLinkAt === false || $endAt === false ||
-    !($ifAt < $lotLinkAt && $lotLinkAt < $elseAt &&
-      $elseAt < $directoryLinkAt && $directoryLinkAt < $endAt) ||
-    substr_count($nav, '← Terug naar kavel</a>') !== 1 ||
-    substr_count($nav, '← Terug naar alle kunstenaars</a>') !== 1) {
-    throw new RuntimeException('Artist profile must show exactly one contextual return link.');
+$expected = [
+    '<?php if ($returnLotNum): ?>',
+    'href="<?=e(url(\'kavel.php\', [\'nr\'=>(int)$returnLotNum]))?>">← Terug naar kavel</a>',
+    '<?php elseif ($fromDirectory || filter_has_var(INPUT_GET, \'kavel\')): ?>',
+    'href="<?=e(url(\'kunstenaars.php\'))?>">← Terug naar alle kunstenaars</a>',
+    '<?php else: ?>',
+    'href="<?=e(url(\'index.php\'))?>#catalogus">← Terug naar catalogus</a>',
+    '<?php endif; ?>',
+];
+$offset = 0;
+foreach ($expected as $item) {
+    $position = strpos($nav, $item, $offset);
+    if ($position === false) {
+        throw new RuntimeException('Artist profile must show the correct contextual return link.');
+    }
+    $offset = $position + strlen($item);
 }
-echo "PASS published artist directory-to-profile access independent of catalog publication\n";
+echo "PASS artist navigation from the catalog, directory and lot, and the lot catalog return link\n";

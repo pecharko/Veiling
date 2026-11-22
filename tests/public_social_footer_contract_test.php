@@ -84,3 +84,5 @@ require __DIR__ . '/previous_edition_header_navigation_contract_test.php';
 
 // Verify the two recruitment panels and approved assets in the existing public CI.
 require __DIR__ . '/homepage_recruitment_contract_test.php';
+require __DIR__ . '/artist_directory_profile_navigation_contract_test.php';
+require __DIR__ . '/catalog_split_reference_layout_test.php';
