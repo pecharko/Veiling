@@ -91,7 +91,7 @@ $date = !empty($s['event_date']) ? date_nl($s['event_date']) : 'Verwacht in okto
 $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
-<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=199"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
+<html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=200"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
 <link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
@@ -127,7 +127,6 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
           <a class="front-btn front-btn-outline" href="<?=e(url('kunstenaars.php'))?>">Deelnemende kunstenaars</a>
           <a class="front-btn front-btn-outline" href="<?=e(url('goede-doel.php'))?>">Meer over het goede doel</a>
           <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-          <?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>
         </nav>
       </div>
     </section>

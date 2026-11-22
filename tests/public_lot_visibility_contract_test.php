@@ -8,7 +8,6 @@ if ($home === false || $admin === false || $detail === false) { throw new Runtim
 foreach ([
   'if ($published): ?><a href="#catalogus">Bekijk kavels',
   'if ($published): ?><a id="favoriteLink"',
-  'if ($published): ?><a class="front-btn front-btn-primary"',
   'if ($published): ?>',
   'if ($published) {',
 ] as $guard) {

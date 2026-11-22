@@ -20,7 +20,7 @@ Bij de cronlog-release stopte de assistent na (a) een net gestarte CI-check, (b)
 - Laat een gebruiker nooit hetzelfde al gegeven akkoord herhalen. Een gewone `go` ná een expliciet autorisatieverzoek is nog steeds niet de ontbrekende exacte autorisatie.
 
 ## Meetlat
-Normale release: **één PR, één exacte mergeautorisatie en één aparte exacte productieautorisatie**. Vraag alleen om een handmatige workflowstart als het beschikbare, bevoegde gereedschap die niet kan uitvoeren. Vraag na technische verificatie uitsluitend de eventueel nog ontbrekende functionele browseracceptatie.
+Normale release: **één PR, één exacte mergeautorisatie en één aparte exacte productieautorisatie**. Vraag alleen om een handmatige workflowstart als het beschikbare, bevoegde gereedschap die niet kan uitvoeren. Bundel na een geverifieerde website-uitrol de eventuele browseracceptatie en de eenmalige vraag om de lokale preview te synchroniseren, volgens [SKILL.md](../SKILL.md#lokale-testomgeving-na-een-geslaagde-website-uitrol).
 
 ## Codex voltooit eerst de gevraagde ontwikkelscope
 

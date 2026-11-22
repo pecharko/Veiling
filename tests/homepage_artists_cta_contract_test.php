@@ -21,9 +21,8 @@ $expected = '';
 foreach ($links as $path => $label) {
     $expected .= '<a class="front-btn front-btn-outline" href="<?=e(url(\'' . $path . '\'))?>">' . $label . '</a>';
 }
-$expected .= '<?php if ($published): ?><a class="front-btn front-btn-primary" href="#catalogus">Bekijk de kavels</a><?php endif; ?>';
 if (preg_replace('~>\s+<~', '><', trim($actions)) !== $expected) {
-    throw new RuntimeException('Title bar buttons must keep their routes, order and plain labels; only the catalog link is conditional.');
+    throw new RuntimeException('The title bar must show exactly the three expected links in order.');
 }
 if (!str_contains($home, "assets/home-v18.css'))?>?v=187")) {
     throw new RuntimeException('Homepage title bar CSS needs the updated cache version.');
@@ -31,4 +30,4 @@ if (!str_contains($home, "assets/home-v18.css'))?>?v=187")) {
 if (!str_contains($artists, 'if ($artistsOverviewEnabled) {')) {
     throw new RuntimeException('Artists destination must keep coming-soon behavior.');
 }
-echo "PASS homepage title bar buttons, link order and publication guard.\n";
+echo "PASS homepage title bar shows exactly three links in the expected order.\n";
