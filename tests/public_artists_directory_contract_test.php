@@ -18,7 +18,7 @@ $required = [
     'disabled overview does not query artists' => 'if ($artistsOverviewEnabled) {',
     'disabled overview displays coming-soon message' => 'Binnenkort vind je hier een overzicht van de deelnemende kunstenaars.',
     'one portrait per artist' => "si.image_kind='portrait' AND si.slot=1",
-    'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\']])',
+    'portrait link to profile' => 'url(\'kunstenaar.php\',[\'id\'=>(int)$artist[\'id\'], \'van\'=>\'kunstenaars\'])',
     'image URL escaped' => 'src="<?=e(url($portrait))?>"',
     'artist name escaped' => '<?=e($name)?>',
     'safe live upload path' => 'uploads/[0-9]{4}/[0-9]{2}/[a-f0-9]{32}',
