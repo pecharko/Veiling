@@ -22,7 +22,7 @@ const output = path.join(__dirname, '.screenshots');
     assert.equal(new URL(page.url()).hostname, 'localhost');
     assert.match(await page.textContent('body'), /Abstract landschap/);
     assert.equal(await page.locator('form.toolbar').count(), 0, 'No public lot filters');
-    assert.equal(await page.locator('.catalog-preview-explain').count(), 0, 'Unsplit catalog has no introductory box');
+    assert.equal(await page.locator('.catalog-preview-intro').count(), 0, 'Unsplit catalog has no introductory box');
     for (const width of [1440, 390]) {
       await page.setViewportSize({ width, height: 900 });
       await page.screenshot({ path: path.join(output, `catalogue-${width}.png`), fullPage: true, animations: 'disabled' });
@@ -96,6 +96,40 @@ const output = path.join(__dirname, '.screenshots');
       await page.screenshot({ path: path.join(output, `admin-${width}.png`), fullPage: true, animations: 'disabled' });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `No admin overflow ${width}`);
     }
+    // Save each combination and verify what an ordinary visitor sees.
+    await page.goto(base + '/admin/instellingen.php');
+    const switches = [
+      { name: 'show_artist_recruitment', heading: '#front-recruit-artist-title' },
+      { name: 'show_artwork_recruitment', heading: '#front-recruit-lot-title' },
+    ];
+    for (const { name } of switches) {
+      assert.equal(await page.locator(`input[name="${name}"]`).isChecked(), true);
+    }
+    const ordinary = await browser.newContext();
+    const ordinaryPage = await ordinary.newPage();
+    for (const visibility of [[false, true], [false, false], [true, false], [true, true]]) {
+      for (const [index, { name }] of switches.entries()) {
+        const checked = await page.locator(`input[name="${name}"]`).isChecked();
+        if (checked !== visibility[index]) {
+          await page.locator(`label.auction-settings-toggle:has(input[name="${name}"])`).click();
+        }
+      }
+      const [saved] = await Promise.all([
+        page.waitForResponse(response => response.request().method() === 'POST' &&
+          new URL(response.url()).pathname === '/admin/instellingen.php'),
+        page.locator('button.auction-settings-save').click(),
+      ]);
+      assert.equal(saved.status(), 303);
+      await page.waitForLoadState('domcontentloaded');
+      await ordinaryPage.goto(base + '/index.php');
+      for (const [index, { name, heading }] of switches.entries()) {
+        const expected = visibility[index];
+        assert.equal(await page.locator(`input[name="${name}"]`).isChecked(), expected);
+        assert.equal(await ordinaryPage.locator(heading).count(), Number(expected), `Saved ${name}: ${expected}`);
+      }
+      assert.equal(await ordinaryPage.locator('#catalogus').count(), 1, 'Catalogue stays visible');
+    }
+    console.log('PASS independent public visibility of both homepage sections');
     // Persist the split via Veilinginfo and inspect it without an admin session.
     await page.goto(base + '/admin/instellingen.php');
     const splitToggle = page.locator('input[name="catalog_split_active"]');
@@ -106,8 +140,6 @@ const output = path.join(__dirname, '.screenshots');
     await page.locator('button.auction-settings-save').click();
     await page.waitForURL('**/admin/instellingen.php');
     assert.equal(await page.locator('input[name="catalog_split_active"]').isChecked(), true);
-    const ordinary = await browser.newContext();
-    const ordinaryPage = await ordinary.newPage();
     await ordinaryPage.goto(base + '/index.php');
     assert.equal(await ordinaryPage.locator('.catalog-preview-tabs').count(), 1, 'Saved split affects ordinary visitor');
     assert.match(await ordinaryPage.locator('.lot-estimate').first().textContent(), /Startbod/);
@@ -130,9 +162,10 @@ const output = path.join(__dirname, '.screenshots');
       preview.locator('button[name="admin_preview_action"][value="split_on"]').click(),
     ]);
     assert.equal(await preview.locator('.catalog-preview-tabs').count(), 1);
-    assert.equal(await preview.locator('.catalog-preview-explain ul li').count(), 2);
+    assert.equal(await preview.locator('.catalog-preview-intro .front-recruit-copy li').count(), 2);
     assert.equal(await preview.locator('.catalog-preview-tabs svg').count(), 2);
-    assert.equal(await preview.locator('[data-icon="auction-gavel"]').count(), 3, 'Same corrected gavel icon in three positions');
+    assert.equal(await preview.locator('.catalog-preview-tabs [data-icon="auction-gavel"]').count(), 1);
+    assert.equal(await preview.locator('.catalog-preview-help [data-icon="auction-gavel"]').count(), 1);
     assert.equal(await preview.locator('.catalog-preview-help svg').count(), 1);
     assert.match(await preview.locator('.catalog-preview-help strong').textContent(), /Veiling/);
     for (const width of [1440, 390]) {
@@ -176,7 +209,7 @@ const output = path.join(__dirname, '.screenshots');
       await invitationPage.setViewportSize({width, height:900});
       const response = await invitationPage.goto(base + '/index.php', {waitUntil:'domcontentloaded'});
       assert.equal(response.status(), 200, 'Public homepage should open for artist invitation');
-      const action = invitationPage.getByRole('link', {name:'Ik ben kunstenaar en heb interesse'});
+      const action = invitationPage.locator('.front-recruit-artist').getByRole('link', {name:'Ik wil graag deelnemen'});
       assert.equal(await action.count(), 1, 'Artist participation action must be an enabled link');
       await Promise.all([
         invitationPage.waitForURL('**/kunstenaar-interesse.php'),
