@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus-verkocht-veilinghamer.webp",
+      "source_sha256": "35a926385b6ffbd9a368f9fbed37e82c75211b57608a7762b6a82d707923e0a8",
+      "remote_sha256": "ABSENT"
+    },
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "08eb5bf14cf5522be0fb5a0181ed8c22e3bf793120e5521413119cf35885836c",
+      "remote_sha256": "0fa15a431ad4c8ad304154cc2dfa833c5a283e0c6a82f1a0774254af48f85172"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "a79aaa66205eed9a8179a0bde8ce6803b644a184f63dffcec4f53d32a3d61b46",
+      "remote_sha256": "cda571ba9453b7d6b70c6351a6f8fccfac6fb05d4ccc753df193736f239d745e"
+    }
+  ]
+}
