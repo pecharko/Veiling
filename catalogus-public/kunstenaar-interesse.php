@@ -35,7 +35,7 @@ require_public_site_online();
       <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
       <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
     </nav>
-    <?php require __DIR__ . '/partials/mobile-menu.php'; ?>
+    <?php require __DIR__ . '/mobile-menu.php'; ?>
   </div>
 </header>
 <main id="inhoud" class="artist-invite">

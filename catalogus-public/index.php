@@ -111,7 +111,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
         <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a><?php endif; ?>
       </nav>
-      <?php require __DIR__ . '/partials/mobile-menu.php'; ?>
+      <?php require __DIR__ . '/mobile-menu.php'; ?>
     </div>
   </header>
   <main>

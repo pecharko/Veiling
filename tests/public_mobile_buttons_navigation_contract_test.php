@@ -32,7 +32,7 @@ foreach ($names as $name) {
     $hasHeaderNav = !in_array($name, ['kavel.php', 'kunstenaar.php'], true);
     if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=" . $buttonsVersion) ||
         str_contains($page, 'class="header-nav') !== $hasHeaderNav ||
-        str_contains($page, "require __DIR__ . '/partials/mobile-menu.php'") !== $hasHeaderNav) {
+        str_contains($page, "require __DIR__ . '/mobile-menu.php'") !== $hasHeaderNav) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
     $pages[$name] = $page;

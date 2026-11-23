@@ -58,7 +58,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
       <a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a>
       <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
     </nav>
-    <?php require __DIR__ . '/partials/mobile-menu.php'; ?>
+    <?php require __DIR__ . '/mobile-menu.php'; ?>
   </div>
 </header>
 <main id="impressie">

@@ -38,7 +38,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
-  <?php require __DIR__ . '/partials/mobile-menu.php'; ?>
+  <?php require __DIR__ . '/mobile-menu.php'; ?>
 </div></header>
 <main class="shell artists-overview">
   <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>
