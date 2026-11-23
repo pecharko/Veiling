@@ -4,6 +4,7 @@ require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
 $settings = settings();
+$published = (int)($settings['is_published'] ?? 0) === 1 || admin_preview_active();
 $artistsOverviewEnabled = (int)($settings['show_artists_overview'] ?? 1) === 1;
 // Authenticated admin previews may inspect the published directory before public launch.
 // This never enables the overview for regular visitors or includes unpublished artists.
@@ -37,7 +38,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <?php admin_preview_banner(); ?>
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
-  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
+  <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><?php if ($published): ?><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><?php endif; ?><a href="<?=e(url('kunstenaars.php'))?>" aria-current="page">Kunstenaars</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
   <?php require __DIR__ . '/mobile-menu.php'; ?>
 </div></header>
 <main class="shell artists-overview">

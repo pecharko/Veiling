@@ -28,6 +28,17 @@ try {
         [$status,$home] = impression_request('/index.php');
         impression_check($status === 200 && str_contains($home,'Vorige editie')
             && str_contains($home,'vorige-editie.php'), 'Homepage links to impression with published=' . $published);
+        foreach (['/index.php', '/kunstenaars.php', '/goede-doel.php', '/vorige-editie.php',
+                  '/kunstenaar-interesse.php', '/kunstwerk-interesse.php'] as $route) {
+            [$navStatus, $page] = impression_request($route);
+            preg_match_all('~<nav[^>]+aria-label="Hoofdnavigatie"[^>]*>(.*?)</nav>~s', $page, $menus);
+            impression_check($navStatus === 200 && count($menus[1]) === 2, 'Public menus on ' . $route);
+            foreach ($menus[1] as $menu) {
+                impression_check(substr_count($menu, '>Kunstenaars</a>') === 1
+                    && substr_count($menu, '>Bekijk kavels</a>') === $published,
+                    'Menu visibility on ' . $route . ' with published=' . $published);
+            }
+        }
         [$status,$body] = impression_request('/vorige-editie.php');
         impression_check($status === 200 && substr_count($body,'class="impression-photo-image"') === 9 
                        && !str_contains($body,'data-impression-photo=') 

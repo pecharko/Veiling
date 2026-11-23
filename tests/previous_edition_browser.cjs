@@ -52,14 +52,14 @@ const fs = require('node:fs');
       if (width > 767) {
         assert.equal(await desktopNav.getByRole('link', { name: 'Home', exact: true }).isVisible(), true, 'Desktop header retains Home');
       } else {
-        const catalog = mobileMenu.getByRole('link', { name: 'Bekijk kavels', exact: true });
-        assert.equal(await catalog.isVisible(), false, 'Mobile menu starts closed');
+        const artists = mobileMenu.getByRole('link', { name: 'Kunstenaars', exact: true });
+        assert.equal(await artists.isVisible(), false, 'Mobile menu starts closed');
         await summary.focus();
         await page.keyboard.press('Enter');
-        assert.equal(await catalog.isVisible(), true, 'Keyboard opens mobile menu');
-        assert.equal(await catalog.getAttribute('href'), '/index.php#catalogus');
+        assert.equal(await artists.isVisible(), true, 'Keyboard opens mobile menu');
+        assert.equal(await artists.getAttribute('href'), '/kunstenaars.php');
         await page.keyboard.press('Enter');
-        assert.equal(await catalog.isVisible(), false, 'Keyboard closes mobile menu');
+        assert.equal(await artists.isVisible(), false, 'Keyboard closes mobile menu');
       }
       if ([1280,390].includes(width)) await page.screenshot({ path: `/tmp/previous-edition-preview/${width}.png`, fullPage: true, animations: 'disabled' });
     }

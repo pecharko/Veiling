@@ -104,7 +104,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>
-        <?php if ($published): ?><a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a><?php endif; ?>
+        <a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a>
         <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
         <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
         <?php if ((int)($s['show_report_issue_link'] ?? 0) === 1): ?><a href="https://github.com/pecharko/Veiling/issues/new/choose" target="_blank" rel="noopener noreferrer">Probleem melden</a><?php endif; ?>

@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// The artists overview must not link to itself from its own top navigation.
+// The artists overview shows the current navigation item and retains its return links.
 $source = file_get_contents(dirname(__DIR__) . '/catalogus-public/kunstenaars.php');
 if (!is_string($source)) {
     throw new RuntimeException('Artists overview source unavailable.');
@@ -10,8 +10,8 @@ if (!preg_match('~<nav class="header-nav" aria-label="Hoofdnavigatie">(.*?)</nav
     throw new RuntimeException('Artists overview navigation missing.');
 }
 $nav = $match[1];
-if (str_contains($nav, "url('kunstenaars.php')") || str_contains($nav, '>Kunstenaars</a>')) {
-    throw new RuntimeException('Artists overview should not show redundant Kunstenaars menu item.');
+if (!str_contains($nav, "url('kunstenaars.php')") || !str_contains($nav, 'aria-current="page">Kunstenaars</a>')) {
+    throw new RuntimeException('Artists overview must show Kunstenaars as the current menu item.');
 }
 foreach (["url('index.php')", '>Home</a>', '>Bekijk kavels</a>', "url('goede-doel.php')", '>Het goede doel</a>', "url('vorige-editie.php')", '>Vorige editie</a>'] as $expected) {
     if (!str_contains($nav, $expected)) {
