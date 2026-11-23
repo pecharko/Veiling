@@ -92,7 +92,7 @@ $title = (string)($s['title'] ?? 'Veilingcatalogus');
 $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
 ?><!doctype html>
 <html lang="nl"><head><link rel="icon" type="image/png" href="/favicon.png?v=3"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#850015"><meta name="description" content="<?=e($published ? "Bekijk de kavels, foto's en beschrijvingen van " . $title . ". Bieden gebeurt uitsluitend op locatie." : $title . ". Een veiling voor het goede doel, georganiseerd door 41 Lokeren.")?>"><title><?=e($title)?> | 41 Lokeren</title><?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/<?= $page > 1 ? '?pagina=' . $page : '' ?>"><?php endif; ?><link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>?v=18"><link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=203"><link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=187">
-<link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
+<link rel="stylesheet" href="<?=e(url('assets/home-recruitment-preview.css'))?>?v=2"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">  <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body data-favorites="<?=$onlyFavorites ? '1' : '0'?>">
   <?php admin_preview_banner(); ?>
@@ -111,6 +111,7 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
         <?php if(!empty($s['contact_email'])): ?><a class="front-contact-link" href="mailto:<?=e($s['contact_email'])?>">Contact</a><?php endif; ?>
         <?php if ($published): ?><a id="favoriteLink" class="header-favorites" href="<?=e(url('index.php',['favorieten'=>1]))?>" aria-label="Mijn favorieten"><span aria-hidden="true">♡</span> <span id="favoriteCount">0</span></a><?php endif; ?>
       </nav>
+      <?php require __DIR__ . '/partials/mobile-menu.php'; ?>
     </div>
   </header>
   <main>

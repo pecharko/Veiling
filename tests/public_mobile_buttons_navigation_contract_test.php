@@ -6,7 +6,7 @@ $root = dirname(__DIR__);
 $css = file_get_contents($root . '/catalogus-public/assets/public-buttons.css');
 if (!is_string($css) ||
     !preg_match('/@media screen and \\(max-width: 767px\\)\\s*\\{\\s*\\.site-header \\.header-nav\\s*\\{\\s*display:\\s*none\\s*!important;/s', $css)) {
-    throw new RuntimeException('The entire public menu must be hidden on small screens.');
+    throw new RuntimeException('The desktop navigation must be hidden on small screens.');
 }
 foreach (['#D8C9B4', '#3B3025', '.front-btn:not(.front-impact-action)'] as $rule) {
     if (!str_contains($css, $rule)) throw new RuntimeException('Missing button rule: ' . $rule);
@@ -24,10 +24,15 @@ $names = [
 $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
-    $buttonsVersion = $name === 'kavel.php' ? 4 : 3;
+    $buttonsVersion = match ($name) {
+        'kavel.php' => 4,
+        'kunstenaar.php' => 3,
+        default => 5,
+    };
     $hasHeaderNav = !in_array($name, ['kavel.php', 'kunstenaar.php'], true);
     if (!is_string($page) || !str_contains($page, "assets/public-buttons.css'))?>?v=" . $buttonsVersion) ||
-        str_contains($page, 'class="header-nav') !== $hasHeaderNav) {
+        str_contains($page, 'class="header-nav') !== $hasHeaderNav ||
+        str_contains($page, "require __DIR__ . '/partials/mobile-menu.php'") !== $hasHeaderNav) {
         throw new RuntimeException('Missing public button stylesheet or desktop navigation on ' . $name);
     }
     $pages[$name] = $page;
@@ -35,9 +40,9 @@ foreach ($names as $name) {
 foreach ([
     'index.php' => ['>Vorige editie</a>'],
     'kunstenaars.php' => ['>← Terug naar startpagina</a>', 'artists-overview-bottom-action'],
-    'goede-doel.php' => ['>← Terug naar startpagina</a>', '>Vorige editie</a>'],
-    'kunstenaar-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar startpagina</a>'],
-    'kunstwerk-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar startpagina</a>'],
+    'goede-doel.php' => ['>← Terug naar de catalogus</a>', '>Vorige editie</a>'],
+    'kunstenaar-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar de catalogus</a>'],
+    'kunstwerk-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar de catalogus</a>'],
     'vorige-editie.php' => ['>← Terug naar startpagina</a>'],
 ] as $pageName => $required) {
     foreach ($required as $item) {
@@ -64,4 +69,4 @@ foreach ([
         throw new RuntimeException('Both participation buttons must share the approved beige style: ' . $target);
     }
 }
-echo "PASS: public mobile menu hidden, compact CTAs, artist bottom button and preserved participation buttons.\n";
+echo "PASS: mobile disclosure, desktop navigation, compact CTAs, artist bottom button and preserved participation buttons.\n";
