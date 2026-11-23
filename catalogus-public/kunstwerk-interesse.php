@@ -40,7 +40,7 @@ require_public_site_online();
 </header>
 <main id="inhoud" class="artist-invite lot-invite">
   <div class="shell">
-    <a class="front-btn front-btn-outline artist-invite-return" href="<?=e(url('index.php'))?>">Startpagina</a>
+    <a class="back-link artist-invite-return" href="<?=e(url('index.php'))?>#catalogus">← Terug naar startpagina</a>
     <div class="artist-invite-grid">
       <section class="artist-invite-copy" aria-labelledby="lot-invite-title">
         <header class="artist-invite-heading">

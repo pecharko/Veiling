@@ -16,7 +16,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/goede-doel.css'))?>?v=4">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
@@ -39,13 +39,10 @@ require_public_site_online();
 <main id="inhoud">
   <section class="cause-announcement" aria-labelledby="cause-announcement-title">
     <div class="shell cause-announcement-inner">
+      <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar startpagina</a>
       <p class="front-eyebrow">HET GOEDE DOEL VAN DE KOMENDE EDITIE</p>
       <h1 id="cause-announcement-title">Binnenkort stellen we het goede doel voor.</h1>
       <p>Welke organisatie of welk project door deze editie wordt ondersteund, maken we bekend zodra de keuze officieel is aangekondigd. Op deze pagina lees je dan meer over het initiatief en wat de steun mogelijk maakt.</p>
-      <div class="cause-announcement-actions">
-      <a class="front-btn front-btn-outline" href="<?=e(url('index.php'))?>">Startpagina</a>
-      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-      </div>
     </div>
   </section>
   <section class="shell cause-story" aria-labelledby="cause-story-title">
@@ -61,10 +58,7 @@ require_public_site_online();
   <section class="shell cause-last" aria-labelledby="cause-last-title">
     <h2 id="cause-last-title">Ook jouw aanwezigheid maakt het verschil.</h2>
     <p>Kom de bijzondere stukken bekijken, ontdek de verhalen achter de kavels en beleef de veiling mee.</p>
-    <div class="cause-actions">
-      <a class="front-btn front-btn-primary" href="<?=e(url('index.php'))?>">Startpagina</a>
-      <a class="front-btn front-btn-outline" href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
-    </div>
+    <div class="cause-actions"><a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar startpagina</a></div>
   </section>
 </main>
 <footer class="footer"><div class="shell footer-inner public-footer-inner"><span class="footer-brand"><strong>41 LOKEREN · VEILING 2027</strong></span><p class="footer-secondary-note">Geen online biedingen. Geen registratie vereist.</p><a href="<?=e(url('privacy.php'))?>">Privacy</a><a href="https://pecharko-website.pages.dev/">Designed by Pecharko</a><?php public_social_footer(); ?></div></footer>
