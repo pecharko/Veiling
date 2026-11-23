@@ -30,7 +30,7 @@ $previousPos = strpos($nav, '>Vorige editie</a>');
 if (!($homePos < $catalogPos && $catalogPos < $artistsPos && $artistsPos < $previousPos)) {
     throw new RuntimeException('Good cause header order is incorrect.');
 }
-$return = '<a class="back-link" href="<?=e(url(\'index.php\'))?>#catalogus">← Terug naar startpagina</a>';
+$return = '<a class="back-link" href="<?=e(url(\'index.php\'))?>#catalogus">← Terug naar de catalogus</a>';
 $topSection = 'class="shell cause-announcement-inner">';
 $bottomSection = '<div class="cause-actions">' . $return . '</div>';
 if (!preg_match('~' . preg_quote($topSection, '~') . '\s*' . preg_quote($return, '~') . '~', $source)

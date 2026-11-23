@@ -13,12 +13,13 @@ require_public_site_online();
 <title>Privacy · 41 Lokeren</title>
 <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
 <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>">
+  <link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
 <?php admin_preview_banner(); ?>
-<main class="shell" style="max-width:780px;padding:48px 20px 72px">
-  <p><a href="<?=e(url('index.php'))?>">← Terug naar de catalogus</a></p>
+<main class="shell public-privacy">
+  <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
   <h1>Privacy en bezoekersstatistieken</h1>
   <p>Voor bezoekersstatistieken gebruiken we het IP-adres tijdens het bezoek om via een lokale geolocatiedatabase het vermoedelijke land te bepalen. Alleen bezoeken waarvan België (BE) wordt herkend, kunnen meetellen in bezoekersaantallen, kavelweergaven en geografische statistieken. Bezoeken uit andere landen en bezoeken met onbekende of niet-verifieerbare herkomst tellen niet mee. Er wordt geen locatieaanvraag naar een externe dienst gestuurd; de geschatte herkomst is geen exacte locatie of GPS-positie.</p>
   <p>Als geografische bezoekersregistratie is ingeschakeld, bewaren we voor de meegetelde Belgische bezoeken ook een geschatte provincie/regio en stad bij de dagelijkse gepseudonimiseerde bezoekerscode. Bevoegde beheerders zien samengevoegde cijfers en percentages; kleine groepen worden samengevoegd. De bestaande gegevens volgen dezelfde archivering, verwijdering en uiterste bewaartermijn als de overige bezoekersstatistieken. De nieuwe landfilter verwijdert geen eerder opgeslagen statistieken.</p>

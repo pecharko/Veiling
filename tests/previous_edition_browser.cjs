@@ -44,8 +44,23 @@ const fs = require('node:fs');
         assert.equal(await link.isVisible(), true, `Homepage return link at ${width}px`);
         assert.equal(await link.getAttribute('href'), '/index.php');
       }
-      assert.equal(await page.locator('.site-header .header-nav').isVisible(), width > 767, `Header menu visibility at ${width}px`);
-      if (width > 767) assert.equal(await page.getByRole('link', { name: 'Home', exact: true }).isVisible(), true, 'Desktop header retains Home');
+      const desktopNav = page.locator('.site-header .header-nav');
+      const mobileMenu = page.locator('.public-mobile-menu');
+      const summary = mobileMenu.locator('summary');
+      assert.equal(await desktopNav.isVisible(), width > 767, `Desktop navigation at ${width}px`);
+      assert.equal(await summary.isVisible(), width <= 767, `Mobile menu at ${width}px`);
+      if (width > 767) {
+        assert.equal(await desktopNav.getByRole('link', { name: 'Home', exact: true }).isVisible(), true, 'Desktop header retains Home');
+      } else {
+        const catalog = mobileMenu.getByRole('link', { name: 'Bekijk kavels', exact: true });
+        assert.equal(await catalog.isVisible(), false, 'Mobile menu starts closed');
+        await summary.focus();
+        await page.keyboard.press('Enter');
+        assert.equal(await catalog.isVisible(), true, 'Keyboard opens mobile menu');
+        assert.equal(await catalog.getAttribute('href'), '/index.php#catalogus');
+        await page.keyboard.press('Enter');
+        assert.equal(await catalog.isVisible(), false, 'Keyboard closes mobile menu');
+      }
       if ([1280,390].includes(width)) await page.screenshot({ path: `/tmp/previous-edition-preview/${width}.png`, fullPage: true, animations: 'disabled' });
     }
     assert.deepEqual(errors, [], 'No browser errors or failed resources');

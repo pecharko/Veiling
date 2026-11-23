@@ -87,7 +87,7 @@ try {
   <?php elseif ($fromDirectory || filter_has_var(INPUT_GET, 'kavel')): ?>
     <a class="back-link" href="<?=e(url('kunstenaars.php'))?>">← Terug naar alle kunstenaars</a>
   <?php else: ?>
-    <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar catalogus</a>
+    <a class="back-link" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
   <?php endif; ?>
   <article class="artist-brochure-sheet">
     <header class="artist-brochure-heading">

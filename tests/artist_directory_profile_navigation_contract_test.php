@@ -32,7 +32,7 @@ $checks = [
     'no private seller fields exposed'
         => !preg_match('/SELECT\\s+s\\.\\*/i', $profile),
     'lot has a bottom return link with the catalog target'
-        => str_contains($lot, '<nav class="detail-bottom-nav" aria-label="Terug naar overzicht"><a href="<?=e(url(\'index.php\'))?>#catalogus">Terug naar catalogus</a></nav>'),
+        => str_contains($lot, '<nav class="detail-bottom-nav" aria-label="Terug naar overzicht"><a href="<?=e(url(\'index.php\'))?>#catalogus">Terug naar de catalogus</a></nav>'),
 ];
 foreach ($checks as $name => $passed) {
     if (!$passed) throw new RuntimeException('Artist navigation regression: ' . $name);
@@ -51,7 +51,7 @@ $expected = [
     '<?php elseif ($fromDirectory || filter_has_var(INPUT_GET, \'kavel\')): ?>',
     'href="<?=e(url(\'kunstenaars.php\'))?>">← Terug naar alle kunstenaars</a>',
     '<?php else: ?>',
-    'href="<?=e(url(\'index.php\'))?>#catalogus">← Terug naar catalogus</a>',
+    'href="<?=e(url(\'index.php\'))?>#catalogus">← Terug naar de catalogus</a>',
     '<?php endif; ?>',
 ];
 $offset = 0;

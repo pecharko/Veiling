@@ -30,7 +30,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <title>Onze kunstenaars · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaars.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>
@@ -38,6 +38,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <header class="site-header"><div class="shell header-inner">
   <a href="<?=e(url('index.php'))?>" class="brand"><span class="brand-mark">41</span><span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span></a>
   <nav class="header-nav" aria-label="Hoofdnavigatie"><a href="<?=e(url('index.php'))?>">Home</a><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a><a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a></nav>
+  <?php require __DIR__ . '/mobile-menu.php'; ?>
 </div></header>
 <main class="shell artists-overview">
   <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>

@@ -37,11 +37,109 @@
 }
 
 
-/* Small-screen navigation: logo remains visible, header menu items do not. */
+/* The mobile disclosure sits alongside the logo and uses the same public palette. */
+.public-mobile-menu {
+  display: none;
+}
+
 @media screen and (max-width: 767px) {
   .site-header .header-nav {
     display: none !important;
   }
+
+  .public-mobile-menu {
+    display: block;
+    position: relative;
+    flex: none;
+  }
+
+  .public-mobile-menu summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    padding: 0 13px;
+    border: 1px solid var(--public-button-border);
+    border-radius: 8px;
+    background: var(--public-button-bg);
+    color: var(--public-button-ink);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .public-mobile-menu summary::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border: solid currentColor;
+    border-width: 0 1.5px 1.5px 0;
+    transform: translateY(-2px) rotate(45deg);
+  }
+
+  .public-mobile-menu[open] summary::after {
+    transform: translateY(2px) rotate(225deg);
+  }
+
+  .public-mobile-menu nav {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 6px);
+    min-width: 188px;
+    padding: 4px;
+    border: 1px solid var(--public-button-border);
+    border-radius: 8px;
+    background: #fff9f4;
+    box-shadow: 0 10px 22px rgba(59, 48, 37, .12);
+  }
+
+  .public-mobile-menu nav a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 6px 12px;
+    border-radius: 4px;
+    color: var(--wine);
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .public-mobile-menu nav a:hover {
+    background: var(--cream);
+    text-decoration: underline;
+  }
+
+  .public-mobile-menu summary:focus-visible,
+  .public-mobile-menu nav a:focus-visible {
+    outline: 2px solid var(--wine);
+    outline-offset: -2px;
+  }
+}
+
+.public-privacy {
+  max-width: 46rem;
+  padding-block: clamp(30px, 5vw, 64px);
+  overflow-wrap: anywhere;
+}
+
+.public-privacy h1 {
+  margin: 0 0 1.2rem;
+  color: var(--wine);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.625rem, 6.75vw, 3.4rem);
+  hyphens: auto;
+  letter-spacing: -.035em;
+  line-height: 1.12;
+}
+
+.public-privacy p {
+  line-height: 1.65;
+}
+
+.public-privacy p a {
+  color: var(--wine);
+  text-decoration: underline;
+  text-underline-offset: .15em;
 }
 
 /* Return to the homepage after the complete artist list (also empty states). */

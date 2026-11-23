@@ -15,7 +15,7 @@ require_public_site_online();
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=3">
+  <link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/kunstenaar-interesse.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/kunstwerk-interesse.css'))?>?v=1">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
@@ -36,11 +36,12 @@ require_public_site_online();
       <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
       <a href="<?=e(url('vorige-editie.php'))?>">Vorige editie</a>
     </nav>
+    <?php require __DIR__ . '/mobile-menu.php'; ?>
   </div>
 </header>
 <main id="inhoud" class="artist-invite lot-invite">
   <div class="shell">
-    <a class="back-link artist-invite-return" href="<?=e(url('index.php'))?>#catalogus">← Terug naar startpagina</a>
+    <a class="back-link artist-invite-return" href="<?=e(url('index.php'))?>#catalogus">← Terug naar de catalogus</a>
     <div class="artist-invite-grid">
       <section class="artist-invite-copy" aria-labelledby="lot-invite-title">
         <header class="artist-invite-heading">
