@@ -3,6 +3,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/private/bootstrap.php';
 require_once dirname(__DIR__) . '/private/public_social_footer.php';
 require_public_site_online();
+$published = (int)(settings()['is_published'] ?? 0) === 1 || admin_preview_active();
 require_once dirname(__DIR__) . '/private/visitor_stats.php';
 track_catalog_view();
 $photos = [
@@ -54,7 +55,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
     </a>
     <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
       <a href="<?=e(url('index.php'))?>">Home</a>
-      <a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a>
+      <?php if ($published): ?><a href="<?=e(url('index.php'))?>#catalogus">Bekijk kavels</a><?php endif; ?>
       <a href="<?=e(url('kunstenaars.php'))?>">Kunstenaars</a>
       <a href="<?=e(url('goede-doel.php'))?>">Het goede doel</a>
     </nav>

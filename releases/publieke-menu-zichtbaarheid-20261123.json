@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/goede-doel.php",
+      "source_sha256": "552990c8059600c42d44223cfad5d2a98fadb353dad878b70c0d2566b62285cb",
+      "remote_sha256": "aa1eef4966187a4181864e88b937b40b90b3a0d57c0ce8c643789218522e1722"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "4a586b559768d6c7a914ea6bf521f2623d30e49b3fa1b1f3b45132b334ec419c",
+      "remote_sha256": "2bdcc5d4103fe8371d96610c0d049c8cefa7054b76bcc941029d1014a23b4d8c"
+    },
+    {
+      "path": "catalogus-public/kunstenaar-interesse.php",
+      "source_sha256": "848070c9ef3599e00f89a5c14889b9758e784d1cca626559393ca162c6b6dae5",
+      "remote_sha256": "248186f467e642bafd138dabaaaf3b0336ddadaf78ec483d86dee59091dfbe01"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "d32de20da14fbf0f1cd8f823cd2347ebe546c31b4cd779453a40fdd0db631533",
+      "remote_sha256": "8c8c5a228908d7c7d7719463256f4ded3077772b6ac06c7f1d89adb4222916ff"
+    },
+    {
+      "path": "catalogus-public/kunstwerk-interesse.php",
+      "source_sha256": "390ec7bd2f2c835342ac13a451c99b59459bac23770452503129bd2597c6c6f6",
+      "remote_sha256": "1e4c3ab019d348de5df0e814195f22e3a0353b0d22ec2573ff06679929244cdf"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "42d53387b011b3999635b7ea88d1e37b70d55afe3b3185f67211e654f5fb97de",
+      "remote_sha256": "e02c2749965d0c749c26e12cabf477c5c92c7ad2e6d2ec400a7d30325e4868e3"
+    },
+    {
+      "path": "catalogus-public/mobile-menu.php",
+      "source_sha256": "03f1adc18363ee278022c5ef41e5bb29474333d0f3c0a0d65af984c7588ee795",
+      "remote_sha256": "c66fe08d1fdfeacf8ceb01ac61072336c3c559ab9b12dd03ccecf4da70a247c3"
+    }
+  ]
+}
