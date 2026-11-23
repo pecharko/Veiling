@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/goede-doel.css",
+      "source_sha256": "f7884b2953f3b1e44a5ec3ab2e78bb6deea5a06cf46a3a9042bea2ed90b8afd1",
+      "remote_sha256": "205f34584e253a7dd3acaf1921c4b49aebfa744906000d6dc5ae14a2efed90ad"
+    },
+    {
+      "path": "catalogus-public/goede-doel.php",
+      "source_sha256": "361b6298350091874a5674c4bd0ddce738a4228baffb9bd9f144049c641d7e3d",
+      "remote_sha256": "eeb328c292689968fc74313620174556d2407db829e0b93720410ae9befccac5"
+    },
+    {
+      "path": "catalogus-public/kunstenaar-interesse.php",
+      "source_sha256": "e3e3cc90a6cdcc2da0fcdc075046f49b4c1a88bc34de44534406ff3b99b784a8",
+      "remote_sha256": "51b8cf07549f12282bbd2d97c400d6acbb7eaa62b750bd22f8775948b0016173"
+    },
+    {
+      "path": "catalogus-public/kunstwerk-interesse.php",
+      "source_sha256": "b37c6e015c62afbeafb32861cf5f373d9f553449b8dec44da7f80637cbb76aaa",
+      "remote_sha256": "83500e39da4991449c189ef96bc1730087e78b4a4876be79a40962f4c9402264"
+    }
+  ]
+}

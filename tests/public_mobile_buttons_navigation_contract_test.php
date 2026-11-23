@@ -35,8 +35,9 @@ foreach ($names as $name) {
 foreach ([
     'index.php' => ['>Vorige editie</a>'],
     'kunstenaars.php' => ['>← Terug naar startpagina</a>', 'artists-overview-bottom-action'],
-    'goede-doel.php' => ['>Startpagina</a>', '>Vorige editie</a>'],
-    'kunstenaar-interesse.php' => ['>Startpagina</a>'],
+    'goede-doel.php' => ['>← Terug naar startpagina</a>', '>Vorige editie</a>'],
+    'kunstenaar-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar startpagina</a>'],
+    'kunstwerk-interesse.php' => ['class="back-link artist-invite-return"', '#catalogus">← Terug naar startpagina</a>'],
     'vorige-editie.php' => ['>← Terug naar startpagina</a>'],
 ] as $pageName => $required) {
     foreach ($required as $item) {
