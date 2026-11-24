@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus.css",
+      "source_sha256": "ce4987a042951f4f0c4d528eead16a22407ba7c54ea62e7240f254e7fb0ef52b",
+      "remote_sha256": "68ea080ec9fe9a8b933cbcbfbb1f553b46022433d6b1709cc6cb1e53e63c2afa"
+    },
+    {
+      "path": "catalogus-public/assets/vorige-editie.css",
+      "source_sha256": "4cb5ed9e8a9e9c6c93b0accfc76e50f3b57c85a1de7f89ab89aac20c4e47be06",
+      "remote_sha256": "7bde0417a59885a0deaf0472daebedd2cad10324bff4e58f4be2abe6d0890d0d"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "5908402f07561ba37803dea0304b6cd8a9e53a23a56dedebb064e2965720aa72",
+      "remote_sha256": "4a586b559768d6c7a914ea6bf521f2623d30e49b3fa1b1f3b45132b334ec419c"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "3ec822ba4e7719e014cf92a238f9ea34ee38fb9b832944d55cc26d38f4dfa39a",
+      "remote_sha256": "5c810349e1e9e95e10d35b14fb87cb2156121f79515df003f90ad50aa8bc7851"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "f7510a31f046e06964f2511b90941f82f3e1e2f8564042e1773d93589522ec54",
+      "remote_sha256": "d32de20da14fbf0f1cd8f823cd2347ebe546c31b4cd779453a40fdd0db631533"
+    },
+    {
+      "path": "catalogus-public/privacy.php",
+      "source_sha256": "82eb50a1d2b00df8a94e3ff45205aacbeb41dd61e5e6e658b03dc9e414648a9a",
+      "remote_sha256": "d54fef92cd9b0d49d75a0387e42183954376b5cf3bde4d446fab5400bea6041f"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "d3350a6c9ecb46aafb383a1dea6b047c248710fe38f41ded164348d853f97209",
+      "remote_sha256": "42d53387b011b3999635b7ea88d1e37b70d55afe3b3185f67211e654f5fb97de"
+    }
+  ]
+}
