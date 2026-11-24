@@ -14,12 +14,11 @@ assert_reportage(str_contains($page, 'aria-labelledby="impression-video-title"')
 assert_reportage(str_contains($page, 'aria-label="Bekijk de TV Oost-reportage'), 'Accessible external media card');
 assert_reportage(!str_contains($page, 'target="_blank"') && str_contains($page, 'opent in hetzelfde tabblad'), 'TV Oost opens in same browser tab');
 assert_reportage(!str_contains($page, '<iframe') && !str_contains($page, '<video'), 'No unverified embedded third-party player');
-assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=3'), 'Cache busting');
+assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=9'), 'Cache busting');
 assert_reportage(str_contains($css, '.impression-video{display:grid;') && str_contains($css, 'aspect-ratio:16/9'), 'Responsive feature');
 assert_reportage(str_contains($css, "url('vorige-editie-soepkar-tegel.webp')"), 'Local soup cart thumbnail used by video card');
 assert_reportage(str_contains($css, '@media(max-width:900px){.impression-video{grid-template-columns:1fr;'), 'Mobile feature');
 assert_reportage(str_contains($page, 'impression-gallery-grid') && str_contains($page, 'impression-next shell'), 'Original photos and CTA retained');
-assert_reportage(strpos($page, '<main id="impressie">') < strpos($page, 'class="impression-video shell"')
-    && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-hero shell"')
-    && strpos($page, 'class="impression-video shell"') < strpos($page, 'class="impression-gallery shell"'), 'TV Oost section first in page content, above hero and photo gallery');
+assert_reportage(preg_match('~<section class="impression-gallery shell".*?</section>\s*<section class="impression-video shell".*?</section>\s*<section class="impression-next shell"~s', $page) === 1,
+    'TV Oost introduction and video sit immediately after the full podium gallery');
 echo "PASS: TV Oost previous edition feature link, accessible, responsive and preserves gallery.\n";

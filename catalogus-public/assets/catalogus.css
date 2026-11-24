@@ -142,9 +142,9 @@ body{background:#fffaf6;color:var(--ink)}
 /* Artist attribution: label followed by a recognizable hyperlink on the same line. */
 .lot-artist,.detail-artist{display:block;min-width:0}
 .lot-artist-name{overflow-wrap:anywhere}
-.lot-artist-name a{color:#1856a3;text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;font-weight:700}
-.lot-artist-name a:hover{color:#103e7e;text-decoration-thickness:2px}
-.lot-artist-name a:focus-visible{outline:3px solid #1856a3;outline-offset:3px;border-radius:2px}
+.lot-artist-name a{color:var(--wine);text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:3px;font-weight:700}
+.lot-artist-name a:hover{color:var(--wine);text-decoration-thickness:2px}
+.lot-artist-name a:focus-visible{outline:3px solid var(--wine);outline-offset:3px;border-radius:2px}
 .lot-artist-label{font-size:.82em;line-height:1.4;color:#58645e}
 
 /* Truncate only the catalog-card title to a single row on all screen sizes.
@@ -251,7 +251,8 @@ body{background:#fffaf6;color:var(--ink)}
 @media(prefers-reduced-motion:reduce){.artists-overview .front-btn{transition:none}.artists-overview .front-btn:hover{transform:none}}
 .artists-overview-heading{text-align:center;max-width:720px;margin:0 auto 48px}
 .artists-overview-heading .eyebrow{font-size:11px;letter-spacing:.2em;color:#86776d}
-.artists-overview-heading h1{font:400 clamp(40px,6vw,76px)/1.12 Georgia,serif;letter-spacing:-.045em;color:#302a26;margin:10px 0 16px}
+.artists-overview-heading h1{font:700 clamp(32px,3.4vw,48px)/1.1 Georgia,'Times New Roman',serif;letter-spacing:-.035em;color:var(--wine);margin:10px 0 16px}
+@media(max-width:650px){.artists-overview-heading h1{font-size:36px}}
 .artists-overview-heading>p:last-child{font-size:16px;line-height:1.8;color:#655d56}
 .artists-overview-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(14px,1.8vw,24px)}
 .artists-overview-card{display:block;min-width:0;background:#faf8f5;color:#302a26;text-decoration:none;overflow:hidden;border:1px solid #e8ddd2;transition:transform .2s ease,box-shadow .2s ease}
@@ -267,7 +268,7 @@ body{background:#fffaf6;color:var(--ink)}
 .artists-overview-more{margin-top:8px;font-size:11px;font-weight:750;letter-spacing:.04em;color:var(--wine,#8a001b)}
 .artists-overview-empty{text-align:center;background:#faf8f5;padding:45px 20px;border:1px solid #e8ddd2}
 @media(max-width:900px){.artists-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:580px){.artists-overview{padding-top:20px;padding-bottom:45px}.artists-overview-heading{margin-bottom:30px}.artists-overview-grid{grid-template-columns:1fr;gap:22px}.artists-overview-card-body{padding:20px}}
+@media(max-width:580px){.artists-overview{padding-top:20px;padding-bottom:45px}.artists-overview-heading{margin-bottom:30px}.artists-overview-grid{gap:12px}.artists-overview-placeholder{font-size:58px}.artists-overview-card-body{gap:5px;padding:10px}.artists-overview-card-body strong{font-size:17px}.artists-overview-slogan{font-size:13px;overflow-wrap:anywhere}.artists-overview-more{margin-top:4px;overflow-wrap:anywhere}}
 @media(prefers-reduced-motion:reduce){.artists-overview-card,.artists-overview-image img{transition:none}}
 
 

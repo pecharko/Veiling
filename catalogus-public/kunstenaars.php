@@ -31,7 +31,7 @@ $artists = $stmt->fetchAll(PDO::FETCH_ASSOC);
   <title>Onze kunstenaars · 41 Lokeren</title>
   <?php if (!admin_preview_active()): ?><link rel="canonical" href="https://41lokeren.be/kunstenaars.php"><?php endif; ?>
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
-  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
+  <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=204"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body>

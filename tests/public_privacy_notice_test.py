@@ -18,7 +18,7 @@ class PublicPrivacyTests(unittest.TestCase):
         self.assertIn("laatste drie volledige UTC-dagen", page)
         self.assertIn("Bij een fout blijven de niet-gearchiveerde detailgegevens bewaard", page)
         self.assertNotIn("opschoning",page)
-        self.assertIn('href="mailto:41clublokeren@gmail.com"', page)
+        self.assertIn('href="mailto:veiling@41lokeren.be"', page)
         self.assertIn("Verantwoordelijke organisatie:</strong> 41 Lokeren",page)
         self.assertIn("rechtsgrond en de proportionaliteit van de bewaartermijn",page)
         self.assertIn("interne kavel-ID",page)
