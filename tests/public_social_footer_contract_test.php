@@ -30,8 +30,10 @@ if (!str_contains($html,'Volg ons') || substr_count($html,'footer-social-icon--p
     || substr_count($html,'<a class="footer-social-icon"')!==2
     || !str_contains($html,'href="https://www.facebook.com/41Lokeren"')
     || !str_contains($html,'href="https://www.instagram.com/41lokeren/"')
-    || substr_count($html,'target="_blank" rel="noopener noreferrer"')!==2) {
-    throw new RuntimeException('Both confirmed social profiles must open safely in new tabs');
+    || substr_count($html,'target="_blank"')!==1
+    || !str_contains($html,'aria-label="Facebook van 41 Lokeren" rel="noreferrer"')
+    || !str_contains($html,'aria-label="Instagram van 41 Lokeren (opent in nieuw tabblad)" target="_blank" rel="noopener noreferrer"')) {
+    throw new RuntimeException('Facebook must use the same tab and Instagram retains its existing target');
 }
 $GLOBALS['social_test_config']=[
     'facebook_url'=>'https://www.facebook.com/example',
@@ -39,7 +41,9 @@ $GLOBALS['social_test_config']=[
 ];
 ob_start();public_social_footer();$html=ob_get_clean();
 if (substr_count($html,'<a class="footer-social-icon"')!==2
-    || substr_count($html,'rel="noopener noreferrer"')!==2) {
+    || substr_count($html,'rel="noopener noreferrer"')!==1
+    || substr_count($html,'rel="noreferrer"')!==1
+    || substr_count($html,'target="_blank"')!==1) {
     throw new RuntimeException('Configured links must be safe');
 }
 foreach (['http://www.facebook.com/example','https://facebook.com.evil.test/a','https://user@instagram.com/a'] as $bad) {
