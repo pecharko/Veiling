@@ -29,7 +29,7 @@ if (str_contains($source, '← Terug naar de catalogus')) {
 if (!str_contains($source, '<h1>Ontmoet onze kunstenaars</h1>')) {
     throw new RuntimeException('Artists overview heading must remain intact.');
 }
-if (!str_contains($source, "catalogus.css'))?>?v=196")) {
+if (!str_contains($source, "catalogus.css'))?>?v=204")) {
     throw new RuntimeException('Artist directory must bust stylesheet cache for updated button style.');
 }
 echo "PASS artist navigation and shared homepage return links.\n";

@@ -23,7 +23,7 @@ artist_style_assert(str_contains($card, 'AS published_artist_id'), 'Catalogus be
 artist_style_assert(str_contains($detail, 'AS published_artist_id'), 'Kaveldetail bepaalt publicatiestatus bij de databasequery');
 artist_style_assert(str_contains($card, 'class="lot-artist"'), 'Cataloguskaart gebruikt een aparte kunstenaarcontainer');
 artist_style_assert(str_contains($detail, 'class="detail-artist"'), 'Kaveldetail gebruikt een aparte kunstenaarcontainer');
-artist_style_assert(is_string($css) && str_contains($css, '.lot-artist-name a{color:#1856a3;text-decoration:underline'), 'Kunstenaarslink heeft blauwe onderlijnde stijl');
+artist_style_assert(is_string($css) && str_contains($css, '.lot-artist-name a{color:var(--wine);text-decoration:underline'), 'Kunstenaarslink heeft bordeauxrode onderlijnde stijl');
 artist_style_assert(str_contains($css, '.lot-artist-name a:hover') && str_contains($css, '.lot-artist-name a:focus-visible'), 'Hover en toetsenbordfocus blijven zichtbaar');
 artist_style_assert(str_contains($css, '.lot-artist-label{'), 'Het label heeft een eigen stijl');
 artist_style_assert(str_contains($css, '.lot-artist,.detail-artist{display:flex') && str_contains($css, 'text-overflow:ellipsis;white-space:nowrap'), 'Label en kunstenaarsnaam blijven op één regel met afkapping');
