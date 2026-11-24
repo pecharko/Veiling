@@ -14,7 +14,7 @@ assert_reportage(str_contains($page, 'aria-labelledby="impression-video-title"')
 assert_reportage(str_contains($page, 'aria-label="Bekijk de TV Oost-reportage'), 'Accessible external media card');
 assert_reportage(!str_contains($page, 'target="_blank"') && str_contains($page, 'opent in hetzelfde tabblad'), 'TV Oost opens in same browser tab');
 assert_reportage(!str_contains($page, '<iframe') && !str_contains($page, '<video'), 'No unverified embedded third-party player');
-assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=7'), 'Cache busting');
+assert_reportage(str_contains($page, 'assets/vorige-editie.css\'))?>?v=8'), 'Cache busting');
 assert_reportage(str_contains($css, '.impression-video{display:grid;') && str_contains($css, 'aspect-ratio:16/9'), 'Responsive feature');
 assert_reportage(str_contains($css, "url('vorige-editie-soepkar-tegel.webp')"), 'Local soup cart thumbnail used by video card');
 assert_reportage(str_contains($css, '@media(max-width:900px){.impression-video{grid-template-columns:1fr;'), 'Mobile feature');

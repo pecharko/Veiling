@@ -41,7 +41,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=7">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=8">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body class="impression-page">
@@ -68,8 +68,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </div>
   <section class="impression-hero shell" aria-labelledby="impression-title">
     <div class="impression-hero-copy">
-      <p class="impression-eyebrow"><span aria-hidden="true"></span> TERUGBLIK · 41 LOKEREN</p>
-      <h1 id="impression-title">Een veiling<br>om op <em>terug<br> te kijken.</em></h1>
+      <h1 id="impression-title">Een veiling om op <em>terug te kijken.</em></h1>
       <p class="impression-lead">Bijzondere stukken. Een betrokken publiek.<br>En vooral: samen iets betekenen.</p>
       <p class="impression-intro">De vorige editie bracht kunst, ontmoeting en engagement samen. Deze beelden nemen je mee naar het kijkmoment, de zaal en de veiling op het podium.</p>
     </div>
@@ -81,7 +80,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <div class="impression-ribbon"><div class="shell"><span>DE KRACHT VAN SAMEN</span><p>Van een eerste blik op een kavel tot alle aandacht in de zaal.</p><span aria-hidden="true">✳</span></div></div>
   <section class="impression-discover shell" aria-labelledby="discover-title">
     <div class="impression-section-heading">
-      <div><p class="impression-eyebrow">HET KIJKMOMENT</p><h2 id="discover-title">Er viel heel wat<br>te <em>ontdekken.</em></h2></div>
+      <div><h2 id="discover-title">Er viel heel wat<br>te <em>ontdekken.</em></h2></div>
       <p>Even van dichtbij kijken, een favoriet ontdekken en met elkaar in gesprek gaan. De sfeer begon al tussen de uitgestalde kavels.</p>
     </div>
     <div class="impression-pair">
@@ -91,7 +90,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </section>
   <section class="impression-gallery shell" id="in-beeld" aria-labelledby="gallery-title">
     <div class="impression-section-heading">
-      <div><p class="impression-eyebrow">DE VEILING IN BEELD</p><h2 id="gallery-title">Alle ogen op<br>het <em>podium.</em></h2></div>
+      <div><h2 id="gallery-title">Alle ogen op<br>het <em>podium.</em></h2></div>
       <div><p>Presentaties, bijzondere kavels en het samenspel tussen veilingteam en publiek. Een terugblik op wat deze editie zo bijzonder maakte.</p></div>
     </div>
     <div class="impression-gallery-grid">

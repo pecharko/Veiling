@@ -40,7 +40,7 @@ if (!str_contains($topSection, $homepageLink)
     || substr_count($page, $homepageLink) !== 2) {
     throw new RuntimeException('Missing shared homepage return links above and below the previous edition.');
 }
-if (!str_contains($page, "assets/vorige-editie.css'))?>?v=7")) {
+if (!str_contains($page, "assets/vorige-editie.css'))?>?v=8")) {
     throw new RuntimeException('Previous edition CSS cache must be updated.');
 }
 $css = file_get_contents($root . '/catalogus-public/assets/vorige-editie.css');

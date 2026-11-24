@@ -34,7 +34,7 @@ $previous = file_get_contents($root . '/catalogus-public/vorige-editie.php');
 $css = file_get_contents($root . '/catalogus-public/assets/vorige-editie.css');
 if (!is_string($previous) || !is_string($css) ||
     !str_contains($previous, '<div class="impression-top-actions shell" style="padding-top:clamp(32px,4vw,56px)">') ||
-    !str_contains($previous, "assets/vorige-editie.css'))?>?v=7") ||
+    !str_contains($previous, "assets/vorige-editie.css'))?>?v=8") ||
     !str_contains($css, '.impression-top-actions{display:block;padding-top:clamp(32px,4vw,56px);')) {
     throw new RuntimeException('Previous edition home button must stand clearly below the header.');
 }
