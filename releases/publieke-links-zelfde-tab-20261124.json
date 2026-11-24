@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/assets/catalogus.js",
+      "source_sha256": "55f015f1595a2fde0e9337655e074d54efa82d4d8cc064368ec6aa403619ddeb",
+      "remote_sha256": "9003719960102069718b3f59f0b363b8a22f38bfee07c24aedcd1dad3af2fd5e"
+    },
+    {
+      "path": "private/public_social_footer.php",
+      "source_sha256": "a9ab0a1d7c981b8c3994d4ea5874bb2cb6e92b6c1bac5adfcdd0cdfe7092b5ad",
+      "remote_sha256": "884270625855f9356e66cf9c6655667bd290ef41d899e73237bdef1dcd18b9c2"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "b48d86733403dd9e0cdd0b4c5934e4b96e0507d43e44ae29d48c6d04bb6afc31",
+      "remote_sha256": "5908402f07561ba37803dea0304b6cd8a9e53a23a56dedebb064e2965720aa72"
+    },
+    {
+      "path": "catalogus-public/kunstenaar.php",
+      "source_sha256": "58e0c9edf596682dc5f7a6cba5efeabdcb2b15b0ed6c3bdb58a21dc2dbd15f6b",
+      "remote_sha256": "03943680fc9dd23cd3944a4d44e58bdfbb894151fde86e2597f136a2bcf6e22b"
+    }
+  ]
+}
