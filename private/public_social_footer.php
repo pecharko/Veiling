@@ -35,9 +35,11 @@ function public_social_footer(): void
         $href = public_social_profile_url($platform, $profileUrl);
         $picture = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' . $svg . '</svg>';
         if ($href !== null) {
+            $linkAttributes = $platform === 'instagram'
+                ? ' (opent in nieuw tabblad)" target="_blank" rel="noopener noreferrer"'
+                : '" rel="noreferrer"';
             echo '<a class="footer-social-icon" href="' . e($href) . '" aria-label="' . $label
-                . ' van 41 Lokeren (opent in nieuw tabblad)" target="_blank" rel="noopener noreferrer">'
-                . $picture . '</a>';
+                . ' van 41 Lokeren' . $linkAttributes . '>' . $picture . '</a>';
         } else {
             // Do not invent links to accounts that have not yet been confirmed.
             echo '<span class="footer-social-icon footer-social-icon--pending" role="img" aria-label="'

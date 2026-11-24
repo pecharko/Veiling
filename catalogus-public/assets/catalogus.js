@@ -33,6 +33,13 @@
   // Change between Veiling / Marktplaats in place. No #catalogus jump or full reload.
   // The ordinary href remains a fallback when JavaScript is unavailable.
   let switchingCatalog = false;
+  let displayedCatalogUrl = window.location.pathname + window.location.search;
+  window.addEventListener('popstate', () => {
+    const requestedCatalogUrl = window.location.pathname + window.location.search;
+    if (requestedCatalogUrl !== displayedCatalogUrl && document.querySelector('.catalog-preview-tabs')) {
+      window.location.reload();
+    }
+  });
   document.addEventListener('click', async event => {
     const tab = event.target.closest('.catalog-preview-tabs a');
     if (!tab || event.defaultPrevented || event.button !== 0 || event.metaKey ||
@@ -54,6 +61,7 @@
       }
       oldSection.replaceWith(document.importNode(newSection, true));
       window.history.pushState({ catalogSection: true }, '', next.pathname + next.search);
+      displayedCatalogUrl = next.pathname + next.search;
       paint();
       window.scrollTo({ top: oldScrollY, behavior: 'instant' });
       document.querySelector('.catalog-preview-tabs a[aria-current="page"]')?.focus({ preventScroll: true });
