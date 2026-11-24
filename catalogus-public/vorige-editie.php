@@ -41,7 +41,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   <link rel="icon" type="image/png" href="<?=e(url('favicon.png'))?>">
   <link rel="stylesheet" href="<?=e(url('assets/catalogus.css'))?>?v=196"><link rel="stylesheet" href="<?=e(url('assets/public-buttons.css'))?>?v=5">
   <link rel="stylesheet" href="<?=e(url('assets/home-v18.css'))?>?v=184">
-  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=8">
+  <link rel="stylesheet" href="<?=e(url('assets/vorige-editie.css'))?>?v=9">
   <link rel="stylesheet" href="<?=e(url('assets/public-footer.css'))?>?v=1">
 </head>
 <body class="impression-page">
@@ -63,7 +63,7 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
   </div>
 </header>
 <main id="impressie">
-  <div class="impression-top-actions shell" style="padding-top:clamp(32px,4vw,56px)">
+  <div class="impression-top-actions shell">
     <a class="back-link" href="<?=e(url('index.php'))?>">← Terug naar startpagina</a>
   </div>
   <section class="impression-hero shell" aria-labelledby="impression-title">
@@ -77,7 +77,6 @@ function impression_photo(array $photo, int $index, string $class = ''): void {
       <span class="impression-seal" aria-hidden="true">SAMEN VOOR<br><strong>het goede<br>doel.</strong></span>
     </div>
   </section>
-  <div class="impression-ribbon"><div class="shell"><span>DE KRACHT VAN SAMEN</span><p>Van een eerste blik op een kavel tot alle aandacht in de zaal.</p><span aria-hidden="true">✳</span></div></div>
   <section class="impression-discover shell" aria-labelledby="discover-title">
     <div class="impression-section-heading">
       <div><h2 id="discover-title">Er viel heel wat<br>te <em>ontdekken.</em></h2></div>
