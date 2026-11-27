@@ -106,7 +106,7 @@ function seller_send_artist_publication_mail(int $sellerId, string $artistName, 
   $message=$greeting."\n\n"
     ."Je kunstenaarspagina staat online op de website van de kunstveiling van 41 Lokeren. Bekijk je persoonlijke pagina hier:\n"
     .$link."\n\n"
-    ."Wil je je pagina delen met vrienden, familie of volgers? Zo ontdekken meer mensen jouw werk en krijgt ook onze kunstveiling voor het goede doel meer zichtbaarheid. Op je pagina vind je de knop ‘Deel deze kunstenaar’.\n\n"
+    ."Deel je pagina met je vrienden, familie en volgers. Laat hen jouw werk ontdekken en nodig hen uit op onze kunstveiling voor het goede doel. Klik op ‘Deel deze kunstenaar’ op je pagina om de link meteen door te sturen of op je sociale media te plaatsen.\n\n"
     ."Wil je iets laten aanpassen aan je pagina? Neem contact op met je buddy of mail naar veiling@41lokeren.be. We brengen het zo snel mogelijk in orde.\n\n"
     ."Bedankt dat je meedoet!\n\n"
     ."Hartelijke groeten,\nHet veilingteam van 41 Lokeren\n";

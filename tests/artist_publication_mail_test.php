@@ -15,7 +15,8 @@ if (count($messages)!==1) throw new RuntimeException('Only a valid artist addres
 if ($email!=='test@example.invalid' || $subject!=='Je kunstenaarspagina staat online'
     || !str_starts_with($body,'Dag Testkunstenaar,')
     || !str_contains($body,'https://41lokeren.be/kunstenaar.php?id=42')
-    || !str_contains($body,'Wil je je pagina delen')
+    || !str_contains($body,'Deel je pagina met je vrienden, familie en volgers.')
+    || !str_contains($body,'Deel deze kunstenaar')
     || !str_contains($body,'Neem contact op met je buddy of mail naar veiling@41lokeren.be.')
     || !str_contains($body,'We brengen het zo snel mogelijk in orde.')
     || $headers['From']!=='41 Lokeren <noreply@41lokeren.be>') {
