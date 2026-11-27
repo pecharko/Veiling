@@ -154,6 +154,12 @@ $pdo->exec($artistMailSettingsSql);
 $artistMailUpdateSql = file_get_contents($dir . '/database/migrations/20261127_artist_publication_mail_update_kind.sql');
 if ($artistMailUpdateSql === false) throw new RuntimeException('Artist profile update mail migration missing.');
 $pdo->exec($artistMailUpdateSql);
+foreach (['artist_publication_mail_queue_id', 'artist_publication_mail_history'] as $migration) {
+  $sql = file_get_contents($dir . "/database/migrations/20261127_$migration.sql");
+  if ($sql === false) throw new RuntimeException('Artist mail management migration missing.');
+  $pdo->exec($sql);
+}
+
 
 // Issue #638 fixture: additive Instagram column on disposable CI MySQL only.
 $instagramSql=file_get_contents($dir.'/database/migrations/20261120_seller_artist_instagram.sql');

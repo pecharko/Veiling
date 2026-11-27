@@ -32,7 +32,8 @@ $queue->exec("CREATE TABLE settings (id INTEGER,is_site_online INTEGER,show_arti
   INSERT INTO lot_sellers VALUES (42,'kunstenaar',1,'Testkunstenaar','test@example.invalid'),
      (43,'kunstenaar',0,'Verborgen kunstenaar','hidden@example.invalid');
   CREATE TABLE artist_publication_mail_settings (id INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1);
-  CREATE TABLE artist_publication_mail_queue (seller_id INTEGER PRIMARY KEY,is_profile_update INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE artist_publication_mail_queue (id INTEGER PRIMARY KEY AUTOINCREMENT,seller_id INTEGER UNIQUE,is_profile_update INTEGER NOT NULL DEFAULT 0);
+  CREATE TABLE artist_publication_mail_history (id INTEGER PRIMARY KEY,artist_name TEXT,is_profile_update INTEGER,sent_at TEXT);
   INSERT INTO artist_publication_mail_queue (seller_id) VALUES (42),(43)");
 if (!seller_artist_publication_mail_enabled($queue)) {
   throw new RuntimeException('Artist publication mail must be enabled by default.');
@@ -81,3 +82,22 @@ if ((int)$queue->query('SELECT COUNT(*) FROM artist_publication_mail_queue')->fe
   throw new RuntimeException('Changes to unpublished artists must not queue update mail.');
 }
 echo "PASS pending publication takes precedence, published updates send one review request, unpublished edits do not queue.\n";
+
+seller_queue_artist_profile_update($queue,42);
+seller_send_pending_artist_publication_mail($queue,static fn() => false);
+if ((int)$queue->query('SELECT COUNT(*) FROM artist_publication_mail_history')->fetchColumn()!==2
+    || (int)$queue->query('SELECT seller_id FROM artist_publication_mail_queue')->fetchColumn()!==42) {
+  throw new RuntimeException('Failed sends must stay queued without appearing in the sent history.');
+}
+for ($index=1; $index<=10; $index++) {
+  $queue->prepare('UPDATE lot_sellers SET artist_name=? WHERE id=42')->execute(['Testkunstenaar '.$index]);
+  seller_queue_artist_profile_update($queue,42);
+  seller_send_pending_artist_publication_mail($queue,$send);
+}
+$history=$queue->query('SELECT artist_name,is_profile_update,sent_at FROM artist_publication_mail_history ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC);
+if (count($history)!==10 || $history[0]['artist_name']!=='Testkunstenaar 10'
+    || $history[9]['artist_name']!=='Testkunstenaar 1' || (int)$history[0]['is_profile_update']!==1
+    || !preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/',$history[0]['sent_at'])) {
+  throw new RuntimeException('Only the ten most recent accepted messages must be recorded.');
+}
+echo "PASS failed sends stay pending and history retains the latest ten accepted messages.\n";

@@ -195,7 +195,7 @@ if (!$lotAuditEditor) {
     echo "Lot edit auditing added to isolated preview.\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
-foreach (['artist_publication_mail_queue', 'artist_publication_mail_settings'] as $table) {
+foreach (['artist_publication_mail_queue', 'artist_publication_mail_settings', 'artist_publication_mail_history'] as $table) {
     if ($pdo->query('SHOW TABLES WHERE Tables_in_auction_test = ' . $pdo->quote($table))->fetchColumn() === false) {
         $migration = file_get_contents(dirname(__DIR__, 2) . "/database/migrations/20261127_$table.sql");
         if ($migration === false) throw new RuntimeException('Artist publication mail migration missing.');
@@ -205,6 +205,11 @@ foreach (['artist_publication_mail_queue', 'artist_publication_mail_settings'] a
 if (!$pdo->query("SHOW COLUMNS FROM artist_publication_mail_queue WHERE Field = 'is_profile_update'")->fetch()) {
     $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261127_artist_publication_mail_update_kind.sql');
     if ($migration === false) throw new RuntimeException('Artist profile update mail migration missing.');
+    $pdo->exec($migration);
+}
+if (!$pdo->query("SHOW COLUMNS FROM artist_publication_mail_queue WHERE Field = 'id'")->fetch()) {
+    $migration = file_get_contents(dirname(__DIR__, 2) . '/database/migrations/20261127_artist_publication_mail_queue_id.sql');
+    if ($migration === false) throw new RuntimeException('Artist mail queue ID migration missing.');
     $pdo->exec($migration);
 }
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {

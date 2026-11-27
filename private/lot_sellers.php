@@ -94,21 +94,30 @@ function seller_send_pending_artist_publication_mail(PDO $pdo, ?callable $send=n
         || getenv('GITHUB_ACTIONS')==='true'
         || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return;
 
-    $pending=$pdo->prepare("SELECT s.id,s.artist_name,s.email,q.is_profile_update FROM artist_publication_mail_queue q
+    $pending=$pdo->prepare("SELECT q.id AS queue_id,s.id,s.artist_name,s.email,q.is_profile_update FROM artist_publication_mail_queue q
       JOIN lot_sellers s ON s.id=q.seller_id
       WHERE s.seller_type='kunstenaar' AND s.artist_published=1 AND TRIM(s.artist_name)<>''
         AND (? IS NULL OR s.id=?)");
     $pending->execute([$onlySellerId,$onlySellerId]);
-    $remove=$pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE seller_id=?');
+    $remove=$pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE id=?');
+    $record=$pdo->prepare('INSERT INTO artist_publication_mail_history (artist_name,is_profile_update,sent_at) VALUES (?,?,?)');
+    $prune=$pdo->prepare('DELETE FROM artist_publication_mail_history WHERE id<?');
     foreach ($pending->fetchAll(PDO::FETCH_ASSOC) as $artist) {
-      $sellerId=(int)$artist['id'];
-      if (seller_send_artist_publication_mail(
-        $sellerId,(string)$artist['artist_name'],(string)$artist['email'],$send,(int)$artist['is_profile_update']===1
+      $pdo->beginTransaction();
+      $remove->execute([$artist['queue_id']]);
+      if ($remove->rowCount()!==1 || !seller_send_artist_publication_mail(
+        (int)$artist['id'],(string)$artist['artist_name'],(string)$artist['email'],$send,(int)$artist['is_profile_update']===1
       )) {
-        $remove->execute([$sellerId]);
+        $pdo->rollBack();
+        continue;
       }
+      $record->execute([$artist['artist_name'],$artist['is_profile_update'],gmdate('Y-m-d H:i:s')]);
+      $oldestKept=$pdo->query('SELECT id FROM artist_publication_mail_history ORDER BY id DESC LIMIT 1 OFFSET 9')->fetchColumn();
+      if ($oldestKept!==false) $prune->execute([$oldestKept]);
+      $pdo->commit();
     }
   } catch (Throwable $ex) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
     error_log('Artist publication notification queue failed.');
   }
 }

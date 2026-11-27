@@ -379,6 +379,10 @@ if ($error) {
               </span>
             </label>
 
+            <?php if (effective_admin_role() === 'administrator'): ?>
+              <p class="auction-settings-note"><a href="<?=e(url('admin/kunstenaarsmails.php'))?>">Wachtrij en verzonden kunstenaarsmails bekijken</a></p>
+            <?php endif; ?>
+
             <?php if ($homepageSectionsAvailable): ?>
               <input type="hidden" name="homepage_sections_present" value="1">
             <?php else: ?>
