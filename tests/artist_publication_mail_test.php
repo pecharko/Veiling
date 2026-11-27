@@ -16,8 +16,10 @@ if ($email!=='test@example.invalid' || $subject!=='Je kunstenaarspagina staat on
     || !str_starts_with($body,'Dag Testkunstenaar,')
     || !str_contains($body,'https://41lokeren.be/kunstenaar.php?id=42')
     || !str_contains($body,'Wil je je pagina delen')
+    || !str_contains($body,'Neem contact op met je buddy of mail naar veiling@41lokeren.be.')
+    || !str_contains($body,'We brengen het zo snel mogelijk in orde.')
     || $headers['From']!=='41 Lokeren <noreply@41lokeren.be>') {
-  throw new RuntimeException('Publication mail must contain the direct profile link, sharing request and noreply sender.');
+  throw new RuntimeException('Publication mail must contain the direct profile link, sharing request, instructions for requesting changes and noreply sender.');
 }
 echo "PASS publication mail address, content and direct link with mock transport.\n";
 
