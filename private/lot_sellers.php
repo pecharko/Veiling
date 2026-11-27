@@ -48,16 +48,81 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
         throw new InvalidArgumentException('Publiceren kan alleen met een opgeslagen portretfoto van de kunstenaar.');
       }
     }
-    if ((int)$seller['artist_published']!==$status) {
+    $publicationChanged=(int)$seller['artist_published']!==$status;
+    if ($publicationChanged) {
       $name=seller_actor_name($pdo,$actorId);
       $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
       $update->execute([$status,$actorId,$name,$sellerId]);
+      if ($status===1) {
+        $pdo->prepare('INSERT INTO artist_publication_mail_queue (seller_id) VALUES (?)')->execute([$sellerId]);
+      } else {
+        $pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE seller_id=?')->execute([$sellerId]);
+      }
     }
     $pdo->commit();
   } catch(Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     throw $ex;
   }
+  if ($publicationChanged && $status===1) {
+    seller_send_pending_artist_publication_mail($pdo);
+  }
+}
+
+/** Called after saving visibility settings or committing an artist publication, under the catalogue lock. */
+function seller_send_pending_artist_publication_mail(PDO $pdo, ?callable $send=null): void {
+  try {
+    $settings=$pdo->query('SELECT is_site_online,show_artists_overview FROM settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+    if ((int)($settings['is_site_online']??0)!==1 || (int)($settings['show_artists_overview']??0)!==1) return;
+    if ($send===null && (getenv('LOCAL_PREVIEW_ISOLATED')==='1'
+        || getenv('GITHUB_ACTIONS')==='true'
+        || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return;
+
+    $pending=$pdo->query("SELECT s.id,s.artist_name,s.email FROM artist_publication_mail_queue q
+      JOIN lot_sellers s ON s.id=q.seller_id
+      WHERE s.seller_type='kunstenaar' AND s.artist_published=1 AND TRIM(s.artist_name)<>''")->fetchAll(PDO::FETCH_ASSOC);
+    $remove=$pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE seller_id=?');
+    foreach ($pending as $artist) {
+      $sellerId=(int)$artist['id'];
+      if (seller_send_artist_publication_mail($sellerId,(string)$artist['artist_name'],(string)$artist['email'],$send)) {
+        $remove->execute([$sellerId]);
+      }
+    }
+  } catch (Throwable $ex) {
+    error_log('Artist publication notification queue failed.');
+  }
+}
+
+/** Send only after publication commits. Mail failure leaves the saved status intact. */
+function seller_send_artist_publication_mail(int $sellerId, string $artistName, string $email, ?callable $send=null): bool {
+  if ($send===null && (getenv('LOCAL_PREVIEW_ISOLATED')==='1'
+      || getenv('GITHUB_ACTIONS')==='true'
+      || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return false;
+  $email=trim($email);
+  if (!filter_var($email,FILTER_VALIDATE_EMAIL)) return false;
+
+  $link='https://41lokeren.be/kunstenaar.php?id='.$sellerId;
+  $greeting=trim($artistName)==='' ? 'Dag,' : 'Dag '.trim($artistName).',';
+  $message=$greeting."\n\n"
+    ."Je kunstenaarspagina staat online op de website van de kunstveiling van 41 Lokeren. Bekijk je persoonlijke pagina hier:\n"
+    .$link."\n\n"
+    ."Wil je je pagina delen met vrienden, familie of volgers? Zo ontdekken meer mensen jouw werk en krijgt ook onze kunstveiling voor het goede doel meer zichtbaarheid. Op je pagina vind je de knop ‘Deel deze kunstenaar’.\n\n"
+    ."Bedankt dat je meedoet!\n\n"
+    ."Hartelijke groeten,\nHet veilingteam van 41 Lokeren\n";
+  $headers=[
+    'From'=>'41 Lokeren <noreply@41lokeren.be>',
+    'Reply-To'=>'veiling@41lokeren.be',
+    'Content-Type'=>'text/plain; charset=UTF-8',
+    'Auto-Submitted'=>'auto-generated',
+  ];
+  $send??='mail';
+  try {
+    if ($send($email,'Je kunstenaarspagina staat online',$message,$headers)) return true;
+  } catch (Throwable $ex) {
+    // Do not expose addresses, content or transport details.
+  }
+  error_log('Artist publication notification failed.');
+  return false;
 }
 
 /** Only creator ownership gives assistants seller edit/delete rights. */

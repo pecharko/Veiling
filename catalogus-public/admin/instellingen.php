@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
+require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_auth();
 
 $error = '';
@@ -68,6 +69,7 @@ if (is_post()) {
       show_report_issue_link = :show_report_issue_link' . $homepageSectionAssignments . '
       WHERE id = 1');
     $st->execute($fields);
+    seller_send_pending_artist_publication_mail($pdo);
 
     flash(
       $fields['is_published']

@@ -7,8 +7,7 @@ $page = file_get_contents($root.'/catalogus-public/kunstenaar.php');
 $css = file_get_contents($root.'/catalogus-public/assets/catalogus.css');
 if (!is_string($page) || !is_string($css)) throw new RuntimeException('Artist link source missing');
 $checks = [
-  'shared links container when either link exists' => "if (\$artistWebsite !== '' || \$artistInstagram !== '')",
-  'accessible link group' => 'class="artist-brochure-links" aria-label="Externe links van de kunstenaar"',
+  'accessible link group' => 'class="artist-brochure-links" role="group" aria-label="Links en delen"',
   'website optional' => "if (\$artistWebsite !== '')",
   'Instagram optional' => "if (\$artistInstagram !== '')",
   'website shared link class' => 'class="artist-brochure-website"><a class="artist-brochure-link"',
@@ -29,7 +28,8 @@ foreach ($checks as $label => $needle) {
     throw new RuntimeException('Artist external links regression: '.$label);
   }
 }
-if (substr_count($page, 'class="artist-brochure-link"') !== 2) {
+if (substr_count($page, '<a class="artist-brochure-link"') !== 2
+    || !str_contains($page, 'class="artist-brochure-link" id="artist-share"')) {
   throw new RuntimeException('Both links must use the same accessible button styling');
 }
 if (substr_count($page, '<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"') !== 2) {
