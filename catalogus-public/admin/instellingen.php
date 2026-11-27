@@ -373,8 +373,8 @@ if ($error) {
               <span class="auction-settings-toggle-row">
                 <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
                 <span class="auction-settings-toggle-copy">
-                  <strong>Publicatiemails naar kunstenaars versturen</strong>
-                  <span>Aan: kunstenaars krijgen een mail zodra hun pagina via het openbare kunstenaarsoverzicht beschikbaar is. Uit: de mails blijven klaarstaan tot je deze schakelaar weer aanzet.</span>
+                  <strong>Publicatie- en updatemails naar kunstenaars versturen</strong>
+                  <span>Aan: kunstenaars krijgen een mail bij publicatie of een wijziging, zodra hun pagina via het openbare kunstenaarsoverzicht beschikbaar is. Uit: de mails blijven klaarstaan tot je deze schakelaar weer aanzet.</span>
                 </span>
               </span>
             </label>

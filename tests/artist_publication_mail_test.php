@@ -32,8 +32,8 @@ $queue->exec("CREATE TABLE settings (id INTEGER,is_site_online INTEGER,show_arti
   INSERT INTO lot_sellers VALUES (42,'kunstenaar',1,'Testkunstenaar','test@example.invalid'),
      (43,'kunstenaar',0,'Verborgen kunstenaar','hidden@example.invalid');
   CREATE TABLE artist_publication_mail_settings (id INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1);
-  CREATE TABLE artist_publication_mail_queue (seller_id INTEGER PRIMARY KEY);
-  INSERT INTO artist_publication_mail_queue VALUES (42),(43)");
+  CREATE TABLE artist_publication_mail_queue (seller_id INTEGER PRIMARY KEY,is_profile_update INTEGER NOT NULL DEFAULT 0);
+  INSERT INTO artist_publication_mail_queue (seller_id) VALUES (42),(43)");
 if (!seller_artist_publication_mail_enabled($queue)) {
   throw new RuntimeException('Artist publication mail must be enabled by default.');
 }
@@ -50,11 +50,34 @@ seller_send_pending_artist_publication_mail($queue,$send);
 if ($messages || (int)$queue->query('SELECT COUNT(*) FROM artist_publication_mail_queue')->fetchColumn()!==2) {
   throw new RuntimeException('Disabling artist publication mail must pause the queue without dropping notices.');
 }
+seller_queue_artist_profile_update($queue,42);
 $queue->exec('UPDATE artist_publication_mail_settings SET enabled=1 WHERE id=1');
 seller_send_pending_artist_publication_mail($queue,$send);
 seller_send_pending_artist_publication_mail($queue,$send);
-if (count($messages)!==1 || $messages[0][0]!=='test@example.invalid'
+if (count($messages)!==1 || $messages[0][0]!=='test@example.invalid' || $messages[0][1]!=='Je kunstenaarspagina staat online'
     || (int)$queue->query('SELECT seller_id FROM artist_publication_mail_queue')->fetchColumn()!==43) {
   throw new RuntimeException('Only the published, pending artist receives a single mail.');
 }
 echo "PASS queue waits for the site, artist directory and mail switch, ignores hidden profiles and sends once.\n";
+
+$queue->exec('UPDATE artist_publication_mail_settings SET enabled=0 WHERE id=1');
+seller_queue_artist_profile_update($queue,42);
+seller_queue_artist_profile_update($queue,42);
+seller_send_pending_artist_publication_mail($queue,$send);
+if (count($messages)!==1) throw new RuntimeException('Profile updates must respect the mail switch.');
+$queue->exec('UPDATE artist_publication_mail_settings SET enabled=1 WHERE id=1');
+seller_send_pending_artist_publication_mail($queue,$send);
+if (count($messages)!==2 || $messages[1][0]!=='test@example.invalid'
+    || $messages[1][1]!=='Je kunstenaarspagina is bijgewerkt'
+    || !str_contains($messages[1][2],'https://41lokeren.be/kunstenaar.php?id=42')
+    || !str_contains($messages[1][2],'controleer of alles klopt')
+    || !str_contains($messages[1][2],'Neem contact op met je buddy of mail naar veiling@41lokeren.be.')
+    || (int)$queue->query('SELECT seller_id FROM artist_publication_mail_queue')->fetchColumn()!==43) {
+  throw new RuntimeException('Coalesced profile updates must send a single review request linking to the profile.');
+}
+$queue->exec('DELETE FROM artist_publication_mail_queue');
+seller_queue_artist_profile_update($queue,43);
+if ((int)$queue->query('SELECT COUNT(*) FROM artist_publication_mail_queue')->fetchColumn()!==0) {
+  throw new RuntimeException('Changes to unpublished artists must not queue update mail.');
+}
+echo "PASS pending publication takes precedence, published updates send one review request, unpublished edits do not queue.\n";

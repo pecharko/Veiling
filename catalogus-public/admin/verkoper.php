@@ -67,6 +67,7 @@ if (is_post()) {
       if ($slot===false || $slot===null) throw new InvalidArgumentException('Ongeldige fotopositie.');
       if ($action==='upload-photo') seller_image_upload($pdo,$editId,$kind,(int)$slot,$_FILES['image']??[],(int)$_SESSION['admin_id']);
       else seller_image_delete($pdo,$editId,$kind,(int)$slot,(int)$_SESSION['admin_id']);
+      seller_send_pending_artist_publication_mail($pdo,onlySellerId:$editId);
       if ($ajaxPhoto && $action==='delete-photo') $ajaxReply(200,['ok'=>true,'slot'=>(int)$slot,'kind'=>$kind,'deleted'=>true]);
       if ($ajaxPhoto) {
         $rows=seller_image_rows($pdo,$editId);
@@ -104,6 +105,7 @@ if (is_post()) {
         }
       }
     }
+    if ($values['seller_type']==='kunstenaar') seller_send_pending_artist_publication_mail($pdo,onlySellerId:$savedId);
     if ($failedPhotos) {
       $notice='Kunstenaar bewaard. Foto’s opgeslagen ('.count($savedPhotos).'/'
         .(count($savedPhotos)+count($failedPhotos)).'): '
