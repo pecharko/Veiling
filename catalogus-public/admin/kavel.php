@@ -150,6 +150,21 @@ if(is_post()){
         if ($error==='') $error='Kies een bestaande verkoper.';
       } else $sellerId=(int)$parsedSeller;
     }
+    // A form opened before the release retains its existing percentage.
+    $rawPercentage=$_POST['seller_percentage'] ?? (string)($lot['seller_percentage'] ?? 0);
+    $sellerPercentage=0;
+    if (!in_array($rawPercentage,['0','30','60'],true)) {
+      if ($error==='') $error='Kies een verkoperspercentage van 0%, 30% of 60%.';
+    } else {
+      $sellerPercentage=(int)$rawPercentage;
+    }
+    if ($error==='' && $sellerPercentage>0) {
+      if ($sellerId===null) {
+        $error='Selecteer een verkoper voor een verkoperspercentage hoger dan 0%. Het kavel is niet opgeslagen.';
+      } elseif (!seller_has_bank_details($pdo,$sellerId)) {
+        $error='Vul bij de verkoper de naam van de rekeninghouder en het IBAN in. Het kavel is niet opgeslagen.';
+      }
+    }
     // Every seller-less lot is a donation with no payout. Require explicit
     // acknowledgement even if client-side JavaScript is disabled or bypassed.
     if ($rawSeller==='' && ($_POST['donation_confirmed']??'')!=='1' && $error==='') {
@@ -214,16 +229,16 @@ if(is_post()){
           if ($saleLocation === 'veiling' && $auctionNumber === null) {
             $auctionNumber = next_auction_number($pdo);
           }
-          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:(string)(int)$marketPrice,$startingBid===''?null:(string)(int)$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId];
+          $values=[$nr,$title,$subtitle,$category,$description,$details,$marketPrice===''?null:(string)(int)$marketPrice,$startingBid===''?null:(string)(int)$startingBid,(int)$auctionOnly,$status,$saleLocation,$auctionNumber,$sellerId,$sellerPercentage];
           $lotFieldsChanged=!$id || lot_effective_fields_changed($lot,$values);
           if($id){
             if($lotFieldsChanged) {
-              $st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=? WHERE id=?');
+              $st=$pdo->prepare('UPDATE lots SET lot_number=?,title=?,subtitle=?,category=?,description=?,details=?,market_price=?,starting_bid=?,auction_only=?,status=?,sale_location=?,auction_number=?,seller_id=?,seller_percentage=? WHERE id=?');
               $st->execute([...$values,$id]);
               lot_audit_touch($pdo,$id,(int)$_SESSION['admin_id']);
             }
           } else {
-            $st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $st=$pdo->prepare('INSERT INTO lots (lot_number,title,subtitle,category,description,details,market_price,starting_bid,auction_only,status,sale_location,auction_number,seller_id,seller_percentage,created_by_admin_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $st->execute([...$values,(int)$_SESSION['admin_id']]);
             $id=(int)$pdo->lastInsertId();
           }
@@ -313,7 +328,7 @@ if (!$lot && !is_post()) {
   $existingNumbers = $pdo->query('SELECT MAX(lot_number) FROM issued_lot_numbers')->fetchColumn();
   $suggestedNumber = first_available_lot_number(($existingNumbers === null || $existingNumbers === false) ? [] : [$existingNumbers]) ?? '';
 }
-$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>''];
+$defaults=['lot_number'=>$suggestedNumber,'title'=>'','subtitle'=>'','category'=>'','description'=>'','details'=>'','market_price'=>'','starting_bid'=>'','auction_only'=>0,'status'=>'draft','sale_location'=>'markt','auction_number'=>'','seller_id'=>'','seller_percentage'=>0];
 $submitted = ($error !== '' && is_post() && ($_POST['action'] ?? 'save') === 'save') ? $_POST : null;
 $d=lot_form_values($defaults,$lot?:null,$submitted);
 if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$suggestedNumber;
@@ -427,6 +442,14 @@ if ($error === $cancelAuctionWarning) {
           <div class="lot-editor-fields"><label>Beschrijving<textarea name="description" rows="6" maxlength="250" placeholder="Wat maakt dit kavel bijzonder?"><?=e($d['description'])?></textarea></label><label>Details, afmetingen en staat<textarea name="details" rows="4" maxlength="100" placeholder="Afmetingen, technische informatie, eventuele gebruikssporen …"><?=e($d['details'])?></textarea></label></div>
         </section>
         <section class="lot-editor-card"><div class="lot-editor-card-header"><span class="lot-editor-step">03</span><div><h2>Waardebepaling</h2><p>Marktprijs en startbod in hele euro’s, zonder decimalen.</p></div></div>
+          <div class="lot-editor-seller-percentage">
+            <label for="lot-seller-percentage">Percentage verkoper</label>
+            <input id="lot-seller-percentage" name="seller_percentage" type="range" min="0" max="60" step="30"
+              value="<?=in_array((string)$d['seller_percentage'],['0','30','60'],true) ? e((string)$d['seller_percentage']) : '0'?>"
+              aria-describedby="lot-seller-percentage-hint">
+            <div class="lot-editor-percentage-ticks" aria-hidden="true"><span>0%</span><span>30%</span><span>60%</span></div>
+            <p id="lot-seller-percentage-hint">Bij 30% of 60% zijn een verkoper en bankgegevens verplicht.</p>
+          </div>
           <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="1" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="1" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
         </section>
       </div>

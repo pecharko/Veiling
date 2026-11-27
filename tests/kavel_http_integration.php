@@ -393,6 +393,35 @@ try {
   claim($donationStatus===200
     && str_contains($donationPage,'Bevestig dit om op te slaan')
     && !by_number(876541), 'Server rejects unconfirmed donation with no seller');
+  claim(preg_match('/name="seller_percentage" type="range" min="0" max="60" step="30"\s+value="0"/', $html)===1,
+      'New lot has a three-stop slider defaulting to 0%');
+  $payoutPost=[
+    'csrf'=>token($html),'action'=>'save','id'=>'0','lot_number'=>'876571',
+    'title'=>'Verkoperspercentage test','seller_percentage'=>'30','donation_confirmed'=>'1',
+  ];
+  [$payoutStatus,$payoutPage]=request_page('/admin/kavel.php',$payoutPost);
+  claim($payoutStatus===200 && str_contains($payoutPage,'Selecteer een verkoper voor een verkoperspercentage')
+    && !by_number(876571), 'A payout requires a seller, even on a direct POST');
+  db()->exec("INSERT INTO lot_sellers (seller_type,name) VALUES ('particulier','Testverkoper zonder IBAN')");
+  $noBankSeller=(int)db()->lastInsertId();
+  [$payoutStatus,$payoutPage]=request_page('/admin/kavel.php',$payoutPost+['seller_id'=>(string)$noBankSeller]);
+  claim($payoutStatus===200 && str_contains($payoutPage,'de naam van de rekeninghouder en het IBAN')
+    && !by_number(876571), 'A payout requires both bank details');
+  [$payoutStatus]=request_page('/admin/kavel.php',$payoutPost+['seller_id'=>(string)$sellerLinkId]);
+  $payoutLot=by_number(876571);
+  claim($payoutStatus===303 && (int)$payoutLot['seller_percentage']===30,'A valid seller percentage persists');
+  $payoutId=(int)$payoutLot['id'];
+  [$payoutStatus,$payoutPage]=request_page('/admin/kavel.php?id='.$payoutId,array_replace($payoutPost,[
+    'id'=>(string)$payoutId,'seller_id'=>(string)$sellerLinkId,'seller_percentage'=>'31',
+  ]));
+  claim($payoutStatus===200 && str_contains($payoutPage,'0%, 30% of 60%')
+    && (int)by_number(876571)['seller_percentage']===30,'Forged percentage is rejected without changing the lot');
+  db()->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$noBankSeller,$payoutId]);
+  [$payoutStatus,$payoutPage]=request_page('/admin/index.php?q=876571');
+  claim($payoutStatus===200 && str_contains($payoutPage,'class="dashboard-bank-missing">Missing</strong>'),
+    'Overview flags missing bank details for a nonzero percentage');
+  db()->prepare('DELETE FROM lots WHERE id=?')->execute([$payoutId]);
+  db()->prepare('DELETE FROM lot_sellers WHERE id=?')->execute([$noBankSeller]);
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [
     'csrf' => token($html), 'action' => 'save',
     'lot_number' => '876542', 'title' => str_repeat('X', 51),

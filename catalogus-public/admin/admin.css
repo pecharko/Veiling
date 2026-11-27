@@ -490,3 +490,10 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .admin-session-warning button{font:inherit;padding:.45rem .8rem;background:#850015;color:white;border:0;border-radius:.35rem;cursor:pointer}
 .admin-session-warning button:focus-visible,.admin-session-warning a:focus-visible{outline:3px solid #29473e;outline-offset:3px}
 .admin-session-warning button:disabled{opacity:.6}
+
+.lot-editor-seller-percentage{display:grid;gap:6px;max-width:28rem;margin-bottom:20px}
+.lot-editor-seller-percentage label{font-weight:700}
+.lot-editor-seller-percentage input[type=range]{width:100%;margin:0;min-height:32px;accent-color:var(--wine)}
+.lot-editor-percentage-ticks{display:flex;justify-content:space-between;font-size:13px}
+.lot-editor-seller-percentage p{margin:0;font-size:13px}
+.dashboard-bank-missing{color:#9b1c1c}

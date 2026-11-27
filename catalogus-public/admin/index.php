@@ -109,7 +109,7 @@ $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
 $count=$pdo->prepare('SELECT COUNT(*) FROM lots l '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
 $pages=max(1,(int)ceil($filtered/$perPage));$page=min($page,$pages);
-$st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
+$st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, COALESCE(TRIM(seller.bank_account_name)<>\'\' AND TRIM(seller.bank_account_iban)<>\'\',0) AS seller_bank_details_present, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
 $i=1;foreach($p as $val)$st->bindValue($i++,$val);
 $st->bindValue($i++,$perPage,PDO::PARAM_INT);$st->bindValue($i,($page-1)*$perPage,PDO::PARAM_INT);$st->execute();$rows=$st->fetchAll();
 /** Profielgereedheid, onafhankelijk van de feitelijke publicatiestatus. */
@@ -155,7 +155,7 @@ admin_top('Kaveloverzicht');
       <?php if ($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
-    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Publicatie</th><th scope="col">Klaar om te publiceren</th><th scope="col">Acties</th></tr></thead><tbody>
+    <div class="dashboard-table-scroll"><table class="dashboard-table"><thead><tr><th scope="col">Nr.</th><th scope="col">Foto</th><th scope="col">Titel</th><th scope="col">Categorie</th><th scope="col">Verkoper</th><th scope="col">Verkoopplaats</th><th scope="col">Publicatie</th><th scope="col">Klaar om te publiceren</th><th scope="col">Bank Nr.</th><th scope="col">Acties</th></tr></thead><tbody>
     <?php foreach($rows as $row): ?><tr id="dashboard-lot-<?=(int)$row['id']?>">
       <td><strong><?=e(str_pad((string)$row['lot_number'],3,'0',STR_PAD_LEFT))?></strong></td>
       <td class="dashboard-cover-cell"><?php if(!empty($row['cover'])): ?><img class="dashboard-cover" src="<?=e(url($row['cover']))?>" alt="" loading="lazy" width="52" height="52"><?php else: ?><span class="dashboard-cover-empty" aria-label="Geen foto">▧</span><?php endif; ?></td>
@@ -175,6 +175,7 @@ admin_top('Kaveloverzicht');
         ];
       ?>
       <td><span class="seller-readiness lot-readiness is-<?=e($readiness)?>" title="<?=e($readinessTips[$readiness])?>"><?=e($readinessLabels[$readiness])?></span></td>
+      <td><?php if ((int)($row['seller_percentage'] ?? 0)>0 && !(int)$row['seller_bank_details_present']): ?><strong class="dashboard-bank-missing">Missing</strong><?php endif; ?></td>
       <td><div class="seller-row-actions dashboard-lot-row-actions">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
           <form class="dashboard-lot-status-form" method="post" action="<?=e(url('admin/index.php',array_intersect_key($_GET,array_flip(['q','category','status','sale_location','photos','mine','per_page','pagina']))))?>">
@@ -194,7 +195,7 @@ admin_top('Kaveloverzicht');
         <?php if (lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $row)): ?><a class="dashboard-edit" href="<?=e(url('admin/kavel.php',['id'=>(int)$row['id']]))?>">✎ Bewerken</a><?php endif; ?>
       </div></td>
     </tr><?php endforeach; ?>
-    <?php if(!$rows): ?><tr><td colspan="9">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
+    <?php if(!$rows): ?><tr><td colspan="10">Geen kavels gevonden. <a href="<?=e(url('admin/index.php'))?>">Wis filters</a>.</td></tr><?php endif; ?>
     </tbody></table></div>
     <nav class="dashboard-pagination" aria-label="Paginering kavels"><span><?=($filtered ? (($page-1)*$perPage+1) : 0)?>–<?=min($filtered,$page*$perPage)?> van <?=$filtered?> kavels</span><?php if($page>1): ?><a href="<?=e(dashboard_page_url($page-1))?>">← Vorige</a><?php endif; ?><span>Pagina <?=$page?> / <?=$pages?></span><?php if($page<$pages): ?><a href="<?=e(dashboard_page_url($page+1))?>">Volgende →</a><?php endif; ?></nav>
   </section>

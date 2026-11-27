@@ -89,7 +89,7 @@ $pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lot
 $pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Eenmalige categorie')");
 $categoryId=(int)$pdo->lastInsertId();
 $pdo->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['CI Eenmalige categorie',$lotId]);
-$pdo->prepare("UPDATE lots SET last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
+$pdo->prepare("UPDATE lots SET seller_percentage=30,last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
 $originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
@@ -149,6 +149,7 @@ verify(count($snapshot['tables']['lots'])===1 && !isset($snapshot['tables']['adm
 verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && $s['artist_instagram_url']==='https://www.instagram.com/testmaker/' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
+  && (int)$snapshot['tables']['lots'][0]['seller_percentage']===30
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
   && $snapshot['tables']['lots'][0]['last_edited_at']==='2026-11-11 07:30:00',
   'Snapshot v8 stores linked sellers and last lot editor');
@@ -314,8 +315,9 @@ verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetc
     'Restore preserves seller records and lot foreign keys');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
-$restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
-verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
+$restoredLot=$pdo->query('SELECT sale_location,auction_number,seller_percentage FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1
+    && (int)$restoredLot['seller_percentage']===30,
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');
