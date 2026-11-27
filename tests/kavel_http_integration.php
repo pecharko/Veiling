@@ -419,8 +419,14 @@ try {
   claim($payoutStatus===200 && str_contains($payoutPage,'0%, 30% of 60%')
     && (int)by_number(876571)['seller_percentage']===30,'Forged percentage is rejected without changing the lot');
   [$payoutStatus,$payoutPage]=request_page('/admin/index.php?q=876571');
-  claim($payoutStatus===200 && str_contains($payoutPage,'class="dashboard-bank-missing">Missing</strong>'),
+  claim($payoutStatus===200 && str_contains($payoutPage,'class="seller-readiness dashboard-bank-missing">Missing</strong>'),
     'Overview flags missing bank details for a nonzero percentage');
+  [$filterStatus,$filteredPayouts]=request_page('/admin/index.php?bank_details=missing&mine=1');
+  claim($filterStatus===200 && str_contains($filteredPayouts,'id="dashboard-lot-'.$payoutId.'"')
+    && substr_count($filteredPayouts,'id="dashboard-lot-')===1
+    && str_contains($filteredPayouts,'name="bank_details" value="missing"'),
+    'Missing bank details tile restricts results and preserves the filter with my lots');
+
   db()->prepare('DELETE FROM lots WHERE id=?')->execute([$payoutId]);
   db()->prepare('DELETE FROM lot_sellers WHERE id=?')->execute([$noBankSeller]);
   [$titleStatus, $tooLongTitlePage] = request_page('/admin/kavel.php', [

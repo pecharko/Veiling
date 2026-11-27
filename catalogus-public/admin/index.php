@@ -26,7 +26,7 @@ if (is_post()) {
       exit(e($message));
     }
     flash($message);
-    $params = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','mine','per_page','pagina']));
+    $params = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','bank_details','mine','per_page','pagina']));
     header('Location: '.url('admin/index.php', $params).'#dashboard-lot-'.(int)($_POST['lot_id'] ?? 0), true, 303);
     exit;
   };
@@ -71,6 +71,10 @@ if (is_post()) {
 }
 
 $mine = ($_GET['mine'] ?? '') === '1';
+$bankDetailsMissing = "l.seller_percentage > 0 AND NOT EXISTS (
+  SELECT 1 FROM lot_sellers bank_seller WHERE bank_seller.id=l.seller_id
+    AND TRIM(bank_seller.bank_account_name)<>'' AND TRIM(bank_seller.bank_account_iban)<>''
+)";
 // The scope switch applies to every dashboard statistic and the results table.
 $scopeCount = static function (string $condition) use ($pdo, $mine): int {
   $sql = 'SELECT COUNT(*) FROM lots l WHERE '.$condition;
@@ -84,6 +88,7 @@ $published = $scopeCount("l.status='published'");
 $inAuction = $scopeCount("l.sale_location='veiling'");
 $inMarket = $scopeCount("l.sale_location='markt'");
 $withoutPhoto = $scopeCount('NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)');
+$withoutBankDetails = $scopeCount($bankDetailsMissing);
 $q = mb_substr(trim((string)($_GET['q'] ?? '')),0,100);
 $category = mb_substr(trim((string)($_GET['category'] ?? '')),0,100);
 $categorySql = "SELECT DISTINCT category FROM lots WHERE category IS NOT NULL AND category <> ''";
@@ -96,6 +101,7 @@ if (!in_array($category,$categories,true)) $category='';
 $status = in_array($_GET['status'] ?? '', ['draft','published','sold','canceled'], true) ? (string)$_GET['status'] : '';
 $saleLocation = in_array($_GET['sale_location'] ?? '', ['markt','veiling'], true) ? (string)$_GET['sale_location'] : '';
 $photoFilter = ($_GET['photos'] ?? '') === 'none' ? 'none' : '';
+$missingBankFilter = ($_GET['bank_details'] ?? '') === 'missing';
 $page = max(1,min(1000,(int)($_GET['pagina'] ?? 1)));
 $perPage = in_array((int)($_GET['per_page'] ?? 20),[20,50,100],true) ? (int)($_GET['per_page'] ?? 20) : 20;
 $where = []; $p = [];
@@ -104,12 +110,13 @@ if ($category!=='') { $where[]='category=?'; $p[]=$category; }
 if ($status!=='') { $where[]='status=?'; $p[]=$status; }
 if ($saleLocation!=='') { $where[]='sale_location=?'; $p[]=$saleLocation; }
 if ($photoFilter==='none') { $where[]='NOT EXISTS (SELECT 1 FROM lot_images li WHERE li.lot_id=l.id)'; }
+if ($missingBankFilter) { $where[]=$bankDetailsMissing; }
 if ($mine) { $where[]='l.created_by_admin_id=?'; $p[]=(int)$_SESSION['admin_id']; }
 $w = $where ? 'WHERE '.implode(' AND ',$where) : '';
 $count=$pdo->prepare('SELECT COUNT(*) FROM lots l '.$w);$count->execute($p);
 $filtered=(int)$count->fetchColumn();
 $pages=max(1,(int)ceil($filtered/$perPage));$page=min($page,$pages);
-$st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, COALESCE(TRIM(seller.bank_account_name)<>\'\' AND TRIM(seller.bank_account_iban)<>\'\',0) AS seller_bank_details_present, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
+$st=$pdo->prepare('SELECT l.*, seller.name AS seller_name, ('.$bankDetailsMissing.') AS seller_bank_details_missing, (SELECT COUNT(*) FROM lot_images li WHERE li.lot_id=l.id) AS photo_count, (SELECT li.path FROM lot_images li WHERE li.lot_id=l.id ORDER BY li.sort_order, li.id LIMIT 1) AS cover FROM lots l LEFT JOIN lot_sellers seller ON seller.id=l.seller_id '.$w.' ORDER BY l.lot_number LIMIT ? OFFSET ?');
 $i=1;foreach($p as $val)$st->bindValue($i++,$val);
 $st->bindValue($i++,$perPage,PDO::PARAM_INT);$st->bindValue($i,($page-1)*$perPage,PDO::PARAM_INT);$st->execute();$rows=$st->fetchAll();
 /** Profielgereedheid, onafhankelijk van de feitelijke publicatiestatus. */
@@ -123,7 +130,7 @@ function lot_publication_readiness(array $lot): string {
 }
 function dashboard_stat_url(array $filters, bool $mine): string { if ($mine) $filters['mine']='1'; return url('admin/index.php', $filters); }
 function dashboard_page_url(int $page): string { $p=$_GET;$p['pagina']=$page;return url('admin/index.php',$p); }
-$allParams = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','per_page']));
+$allParams = array_intersect_key($_GET, array_flip(['q','category','status','sale_location','photos','bank_details','per_page']));
 $ownParams = $allParams;
 $ownParams['mine']='1';
 admin_top('Kaveloverzicht');
@@ -136,12 +143,13 @@ admin_top('Kaveloverzicht');
       <a class="dashboard-stat dashboard-scope-option <?=$mine?'is-selected':''?>" href="<?=e(url('admin/index.php',$ownParams))?>" <?=$mine?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">◉</span><span><strong>Mijn kavels</strong><small>Alleen door mij aangemaakt</small></span><span class="dashboard-scope-check" aria-hidden="true"><?=$mine?'✓':''?></span></a>
     </div>
   </div>
-  <div class="dashboard-stats" aria-label="Catalogusstatistieken">
+  <div class="dashboard-stats dashboard-lot-stats" aria-label="Catalogusstatistieken">
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url([], $mine))?>" aria-label="<?=$mine?'Al mijn kavels tonen':'Alle kavels tonen'?>"><span class="dashboard-icon" aria-hidden="true">◇</span><div><small>TOTAAL AANGEMAAKT</small><div><strong><?=e((string)$total)?></strong> kavels</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['status'=>'published'], $mine))?>" aria-label="Gepubliceerde kavels tonen"><span class="dashboard-icon" aria-hidden="true">◉</span><div><small>GEPUBLICEERD</small><div><strong><?=e((string)$published)?></strong> kavels zichtbaar</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'veiling'], $mine))?>" aria-label="Kavels in Veiling tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS IN VEILING</small><div><strong><?=e((string)$inAuction)?></strong> kavels</div></div></a>
     <a class="dashboard-stat" href="<?=e(dashboard_stat_url(['sale_location'=>'markt'], $mine))?>" aria-label="Kavels in Markt tonen"><span class="dashboard-icon" aria-hidden="true">◎</span><div><small>KAVELS IN MARKT</small><div><strong><?=e((string)$inMarket)?></strong> kavels</div></div></a>
     <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['photos'=>'none'], $mine))?>" aria-label="Kavels zonder foto tonen"><span class="dashboard-icon" aria-hidden="true">▧</span><div><small>KAVELS ZONDER FOTO</small><div><strong><?=e((string)$withoutPhoto)?></strong> kavels</div></div></a>
+    <a class="dashboard-stat dashboard-stat-extra" href="<?=e(dashboard_stat_url(['bank_details'=>'missing'], $mine))?>" aria-label="Kavels met ontbrekende bankgegevens tonen" <?=$missingBankFilter?'aria-current="page"':''?>><span class="dashboard-icon" aria-hidden="true">!</span><div><small>Bankgegevens missing</small><div><strong><?=$withoutBankDetails?></strong> kavels</div></div></a>
   </div>
   <section class="dashboard-panel" aria-labelledby="dashboard-lots-title">
     <div class="dashboard-panel-heading"><div><h2 id="dashboard-lots-title"><?=$mine?'Mijn kavels':'Alle kavels'?></h2><p><?=e((string)$filtered)?> resultaten. Ongepubliceerde kavels blijven onzichtbaar voor bezoekers.</p></div><div class="dashboard-lot-actions"><?php if (lot_can_create(effective_admin_role())): ?><a class="primary" href="<?=e(url('admin/kavel.php'))?>">+ Nieuw kavel</a><?php endif; ?></div></div>
@@ -152,6 +160,7 @@ admin_top('Kaveloverzicht');
       <label><span class="sr-only">Verkoopplaats</span><select name="sale_location"><option value="">Alle verkoopplaatsen</option><option value="markt" <?=$saleLocation==='markt'?'selected':''?>>Markt</option><option value="veiling" <?=$saleLocation==='veiling'?'selected':''?>>Veiling</option></select></label>
       <label><span class="sr-only">Aantal kavels per pagina</span><select name="per_page" aria-label="Kavels per pagina"><?php foreach([20,50,100] as $limit): ?><option value="<?=$limit?>" <?=$perPage===$limit?'selected':''?>><?=$limit?> per pagina</option><?php endforeach; ?></select></label>
       <?php if ($photoFilter==='none'): ?><input type="hidden" name="photos" value="none"><?php endif; ?>
+      <?php if ($missingBankFilter): ?><input type="hidden" name="bank_details" value="missing"><?php endif; ?>
       <?php if ($mine): ?><input type="hidden" name="mine" value="1"><?php endif; ?>
       <button class="primary" type="submit">Zoeken</button>
     </form>
@@ -175,10 +184,10 @@ admin_top('Kaveloverzicht');
         ];
       ?>
       <td><span class="seller-readiness lot-readiness is-<?=e($readiness)?>" title="<?=e($readinessTips[$readiness])?>"><?=e($readinessLabels[$readiness])?></span></td>
-      <td><?php if ((int)($row['seller_percentage'] ?? 0)>0 && !(int)$row['seller_bank_details_present']): ?><strong class="dashboard-bank-missing">Missing</strong><?php endif; ?></td>
+      <td><?php if ((int)$row['seller_bank_details_missing']): ?><strong class="seller-readiness dashboard-bank-missing">Missing</strong><?php endif; ?></td>
       <td><div class="seller-row-actions dashboard-lot-row-actions">
         <?php if (lot_can_change_publication(effective_admin_role())): ?>
-          <form class="dashboard-lot-status-form" method="post" action="<?=e(url('admin/index.php',array_intersect_key($_GET,array_flip(['q','category','status','sale_location','photos','mine','per_page','pagina']))))?>">
+          <form class="dashboard-lot-status-form" method="post" action="<?=e(url('admin/index.php',array_intersect_key($_GET,array_flip(['q','category','status','sale_location','photos','bank_details','mine','per_page','pagina']))))?>">
             <?=csrf_field()?>
             <input type="hidden" name="action" value="lot-status">
             <input type="hidden" name="lot_id" value="<?=(int)$row['id']?>">

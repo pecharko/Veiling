@@ -359,10 +359,13 @@ if ($error === $cancelAuctionWarning) {
 ?>
 <?php if ($sellerBankMissing): ?>
   <div class="alert warning" role="alert">
-    Bankgegevens ontbreken voor dit verkoperspercentage. Vul de naam van de rekeninghouder en het IBAN in bij de verkoper.
+    Bankgegevens ontbreken voor dit verkoperspercentage.
     <?php if (seller_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $selectedSeller)): ?>
+      Vul de naam van de rekeninghouder en het IBAN in bij de verkoper.
       <?php $sellerEditor = $selectedSeller['seller_type']==='kunstenaar' ? 'admin/kunstenaar-bewerken.php' : 'admin/verkoper.php'; ?>
       <a href="<?=e(url($sellerEditor,['id'=>(int)$selectedSeller['id'],'from_lot'=>1,'lot_id'=>$id]))?>#verkoper-bankgegevens">Bankgegevens van verkoper bewerken</a>
+    <?php else: ?>
+      Contacteer de veilingmeester om de bankgegevens te laten aanvullen.
     <?php endif; ?>
   </div>
 <?php endif; ?>

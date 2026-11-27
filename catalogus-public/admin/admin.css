@@ -496,4 +496,7 @@ hr {border:0;border-top:1px solid var(--line);margin:24px 0}
 .lot-editor-seller-percentage input[type=range]{width:100%;margin:0;min-height:32px;accent-color:var(--wine)}
 .lot-editor-percentage-ticks{display:flex;justify-content:space-between;font-size:13px}
 .lot-editor-seller-percentage p{margin:0;font-size:13px}
-.dashboard-bank-missing{color:#9b1c1c}
+.dashboard-bank-missing{background:#fde7e7;color:#9b1c1c}
+.dashboard-lot-stats .dashboard-stat-extra{grid-column:span 2}
+.dashboard-lot-stats .dashboard-stat[aria-current="page"]{border-color:var(--wine);background:#fdf0ef}
+@media(max-width:1100px){.dashboard-lot-stats .dashboard-stat-extra{grid-column:auto}}
