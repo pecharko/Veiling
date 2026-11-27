@@ -195,6 +195,13 @@ if (!$lotAuditEditor) {
     echo "Lot edit auditing added to isolated preview.\n";
 }
 // Use fake names and e-mail addresses only; never import actual seller information.
+foreach (['artist_publication_mail_queue', 'artist_publication_mail_settings'] as $table) {
+    if ($pdo->query('SHOW TABLES WHERE Tables_in_auction_test = ' . $pdo->quote($table))->fetchColumn() === false) {
+        $migration = file_get_contents(dirname(__DIR__, 2) . "/database/migrations/20261127_$table.sql");
+        if ($migration === false) throw new RuntimeException('Artist publication mail migration missing.');
+        $pdo->exec($migration);
+    }
+}
 if ((int)$pdo->query('SELECT COUNT(*) FROM lot_sellers')->fetchColumn()===0) {
     $seller=$pdo->prepare('INSERT INTO lot_sellers (seller_type,name,email,street,house_number,postal_code,municipality,bank_account_name,bank_account_iban,artist_name,artist_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)');
     $seller->execute(['kunstenaar','Voorbeeldkunstenaar','kunst@example.invalid','Voorbeeldstraat','1','9160','Lokeren','Voorbeeldkunstenaar','BE68539007547034','Fictieve Ateliernaam','https://example.org']);

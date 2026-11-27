@@ -69,11 +69,17 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
   }
 }
 
+function seller_artist_publication_mail_enabled(PDO $pdo): bool {
+  $enabled=$pdo->query('SELECT enabled FROM artist_publication_mail_settings WHERE id=1')->fetchColumn();
+  return $enabled===false || (int)$enabled===1;
+}
+
 /** Called after saving visibility settings or committing an artist publication, under the catalogue lock. */
 function seller_send_pending_artist_publication_mail(PDO $pdo, ?callable $send=null): void {
   try {
     $settings=$pdo->query('SELECT is_site_online,show_artists_overview FROM settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
     if ((int)($settings['is_site_online']??0)!==1 || (int)($settings['show_artists_overview']??0)!==1) return;
+    if (!seller_artist_publication_mail_enabled($pdo)) return;
     if ($send===null && (getenv('LOCAL_PREVIEW_ISOLATED')==='1'
         || getenv('GITHUB_ACTIONS')==='true'
         || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return;

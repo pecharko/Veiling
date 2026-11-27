@@ -68,7 +68,20 @@ if (is_post()) {
       is_site_online = :is_site_online,
       show_report_issue_link = :show_report_issue_link' . $homepageSectionAssignments . '
       WHERE id = 1');
-    $st->execute($fields);
+    $pdo->beginTransaction();
+    try {
+      $st->execute($fields);
+      if (($_POST['artist_publication_mail_present'] ?? null) === '1') {
+        $enabled = ($_POST['artist_publication_mail_enabled'] ?? null) === '1' ? 1 : 0;
+        $mailSettings = $pdo->prepare('INSERT INTO artist_publication_mail_settings (id, enabled)
+          VALUES (1, ?) ON DUPLICATE KEY UPDATE enabled = ?');
+        $mailSettings->execute([$enabled, $enabled]);
+      }
+      $pdo->commit();
+    } catch (Throwable $ex) {
+      if ($pdo->inTransaction()) $pdo->rollBack();
+      throw $ex;
+    }
     seller_send_pending_artist_publication_mail($pdo);
 
     flash(
@@ -92,6 +105,9 @@ $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelde
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $catalogSplitEnabled = (int)($s['catalog_split_active'] ?? 0) === 1;
 $artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 1) === 1;
+$artistPublicationMailEnabled = ($_POST['artist_publication_mail_present'] ?? null) === '1'
+  ? ($_POST['artist_publication_mail_enabled'] ?? null) === '1'
+  : seller_artist_publication_mail_enabled($pdo);
 $artistRecruitmentEnabled = (int)($s['show_artist_recruitment'] ?? 1) === 1;
 $artworkRecruitmentEnabled = (int)($s['show_artwork_recruitment'] ?? 1) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
@@ -347,6 +363,18 @@ if ($error) {
                 <span class="auction-settings-toggle-copy">
                   <strong>Kunstenaarsoverzicht tonen op website</strong>
                   <span>Uit: bezoekers zien op de kunstenaars-pagina een aankondiging dat het overzicht binnenkort beschikbaar is. Aan: toon de gepubliceerde kunstenaars. Onafhankelijk van de kavelschakelaar.</span>
+                </span>
+              </span>
+            </label>
+
+            <input type="hidden" name="artist_publication_mail_present" value="1">
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="artist_publication_mail_enabled" value="1" <?= $artistPublicationMailEnabled ? 'checked' : '' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy">
+                  <strong>Publicatiemails naar kunstenaars versturen</strong>
+                  <span>Aan: kunstenaars krijgen een mail zodra hun pagina via het openbare kunstenaarsoverzicht beschikbaar is. Uit: de mails blijven klaarstaan tot je deze schakelaar weer aanzet.</span>
                 </span>
               </span>
             </label>

@@ -31,8 +31,12 @@ $queue->exec("CREATE TABLE settings (id INTEGER,is_site_online INTEGER,show_arti
   CREATE TABLE lot_sellers (id INTEGER,seller_type TEXT,artist_published INTEGER,artist_name TEXT,email TEXT);
   INSERT INTO lot_sellers VALUES (42,'kunstenaar',1,'Testkunstenaar','test@example.invalid'),
      (43,'kunstenaar',0,'Verborgen kunstenaar','hidden@example.invalid');
+  CREATE TABLE artist_publication_mail_settings (id INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 1);
   CREATE TABLE artist_publication_mail_queue (seller_id INTEGER PRIMARY KEY);
   INSERT INTO artist_publication_mail_queue VALUES (42),(43)");
+if (!seller_artist_publication_mail_enabled($queue)) {
+  throw new RuntimeException('Artist publication mail must be enabled by default.');
+}
 $messages=[];
 seller_send_pending_artist_publication_mail($queue,$send);
 $queue->exec('UPDATE settings SET is_site_online=0,show_artists_overview=1');
@@ -41,10 +45,16 @@ if ($messages || (int)$queue->query('SELECT COUNT(*) FROM artist_publication_mai
   throw new RuntimeException('Both public visibility switches must be on before sending.');
 }
 $queue->exec('UPDATE settings SET is_site_online=1');
+$queue->exec('INSERT INTO artist_publication_mail_settings (id,enabled) VALUES (1,0)');
+seller_send_pending_artist_publication_mail($queue,$send);
+if ($messages || (int)$queue->query('SELECT COUNT(*) FROM artist_publication_mail_queue')->fetchColumn()!==2) {
+  throw new RuntimeException('Disabling artist publication mail must pause the queue without dropping notices.');
+}
+$queue->exec('UPDATE artist_publication_mail_settings SET enabled=1 WHERE id=1');
 seller_send_pending_artist_publication_mail($queue,$send);
 seller_send_pending_artist_publication_mail($queue,$send);
 if (count($messages)!==1 || $messages[0][0]!=='test@example.invalid'
     || (int)$queue->query('SELECT seller_id FROM artist_publication_mail_queue')->fetchColumn()!==43) {
   throw new RuntimeException('Only the published, pending artist receives a single mail.');
 }
-echo "PASS queue waits for the site and artist directory, ignores hidden profiles and sends once.\n";
+echo "PASS queue waits for the site, artist directory and mail switch, ignores hidden profiles and sends once.\n";

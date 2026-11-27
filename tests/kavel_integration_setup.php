@@ -148,6 +148,9 @@ if (!$pdo->query("SHOW COLUMNS FROM lot_sellers LIKE 'artist_slogan'")->fetch())
 $artistMailQueueSql = file_get_contents($dir . '/database/migrations/20261127_artist_publication_mail_queue.sql');
 if ($artistMailQueueSql === false) throw new RuntimeException('Artist publication mail queue migration missing.');
 $pdo->exec($artistMailQueueSql);
+$artistMailSettingsSql = file_get_contents($dir . '/database/migrations/20261127_artist_publication_mail_settings.sql');
+if ($artistMailSettingsSql === false) throw new RuntimeException('Artist publication mail settings migration missing.');
+$pdo->exec($artistMailSettingsSql);
 
 // Issue #638 fixture: additive Instagram column on disposable CI MySQL only.
 $instagramSql=file_get_contents($dir.'/database/migrations/20261120_seller_artist_instagram.sql');
