@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require dirname(__DIR__, 2) . '/private/bootstrap.php';
 require_once dirname(__DIR__, 2) . '/private/catalog_mutex.php';
+require_once dirname(__DIR__,2).'/private/lot_sellers.php';
 require_auth();
 
 $error = '';
@@ -67,7 +68,21 @@ if (is_post()) {
       is_site_online = :is_site_online,
       show_report_issue_link = :show_report_issue_link' . $homepageSectionAssignments . '
       WHERE id = 1');
-    $st->execute($fields);
+    $pdo->beginTransaction();
+    try {
+      $st->execute($fields);
+      if (($_POST['artist_publication_mail_present'] ?? null) === '1') {
+        $enabled = ($_POST['artist_publication_mail_enabled'] ?? null) === '1' ? 1 : 0;
+        $mailSettings = $pdo->prepare('INSERT INTO artist_publication_mail_settings (id, enabled)
+          VALUES (1, ?) ON DUPLICATE KEY UPDATE enabled = ?');
+        $mailSettings->execute([$enabled, $enabled]);
+      }
+      $pdo->commit();
+    } catch (Throwable $ex) {
+      if ($pdo->inTransaction()) $pdo->rollBack();
+      throw $ex;
+    }
+    seller_send_pending_artist_publication_mail($pdo);
 
     flash(
       $fields['is_published']
@@ -90,6 +105,9 @@ $completenessText = $completedCount . ' / ' . count($checkFields) . ' basisvelde
 $publicationEnabled = (int)($s['is_published'] ?? 0) === 1;
 $catalogSplitEnabled = (int)($s['catalog_split_active'] ?? 0) === 1;
 $artistsOverviewEnabled = (int)($s['show_artists_overview'] ?? 1) === 1;
+$artistPublicationMailEnabled = ($_POST['artist_publication_mail_present'] ?? null) === '1'
+  ? ($_POST['artist_publication_mail_enabled'] ?? null) === '1'
+  : seller_artist_publication_mail_enabled($pdo);
 $artistRecruitmentEnabled = (int)($s['show_artist_recruitment'] ?? 1) === 1;
 $artworkRecruitmentEnabled = (int)($s['show_artwork_recruitment'] ?? 1) === 1;
 $siteOnline = (int)($s['is_site_online'] ?? 1) === 1;
@@ -348,6 +366,22 @@ if ($error) {
                 </span>
               </span>
             </label>
+
+            <input type="hidden" name="artist_publication_mail_present" value="1">
+            <label class="auction-settings-toggle" style="margin-top:14px;">
+              <input type="checkbox" name="artist_publication_mail_enabled" value="1" <?= $artistPublicationMailEnabled ? 'checked' : '' ?>>
+              <span class="auction-settings-toggle-row">
+                <span class="auction-settings-toggle-ui" aria-hidden="true"></span>
+                <span class="auction-settings-toggle-copy">
+                  <strong>Publicatie- en updatemails naar kunstenaars versturen</strong>
+                  <span>Aan: kunstenaars krijgen een mail bij publicatie of een wijziging, zodra hun pagina via het openbare kunstenaarsoverzicht beschikbaar is. Uit: de mails blijven klaarstaan tot je deze schakelaar weer aanzet.</span>
+                </span>
+              </span>
+            </label>
+
+            <?php if (effective_admin_role() === 'administrator'): ?>
+              <p class="auction-settings-note"><a href="<?=e(url('admin/kunstenaarsmails.php'))?>">Wachtrij en verzonden kunstenaarsmails bekijken</a></p>
+            <?php endif; ?>
 
             <?php if ($homepageSectionsAvailable): ?>
               <input type="hidden" name="homepage_sections_present" value="1">

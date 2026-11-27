@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__.'/images.php';
 require_once __DIR__.'/photo_delete_safety.php';
-require_once __DIR__.'/seller_audit.php';
+require_once __DIR__.'/lot_sellers.php';
 
 /** Call only from authenticated seller management while holding the catalog mutex. */
 function seller_image_rows(PDO $pdo,int $sellerId): array {
@@ -36,6 +36,7 @@ function seller_image_upload(PDO $pdo,int $sellerId,string $kind,int $slot,array
       ON DUPLICATE KEY UPDATE path=VALUES(path)');
     $save->execute([$sellerId,$kind,$slot,$path]);
     if ($actorId!==null) $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$actorId,seller_actor_name($pdo,$actorId),$sellerId]);
+    seller_queue_artist_profile_update($pdo,$sellerId);
     $pdo->commit();
   } catch (Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
@@ -63,6 +64,7 @@ function seller_image_delete(PDO $pdo,int $sellerId,string $kind,int $slot,?int 
     }
     $pdo->prepare('DELETE FROM seller_images WHERE seller_id=? AND image_kind=? AND slot=?')->execute([$sellerId,$kind,$slot]);
     if ($actorId!==null) $pdo->prepare('UPDATE lot_sellers SET updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?')->execute([$actorId,seller_actor_name($pdo,$actorId),$sellerId]);
+    seller_queue_artist_profile_update($pdo,$sellerId);
     $pdo->commit();
   } catch (Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();

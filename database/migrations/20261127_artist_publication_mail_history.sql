@@ -1,0 +1,6 @@
+CREATE TABLE artist_publication_mail_history (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  artist_name VARCHAR(50) NOT NULL,
+  is_profile_update TINYINT(1) NOT NULL,
+  sent_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

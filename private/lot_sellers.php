@@ -48,16 +48,120 @@ function seller_set_artist_publication(PDO $pdo,int $sellerId,int $status,string
         throw new InvalidArgumentException('Publiceren kan alleen met een opgeslagen portretfoto van de kunstenaar.');
       }
     }
-    if ((int)$seller['artist_published']!==$status) {
+    $publicationChanged=(int)$seller['artist_published']!==$status;
+    if ($publicationChanged) {
       $name=seller_actor_name($pdo,$actorId);
       $update=$pdo->prepare('UPDATE lot_sellers SET artist_published=?,updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
       $update->execute([$status,$actorId,$name,$sellerId]);
+      if ($status===1) {
+        $pdo->prepare('INSERT INTO artist_publication_mail_queue (seller_id) VALUES (?)')->execute([$sellerId]);
+      } else {
+        $pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE seller_id=?')->execute([$sellerId]);
+      }
     }
     $pdo->commit();
   } catch(Throwable $ex) {
     if ($pdo->inTransaction()) $pdo->rollBack();
     throw $ex;
   }
+  if ($publicationChanged && $status===1) {
+    seller_send_pending_artist_publication_mail($pdo);
+  }
+}
+
+function seller_artist_publication_mail_enabled(PDO $pdo): bool {
+  $enabled=$pdo->query('SELECT enabled FROM artist_publication_mail_settings WHERE id=1')->fetchColumn();
+  return $enabled===false || (int)$enabled===1;
+}
+
+/** Queue a profile change inside its transaction, under the catalogue lock. */
+function seller_queue_artist_profile_update(PDO $pdo, int $sellerId): void {
+  // A pending publication takes precedence. Any pending mail links to the latest profile.
+  $stmt=$pdo->prepare("INSERT INTO artist_publication_mail_queue (seller_id,is_profile_update)
+    SELECT s.id,1 FROM lot_sellers s
+    WHERE s.id=? AND s.seller_type='kunstenaar' AND s.artist_published=1
+      AND NOT EXISTS (SELECT 1 FROM artist_publication_mail_queue q WHERE q.seller_id=s.id)");
+  $stmt->execute([$sellerId]);
+}
+
+/** Called after saving public settings or committing artist changes, under the catalogue lock. */
+function seller_send_pending_artist_publication_mail(PDO $pdo, ?callable $send=null, ?int $onlySellerId=null): void {
+  try {
+    $settings=$pdo->query('SELECT is_site_online,show_artists_overview FROM settings WHERE id=1')->fetch(PDO::FETCH_ASSOC);
+    if ((int)($settings['is_site_online']??0)!==1 || (int)($settings['show_artists_overview']??0)!==1) return;
+    if (!seller_artist_publication_mail_enabled($pdo)) return;
+    if ($send===null && (getenv('LOCAL_PREVIEW_ISOLATED')==='1'
+        || getenv('GITHUB_ACTIONS')==='true'
+        || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return;
+
+    $pending=$pdo->prepare("SELECT q.id AS queue_id,s.id,s.artist_name,s.email,q.is_profile_update FROM artist_publication_mail_queue q
+      JOIN lot_sellers s ON s.id=q.seller_id
+      WHERE s.seller_type='kunstenaar' AND s.artist_published=1 AND TRIM(s.artist_name)<>''
+        AND (? IS NULL OR s.id=?)");
+    $pending->execute([$onlySellerId,$onlySellerId]);
+    $remove=$pdo->prepare('DELETE FROM artist_publication_mail_queue WHERE id=?');
+    $record=$pdo->prepare('INSERT INTO artist_publication_mail_history (artist_name,is_profile_update,sent_at) VALUES (?,?,?)');
+    $prune=$pdo->prepare('DELETE FROM artist_publication_mail_history WHERE id<?');
+    foreach ($pending->fetchAll(PDO::FETCH_ASSOC) as $artist) {
+      $pdo->beginTransaction();
+      $remove->execute([$artist['queue_id']]);
+      if ($remove->rowCount()!==1 || !seller_send_artist_publication_mail(
+        (int)$artist['id'],(string)$artist['artist_name'],(string)$artist['email'],$send,(int)$artist['is_profile_update']===1
+      )) {
+        $pdo->rollBack();
+        continue;
+      }
+      $record->execute([$artist['artist_name'],$artist['is_profile_update'],gmdate('Y-m-d H:i:s')]);
+      $oldestKept=$pdo->query('SELECT id FROM artist_publication_mail_history ORDER BY id DESC LIMIT 1 OFFSET 9')->fetchColumn();
+      if ($oldestKept!==false) $prune->execute([$oldestKept]);
+      $pdo->commit();
+    }
+  } catch (Throwable $ex) {
+    if ($pdo->inTransaction()) $pdo->rollBack();
+    error_log('Artist publication notification queue failed.');
+  }
+}
+
+/** Send only after the change commits. Mail failure leaves the saved change intact. */
+function seller_send_artist_publication_mail(int $sellerId, string $artistName, string $email, ?callable $send=null, bool $isProfileUpdate=false): bool {
+  if ($send===null && (getenv('LOCAL_PREVIEW_ISOLATED')==='1'
+      || getenv('GITHUB_ACTIONS')==='true'
+      || in_array(cfg('setup_key'),['local-preview-only-nonproduction','ci-test-only-nonproduction'],true))) return false;
+  $email=trim($email);
+  if (!filter_var($email,FILTER_VALIDATE_EMAIL)) return false;
+
+  $link='https://41lokeren.be/kunstenaar.php?id='.$sellerId;
+  $greeting=trim($artistName)==='' ? 'Dag,' : 'Dag '.trim($artistName).',';
+  $message=$greeting."\n\n"
+    ."Je kunstenaarspagina staat online op de website van de kunstveiling van 41 Lokeren. Bekijk je persoonlijke pagina hier:\n"
+    .$link."\n\n"
+    ."Deel je pagina met je vrienden, familie en volgers. Laat hen jouw werk ontdekken en nodig hen uit op onze kunstveiling voor het goede doel. Klik op ‘Deel deze kunstenaar’ op je pagina om de link meteen door te sturen of op je sociale media te plaatsen.\n\n"
+    ."Wil je iets laten aanpassen aan je pagina? Neem contact op met je buddy of mail naar veiling@41lokeren.be. We brengen het zo snel mogelijk in orde.\n\n"
+    ."Bedankt dat je meedoet!\n\n"
+    ."Hartelijke groeten,\nHet veilingteam van 41 Lokeren\n";
+  $subject='Je kunstenaarspagina staat online';
+  if ($isProfileUpdate) {
+    $subject='Je kunstenaarspagina is bijgewerkt';
+    $message=$greeting."\n\n"
+      ."We hebben je kunstenaarspagina op de website van de kunstveiling van 41 Lokeren bijgewerkt. Bekijk je pagina even en controleer of alles klopt:\n"
+      .$link."\n\n"
+      ."Heb je opmerkingen of wil je nog iets laten aanpassen? Neem contact op met je buddy of mail naar veiling@41lokeren.be. We brengen het zo snel mogelijk in orde.\n\n"
+      ."Hartelijke groeten,\nHet veilingteam van 41 Lokeren\n";
+  }
+  $headers=[
+    'From'=>'41 Lokeren <noreply@41lokeren.be>',
+    'Reply-To'=>'veiling@41lokeren.be',
+    'Content-Type'=>'text/plain; charset=UTF-8',
+    'Auto-Submitted'=>'auto-generated',
+  ];
+  $send??='mail';
+  try {
+    if ($send($email,$subject,$message,$headers)) return true;
+  } catch (Throwable $ex) {
+    // Do not expose addresses, content or transport details.
+  }
+  error_log('Artist publication notification failed.');
+  return false;
 }
 
 /** Only creator ownership gives assistants seller edit/delete rights. */
@@ -174,6 +278,14 @@ function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $rol
       $sets=implode(',',array_map(static fn($key)=>$key.'=?',$keys));
       $stmt=$pdo->prepare('UPDATE lot_sellers SET '.$sets.',updated_by_admin_id=?,updated_by_name=?,updated_at=UTC_TIMESTAMP() WHERE id=?');
       $stmt->execute([...array_values($data),$actorId,$actorName,$id]);
+      if ($current['seller_type']==='kunstenaar' && (int)$current['artist_published']===1) {
+        foreach (['artist_name','artist_slogan','artist_intro','artist_url','artist_instagram_url'] as $key) {
+          if ((string)($current[$key]??'')!==$data[$key]) {
+            seller_queue_artist_profile_update($pdo,$id);
+            break;
+          }
+        }
+      }
     } else {
       // Status 2 means 'Nieuw'. Existing statuses 0 and 1 remain unchanged.
       $data['artist_published']=$data['seller_type']==='kunstenaar' ? 2 : 0;
