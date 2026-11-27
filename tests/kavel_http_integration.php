@@ -404,19 +404,20 @@ try {
     && !by_number(876571), 'A payout requires a seller, even on a direct POST');
   db()->exec("INSERT INTO lot_sellers (seller_type,name) VALUES ('particulier','Testverkoper zonder IBAN')");
   $noBankSeller=(int)db()->lastInsertId();
-  [$payoutStatus,$payoutPage]=request_page('/admin/kavel.php',$payoutPost+['seller_id'=>(string)$noBankSeller]);
-  claim($payoutStatus===200 && str_contains($payoutPage,'de naam van de rekeninghouder en het IBAN')
-    && !by_number(876571), 'A payout requires both bank details');
-  [$payoutStatus]=request_page('/admin/kavel.php',$payoutPost+['seller_id'=>(string)$sellerLinkId]);
+  [$payoutStatus,,$payoutLocation]=request_page('/admin/kavel.php',$payoutPost+['seller_id'=>(string)$noBankSeller]);
   $payoutLot=by_number(876571);
-  claim($payoutStatus===303 && (int)$payoutLot['seller_percentage']===30,'A valid seller percentage persists');
-  $payoutId=(int)$payoutLot['id'];
+  $payoutId=(int)($payoutLot['id']??0);
+  claim($payoutStatus===303 && $payoutId>0 && (int)$payoutLot['seller_percentage']===30
+    && $payoutLocation==='/admin/kavel.php?id='.$payoutId, 'A payout is saved with missing bank details');
+  [$payoutStatus,$payoutPage]=request_page($payoutLocation);
+  claim($payoutStatus===200 && str_contains($payoutPage,'Bankgegevens ontbreken voor dit verkoperspercentage')
+    && str_contains($payoutPage,'/admin/verkoper.php?id='.$noBankSeller.'&amp;from_lot=1&amp;lot_id='.$payoutId.'#verkoper-bankgegevens'),
+    'The warning links to the seller bank details');
   [$payoutStatus,$payoutPage]=request_page('/admin/kavel.php?id='.$payoutId,array_replace($payoutPost,[
     'id'=>(string)$payoutId,'seller_id'=>(string)$sellerLinkId,'seller_percentage'=>'31',
   ]));
   claim($payoutStatus===200 && str_contains($payoutPage,'0%, 30% of 60%')
     && (int)by_number(876571)['seller_percentage']===30,'Forged percentage is rejected without changing the lot');
-  db()->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$noBankSeller,$payoutId]);
   [$payoutStatus,$payoutPage]=request_page('/admin/index.php?q=876571');
   claim($payoutStatus===200 && str_contains($payoutPage,'class="dashboard-bank-missing">Missing</strong>'),
     'Overview flags missing bank details for a nonzero percentage');

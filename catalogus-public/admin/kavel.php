@@ -158,12 +158,8 @@ if(is_post()){
     } else {
       $sellerPercentage=(int)$rawPercentage;
     }
-    if ($error==='' && $sellerPercentage>0) {
-      if ($sellerId===null) {
-        $error='Selecteer een verkoper voor een verkoperspercentage hoger dan 0%. Het kavel is niet opgeslagen.';
-      } elseif (!seller_has_bank_details($pdo,$sellerId)) {
-        $error='Vul bij de verkoper de naam van de rekeninghouder en het IBAN in. Het kavel is niet opgeslagen.';
-      }
+    if ($error==='' && $sellerPercentage>0 && $sellerId===null) {
+      $error='Selecteer een verkoper voor een verkoperspercentage hoger dan 0%. Het kavel is niet opgeslagen.';
     }
     // Every seller-less lot is a donation with no payout. Require explicit
     // acknowledgement even if client-side JavaScript is disabled or bypassed.
@@ -217,6 +213,7 @@ if(is_post()){
         try{
           // The catalog mutex serializes allocation and gap-free resequencing.
           // All lot changes and shifts must succeed together.
+          $sellerBankMissing = $sellerPercentage>0 && $sellerId!==null && !seller_has_bank_details($pdo,$sellerId);
           $pdo->beginTransaction();
           // A newly assigned ordinary lot number is never reusable, even after delete.
           // The permanent registry is part of this same transaction.
@@ -279,6 +276,7 @@ if(is_post()){
             redirect('admin/kavel.php',['id'=>$id]);
           }
           flash(!$lotFieldsChanged && !$photos ? 'Geen wijzigingen aan dit kavel.' : "Kavel en foto's bewaard.",'success');
+          if ($sellerBankMissing) redirect('admin/kavel.php',['id'=>$id]);
           redirect('admin/index.php');
         }catch(PDOException $ex){
           if ($pdo->inTransaction()) $pdo->rollBack();
@@ -335,11 +333,15 @@ if ($submitted !== null && $suggestedNumber !== '') $d['lot_number'] = (string)$
 $canEditLot = !$lot || lot_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $lot);
 $availableCategories = lot_category_names($pdo);
 $selectedSeller=null;
+$sellerBankMissing=false;
 if (filter_var($d['seller_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]])!==false) {
   try {
-    $sellerQuery=$pdo->prepare("SELECT s.id,s.name,s.artist_name,s.seller_type,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=?");
+    $sellerQuery=$pdo->prepare("SELECT s.id,s.name,s.artist_name,s.seller_type,s.artist_published,s.created_by_admin_id,si.path AS portrait_path FROM lot_sellers s LEFT JOIN seller_images si ON si.seller_id=s.id AND si.image_kind='portrait' AND si.slot=1 WHERE s.id=?");
     $sellerQuery->execute([(int)$d['seller_id']]);
     $selectedSeller=$sellerQuery->fetch(PDO::FETCH_ASSOC) ?: null;
+    if ($selectedSeller && $error==='' && (int)($lot['seller_percentage']??0)>0) {
+      $sellerBankMissing=!seller_has_bank_details($pdo,(int)$selectedSeller['id']);
+    }
   } catch (PDOException $ex) { error_log('[Kavel verkoper] Selectie laden mislukt.'); }
 }
 $selectedSellerName=$selectedSeller===null ? '' : (string)($selectedSeller['seller_type']==='kunstenaar' ? ($selectedSeller['artist_name']?:$selectedSeller['name']) : $selectedSeller['name']);
@@ -355,6 +357,15 @@ if ($error === $cancelAuctionWarning) {
   echo '<div class="alert error" role="alert">'.e($error).'</div>';
 }
 ?>
+<?php if ($sellerBankMissing): ?>
+  <div class="alert warning" role="alert">
+    Bankgegevens ontbreken voor dit verkoperspercentage. Vul de naam van de rekeninghouder en het IBAN in bij de verkoper.
+    <?php if (seller_can_edit(effective_admin_role(), (int)$_SESSION['admin_id'], $selectedSeller)): ?>
+      <?php $sellerEditor = $selectedSeller['seller_type']==='kunstenaar' ? 'admin/kunstenaar-bewerken.php' : 'admin/verkoper.php'; ?>
+      <a href="<?=e(url($sellerEditor,['id'=>(int)$selectedSeller['id'],'from_lot'=>1,'lot_id'=>$id]))?>#verkoper-bankgegevens">Bankgegevens van verkoper bewerken</a>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
 <?php if ($error === $cancelAuctionWarning): ?>
 <dialog id="lot-cancel-warning" class="lot-cancel-dialog" aria-labelledby="lot-cancel-title" aria-describedby="lot-cancel-description">
   <div class="lot-cancel-dialog-content">
@@ -448,7 +459,7 @@ if ($error === $cancelAuctionWarning) {
               value="<?=in_array((string)$d['seller_percentage'],['0','30','60'],true) ? e((string)$d['seller_percentage']) : '0'?>"
               aria-describedby="lot-seller-percentage-hint">
             <div class="lot-editor-percentage-ticks" aria-hidden="true"><span>0%</span><span>30%</span><span>60%</span></div>
-            <p id="lot-seller-percentage-hint">Bij 30% of 60% zijn een verkoper en bankgegevens verplicht.</p>
+            <p id="lot-seller-percentage-hint">Bij 30% of 60% moet je een verkoper selecteren. Ontbrekende bankgegevens kun je later aanvullen.</p>
           </div>
           <div class="lot-editor-fields lot-editor-two"><label>Marktprijs (€)<input type="number" min="0" step="1" name="market_price" value="<?=e(lot_price_input_value($d['market_price'], $submitted !== null))?>" placeholder="0"></label><label>Startbod (€)<input type="number" min="0" step="1" name="starting_bid" value="<?=e(lot_price_input_value($d['starting_bid'], $submitted !== null))?>" placeholder="0"></label></div>
         </section>

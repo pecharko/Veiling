@@ -242,7 +242,7 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
           <label>Gemeente <span class="seller-optional">(optioneel)</span><input name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
         </div>
       </div>
-      <div class="seller-fields-section">
+      <div class="seller-fields-section" id="verkoper-bankgegevens">
         <h3>Bankgegevens <span class="seller-private-label">Privé</span></h3>
         <div class="seller-fields-grid">
           <label>Naam bankrekeningnummer <span class="seller-optional">(optioneel)</span><input name="bank_account_name" maxlength="100" autocomplete="off" value="<?=e((string)$values['bank_account_name'])?>"></label>
