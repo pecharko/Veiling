@@ -648,7 +648,7 @@ try {
       && !str_contains($minePage, 'Originele titel')
       && str_contains($minePage, 'name="mine" value="1"')
       && str_contains($minePage, 'Filter het volledige overzicht')
-      && strpos($minePage, 'class="dashboard-scope"') < strpos($minePage, 'class="dashboard-stats"')
+      && preg_match('/class="dashboard-scope".*aria-label="Catalogusstatistieken"/s', $minePage)===1
       && str_contains($minePage, 'dashboard-scope-option is-selected')
       && str_contains($minePage, '>Alle kavels</strong>'),
     'Global Mijn kavels filter is above all dashboard tiles and filters table by creator');
