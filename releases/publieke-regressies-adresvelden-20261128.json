@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "168555f778f9a04b610e83bdfc0c3d3615b35cbfce0d7a8710cd0b8a96d8f9fa",
+      "remote_sha256": "58b6bc3d67a1a46e0309f2980c82bea7ffd9efc56181f03de96b7ba97291dcbd"
+    },
+    {
+      "path": "catalogus-public/assets/public-buttons.css",
+      "source_sha256": "e850d290c981a811bd70e9218bf639e64d1cce0dd1f8812d38819a88ba9afe5a",
+      "remote_sha256": "7204d35937dac00f9a3371a49830ec41dc4fd9cf944b5f0eec6158e761418226"
+    },
+    {
+      "path": "catalogus-public/goede-doel.php",
+      "source_sha256": "b43ce5ef3c4a59cd814d057ebd69ef1cb844f92b9536e186ef52228a486a12d4",
+      "remote_sha256": "552990c8059600c42d44223cfad5d2a98fadb353dad878b70c0d2566b62285cb"
+    },
+    {
+      "path": "catalogus-public/index.php",
+      "source_sha256": "92c289568759682077740fd8cd3edffa2c4edeaa0d66f0fccf32eadec14a0867",
+      "remote_sha256": "b48d86733403dd9e0cdd0b4c5934e4b96e0507d43e44ae29d48c6d04bb6afc31"
+    },
+    {
+      "path": "catalogus-public/kavel.php",
+      "source_sha256": "d05b0ca7f1b89ebe332e82e1a7f7f784b60b0946ae7278aa7d45e9b0255e43e7",
+      "remote_sha256": "3ec822ba4e7719e014cf92a238f9ea34ee38fb9b832944d55cc26d38f4dfa39a"
+    },
+    {
+      "path": "catalogus-public/kunstenaar-interesse.php",
+      "source_sha256": "698ded444186d3ebec42d5fe4dc669f3fc5fdb4673d096bf9ecc36d79beed1b3",
+      "remote_sha256": "848070c9ef3599e00f89a5c14889b9758e784d1cca626559393ca162c6b6dae5"
+    },
+    {
+      "path": "catalogus-public/kunstenaars.php",
+      "source_sha256": "5cf56c7ca199c2a93aee484f587ec7fa9beb3096d9cbda8f5bd8d65bc71ae2c0",
+      "remote_sha256": "f7510a31f046e06964f2511b90941f82f3e1e2f8564042e1773d93589522ec54"
+    },
+    {
+      "path": "catalogus-public/kunstwerk-interesse.php",
+      "source_sha256": "c47b87d0174dbf27cd2691dc63f8f1dc1e5c1e96fda0e1b85c26f4a401f9e471",
+      "remote_sha256": "390ec7bd2f2c835342ac13a451c99b59459bac23770452503129bd2597c6c6f6"
+    },
+    {
+      "path": "catalogus-public/vorige-editie.php",
+      "source_sha256": "12735ad2fcd7dcf650b72851c46c7fbbcf73717426f05113462c58edc241f16e",
+      "remote_sha256": "d3350a6c9ecb46aafb383a1dea6b047c248710fe38f41ded164348d853f97209"
+    },
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "a42c5ca255a03dd03d71e6c6be1c4bbb2897e2b41a3857c525b3a86e9cb6c5b7",
+      "remote_sha256": "7825e85fc3dc01e2c6209ce06b4dc891076b749d52dbddea3195f8a665392f45"
+    }
+  ]
+}
