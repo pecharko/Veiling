@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
-const base = 'http://localhost:8080';
+const { checkPublicInteractions, previewBase } = require('./public_interactions_test.cjs');
+const base = previewBase();
 const output = path.join(__dirname, '.screenshots');
 (async () => {
   const browserPath = process.env.PREVIEW_BROWSER_EXECUTABLE;
@@ -12,6 +13,7 @@ const output = path.join(__dirname, '.screenshots');
     ...(browserPath ? { executablePath: browserPath } : {}),
   });
   try {
+    await checkPublicInteractions(browser, base);
     fs.mkdirSync(output, { recursive: true });
     const context = await browser.newContext();
     const page = await context.newPage();
@@ -19,7 +21,7 @@ const output = path.join(__dirname, '.screenshots');
     page.on('pageerror', error => errors.push(error.message));
     const home = await page.goto(base + '/index.php', { waitUntil: 'networkidle' });
     assert.equal(home.status(), 200);
-    assert.equal(new URL(page.url()).hostname, 'localhost');
+    assert.equal(new URL(page.url()).origin, base);
     assert.match(await page.textContent('body'), /Abstract landschap/);
     assert.equal(await page.locator('form.toolbar').count(), 0, 'No public lot filters');
     assert.equal(await page.locator('.catalog-preview-intro').count(), 0, 'Unsplit catalog has no introductory box');

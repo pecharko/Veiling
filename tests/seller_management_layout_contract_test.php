@@ -28,9 +28,13 @@ foreach ([
 ] as $required) {
   if (!str_contains($editor,$required)) throw new RuntimeException('Missing seller editor element: '.$required);
 }
-foreach (['email','street','house_number','postal_code','municipality','artist_name'] as $field) {
+foreach (['name','email','artist_name'] as $field) {
   if (!preg_match('/<input(?=[^>]*name="'.preg_quote($field,'/').'")(?=[^>]*\\brequired\\b)[^>]*>/s', $editor))
     throw new RuntimeException('Required seller input missing: '.$field);
+}
+foreach (['street','house_number','postal_code','municipality'] as $field) {
+  if (!preg_match('/<input(?=[^>]*name="'.preg_quote($field,'/').'")(?![^>]*\brequired\b)[^>]*>/s', $editor))
+    throw new RuntimeException('Optional address input missing or required: '.$field);
 }
 if (!str_contains($editor,"input.required=artist && input.name==='artist_name';") || !str_contains($editor,'input.disabled=!artist'))
   throw new RuntimeException('Artist required fields must toggle with seller type');

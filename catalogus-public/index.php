@@ -99,8 +99,8 @@ $subtitle = (string)($s['subtitle'] ?? 'Een bijzondere selectie');
   <header class="site-header front-header" id="top">
     <div class="shell header-inner front-header-inner">
       <a class="brand front-brand" href="<?=e(url('index.php'))?>" aria-label="41 Lokeren - naar startpagina">
-        <span class="brand-mark" aria-hidden="true">41</span>
-        <span class="brand-name">41 LOKEREN<small>KUNSTVEILING</small></span>
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name">41 LOKEREN <small>KUNSTVEILING</small></span>
       </a>
       <nav class="header-nav front-nav" aria-label="Hoofdnavigatie">
         <?php if ($published): ?><a href="#catalogus">Bekijk kavels</a><?php endif; ?>

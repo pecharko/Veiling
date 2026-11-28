@@ -25,8 +25,8 @@ $pages = [];
 foreach ($names as $name) {
     $page = file_get_contents($root . '/catalogus-public/' . $name);
     $buttonsVersion = match ($name) {
-        'kavel.php' => 4,
-        'kunstenaar.php' => 3,
+        'kavel.php' => 7,
+        'kunstenaar.php' => 6,
         default => 5,
     };
     $hasHeaderNav = !in_array($name, ['kavel.php', 'kunstenaar.php'], true);

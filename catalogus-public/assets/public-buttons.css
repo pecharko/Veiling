@@ -157,19 +157,18 @@
 }
 
 
-/* Kavel-detailnavigatie: op mobiel alleen < en >, behoud labels voor screenreaders. */
-.detail-side-nav-symbol {
+/* Kavel-detailnavigatie: pijlen op mobiel, tekstlabels op desktop. */
+.detail-side-nav-icon {
   display: none;
 }
 @media screen and (max-width: 767px) {
   .detail-side-nav .detail-side-nav-text {
     display: none;
   }
-  .detail-side-nav .detail-side-nav-symbol {
+  .detail-side-nav .detail-side-nav-icon {
     display: block;
-    font-size: 26px;
-    font-weight: 750;
-    line-height: 1;
+    width: 24px;
+    height: 24px;
   }
   .detail-side-nav a {
     width: 44px;

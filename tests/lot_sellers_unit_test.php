@@ -33,15 +33,25 @@ $onlyIban=seller_clean(array_merge($base,['bank_account_name'=>'','bank_account_
 checkSeller($onlyIban['bank_account_iban']==='BE68539007547034',
   'Optional supplied IBAN remains validated and normalized');
 
+$blankAddress=['street'=>'','house_number'=>'','postal_code'=>'','municipality'=>''];
+$privateWithoutAddress=seller_clean(array_diff_key($base,$blankAddress));
+$artistWithoutAddress=seller_clean(array_replace($normal,$blankAddress));
+$partialAddress=seller_clean(array_replace($base,$blankAddress,['municipality'=>' Lokeren ']));
+checkSeller(array_intersect_key($privateWithoutAddress,$blankAddress)===$blankAddress,
+  'Private seller can omit all address fields');
+checkSeller(array_intersect_key($artistWithoutAddress,$blankAddress)===$blankAddress,
+  'Artist can clear all address fields');
+checkSeller(array_intersect_key($partialAddress,$blankAddress)===array_replace($blankAddress,['municipality'=>'Lokeren']),
+  'Partial addresses remain valid and are trimmed');
+
 foreach ([
   ['seller_type'=>'unknown','name'=>'Demo'],
   array_merge($base,['email'=>'not-an-email']),
   array_merge($base,['mobile_number'=>'02 123 45 67']),
   array_merge($base,['bank_account_iban'=>'BE68 5390 0754 7035']),
-  array_merge($base,['street'=>'']),
-  array_merge($base,['house_number'=>'']),
-  array_merge($base,['postal_code'=>'']),
-  array_merge($base,['municipality'=>'']),
+  array_merge($base,['name'=>'']),
+  array_merge($base,['email'=>'']),
+  array_merge($base,['street'=>str_repeat('x',151)]),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'','artist_url'=>'https://example.org']),
   array_merge($base,['seller_type'=>'kunstenaar','artist_name'=>'Demo','artist_url'=>'javascript:alert(1)']),
 ] as $bad) {

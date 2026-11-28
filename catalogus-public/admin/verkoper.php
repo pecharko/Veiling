@@ -236,10 +236,10 @@ admin_top($editId===null?'Nieuwe '.$screenLabel:ucfirst($screenLabel).' bewerken
           <label class="seller-field-wide">E-mail <span class="lot-required">*</span><input required name="email" type="email" maxlength="254" value="<?=e((string)$values['email'])?>"></label>
           <label class="seller-field-wide">Mobiel nummer <span class="seller-optional">(optioneel)</span><input type="tel" name="mobile_number" maxlength="30" autocomplete="tel" inputmode="tel" value="<?=e((string)$values['mobile_number'])?>" placeholder="0470 12 34 56 of +32 470 12 34 56" aria-describedby="seller-mobile-help"></label>
           <p id="seller-mobile-help" class="lot-editor-help seller-field-wide">Belgisch gsm-nummer of internationaal nummer met landcode. Bij het opslaan wordt het formaat gecontroleerd.</p>
-          <label>Straat <span class="lot-required">*</span><input required name="street" maxlength="150" value="<?=e((string)$values['street'])?>"></label>
-          <label>Huisnummer <span class="lot-required">*</span><input required name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
-          <label>Postcode <span class="lot-required">*</span><input required name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
-          <label>Gemeente <span class="lot-required">*</span><input required name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
+          <label>Straat <span class="seller-optional">(optioneel)</span><input name="street" maxlength="150" value="<?=e((string)$values['street'])?>"></label>
+          <label>Huisnummer <span class="seller-optional">(optioneel)</span><input name="house_number" maxlength="20" value="<?=e((string)$values['house_number'])?>"></label>
+          <label>Postcode <span class="seller-optional">(optioneel)</span><input name="postal_code" maxlength="20" value="<?=e((string)$values['postal_code'])?>"></label>
+          <label>Gemeente <span class="seller-optional">(optioneel)</span><input name="municipality" maxlength="120" value="<?=e((string)$values['municipality'])?>"></label>
         </div>
       </div>
       <div class="seller-fields-section">
