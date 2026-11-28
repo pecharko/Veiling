@@ -89,6 +89,9 @@ $ddl = [
   ) ENGINE=InnoDB",
 ];
 foreach ($ddl as $sql) $pdo->exec($sql);
+$sellerPercentageSql = file_get_contents($dir . '/database/migrations/20261127_lot_seller_percentage.sql');
+if ($sellerPercentageSql === false) throw new RuntimeException('Seller percentage migration missing.');
+$pdo->exec($sellerPercentageSql);
 // Exercise the exact reviewed artist migration on the disposable MySQL 8.4 database.
 $artistMigration = file_get_contents($dir . '/database/migrations/20261108_lot_artist_fields.sql');
 if (!is_string($artistMigration) || !str_contains($artistMigration, 'chk_lots_artist_url_requires_name')) {

@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__).'/private/lot_form.php';
 $values=[12,'Fictief kavel','Een ondertitel','Kunst','Beschrijving','Details',
-  '10','5.00',0,'draft','markt',null,null];
+  '10','5.00',0,'draft','markt',null,null,0];
 $stored=[
   'lot_number'=>'12','title'=>'Fictief kavel','subtitle'=>'Een ondertitel',
   'category'=>'Kunst','description'=>'Beschrijving','details'=>'Details',
@@ -10,11 +10,11 @@ $stored=[
   'status'=>'draft','sale_location'=>'markt','auction_number'=>null,'seller_id'=>null,
 ];
 if (lot_effective_fields_changed($stored,$values)) throw new RuntimeException('Unchanged lot incorrectly marked as changed');
-$checks=[0,1,2,3,4,5,6,7,8,9,10,11,12];
+$checks=[0,1,2,3,4,5,6,7,8,9,10,11,12,13];
 foreach($checks as $index) {
   $different=$values;
   $different[$index]=match($index){
-    0=>13,6=>'11',7=>'5.01',8=>1,9=>'published',10=>'veiling',11=>1,12=>34,
+    0=>13,6=>'11',7=>'5.01',8=>1,9=>'published',10=>'veiling',11=>1,12=>34,13=>30,
     default=>$values[$index].' gewijzigd'
   };
   if (!lot_effective_fields_changed($stored,$different))

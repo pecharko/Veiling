@@ -88,7 +88,7 @@ function compact_auction_numbers(PDO $pdo, ?int $actorId=null): void {
 function lot_effective_fields_changed(array $stored, array $values): bool {
   $keys=['lot_number','title','subtitle','category','description','details',
     'market_price','starting_bid','auction_only','status','sale_location',
-    'auction_number','seller_id'];
+    'auction_number','seller_id','seller_percentage'];
   if (count($values)!==count($keys)) throw new InvalidArgumentException('Ongeldige kavelvergelijking.');
   foreach ($keys as $i=>$key) {
     $old=$stored[$key]??null;
@@ -96,6 +96,9 @@ function lot_effective_fields_changed(array $stored, array $values): bool {
     if (in_array($key,['market_price','starting_bid'],true)) {
       $old=($old===null||$old==='')?null:number_format((float)$old,2,'.','');
       $next=($next===null||$next==='')?null:number_format((float)$next,2,'.','');
+    } elseif ($key==='seller_percentage') {
+      $old=(int)$old;
+      $next=(int)$next;
     } elseif (in_array($key,['lot_number','auction_only','auction_number','seller_id'],true)) {
       $old=($old===null||$old==='')?null:(int)$old;
       $next=($next===null||$next==='')?null:(int)$next;

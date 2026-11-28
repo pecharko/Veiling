@@ -9,7 +9,7 @@ const SNAP_INSERT = [
  'settings'=>['id','title','subtitle','introduction','event_date','event_time','location','address','contact_email','practical_info','show_artist_recruitment','show_artwork_recruitment','is_published','is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','updated_at'],
  'lot_categories'=>['id','name'],
  'lot_sellers'=>['id','seller_type','name','email','mobile_number','street','house_number','postal_code','municipality','bank_account_name','bank_account_iban','artist_name','artist_url','artist_instagram_url','artist_intro','artist_slogan','artist_published','created_by_admin_id','created_by_name','created_at','updated_by_admin_id','updated_by_name','updated_at'],
- 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','created_at','updated_at','last_edited_by_admin_id','last_edited_at'],
+ 'lots'=>['id','lot_number','title','subtitle','category','description','details','estimate_min','estimate_max','market_price','starting_bid','auction_only','created_by_admin_id','status','sale_location','auction_number','seller_id','seller_percentage','created_at','updated_at','last_edited_by_admin_id','last_edited_at'],
  'lot_images'=>['id','lot_id','path','sort_order','source_name','created_at'],
  'seller_images'=>['id','seller_id','image_kind','slot','path','created_at'],
 ];
@@ -165,7 +165,21 @@ function snap_verified_file(string $path): array {
   }
   if($zip->numFiles!==count($hashes)+1)throw new RuntimeException('Snapshot bevat onverwachte bestanden.');
   snap_require_referenced_photos($database['tables'],$hashes);
-  foreach(SNAP_TABLES as $t){if(!is_array($database['tables'][$t]))throw new RuntimeException('Ongeldige tabel '.$t);foreach($database['tables'][$t] as $row){if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$t])|| (array_diff(SNAP_INSERT[$t],array_keys($row)) && !($t==='settings' && !array_diff(array_diff(SNAP_INSERT[$t],array_keys($row)),['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','show_artist_recruitment','show_artwork_recruitment']))))throw new RuntimeException('Ongeldige kolommen bij '.$t);}}
+  foreach(SNAP_TABLES as $table) {
+   if(!is_array($database['tables'][$table]))throw new RuntimeException('Ongeldige tabel '.$table);
+   foreach($database['tables'][$table] as $row) {
+    if(!is_array($row)||array_diff(array_keys($row),SNAP_INSERT[$table])) {
+     throw new RuntimeException('Ongeldige kolommen bij '.$table);
+    }
+    $missing=array_diff(SNAP_INSERT[$table],array_keys($row));
+    $optional=$table==='settings'
+      ? ['is_site_online','catalog_split_active','show_report_issue_link','show_artists_overview','show_artist_recruitment','show_artwork_recruitment'] : [];
+    if(array_diff($missing,$optional))throw new RuntimeException('Ongeldige kolommen bij '.$table);
+    if($table==='lots' && !in_array($row['seller_percentage'],[0,30,60,'0','30','60'],true)) {
+     throw new RuntimeException('Ongeldig verkoperspercentage in snapshot.');
+    }
+   }
+  }
   return [$database,$hashes,$size];
  }finally{$zip->close();}
 }

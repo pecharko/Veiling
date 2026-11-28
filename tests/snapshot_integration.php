@@ -89,7 +89,7 @@ $pdo->prepare('UPDATE lots SET seller_id=? WHERE id=?')->execute([$sellerId,$lot
 $pdo->exec("INSERT INTO lot_categories (name) VALUES ('CI Eenmalige categorie')");
 $categoryId=(int)$pdo->lastInsertId();
 $pdo->prepare('UPDATE lots SET category=? WHERE id=?')->execute(['CI Eenmalige categorie',$lotId]);
-$pdo->prepare("UPDATE lots SET last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
+$pdo->prepare("UPDATE lots SET seller_percentage=30,last_edited_by_admin_id=1,last_edited_at='2026-11-11 07:30:00' WHERE id=?")->execute([$lotId]);
 $pdo->prepare("INSERT INTO login_attempts (ip_hash) VALUES (?)")
     ->execute([hash('sha256','nonproduction-test-ip')]);
 $originalAdmin = $pdo->query('SELECT email FROM admins LIMIT 1')->fetchColumn();
@@ -149,6 +149,7 @@ verify(count($snapshot['tables']['lots'])===1 && !isset($snapshot['tables']['adm
 verify($snapshot['format']==='41lokeren-v8-catalog-only' && count(array_filter($snapshot['tables']['lot_sellers'],static fn($s)=>(int)$s['id']===$sellerId && $s['artist_intro']==='Fictieve maker uit Lokeren' && $s['artist_slogan']==='Kunst met karakter' && $s['artist_instagram_url']==='https://www.instagram.com/testmaker/' && (int)$s['artist_published']===1))===1
   && count(array_filter($snapshot['tables']['seller_images'],static fn($row)=>(int)$row['seller_id']===$sellerId && $row['image_kind']==='work'))===1
   && (int)$snapshot['tables']['lots'][0]['seller_id']===$sellerId
+  && (int)$snapshot['tables']['lots'][0]['seller_percentage']===30
   && (int)$snapshot['tables']['lots'][0]['last_edited_by_admin_id']===1
   && $snapshot['tables']['lots'][0]['last_edited_at']==='2026-11-11 07:30:00',
   'Snapshot v8 stores linked sellers and last lot editor');
@@ -225,31 +226,41 @@ $bad->addFromString('database.json', $databaseJson . ' ');
 $bad->close();
 assert_throws(fn() => snap_verified($badName), 'checksum', 'Modified database is rejected by checksum validation');
  
-// Construct an authentic-looking, checksum-consistent older format in a
-// disposable ZIP. Existing customer snapshots remain untouched.
+// Verify that checksum-consistent snapshots are rejected before any writes.
 $legacyName='snapshot-20990103-000000-deadbeefdead.zip';
 $legacyPath=snap_path($legacyName);
-if (!copy(snap_path($name),$legacyPath)) throw new RuntimeException('Cannot create disposable legacy fixture');
-$legacyZip=new ZipArchive();
-if($legacyZip->open($legacyPath)!==true)throw new RuntimeException('Cannot edit legacy fixture');
-$legacyPayload=json_decode((string)$legacyZip->getFromName('database.json'),true,512,JSON_THROW_ON_ERROR);
-$legacyManifest=json_decode((string)$legacyZip->getFromName('manifest.json'),true,512,JSON_THROW_ON_ERROR);
-$legacyPayload['format']='41lokeren-v7-lot-audit';
-$legacyManifest['format']='41lokeren-v7-lot-audit';
-$legacyDatabaseJson=json_encode($legacyPayload,JSON_THROW_ON_ERROR);
-$legacyManifest['sha256']['database.json']=hash('sha256',$legacyDatabaseJson);
-$legacyZip->addFromString('database.json',$legacyDatabaseJson);
-$legacyZip->addFromString('manifest.json',json_encode($legacyManifest,JSON_THROW_ON_ERROR));
-$legacyZip->close();
-assert_throws(fn()=>snap_verified($legacyName),'Niet-ondersteund snapshotformaat',
-    'Older v7 snapshot is refused even when its archive checksums are valid');
-assert_throws(fn()=>snap_restore($pdo,$legacyName),'Niet-ondersteund snapshotformaat',
-    'Older v7 snapshot cannot enter the restore photo or database swap');
-verify(!restore_journal_pending() && is_file($original) && is_file($sellerPhoto),
-    'Rejected v7 restore preserves the active photo tree and leaves no maintenance journal');
+foreach (['v7', 'v8 without seller percentage', 'v8 with invalid seller percentage'] as $fixture) {
+    if (!copy(snap_path($name),$legacyPath)) throw new RuntimeException('Cannot create disposable legacy fixture');
+    try {
+        $legacyZip=new ZipArchive();
+        if($legacyZip->open($legacyPath)!==true)throw new RuntimeException('Cannot edit legacy fixture');
+        $legacyPayload=json_decode((string)$legacyZip->getFromName('database.json'),true,512,JSON_THROW_ON_ERROR);
+        $legacyManifest=json_decode((string)$legacyZip->getFromName('manifest.json'),true,512,JSON_THROW_ON_ERROR);
+        if ($fixture === 'v7') {
+            $legacyPayload['format']=$legacyManifest['format']='41lokeren-v7-lot-audit';
+            $expectedError='Niet-ondersteund snapshotformaat';
+        } elseif ($fixture === 'v8 without seller percentage') {
+            unset($legacyPayload['tables']['lots'][0]['seller_percentage']);
+            $expectedError='Ongeldige kolommen bij lots';
+        } else {
+            $legacyPayload['tables']['lots'][0]['seller_percentage']=31;
+            $expectedError='Ongeldig verkoperspercentage in snapshot';
+        }
+        $legacyDatabaseJson=json_encode($legacyPayload,JSON_THROW_ON_ERROR);
+        $legacyManifest['sha256']['database.json']=hash('sha256',$legacyDatabaseJson);
+        $legacyZip->addFromString('database.json',$legacyDatabaseJson);
+        $legacyZip->addFromString('manifest.json',json_encode($legacyManifest,JSON_THROW_ON_ERROR));
+        if (!$legacyZip->close()) throw new RuntimeException('Cannot close disposable legacy fixture');
+        assert_throws(fn()=>snap_verified($legacyName),$expectedError,"Verification rejects $fixture");
+        assert_throws(fn()=>snap_restore($pdo,$legacyName),$expectedError,"Restore rejects $fixture before writes");
+        verify(!restore_journal_pending() && is_file($original) && is_file($sellerPhoto),
+            "Rejected $fixture restore preserves active photos and leaves no maintenance journal");
+    } finally {
+        if(!unlink($legacyPath))throw new RuntimeException('Cannot delete disposable legacy fixture');
+    }
+}
 verify(snap_verified($name)[0]['format']==='41lokeren-v8-catalog-only',
-    'Rejected old format does not modify the current v8 snapshot');
-if(!unlink($legacyPath))throw new RuntimeException('Cannot delete disposable legacy fixture');
+    'Rejected snapshots do not modify the current v8 snapshot');
 
 
 $pdo->prepare('UPDATE lots SET title=? WHERE id=?')->execute(['Gewijzigde titel', $lotId]);
@@ -314,8 +325,9 @@ verify((int)$pdo->query('SELECT seller_id FROM lots WHERE lot_number=101')->fetc
     'Restore preserves seller records and lot foreign keys');
 verify($pdo->query('SELECT title FROM lots WHERE lot_number=101')->fetchColumn() === 'Kunstwerk voor snapshot',
        'Restore returns the original lot title');
-$restoredLot=$pdo->query('SELECT sale_location,auction_number FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
-verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1,
+$restoredLot=$pdo->query('SELECT sale_location,auction_number,seller_percentage FROM lots WHERE lot_number=101')->fetch(PDO::FETCH_ASSOC);
+verify($restoredLot['sale_location']==='veiling' && (int)$restoredLot['auction_number']===1
+    && (int)$restoredLot['seller_percentage']===30,
        'Restore preserves original sale location and auction number');
 verify($pdo->query('SELECT title FROM settings WHERE id=1')->fetchColumn() === 'CI catalogus',
        'Restore returns the original event settings');

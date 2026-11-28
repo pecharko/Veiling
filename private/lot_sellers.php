@@ -246,6 +246,12 @@ function seller_valid_id(PDO $pdo, ?int $id): bool {
   return $stmt->fetchColumn()!==false;
 }
 
+function seller_has_bank_details(PDO $pdo, int $id): bool {
+  $stmt=$pdo->prepare("SELECT 1 FROM lot_sellers WHERE id=? AND TRIM(bank_account_name)<>'' AND TRIM(bank_account_iban)<>''");
+  $stmt->execute([$id]);
+  return $stmt->fetchColumn()!==false;
+}
+
 /** Caller must have checked admin role, CSRF and catalog mutex. */
 function seller_save(PDO $pdo, ?int $id, array $input, int $actorId, string $role): int {
   if ($actorId<1 || !seller_can_manage($role)) throw new InvalidArgumentException('Ongeldige bewerkingsrechten.');
