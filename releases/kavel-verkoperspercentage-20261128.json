@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "files": [
+    {
+      "path": "private/lot_sellers.php",
+      "source_sha256": "d4f761e95d074346548bc5e788069f1521e67f67832a55f4107dc0962c354076",
+      "remote_sha256": "a42c5ca255a03dd03d71e6c6be1c4bbb2897e2b41a3857c525b3a86e9cb6c5b7"
+    },
+    {
+      "path": "private/lot_form.php",
+      "source_sha256": "d9d23386a9de06198ba84050cd74fd404905d2da223076011b4f017b572c8fa7",
+      "remote_sha256": "246a41adcb046b182d988b49c68d4be6a21c0ac1a9d8fafb54ad1f90aef26593"
+    },
+    {
+      "path": "catalogus-public/admin/admin.css",
+      "source_sha256": "3fbd0132d1d0812383d3f116a38e262d41f931e546736148705b360abc7401f0",
+      "remote_sha256": "c7b4851c5e373a53e0be5143b58fc3f82d79083d0a2cdb6e465a8e2f1390e996"
+    },
+    {
+      "path": "catalogus-public/admin/verkoper.php",
+      "source_sha256": "45a1419e2f1c979d5c0c1b7ef747682f8ca10ad28609272884d4b64ef7c40324",
+      "remote_sha256": "168555f778f9a04b610e83bdfc0c3d3615b35cbfce0d7a8710cd0b8a96d8f9fa"
+    },
+    {
+      "path": "catalogus-public/admin/kavel.php",
+      "source_sha256": "cb7bb1bd6c3a5b13ce48c582069b81b2e8355d2d1b33b8fc64b4f3e77ea26f66",
+      "remote_sha256": "8380e74214837176135d26d29e4e5b177b1bfda69ba40797ad210d862be6ca34"
+    },
+    {
+      "path": "catalogus-public/admin/index.php",
+      "source_sha256": "45af33bf6d4576fbe6dfc2978b7002dc2069b93607d1645e7846e19b0a4630aa",
+      "remote_sha256": "2e8f16fda58a73467aeec3f4b81423ebc743080fb7da1f774948fbf7117efb00"
+    }
+  ]
+}
